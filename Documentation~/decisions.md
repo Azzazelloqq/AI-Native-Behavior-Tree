@@ -17,3 +17,11 @@ This file records accepted direction. Detailed ADR files may be introduced when 
 | AIBT-011 | Base initial development on Unity 6; add compatibility claims only after verification. | Accepted |
 | AIBT-012 | Select the graph UI framework only after an editor technology spike. | Pending spike |
 | AIBT-013 | Add runtime autotuning only when benchmarks show value over calibrated heuristics. | Pending research |
+| AIBT-014 | Fix public statuses to Success, Failure, and Running; lifecycle and composite behavior follow Execution Semantics v1. | Accepted |
+| AIBT-015 | Execute one tree instance sequentially; `Parallel` is semantic, while CPU parallelism is across instances and batches. | Accepted |
+| AIBT-016 | Use command/completion records instead of Task, threads, or coroutines in the runtime async contract. | Accepted |
+| AIBT-017 | Support Windows x64, Android ARM64, and single-threaded Unity Web as mandatory pre-1.0 validation targets. | Accepted |
+| AIBT-018 | Keep the product short name and namespace `AIBT` and package ID `com.azzazello.aibt`. | Accepted |
+| AIBT-019 | Use English for canonical code, APIs, identifiers, diagnostics, schemas, and documentation; translations may be supplemental. | Accepted |
+
+Normative details are in `Documentation~/specifications/`. An implementation may change them only through an accepted decision and corresponding specification update.

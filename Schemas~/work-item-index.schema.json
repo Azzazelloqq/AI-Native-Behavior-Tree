@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aibt.dev/schemas/0.1/work-item-index.schema.json",
+  "title": "AIBT work-item index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "formatVersion", "sourceBranch", "items"],
+  "properties": {
+    "format": { "const": "aibt.work-items" },
+    "formatVersion": { "type": "integer", "const": 1 },
+    "sourceBranch": { "type": "string", "minLength": 1 },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/item" },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "phase", "title", "status", "kind", "card", "dependsOn", "owns"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^P[0-9]+-[0-9]{3}$" },
+        "phase": { "type": "integer", "minimum": 0 },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["draft", "ready", "in_progress", "review", "blocked", "done"] },
+        "kind": { "enum": ["implementation", "infrastructure", "spike", "review", "integration"] },
+        "card": { "type": "string", "minLength": 1 },
+        "dependsOn": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^P[0-9]+-[0-9]{3}$" },
+          "uniqueItems": true
+        },
+        "owns": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "blockedBy": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

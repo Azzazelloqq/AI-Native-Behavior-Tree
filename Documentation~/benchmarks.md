@@ -53,6 +53,8 @@ Run in Player builds on identified hardware. Record Unity, package, OS, CPU arch
 
 Initial targets are selected before Phase 4. Desktop development results cannot be generalized to mobile, console, or WebGL. Unsupported platforms remain explicitly unclaimed.
 
+Mandatory pre-1.0 targets are Windows x64, Android ARM64, and Unity Web on supported desktop browsers. Web measurements use the single-thread backend and include unmanaged immediate execution, deterministic step budgeting, Burst WASM feasibility, memory pressure, build size, and browser throttling. Results from one browser do not establish support for another.
+
 ## Scheduler research
 
 1. Measure scheduling overhead and fixed-policy curves.

@@ -1,0 +1,20 @@
+{
+  "format": "aibt.policy",
+  "formatVersion": 1,
+  "maxTreeDepth": 64,
+  "maxNodesPerTree": 4096,
+  "allowManagedNodes": true,
+  "allowMainThreadNodes": true,
+  "requireTreeDescription": true,
+  "requireNodeDescriptions": true,
+  "blackboardNaming": "snake_case",
+  "forbiddenNodeTypes": [],
+  "warningsAsErrors": [
+    "unreachable_node",
+    "unbounded_repeater"
+  ],
+  "performance": {
+    "forbidUnboundedRepeaters": true,
+    "requireEventDrivenServices": false
+  }
+}

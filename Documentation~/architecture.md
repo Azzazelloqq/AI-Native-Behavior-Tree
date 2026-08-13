@@ -30,6 +30,8 @@ Editor UI          MCP server          Direct JSON authoring
 
 Owns node statuses and lifecycle, compiled instructions, state arenas, blackboard storage, execution contexts, scheduling policies, trace events, world snapshots, and command buffers. It may depend on Burst and Unity Collections, but not `UnityEditor`, Graph Toolkit, MCP, or DOTS Entities.
 
+Execution is backend-neutral. Native platforms may use Unity Job System; Unity Web uses the same compiled program and semantics through a single-thread immediate or budgeted backend. Backend selection is capability-based rather than exposed as platform conditionals.
+
 ### Authoring
 
 Owns the semantic tree document, node manifests, validation, policies, migrations, domain patches, and compilation interfaces. It translates canonical documents into immutable runtime programs.
@@ -66,6 +68,8 @@ Exposes the authoring and diagnostic APIs through model-neutral MCP resources an
 Compiled programs use contiguous unmanaged storage. Node definitions reference child ranges, parameter ranges, and state-layout descriptors by index. Per-agent state is stored separately so one compiled program can serve many agents.
 
 Execution avoids recursive object graphs, managed dictionaries, reflection, virtual dispatch, and per-tick allocations. Custom Burst nodes are dispatched through generated code. Managed nodes cross an explicit execution boundary.
+
+Normative lifecycle, phase, blackboard, async, determinism, compiled-program, and platform requirements live in `Documentation~/specifications/`.
 
 ## Integration boundary
 

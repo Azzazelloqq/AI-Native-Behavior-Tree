@@ -1,0 +1,259 @@
+{
+  "format": "aibt.work-items",
+  "formatVersion": 1,
+  "sourceBranch": "main",
+  "items": [
+    {
+      "id": "P0-001",
+      "phase": 0,
+      "title": "Validate exact Unity toolchain",
+      "status": "blocked",
+      "kind": "infrastructure",
+      "card": "Planning~/Tasks/P0/P0-001-toolchain-baseline.md",
+      "dependsOn": [],
+      "owns": ["Planning~/Evidence/P0-001/"],
+      "blockedBy": ["OQ-001", "Unity Android and Web modules"]
+    },
+    {
+      "id": "P0-002",
+      "phase": 0,
+      "title": "Add repeatable verification entrypoints",
+      "status": "draft",
+      "kind": "infrastructure",
+      "card": "Planning~/Tasks/P0/P0-002-verification-entrypoints.md",
+      "dependsOn": ["P0-001"],
+      "owns": ["Tools~/Verification/", "Documentation~/development-commands.md"]
+    },
+    {
+      "id": "P0-003",
+      "phase": 0,
+      "title": "Unity Web and Burst WASM spike",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P0/P0-003-web-backend-spike.md",
+      "dependsOn": ["P0-001", "P0-002"],
+      "owns": ["Spikes~/WebBackend/", "Benchmarks~/Platform/Web/", "Planning~/Evidence/P0-003/"]
+    },
+    {
+      "id": "P0-004",
+      "phase": 0,
+      "title": "Android ARM64 build smoke",
+      "status": "draft",
+      "kind": "infrastructure",
+      "card": "Planning~/Tasks/P0/P0-004-android-build-smoke.md",
+      "dependsOn": ["P0-001", "P0-002"],
+      "owns": ["Tools~/Verification/Android/", "Planning~/Evidence/P0-004/"]
+    },
+    {
+      "id": "P0-005",
+      "phase": 0,
+      "title": "Windows validation CI",
+      "status": "draft",
+      "kind": "infrastructure",
+      "card": "Planning~/Tasks/P0/P0-005-windows-ci.md",
+      "dependsOn": ["P0-002"],
+      "owns": [".github/workflows/"],
+      "blockedBy": ["OQ-002"]
+    },
+    {
+      "id": "P0-006",
+      "phase": 0,
+      "title": "Phase 0 integration gate",
+      "status": "draft",
+      "kind": "integration",
+      "card": "Planning~/Tasks/P0/P0-006-foundation-gate.md",
+      "dependsOn": ["P0-001", "P0-002", "P0-003", "P0-004", "P0-005"],
+      "owns": ["Planning~/Evidence/P0-GATE/"]
+    },
+    {
+      "id": "P1-001",
+      "phase": 1,
+      "title": "Core semantic identifiers and statuses",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-001-core-identifiers.md",
+      "dependsOn": ["P0-006"],
+      "owns": ["Runtime/Core/Identity/", "Runtime/Core/Execution/NodeStatus.cs", "Tests/Runtime/Core/Identity/"]
+    },
+    {
+      "id": "P1-002",
+      "phase": 1,
+      "title": "Structured diagnostics foundation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-002-structured-diagnostics.md",
+      "dependsOn": ["P0-006", "P1-001"],
+      "owns": ["Authoring/Diagnostics/", "Tests/Editor/Diagnostics/"]
+    },
+    {
+      "id": "P1-003",
+      "phase": 1,
+      "title": "Canonical semantic authoring model",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-003-authoring-model.md",
+      "dependsOn": ["P1-001"],
+      "owns": ["Authoring/Model/Tree/", "Tests/Editor/AuthoringModel/Tree/"]
+    },
+    {
+      "id": "P1-004",
+      "phase": 1,
+      "title": "Node manifest and registry model",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-004-node-manifest-registry.md",
+      "dependsOn": ["P1-001", "P1-002"],
+      "owns": ["Authoring/Model/Nodes/", "Authoring/Registry/", "Tests/Editor/NodeRegistry/"]
+    },
+    {
+      "id": "P1-005",
+      "phase": 1,
+      "title": "Blackboard schema and value model",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-005-blackboard-schema.md",
+      "dependsOn": ["P1-001", "P1-002"],
+      "owns": ["Authoring/Model/Blackboard/", "Runtime/Blackboard/Types/", "Tests/Editor/BlackboardSchema/", "Tests/Runtime/BlackboardTypes/"]
+    },
+    {
+      "id": "P1-006",
+      "phase": 1,
+      "title": "Canonical tree JSON reader and writer",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-006-canonical-json.md",
+      "dependsOn": ["P1-002", "P1-003", "P1-005"],
+      "owns": ["Authoring/Serialization/Json/", "Tests/Editor/Serialization/", "Tests/Fixtures/Trees/Serialization/"]
+    },
+    {
+      "id": "P1-007",
+      "phase": 1,
+      "title": "Structural and semantic validator",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-007-semantic-validation.md",
+      "dependsOn": ["P1-002", "P1-003", "P1-004", "P1-005"],
+      "owns": ["Authoring/Validation/", "Tests/Editor/Validation/", "Tests/Fixtures/Trees/Validation/"]
+    },
+    {
+      "id": "P1-008",
+      "phase": 1,
+      "title": "Logical compiled-program model",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-008-compiled-model.md",
+      "dependsOn": ["P1-001", "P1-004", "P1-005"],
+      "owns": ["Runtime/Compiled/Model/", "Tests/Runtime/CompiledModel/"]
+    },
+    {
+      "id": "P1-009",
+      "phase": 1,
+      "title": "Deterministic reference compiler",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-009-reference-compiler.md",
+      "dependsOn": ["P1-006", "P1-007", "P1-008"],
+      "owns": ["Authoring/Compilation/", "Tests/Editor/Compilation/", "Tests/Fixtures/Trees/Compilation/"]
+    },
+    {
+      "id": "P1-010",
+      "phase": 1,
+      "title": "Reference lifecycle and leaf executor",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-010-reference-lifecycle-executor.md",
+      "dependsOn": ["P1-008", "P1-009"],
+      "owns": ["Runtime/Execution/Reference/Core/", "Runtime/Execution/Reference/Leaves/", "Runtime/State/Reference/", "Tests/Runtime/ReferenceExecutor/Lifecycle/"]
+    },
+    {
+      "id": "P1-011",
+      "phase": 1,
+      "title": "Memory sequence and selector",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-011-memory-composites.md",
+      "dependsOn": ["P1-010"],
+      "owns": ["Runtime/Execution/Reference/Composites/Memory/", "Tests/Runtime/ReferenceExecutor/MemoryComposites/"]
+    },
+    {
+      "id": "P1-012",
+      "phase": 1,
+      "title": "Reactive sequence and selector",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-012-reactive-composites.md",
+      "dependsOn": ["P1-010", "P1-011"],
+      "owns": ["Runtime/Execution/Reference/Composites/Reactive/", "Tests/Runtime/ReferenceExecutor/ReactiveComposites/"]
+    },
+    {
+      "id": "P1-013",
+      "phase": 1,
+      "title": "Parallel and core decorators",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-013-parallel-and-decorators.md",
+      "dependsOn": ["P1-010", "P1-011"],
+      "owns": ["Runtime/Execution/Reference/Composites/Parallel/", "Runtime/Execution/Reference/Decorators/", "Tests/Runtime/ReferenceExecutor/ParallelAndDecorators/"]
+    },
+    {
+      "id": "P1-014",
+      "phase": 1,
+      "title": "Tree blackboard runtime and observer queue",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-014-blackboard-runtime-and-observers.md",
+      "dependsOn": ["P1-005", "P1-009", "P1-012"],
+      "owns": ["Runtime/Blackboard/Storage/", "Runtime/Execution/Reference/Observers/", "Tests/Runtime/ReferenceExecutor/BlackboardAndObservers/"]
+    },
+    {
+      "id": "P1-015",
+      "phase": 1,
+      "title": "Reference commands and async operations",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-015-commands-and-async-reference.md",
+      "dependsOn": ["P1-001", "P1-010"],
+      "owns": ["Runtime/Commands/", "Runtime/Execution/Reference/Async/", "Tests/Runtime/ReferenceExecutor/Async/"]
+    },
+    {
+      "id": "P1-016",
+      "phase": 1,
+      "title": "Deterministic step-budget execution",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-016-step-budget-executor.md",
+      "dependsOn": ["P1-012", "P1-013", "P1-014", "P1-015"],
+      "owns": ["Runtime/Execution/Reference/Budgeting/", "Tests/Runtime/ReferenceExecutor/Budgeting/"]
+    },
+    {
+      "id": "P1-017",
+      "phase": 1,
+      "title": "Behavior-case reader and reference runner",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P1/P1-017-behavior-case-runner.md",
+      "dependsOn": ["P1-006", "P1-014", "P1-015", "P1-016"],
+      "owns": ["Tests/BehaviorCases/Framework/", "Tests/Fixtures/Cases/"]
+    },
+    {
+      "id": "P1-018",
+      "phase": 1,
+      "title": "End-to-end golden semantic slice",
+      "status": "draft",
+      "kind": "integration",
+      "card": "Planning~/Tasks/P1/P1-018-end-to-end-golden-slice.md",
+      "dependsOn": ["P1-007", "P1-009", "P1-013", "P1-014", "P1-015", "P1-017"],
+      "owns": ["Tests/Integration/SemanticSlice/", "Tests/Fixtures/Golden/", "Samples~/SemanticSlice/"]
+    },
+    {
+      "id": "P1-019",
+      "phase": 1,
+      "title": "Phase 1 independent integration gate",
+      "status": "draft",
+      "kind": "review",
+      "card": "Planning~/Tasks/P1/P1-019-phase1-integration-gate.md",
+      "dependsOn": ["P1-018"],
+      "owns": ["Planning~/Evidence/P1-GATE/"]
+    }
+  ]
+}

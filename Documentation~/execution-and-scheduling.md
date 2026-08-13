@@ -20,6 +20,8 @@ AIBT does not assign operating-system threads. Unity Job System owns worker thre
 | `Budgeted` | Very large populations or non-critical AI updates | Configurable |
 | `Auto` | Explainable selection among supported policies | Determined by allowed latency |
 
+Unity Web exposes `SingleThreadImmediate` and `SingleThreadBudgeted` through the same scheduler contract. It does not claim C# worker-job parallelism. See `specifications/platform-backends-v1.md`.
+
 Automatic policy never opts into extra semantic latency unless the user explicitly permits it.
 
 ## Work estimation
@@ -61,6 +63,8 @@ The profiler exposes:
 - comparison with the configured budget.
 
 Users can force a policy, minimum job workload, target batch work, batch bounds, update budget, latency mode, and tree-specific update cadence.
+
+Forcing a policy unavailable on the active backend is an error with a structured diagnostic; it is not silently replaced by a policy with different latency.
 
 ## Semantic guarantees
 

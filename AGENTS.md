@@ -11,6 +11,9 @@ These rules apply to the entire repository.
 5. Test expected behavior. Never reshape tests to preserve an incorrect implementation.
 6. Keep changes scoped. Do not silently add adjacent features.
 7. Before finishing, verify that every requested item is complete and that no unrequested behavior was introduced.
+8. Read `Planning~/AGENT_WORKFLOW.md` and the assigned work-item card before implementation. Work only on a task whose dependencies are merged.
+9. Normative specifications in `Documentation~/specifications/` cannot be changed as an incidental part of an implementation task.
+10. Canonical code, API names, diagnostics, schemas, and documentation are written in English. Translations are supplemental and cannot define behavior.
 
 ## Architectural boundaries
 
@@ -31,6 +34,7 @@ These rules apply to the entire repository.
 - Avoid virtual dispatch, reflection, hidden global state, per-tick allocations, and direct `UnityEngine.Object` access inside jobs.
 - A node has one responsibility and defined `Running`, cancellation, success, and failure semantics.
 - Scheduling changes may affect timing but must not silently change tree semantics.
+- Unity Web uses the documented single-thread backend; do not compile out core behavior merely because worker jobs are unavailable.
 
 ## Quality gates
 
@@ -39,3 +43,4 @@ These rules apply to the entire repository.
 - Run validation, tests, and relevant benchmarks before declaring work complete.
 - Update documentation, schemas, examples, and `CHANGELOG.md` when their contracts change.
 - Do not commit generated IDE files, benchmark output, local MCP caches, secrets, or credentials.
+- Submit the handoff report required by `Planning~/AGENT_WORKFLOW.md`; do not mark a work item complete when a required verification command was unavailable.

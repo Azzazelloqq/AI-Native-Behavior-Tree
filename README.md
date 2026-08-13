@@ -4,6 +4,8 @@
 
 The project targets a Burst-compatible, zero-GC-per-tick execution path; a readable visual editor; machine-readable contracts; reproducible performance research; and an optional MCP integration. DOTS Entities is not required.
 
+Windows x64 and Android ARM64 use native execution backends. Unity Web remains a supported target through the same semantics and a single-thread immediate or frame-budgeted backend.
+
 > Status: architecture and repository foundation. Runtime and editor APIs are not implemented yet.
 
 ## Design goals
@@ -77,4 +79,9 @@ Additional platforms and Unity versions are supported only after validation by t
 - [Testing strategy](Documentation~/testing.md)
 - [Roadmap](Documentation~/roadmap.md)
 - [Architectural decisions](Documentation~/decisions.md)
+- [Normative specifications](Documentation~/specifications/conventions.md)
+- [Agent master plan](Planning~/MASTER_PLAN.md)
+- [Machine-readable work items](Planning~/work-items.json)
+- [Safe parallelization waves](Planning~/PARALLELIZATION.md)
+- [User and infrastructure actions](Planning~/USER_ACTIONS.md)
 - [Contributing](CONTRIBUTING.md)

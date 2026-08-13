@@ -52,6 +52,7 @@ AIBT is a Unity behavior-tree library with a data-oriented Burst execution path,
 - Performance baselines and regression thresholds.
 - Platform-specific benchmark profiles and documented compatibility claims.
 - Samples, recipes, anti-patterns, node catalog, and migration guides.
+- Mandatory pre-1.0 validation for Windows x64, Android ARM64, and supported desktop browsers through the single-thread Unity Web backend.
 
 ## Not in scope
 
@@ -64,6 +65,7 @@ AIBT is a Unity behavior-tree library with a data-oriented Burst execution path,
 - Burst compatibility for arbitrary managed C#.
 - Persistent save/load of live execution state. Hot reload is supported independently.
 - Claims of optimal scheduling on unmeasured hardware or platforms.
+- C# worker-thread parallelism on Unity Web. Web remains a supported functional single-thread backend.
 
 ## Release criteria for 1.0
 

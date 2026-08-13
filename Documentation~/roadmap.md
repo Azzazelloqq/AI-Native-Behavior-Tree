@@ -7,6 +7,7 @@ The order minimizes architectural rework and delivers verifiable vertical slices
 - Repository governance, package layout, scope, architecture, draft schemas, and development rules.
 - Unity import and assembly validation.
 - Initial CI design and compatibility matrix.
+- Unity Web/Burst WASM feasibility spike and Android build-smoke preparation.
 
 Exit: the package imports cleanly and all accepted architectural decisions are documented.
 
@@ -17,6 +18,7 @@ Exit: the package imports cleanly and all accepted architectural decisions are d
 - Sequence, selector, condition, and action contracts.
 - Validation, deterministic compilation, immediate executor, and behavior tests.
 - Canonical tree import/export.
+- Single-thread immediate and deterministic step-budget behavior shared by native and Web execution.
 
 Exit: a small tree can be authored as JSON, validated, compiled, executed, and tested without editor UI.
 
@@ -68,5 +70,6 @@ Exit: an AI agent can safely create, inspect, test, diagnose, and modify a tree 
 
 - Supported-platform matrix, long-running and stress tests, profiler validation, migration tooling, samples, API documentation, and release automation.
 - Review public API and formats for `1.0.0` stability.
+- Validate Windows x64, Android ARM64, and supported desktop browsers against the published compatibility matrix.
 
 Exit: all criteria in `scope.md` are satisfied for supported platforms.
