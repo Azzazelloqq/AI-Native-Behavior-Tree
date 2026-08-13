@@ -232,7 +232,7 @@ namespace AIBT.Tests.BehaviorCases
         [Test]
         public void Schema_ExposesOnlyClosedTypedAssertions()
         {
-            var path = Path.Combine(Application.dataPath, "AIBT/Schemas~/behavior-case.schema.json");
+            var path = BehaviorCaseTestPackagePaths.Resolve("Schemas~", "behavior-case.schema.json");
             var schema = JObject.Parse(File.ReadAllText(path));
             var defs = (JObject)schema["$defs"];
 
@@ -275,7 +275,7 @@ namespace AIBT.Tests.BehaviorCases
         [TestCase("budget-resume.aibtcase.json")]
         public void CanonicalPositiveFixtures_RoundTripByteExactly(string fileName)
         {
-            var path = Path.Combine(Application.dataPath, "AIBT/Tests/Fixtures/Cases", fileName);
+            var path = BehaviorCaseTestPackagePaths.Resolve("Tests", "Fixtures", "Cases", fileName);
             var source = File.ReadAllBytes(path);
             var read = BehaviorCaseJson.Parse(source, fileName);
             var write = read.Success ? BehaviorCaseJson.Serialize(read.Document) : null;
@@ -288,8 +288,8 @@ namespace AIBT.Tests.BehaviorCases
         [Test]
         public void CanonicalNegativeFixture_HasStableSemanticLocation()
         {
-            var path = Path.Combine(Application.dataPath,
-                "AIBT/Tests/Fixtures/Cases/negative-update-order.aibtcase.json");
+            var path = BehaviorCaseTestPackagePaths.Resolve(
+                "Tests", "Fixtures", "Cases", "negative-update-order.aibtcase.json");
             var read = BehaviorCaseJson.Parse(File.ReadAllBytes(path), "negative-update-order.aibtcase.json");
 
             Assert.That(read.Success, Is.False);

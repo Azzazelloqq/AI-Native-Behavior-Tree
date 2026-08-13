@@ -89,7 +89,8 @@ namespace AIBT.Tests.Editor.Serialization
         [TestCase("invalid-unknown-field.aibt.json", false)]
         public void SerializationFixturesHaveStableAcceptanceClassification(string fileName, bool expectedSuccess)
         {
-            var path = Path.Combine(Application.dataPath, "AIBT", "Tests", "Fixtures", "Trees", "Serialization", fileName);
+            var path = EditorTestPackagePaths.Resolve(
+                "Tests", "Fixtures", "Trees", "Serialization", fileName);
             var result = CanonicalTreeJson.Parse(File.ReadAllBytes(path), fileName);
 
             Assert.That(result.Success, Is.EqualTo(expectedSuccess), Messages(result.Diagnostics));

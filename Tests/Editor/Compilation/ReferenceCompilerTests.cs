@@ -25,9 +25,8 @@ namespace AIBT.Tests.Editor.Compilation
             Assert.That(result.Program.Header.CompiledContentHash.IsValid, Is.True);
             Assert.That(result.Program.DebugMap[0].SourcePath, Is.EqualTo("trees/minimal.aibt.json"));
 
-            var goldenPath = Path.Combine(
-                Application.dataPath,
-                "AIBT/Tests/Fixtures/Trees/Compilation/minimal-compiled-v1.golden.json");
+            var goldenPath = EditorTestPackagePaths.Resolve(
+                "Tests", "Fixtures", "Trees", "Compilation", "minimal-compiled-v1.golden.json");
             var golden = JObject.Parse(File.ReadAllText(goldenPath));
             Assert.That(result.Program.Header.CompiledContentHash.HexadecimalValue,
                 Is.EqualTo((string)golden["compiledContentHash"]));

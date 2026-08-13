@@ -193,7 +193,7 @@ namespace AIBT.Tests.Integration.SemanticSlice
                 && item.Event != BehaviorCaseTraceEvent.ExecutionResumed;
 
         private static string GoldenRoot()
-            => Path.Combine(Application.dataPath, "AIBT/Tests/Fixtures/Golden");
+            => SemanticSliceTestPackagePaths.Resolve("Tests", "Fixtures", "Golden");
 
         private static string CasePath(string fileName)
             => Path.Combine(GoldenRoot(), "Cases", fileName);

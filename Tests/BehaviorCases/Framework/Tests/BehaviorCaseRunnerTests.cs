@@ -280,7 +280,7 @@ namespace AIBT.Tests.BehaviorCases
             IReadOnlyList<BehaviorCaseExecutorStepResult> results,
             BehaviorCaseRegisteredValueRegistry registry)
         {
-            var path = Path.Combine(Application.dataPath, "AIBT/Tests/Fixtures/Cases", fileName);
+            var path = BehaviorCaseTestPackagePaths.Resolve("Tests", "Fixtures", "Cases", fileName);
             return BehaviorCaseRunner.Run(File.ReadAllBytes(path), fileName,
                 new RecordingFactory(results), registry);
         }

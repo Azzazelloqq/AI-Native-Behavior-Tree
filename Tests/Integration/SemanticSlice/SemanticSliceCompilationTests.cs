@@ -85,10 +85,10 @@ namespace AIBT.Tests.Integration.SemanticSlice
                 CompilerVersion);
 
         private static string GoldenTreePath(string fileName)
-            => Path.Combine(Application.dataPath, "AIBT/Tests/Fixtures/Golden/Trees", fileName);
+            => SemanticSliceTestPackagePaths.Resolve("Tests", "Fixtures", "Golden", "Trees", fileName);
 
         private static string GoldenCasePath(string fileName)
-            => Path.Combine(Application.dataPath, "AIBT/Tests/Fixtures/Golden/Cases", fileName);
+            => SemanticSliceTestPackagePaths.Resolve("Tests", "Fixtures", "Golden", "Cases", fileName);
 
         private static string Diagnostics(DiagnosticCollection diagnostics)
             => string.Join(" | ", diagnostics.Select(item => item.Code + " "

@@ -333,7 +333,8 @@ namespace AIBT.Tests.Editor.Validation
         [TestCase("invalid-parameters-observer.json", true)]
         public void ValidationFixturesAreParsedAndSnapshotClassified(string fileName, bool expectsErrors)
         {
-            var path = Path.Combine(Application.dataPath, "AIBT", "Tests", "Fixtures", "Trees", "Validation", fileName);
+            var path = EditorTestPackagePaths.Resolve(
+                "Tests", "Fixtures", "Trees", "Validation", fileName);
             var read = CanonicalTreeJson.Parse(File.ReadAllBytes(path), fileName);
             Assert.That(read.Success, Is.True, string.Join(" | ", read.Diagnostics.Select(item => item.Message)));
 
