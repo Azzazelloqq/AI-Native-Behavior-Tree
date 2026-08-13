@@ -78,4 +78,3 @@ Additional platforms and Unity versions are supported only after validation by t
 - [Roadmap](Documentation~/roadmap.md)
 - [Architectural decisions](Documentation~/decisions.md)
 - [Contributing](CONTRIBUTING.md)
-

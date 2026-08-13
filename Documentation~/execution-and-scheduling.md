@@ -69,4 +69,3 @@ Users can force a policy, minimum job workload, target batch work, batch bounds,
 - Command application order is deterministic when deterministic mode is enabled.
 - Pipelined and budgeted latency is visible and never silently selected.
 - Managed nodes execute only in an allowed main-thread phase.
-

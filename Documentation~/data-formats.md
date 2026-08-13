@@ -52,4 +52,3 @@ Project assets use stable Unity GUID and optional local file ID. Scene objects a
 ## Migrations
 
 Each persisted format and node type is independently versioned. Migrations are deterministic, testable, ordered, and produce a previewable diff. Unsupported future versions fail with structured diagnostics; they are never loaded on a best-effort basis.
-

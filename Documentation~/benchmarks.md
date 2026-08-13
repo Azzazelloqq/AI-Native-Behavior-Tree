@@ -63,4 +63,3 @@ Initial targets are selected before Phase 4. Desktop development results cannot 
 6. Reject adaptation if its overhead, instability, or unpredictability outweighs improvement.
 
 Raw results and analysis are retained separately from generated charts. Regression thresholds use statistically stable ranges rather than a single best run.
-

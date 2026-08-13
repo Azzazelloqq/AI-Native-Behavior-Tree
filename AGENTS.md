@@ -39,4 +39,3 @@ These rules apply to the entire repository.
 - Run validation, tests, and relevant benchmarks before declaring work complete.
 - Update documentation, schemas, examples, and `CHANGELOG.md` when their contracts change.
 - Do not commit generated IDE files, benchmark output, local MCP caches, secrets, or credentials.
-

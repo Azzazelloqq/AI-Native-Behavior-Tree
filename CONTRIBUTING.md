@@ -33,4 +33,3 @@ Public contracts are unstable before `1.0.0`, but changes must still be versione
 ## Commit style
 
 Use imperative, scoped messages such as `runtime: add sequence execution` or `editor: preserve pinned node positions`. Keep generated outputs out of commits unless they are intentional distributable artifacts.
-

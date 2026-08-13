@@ -74,4 +74,3 @@ AIBT is a Unity behavior-tree library with a data-oriented Burst execution path,
 - Hot reload with documented compatibility behavior.
 - MCP server and custom tool extension contract.
 - Complete tests, samples, API documentation, migration tooling, and supported-platform matrix.
-

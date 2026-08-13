@@ -88,4 +88,3 @@ Do not expose every behavior node as a separate MCP tool. Generic semantic opera
 ## Agent documentation
 
 The repository provides a short workflow guide, generated node catalog, recipes, anti-patterns, good and bad examples, and versioned migrations. Optional `AGENTS.md`, `SKILL.md`, or provider-specific adapters may be generated, but the canonical contracts remain schemas and authoring APIs.
-

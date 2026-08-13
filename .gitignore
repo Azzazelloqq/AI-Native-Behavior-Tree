@@ -37,4 +37,3 @@ Thumbs.db
 # Local AI/MCP state; schemas and project policy remain tracked
 .aibt/local/
 .aibt/cache/
-

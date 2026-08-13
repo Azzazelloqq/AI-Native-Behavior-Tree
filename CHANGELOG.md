@@ -9,4 +9,3 @@ All notable changes to this project will be documented here. The project follows
 - Initial repository and Unity package structure.
 - Architecture, scope, editor, AI/MCP, benchmark, testing, and roadmap documentation.
 - Draft machine-readable schemas for trees, layouts, node manifests, policies, and behavior test cases.
-

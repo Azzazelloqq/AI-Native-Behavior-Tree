@@ -82,4 +82,3 @@ Benchmarks and tests may reference public layers as required.
 ```
 
 No lower layer may reference a higher layer. Optional integrations live behind adapters.
-

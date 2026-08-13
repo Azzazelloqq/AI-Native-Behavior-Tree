@@ -17,4 +17,3 @@ This file records accepted direction. Detailed ADR files may be introduced when 
 | AIBT-011 | Base initial development on Unity 6; add compatibility claims only after verification. | Accepted |
 | AIBT-012 | Select the graph UI framework only after an editor technology spike. | Pending spike |
 | AIBT-013 | Add runtime autotuning only when benchmarks show value over calibrated heuristics. | Pending research |
-
