@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aibt.dev/schemas/0.1/behavior-case.schema.json",
+  "title": "AIBT behavior test case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "formatVersion", "name", "tree", "steps"],
+  "properties": {
+    "format": { "const": "aibt.case" },
+    "formatVersion": { "type": "integer", "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "tree": { "type": "string", "minLength": 1 },
+    "initialBlackboard": { "type": "object" },
+    "initialWorld": { "type": "object" },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["operation"],
+        "properties": {
+          "operation": { "enum": ["tick", "emit-event", "complete-action", "cancel"] },
+          "count": { "type": "integer", "minimum": 1 },
+          "payload": { "type": "object" },
+          "expect": {
+            "type": "object",
+            "properties": {
+              "rootStatus": { "enum": ["success", "failure", "running", "inactive"] },
+              "blackboard": { "type": "object" },
+              "commands": { "type": "array", "items": { "type": "object" } },
+              "invariants": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "tags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+  }
+}
+

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aibt.dev/schemas/0.1/policy.schema.json",
+  "title": "AIBT project policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "formatVersion"],
+  "properties": {
+    "format": { "const": "aibt.policy" },
+    "formatVersion": { "type": "integer", "const": 1 },
+    "maxTreeDepth": { "type": "integer", "minimum": 1 },
+    "maxNodesPerTree": { "type": "integer", "minimum": 1 },
+    "allowManagedNodes": { "type": "boolean" },
+    "allowMainThreadNodes": { "type": "boolean" },
+    "requireTreeDescription": { "type": "boolean" },
+    "requireNodeDescriptions": { "type": "boolean" },
+    "blackboardNaming": { "enum": ["snake_case", "camelCase", "PascalCase", "any"] },
+    "forbiddenNodeTypes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "warningsAsErrors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxEstimatedCost": { "type": "number", "minimum": 0 },
+        "forbidUnboundedRepeaters": { "type": "boolean" },
+        "requireEventDrivenServices": { "type": "boolean" }
+      }
+    }
+  }
+}
+

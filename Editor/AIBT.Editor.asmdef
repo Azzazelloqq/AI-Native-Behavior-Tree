@@ -1,0 +1,15 @@
+{
+  "name": "AIBT.Editor",
+  "rootNamespace": "AIBT.Editor",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}
+

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aibt.dev/schemas/0.1/node-manifest.schema.json",
+  "title": "AIBT node manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "typeId",
+    "version",
+    "summary",
+    "category",
+    "executionDomain",
+    "deterministic",
+    "parameters",
+    "possibleStatuses"
+  ],
+  "properties": {
+    "typeId": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "category": { "type": "string", "minLength": 1 },
+    "whenToUse": { "type": "string" },
+    "whenNotToUse": { "type": "string" },
+    "parameters": { "type": "object" },
+    "childPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minimum": { "type": "integer", "minimum": 0 },
+        "maximum": { "type": ["integer", "null"], "minimum": 0 },
+        "ordered": { "type": "boolean" }
+      }
+    },
+    "reads": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "writes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "sideEffects": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "possibleStatuses": {
+      "type": "array",
+      "items": { "enum": ["success", "failure", "running"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "executionDomain": { "enum": ["burst", "managed", "main-thread"] },
+    "deterministic": { "type": "boolean" },
+    "costHint": { "enum": ["trivial", "low", "medium", "high", "variable"] },
+    "examples": { "type": "array", "items": { "type": "object" } },
+    "deprecated": { "type": "boolean", "default": false },
+    "replacementTypeId": { "type": "string" }
+  }
+}
+

@@ -1,0 +1,12 @@
+{
+  "name": "AIBT.Runtime",
+  "rootNamespace": "AIBT",
+  "references": [
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}
+

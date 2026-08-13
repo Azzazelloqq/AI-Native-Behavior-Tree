@@ -1,0 +1,14 @@
+{
+  "name": "AIBT.Runtime.Tests",
+  "rootNamespace": "AIBT.Tests.Runtime",
+  "references": [
+    "AIBT.Runtime"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}
+

@@ -1,0 +1,40 @@
+# Unity-generated directories
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+[Mm]emoryCaptures/
+
+# IDE and generated project files
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# .NET and tooling output
+bin/
+obj/
+TestResults/
+BenchmarkResults/
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local AI/MCP state; schemas and project policy remain tracked
+.aibt/local/
+.aibt/cache/
+

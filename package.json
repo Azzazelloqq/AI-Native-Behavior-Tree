@@ -1,0 +1,25 @@
+{
+  "name": "com.azzazello.aibt",
+  "version": "0.1.0",
+  "displayName": "AI-Native Behavior Tree",
+  "description": "A data-oriented, Burst-accelerated behavior tree for Unity, designed for humans and AI agents.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.burst": "1.8.29",
+    "com.unity.collections": "6.5.0"
+  },
+  "keywords": [
+    "AI",
+    "Behavior Tree",
+    "Burst",
+    "Jobs",
+    "MCP"
+  ],
+  "author": {
+    "name": "Dmitry Bogdanov",
+    "email": "bog22232@ya.ru",
+    "url": "https://github.com/Azzazelloqq"
+  },
+  "license": "MIT"
+}
+

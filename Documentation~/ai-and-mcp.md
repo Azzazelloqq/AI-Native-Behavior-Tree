@@ -1,0 +1,91 @@
+# AI-native authoring and MCP
+
+## Principle
+
+MCP is a transport. AI usability comes from strict contracts, discoverability, safe operations, structured feedback, simulation, and documentation shared with the human editor.
+
+The core remains model- and vendor-neutral.
+
+## Information available to an agent
+
+- project manifest and supported capabilities;
+- tree summaries and revisions;
+- node catalog with searchable metadata;
+- exact parameter and blackboard schemas;
+- reads, writes, side effects, lifecycle, execution domain, determinism, and cost hints;
+- project policy and style rules;
+- examples, recipes, anti-patterns, and migrations;
+- compiler diagnostics, tests, runtime traces, and benchmark results.
+
+Agents should request summaries first and load detailed contracts only when needed. Tools support pagination and targeted lookup so large projects do not require placing every tree and node definition in context.
+
+## Node manifest
+
+Every node type declares a stable ID and version, concise summary, intended and discouraged use, parameters, ports, allowed children, blackboard access, side effects, lifecycle statuses, threading domain, determinism, estimated cost category, examples, and deprecation or migration information.
+
+The manifest is generated from the same metadata used by code generation, editor palettes, validation, and documentation. Duplicated hand-maintained catalogs are forbidden.
+
+## Core MCP surface
+
+### Discovery
+
+- project and capability description;
+- node search and contract lookup;
+- tree and policy listing;
+- schema and documentation resources.
+
+### Authoring
+
+- create tree;
+- add, remove, move, replace, and configure nodes;
+- declare and change blackboard keys;
+- extract or inline subtrees;
+- apply a domain patch transaction;
+- request layout of the affected region.
+
+### Verification
+
+- validate and compile;
+- simulate a behavior case;
+- run focused tests;
+- inspect or explain diagnostics;
+- inspect and compare runtime traces;
+- run approved benchmark scenarios.
+
+### Node development
+
+- generate a node from a maintained template;
+- generate or update node tests and manifest metadata;
+- run analyzers, compile, test, and show a reviewable diff;
+- register custom high-level tool providers.
+
+## Safe mutation protocol
+
+Mutating operations accept an expected revision and support dry-run. They return semantic and layout diffs, structured diagnostics, and the resulting revision. A transaction is atomic: invalid partial trees are not persisted.
+
+Generated code follows this gate:
+
+```text
+Generate -> Preview/Diff -> Analyze -> Compile -> Test -> Explicit Apply
+```
+
+Permissions distinguish read, semantic edit, layout edit, code generation, compilation, test execution, benchmark execution, and arbitrary project integration. No tool receives broader access by default.
+
+## Structured diagnostics
+
+Diagnostics include a stable code, severity, tree and node identity, JSON path, message, related locations, and machine-applicable suggested operations when safe. Text-only compiler errors are not the public tool contract.
+
+## Project policy
+
+`.aibt/policy.json` expresses checkable conventions such as allowed execution domains, maximum depth, naming, required descriptions, forbidden nodes, warning levels, performance budgets, and preferred patterns. Prose guidance explains intent; the validator enforces what can be formalized.
+
+## Custom MCP tools
+
+Projects may register high-level tools, for example creating a combat subtree or validating an ability-system integration. A tool declares stable name, description, JSON input/output schemas, permissions, side effects, cancellation behavior, dry-run support, and owning assembly.
+
+Do not expose every behavior node as a separate MCP tool. Generic semantic operations consume the node registry; custom tools represent meaningful project workflows.
+
+## Agent documentation
+
+The repository provides a short workflow guide, generated node catalog, recipes, anti-patterns, good and bad examples, and versioned migrations. Optional `AGENTS.md`, `SKILL.md`, or provider-specific adapters may be generated, but the canonical contracts remain schemas and authoring APIs.
+

@@ -1,0 +1,11 @@
+{
+  "name": "AIBT.Authoring",
+  "rootNamespace": "AIBT.Authoring",
+  "references": [
+    "AIBT.Runtime"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}
+

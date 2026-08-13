@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aibt.dev/schemas/0.1/layout.schema.json",
+  "title": "AIBT shared editor layout",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "formatVersion", "treeId", "nodes"],
+  "properties": {
+    "format": { "const": "aibt.layout" },
+    "formatVersion": { "type": "integer", "const": 1 },
+    "treeId": { "$ref": "#/$defs/id" },
+    "direction": { "enum": ["top-to-bottom", "left-to-right"] },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/nodeLayout" }
+    },
+    "groups": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/group" }
+    },
+    "notes": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/note" }
+    },
+    "routes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/route" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+    "rect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 }
+      }
+    },
+    "nodeLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position"],
+      "properties": {
+        "position": { "$ref": "#/$defs/point" },
+        "width": { "type": "number", "minimum": 0 },
+        "pinned": { "type": "boolean", "default": false }
+      }
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "bounds", "nodeIds"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "color": { "type": "string" },
+        "bounds": { "$ref": "#/$defs/rect" },
+        "nodeIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" },
+          "uniqueItems": true
+        },
+        "pinned": { "type": "boolean", "default": false }
+      }
+    },
+    "note": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "bounds"],
+      "properties": {
+        "text": { "type": "string" },
+        "bounds": { "$ref": "#/$defs/rect" },
+        "color": { "type": "string" }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parentId", "childId", "points"],
+      "properties": {
+        "parentId": { "$ref": "#/$defs/id" },
+        "childId": { "$ref": "#/$defs/id" },
+        "points": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/point" }
+        }
+      }
+    }
+  }
+}
+
