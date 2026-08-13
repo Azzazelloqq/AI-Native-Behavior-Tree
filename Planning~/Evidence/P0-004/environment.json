@@ -1,0 +1,38 @@
+{
+  "format": "aibt.android-build-evidence",
+  "formatVersion": 1,
+  "observedDate": "2026-08-14",
+  "package": "com.azzazello.aibt@0.1.0",
+  "sourceSnapshot": "shared Phase 1 worktree after accepted P1-018, overlaid into the isolated P0-002 harness",
+  "unity": "6000.5.8f1",
+  "burst": "1.8.29",
+  "collections": "6.5.0",
+  "androidBuildTools": "36.0.0",
+  "androidSdkPlatforms": [
+    "android-34 revision 2",
+    "android-36 revision 2",
+    "android-37.0 revision 2"
+  ],
+  "androidNdk": "27.2.12479018 (r27c)",
+  "openJdk": "Temurin 17.0.18+8",
+  "target": "Android",
+  "scriptingBackend": "IL2CPP",
+  "architectures": [
+    "ARM64"
+  ],
+  "burstEnabled": true,
+  "developmentBuild": true,
+  "buildResult": "Succeeded",
+  "totalErrors": 0,
+  "totalWarnings": 1,
+  "cleanBuildApkBytes": 26965742,
+  "cleanBuildApkSha256": "7083910f70139956f491964cf34dce8b4ce053f50805f196e85224b03a87853c",
+  "finalCommandRepeatApkBytes": 26983139,
+  "finalCommandRepeatApkSha256": "fd63881d23c3dd30b3edb9eab2e9efd1d22e2beb50d00a51153aa08022ff3b81",
+  "requiredNativeEntries": [
+    "lib/arm64-v8a/lib_burst_generated.so",
+    "lib/arm64-v8a/libil2cpp.so"
+  ],
+  "deviceRunVerified": false,
+  "performanceVerified": false
+}

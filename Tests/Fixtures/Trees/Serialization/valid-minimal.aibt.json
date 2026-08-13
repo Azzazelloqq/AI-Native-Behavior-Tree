@@ -1,0 +1,13 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.minimal",
+  "name": "Minimal",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.action.success",
+      "typeVersion": 1
+    }
+  }
+}

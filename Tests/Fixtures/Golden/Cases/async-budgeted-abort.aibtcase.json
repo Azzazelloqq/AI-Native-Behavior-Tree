@@ -1,0 +1,141 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "async budgeted abort cancels",
+  "tree": "Trees/async-action.aibt.json",
+  "treeInstanceId": 4,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "waiting",
+        "commands": {
+          "match": "exact",
+          "records": [
+            {
+              "phase": "execute",
+              "typeId": 4323582739283225081,
+              "typeVersion": 1,
+              "treeInstanceId": 4,
+              "sequence": 1,
+              "payload": {
+                "type": "Registered",
+                "typeId": 4323582739283225081,
+                "typeVersion": 1,
+                "encoding": "base64",
+                "value": ""
+              }
+            }
+          ]
+        },
+        "trace": [
+          {
+            "event": "update-started"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 0
+          },
+          {
+            "event": "command-emitted",
+            "nodeIndex": 0
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 0,
+            "status": "running"
+          },
+          {
+            "event": "update-completed"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "abort",
+      "updateId": 2,
+      "snapshotRevision": 2,
+      "timeMicroseconds": 1,
+      "stepBudget": 0,
+      "expect": {
+        "progress": "suspended",
+        "executedSteps": 0,
+        "commands": {
+          "match": "exact",
+          "records": []
+        },
+        "trace": [
+          {
+            "event": "update-started"
+          },
+          {
+            "event": "budget-yielded"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "resume",
+      "expect": {
+        "progress": "completed",
+        "commands": {
+          "match": "exact",
+          "records": [
+            {
+              "phase": "cancel",
+              "typeId": 49060422253092093,
+              "typeVersion": 1,
+              "treeInstanceId": 4,
+              "sequence": 2,
+              "payload": {
+                "type": "Registered",
+                "typeId": 49060422253092093,
+                "typeVersion": 1,
+                "encoding": "base64",
+                "value": ""
+              }
+            }
+          ]
+        },
+        "trace": [
+          {
+            "event": "execution-resumed"
+          },
+          {
+            "event": "command-emitted",
+            "nodeIndex": 0
+          },
+          {
+            "event": "node-abort-started",
+            "nodeIndex": 0,
+            "abortReason": "explicit",
+            "sourceNodeIndex": 0
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 0,
+            "exitReason": "aborted"
+          },
+          {
+            "event": "update-completed"
+          }
+        ],
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-active-operation-leaks"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "abort",
+    "async",
+    "budget"
+  ]
+}

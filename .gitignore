@@ -29,6 +29,7 @@ obj/
 TestResults/
 BenchmarkResults/
 coverage/
+Tools~/Verification/TestResults/
 
 # OS files
 .DS_Store

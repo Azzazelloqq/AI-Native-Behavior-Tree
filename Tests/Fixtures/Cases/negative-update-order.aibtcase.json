@@ -1,0 +1,25 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "negative update order",
+  "tree": "Trees/minimal.aibt.json",
+  "treeInstanceId": 1,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 2,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0
+    },
+    {
+      "operation": "abort",
+      "updateId": 2,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 1
+    }
+  ],
+  "tags": [
+    "invalid"
+  ]
+}

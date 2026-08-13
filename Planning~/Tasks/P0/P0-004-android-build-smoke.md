@@ -1,6 +1,6 @@
 # P0-004 — Android ARM64 build smoke
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 

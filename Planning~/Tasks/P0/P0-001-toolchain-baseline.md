@@ -1,6 +1,6 @@
 # P0-001 — Validate exact Unity toolchain
 
-Status: `Blocked` — exact Unity `6000.5.2f1` and required platform modules are not currently installed.
+Status: `Done`
 
 ## Objective
 
@@ -8,7 +8,7 @@ Import the package and compile its empty assemblies using the repository's exact
 
 ## Depends on
 
-- User actions: install Unity `6000.5.2f1`, Android Build Support, and Web Build Support.
+- User-approved baseline Unity `6000.5.8f1`, Android Build Support, and Web Build Support.
 
 ## Allowed changes
 
@@ -30,6 +30,8 @@ Import the package and compile its empty assemblies using the repository's exact
 - Unity exits with code 0.
 - `AIBT.Runtime`, `AIBT.Authoring`, `AIBT.Editor`, and test assemblies compile.
 - No package import errors or warnings caused by AIBT.
+
+Evidence: `Planning~/Evidence/P0-001/`. The isolated AIBT harness passes. A full parent-project batch compile remains blocked by an unrelated UniTask editor API incompatibility and is not attributed to AIBT.
 
 ## Required verification
 

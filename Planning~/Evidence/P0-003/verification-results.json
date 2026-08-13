@@ -1,0 +1,80 @@
+{
+  "taskId": "P0-003",
+  "observedDate": "2026-08-13",
+  "environment": {
+    "operatingSystem": "Windows 11 Home 10.0.26200 x64",
+    "cpu": "Intel Core Ultra 9 275HX",
+    "physicalCores": 24,
+    "logicalProcessors": 24,
+    "physicalMemoryBytes": 33752997888,
+    "unityVersion": "6000.5.8f1",
+    "burstVersion": "1.8.29",
+    "collectionsVersion": "6.5.0",
+    "newtonsoftJsonVersion": "3.2.2"
+  },
+  "source": {
+    "fingerprintAlgorithm": "SHA-256 of UTF-8 lines 'fileSha256  harness-Assets-relative-path', ordinally sorted, no trailing newline",
+    "buildInputFileCount": 119,
+    "buildInputSha256": "32032bb22eef8d95bb3de0cf6c61ff10e6a8e19e5cfb553252929d26783e94a7"
+  },
+  "build": {
+    "target": "WebGL",
+    "scriptingBackend": "IL2CPP",
+    "developmentBuild": false,
+    "compression": "disabled",
+    "exceptionSupport": "explicitly-thrown-exceptions-only",
+    "result": "Succeeded",
+    "durationSeconds": 108.418582,
+    "unityBuildReportBytes": 30440688,
+    "outputFileBytes": 30460432,
+    "artifacts": [
+      { "path": "Build/Web.wasm", "bytes": 23267051, "sha256": "f851bc1f2f4a8edecb782cff6419c69d160b1c26d600b0f358d58263788ffd24" },
+      { "path": "Build/Web.data", "bytes": 6818420, "sha256": "77e02a7e6530280e22a9633da897493512b8f9f00637fff21a8541fcccbafce8" },
+      { "path": "Build/Web.framework.js", "bytes": 304115, "sha256": "03c1e6221a57d096ca87e42f31f7dbf381a2dedf4827370ad1099c18cc92a02b" },
+      { "path": "Build/Web.loader.js", "bytes": 19670, "sha256": "2eb874a374d9b825f64e4cf3bddd916886eae6455c1d7cc2e5afccf1f72a63e4" },
+      { "path": "index.html", "bytes": 5600, "sha256": "118b2b8514e22d3dcf8e817bf842fd956452bc988f92379475f96be386eda9e5" }
+    ]
+  },
+  "browserExecution": {
+    "resultFileSha256": "c977a32425f80ac7ec225a77d900f1a0ce28d47d4943f46cc647049ad516293a",
+    "pageErrorCount": 0,
+    "browsers": [
+      {
+        "name": "Chrome",
+        "installedVersion": "151.0.7922.137",
+        "userAgentVersion": "151.0.0.0",
+        "headless": true,
+        "graphicsDevice": "ANGLE SwiftShader Vulkan",
+        "behaviorCasesPassed": 5,
+        "behaviorCasesFailed": 0,
+        "budgetEquivalencePassed": true,
+        "equivalenceScenariosPassed": 2,
+        "reactiveBlackboardSlots": 1,
+        "reactiveSemanticTraceEvents": 18,
+        "asyncCommands": 1,
+        "asyncSemanticTraceEvents": 5
+      },
+      {
+        "name": "Firefox",
+        "installedVersion": "153.0.4",
+        "userAgentVersion": "153.0",
+        "headless": true,
+        "graphicsDevice": "ANGLE Intel HD Direct3D11 or similar",
+        "behaviorCasesPassed": 5,
+        "behaviorCasesFailed": 0,
+        "budgetEquivalencePassed": true,
+        "equivalenceScenariosPassed": 2,
+        "reactiveBlackboardSlots": 1,
+        "reactiveSemanticTraceEvents": 18,
+        "asyncCommands": 1,
+        "asyncSemanticTraceEvents": 5
+      }
+    ]
+  },
+  "unsupportedOrUnverified": {
+    "managedReferenceExecutorIJobRun": "unsupported",
+    "managedReferenceExecutorBurstDirect": "unsupported",
+    "safari": "unverified-no-macos-host",
+    "mobileBrowsers": "unverified-and-not-supported-by-this-evidence"
+  }
+}

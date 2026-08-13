@@ -1,6 +1,6 @@
 # P0-006 — Phase 0 integration gate
 
-Status: `Draft`
+Status: `Blocked`
 
 ## Objective
 
@@ -33,3 +33,7 @@ Independently verify Phase 0 evidence and declare Phase 1 implementation ready o
 - Required commands pass from a clean checkout with initialized submodules.
 - Any unverified platform claim remains explicitly unverified.
 - Phase 1 task frontier is identified from the machine-readable dependency graph.
+
+## Current gate result
+
+Blocked. See [`Planning~/Evidence/P0-GATE/README.md`](../../Evidence/P0-GATE/README.md).

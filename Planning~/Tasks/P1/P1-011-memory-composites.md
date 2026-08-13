@@ -1,10 +1,15 @@
 # P1-011 — Memory sequence and selector
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 Implement `MemorySequence` and `MemorySelector` in the reference executor.
+
+## Required reading
+
+- `specifications/execution-semantics-v1.md`
+- `specifications/reference-executor-machine-v1.md`
 
 ## Depends on
 

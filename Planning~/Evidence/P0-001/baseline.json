@@ -1,0 +1,56 @@
+{
+  "taskId": "P0-001",
+  "observedDate": "2026-08-13",
+  "editor": {
+    "version": "6000.5.8f1",
+    "revision": "5cb7df797b7d",
+    "fileVersion": "6000.5.8.6076383",
+    "platform": "WindowsEditor",
+    "liveMcpReady": true,
+    "liveMcpCompiling": false,
+    "liveMcpUpdatingAssets": false
+  },
+  "platformModules": {
+    "android": {
+      "playbackEngineInstalled": true,
+      "sdkInstalled": true,
+      "ndkInstalled": true,
+      "openJdkInstalled": true,
+      "buildTargetSupported": true
+    },
+    "web": {
+      "playbackEngineInstalled": true,
+      "buildTargetSupported": true
+    }
+  },
+  "packages": {
+    "isolatedHarness": {
+      "com.unity.burst": "1.8.29",
+      "com.unity.collections": "6.5.0",
+      "com.unity.test-framework": "1.7.0"
+    },
+    "liveParentProject": {
+      "com.unity.burst": "1.8.30",
+      "com.unity.collections": "6.5.0",
+      "com.unity.test-framework": "1.7.0"
+    }
+  },
+  "aibt": {
+    "importedAsmdefAssetCount": 5,
+    "batchCompiledAssemblies": [
+      "AIBT.Runtime",
+      "AIBT.Authoring",
+      "AIBT.Editor",
+      "AIBT.Runtime.Tests",
+      "AIBT.Editor.Tests"
+    ],
+    "isolatedBatchExitCode": 0,
+    "compilerErrorCount": 0,
+    "compilerWarningCount": 0
+  },
+  "parentProject": {
+    "isolatedBatchExitCode": 1,
+    "blockerOwner": "com.cysharp.unitask",
+    "blockerSummary": "UniTask.Editor uses TreeView APIs that are errors in Unity 6000.5.8f1."
+  }
+}

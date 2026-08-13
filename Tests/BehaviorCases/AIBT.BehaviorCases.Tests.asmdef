@@ -1,0 +1,20 @@
+{
+  "name": "AIBT.BehaviorCases.Tests",
+  "rootNamespace": "AIBT.Tests.BehaviorCases",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Newtonsoft.Json.dll"
+  ],
+  "noEngineReferences": false
+}

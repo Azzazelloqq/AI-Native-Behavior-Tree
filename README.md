@@ -1,12 +1,12 @@
 # AI-Native Behavior Tree
 
-**AIBT** is a data-oriented behavior tree for Unity, designed for humans and AI agents.
+**AIBT** is a deterministic behavior-tree authoring, compilation, and reference-execution package for Unity, designed for humans and AI agents.
 
-The project targets a Burst-compatible, zero-GC-per-tick execution path; a readable visual editor; machine-readable contracts; reproducible performance research; and an optional MCP integration. DOTS Entities is not required.
+The project targets a future Burst-compatible, zero-GC-per-tick production path; a readable visual editor; machine-readable contracts; reproducible performance research; and an optional MCP integration. DOTS Entities is not required.
 
-Windows x64 and Android ARM64 use native execution backends. Unity Web remains a supported target through the same semantics and a single-thread immediate or frame-budgeted backend.
+Phase 1 validates the managed reference backend in Unity Editor on Windows x64, an Android ARM64 IL2CPP + Burst build smoke, and single-thread Unity Web execution in Chrome and Firefox. These results do not claim a production Burst/jobs executor, device performance, or zero-allocation execution.
 
-> Status: architecture and repository foundation. Runtime and editor APIs are not implemented yet.
+> Status: Phase 1 semantic vertical slice implemented. Canonical authoring, validation, compilation, immutable runtime programs, the deterministic reference executor, blackboard/observers, async commands, step budgeting, and backend-neutral behavior cases are covered by golden integration tests. The visual editor, MCP integration, native jobs executor, hot reload, and production performance work remain later phases.
 
 ## Design goals
 
@@ -23,9 +23,9 @@ Windows x64 and Android ARM64 use native execution backends. Unity Web remains a
 | --- | --- |
 | `Runtime/` | Compiled tree representation, execution state, scheduler, blackboard, commands |
 | `Authoring/` | Semantic authoring model, validation, compilation contracts |
-| `Editor/` | Visual editor, debugging, profiling, layout authoring |
-| `CodeGen~/` | Node registry, serializers, dispatch, analyzers, and templates |
-| `Tools~/McpServer/` | Optional MCP server and AI-agent integration |
+| `Editor/` | Planned visual editor, debugging, profiling, and layout authoring |
+| `CodeGen~/` | Planned generated dispatch, analyzers, and templates |
+| `Tools~/McpServer/` | Planned optional MCP server and AI-agent integration |
 | `Schemas~/` | Draft schemas for canonical files and tool contracts |
 | `Tests/` | Runtime and editor behavior tests |
 | `Benchmarks~/` | Reproducible performance and platform research |
@@ -42,7 +42,7 @@ Visual Editor       MCP / AI tools       Text authoring
                          |
                 Immutable Runtime Program
                          |
-      Immediate / Batched Jobs / Budgeted Scheduler
+           Reference Immediate / Step-Budgeted
                          |
               World Snapshot -> Command Buffer
 ```
@@ -60,7 +60,7 @@ Unity assets and runtime buffers are imported or compiled outputs, not the seman
 
 ## Development baseline
 
-- Unity 6 (`6000.0` or newer); initial workspace: `6000.5.2f1`.
+- Unity 6 (`6000.0` or newer); validated development baseline: `6000.5.8f1`.
 - Burst `1.8.29`.
 - Unity Collections `6.5.0`.
 - MIT license.

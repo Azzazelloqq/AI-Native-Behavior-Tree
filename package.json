@@ -2,18 +2,19 @@
   "name": "com.azzazello.aibt",
   "version": "0.1.0",
   "displayName": "AI-Native Behavior Tree",
-  "description": "A data-oriented, Burst-accelerated behavior tree for Unity, designed for humans and AI agents.",
+  "description": "Deterministic behavior-tree authoring, compilation, and reference execution for Unity.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.burst": "1.8.29",
-    "com.unity.collections": "6.5.0"
+    "com.unity.collections": "6.5.0",
+    "com.unity.nuget.newtonsoft-json": "3.2.2"
   },
   "keywords": [
     "AI",
     "Behavior Tree",
-    "Burst",
-    "Jobs",
-    "MCP"
+    "Deterministic",
+    "Authoring",
+    "Reference Runtime"
   ],
   "author": {
     "name": "Dmitry Bogdanov",

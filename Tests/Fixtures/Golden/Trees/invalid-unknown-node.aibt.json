@@ -1,0 +1,13 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.invalid-unknown-node",
+  "name": "Invalid Unknown Node",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "project.missing.node",
+      "typeVersion": 1
+    }
+  }
+}

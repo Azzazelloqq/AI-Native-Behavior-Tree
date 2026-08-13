@@ -1,0 +1,17 @@
+{
+  "taskId": "P0-005",
+  "observedDate": "2026-08-14",
+  "provider": "GitHub Actions",
+  "workflow": ".github/workflows/validation.yml",
+  "workflowYamlParse": "pass",
+  "staticVerification": "pass",
+  "diffCheck": "pass",
+  "runtimeCompile": {
+    "result": "pass",
+    "errors": 0,
+    "warnings": 3,
+    "warningClass": "Unity/.NET assembly-version conflicts"
+  },
+  "remoteWorkflowRun": "not-run",
+  "remoteWorkflowReason": "Requires repository push and an online self-hosted Unity runner."
+}

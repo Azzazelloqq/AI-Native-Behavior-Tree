@@ -1,0 +1,127 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "patrol reacts to alert",
+  "tree": "Trees/patrol-react.aibt.json",
+  "treeInstanceId": 1,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "success",
+        "blackboard": [
+          {
+            "key": "alert",
+            "value": {
+              "type": "Bool",
+              "value": true
+            },
+            "version": 1
+          }
+        ],
+        "trace": [
+          {
+            "event": "update-started"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 0
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 1
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 1,
+            "status": "failure"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 1,
+            "exitReason": "failure"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 2
+          },
+          {
+            "event": "blackboard-changed",
+            "nodeIndex": 2
+          },
+          {
+            "event": "observer-queued",
+            "nodeIndex": 1
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 2,
+            "status": "running"
+          },
+          {
+            "event": "observer-evaluated",
+            "nodeIndex": 1,
+            "status": "success"
+          },
+          {
+            "event": "node-abort-started",
+            "nodeIndex": 2,
+            "abortReason": "observer-lower-priority",
+            "sourceNodeIndex": 1
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 2,
+            "exitReason": "aborted"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 1
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 1,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 1,
+            "exitReason": "success"
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 0,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 0,
+            "exitReason": "success"
+          },
+          {
+            "event": "update-completed"
+          }
+        ],
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-error-diagnostics"
+          },
+          {
+            "kind": "terminal-root-has-no-active-nodes"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "blackboard",
+    "observer",
+    "reactive"
+  ]
+}

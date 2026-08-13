@@ -1,10 +1,17 @@
 # P1-014 — Tree blackboard runtime and observer queue
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 Implement Tree-scope runtime slots, declared access, change versions, and deferred observer reevaluation for the reference executor.
+
+## Required reading
+
+- `specifications/blackboard-v1.md`
+- `specifications/execution-semantics-v1.md`
+- `specifications/update-phases-v1.md`
+- `specifications/reference-executor-machine-v1.md`
 
 ## Depends on
 
@@ -16,7 +23,7 @@ Implement Tree-scope runtime slots, declared access, change versions, and deferr
 
 - `Runtime/Blackboard/Storage/`
 - `Runtime/Execution/Reference/Observers/`
-- Focused runtime tests.
+- `Tests/Runtime/ReferenceExecutor/BlackboardAndObservers/`
 
 ## Forbidden changes
 
@@ -32,6 +39,7 @@ Implement Tree-scope runtime slots, declared access, change versions, and deferr
 - Equal writes do not increment versions.
 - Writes never recursively update a tree.
 - `Self`, `LowerPriority`, `Both`, and `None` produce specified abort traces.
+- Observer descriptors compile from canonical node data and reevaluate at the defined between-step point.
 
 ## Required verification
 

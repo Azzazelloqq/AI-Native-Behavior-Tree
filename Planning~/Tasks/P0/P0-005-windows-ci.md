@@ -1,6 +1,6 @@
 # P0-005 — Windows validation CI
 
-Status: `Draft`
+Status: `Review`
 
 ## Objective
 
@@ -37,3 +37,9 @@ Run deterministic package validation and EditMode tests on pull requests without
 
 - Successful CI run on the repository.
 - Controlled failing branch or equivalent proof that failures propagate.
+
+## Evidence
+
+- Workflow: [`.github/workflows/validation.yml`](../../../.github/workflows/validation.yml)
+- Local verification: [`Planning~/Evidence/P0-005/README.md`](../../Evidence/P0-005/README.md)
+- A successful remote workflow run is still required before this task can become `Done`.

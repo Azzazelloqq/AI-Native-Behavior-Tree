@@ -1,0 +1,13 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.async-action",
+  "name": "Async Action",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.test.async-action",
+      "typeVersion": 1
+    }
+  }
+}

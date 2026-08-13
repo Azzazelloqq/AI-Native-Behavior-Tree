@@ -1,15 +1,18 @@
 # P0-003 — Unity Web and Burst WASM spike
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 Select the production single-thread Web execution entry point using a real Player build and recorded measurements.
 
+The representative workload is the accepted P1-018 semantic slice. The spike MUST NOT invent a throwaway substitute executor before the reference executor exists.
+
 ## Depends on
 
 - `P0-001`
 - `P0-002`
+- `P1-018`
 
 ## Required reading
 
@@ -46,3 +49,14 @@ Select the production single-thread Web execution entry point using a real Playe
 
 - Production-like Web Player build.
 - Browser execution of deterministic behavior cases and allocation/throughput scenario.
+
+## Outcome
+
+- Non-development IL2CPP WebGL build: **pass**.
+- Chrome `151.0.7922.137`: **pass**, 5/5 behavior cases plus full normalized equivalence for reactive blackboard/abort and async-command scenarios.
+- Firefox `153.0.4`: **pass**, 5/5 behavior cases plus full normalized equivalence for reactive blackboard/abort and async-command scenarios.
+- Recommended policies: `SingleThreadImmediate` and `SingleThreadBudgeted` over identical semantic contracts.
+- `IJob.Run` and Burst-direct execution of the managed reference executor: **unsupported**; repeat with the native packed executor.
+- Safari and mobile: **unverified**.
+
+Evidence: `Planning~/Evidence/P0-003/`. Pilot measurements: `Benchmarks~/Platform/Web/`.

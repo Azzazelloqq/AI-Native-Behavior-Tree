@@ -1,6 +1,6 @@
 # P1-001 — Core semantic identifiers and statuses
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -8,7 +8,7 @@ Implement the minimal backend-neutral value contracts used by all later Phase 1 
 
 ## Depends on
 
-- `P0-006`
+- `P0-002`
 
 ## Required reading
 
@@ -16,11 +16,13 @@ Implement the minimal backend-neutral value contracts used by all later Phase 1 
 - `specifications/update-phases-v1.md`
 - `specifications/determinism-v1.md`
 - `specifications/identity-and-hashing-v1.md`
+- `specifications/diagnostics-v1.md`
 
 ## Allowed changes
 
 - `Runtime/Core/Identity/`
 - `Runtime/Core/Execution/NodeStatus.cs`
+- `Runtime/Core/Diagnostics/`
 - `Tests/Runtime/Core/Identity/`
 
 ## Forbidden changes
@@ -32,6 +34,7 @@ Implement the minimal backend-neutral value contracts used by all later Phase 1 
 - Strong immutable IDs for tree, authoring node, tree instance, agent, entity, operation, and revision.
 - Public `NodeStatus` with exactly `Success`, `Failure`, and `Running`.
 - Internal state and exit/abort reason enums required by the lifecycle specification.
+- Backend-neutral diagnostic severity, code, location identities, ordering, and immutable collection.
 
 ## Acceptance criteria
 

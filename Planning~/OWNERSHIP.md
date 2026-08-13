@@ -10,7 +10,8 @@ Ownership is per assigned work item, not permanent personnel ownership.
 | Formats | `Authoring/Serialization/`, format fixtures | schemas and package metadata |
 | Validation | `Authoring/Validation/`, validation fixtures | diagnostic catalog index |
 | Compiler | `Authoring/Compilation/`, compiler tests | compiled-format version registry |
-| Behavior cases | `Tests/BehaviorCases/`, case runner | test asmdefs |
+| Behavior cases | `Tests/BehaviorCases/`, case runner, and its task-owned asmdef in P1-017 | other test asmdefs |
+| Semantic integration | `Tests/Integration/SemanticSlice/`, fixtures, sample, and its task-owned asmdef in P1-018 | other test asmdefs |
 | Platform spikes | `Spikes~/`, `Benchmarks~/Platform/` | accepted decisions and package dependencies |
 | Editor | `Editor/`, editor tests | editor asmdef and layout schema |
 | MCP | `Tools~/McpServer/` | public schema registry |

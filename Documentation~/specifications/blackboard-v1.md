@@ -37,6 +37,8 @@ Node manifests declare every possible read and write. The compiler rejects undec
 
 Each slot has a change version. The version increments only when the registered equality operation reports a changed value. Observer reevaluation is queued from version changes.
 
+Built-in equality is exact value equality. Integers, IDs, enums, and fixed strings compare their canonical values. Floating values compare IEEE numeric values after canonicalizing both `-0` and `+0` to zero; all NaN values are invalid and cannot enter a slot. Vectors and quaternions compare their canonicalized components exactly. Registered unmanaged types supply deterministic equality as part of registration.
+
 ## Shared writes
 
 Shared scope is read-only during the execute phase unless a key declares one of:
@@ -49,8 +51,10 @@ Unconfigured shared writes are compilation errors. Shared reductions occur in th
 
 ## Initialization and reset
 
-Defaults are validated and compiled. Tree-instance creation initializes every slot deterministically. Reset restores defaults and increments the tree revision once after the operation; it does not produce individual observer callbacks until the next update phase.
+Defaults are validated and compiled. Tree-instance creation initializes every slot deterministically with slot change version zero. Reset compares every slot to its default in slot-index order; changed slots increment their own versions and queue their declared observers. If at least one slot changed, the tree revision increments once after reset; a reset with no changes is a no-op. Queued callbacks run only at the next eligible update's observer reevaluation point.
 
 ## Serialization
 
 Canonical authoring JSON stores semantic values. Compiled layout uses 32-bit offsets and deterministic alignment suitable for WASM32. Runtime state is not a persistent save format.
+
+Tree JSON cannot declare `NodeLocal` keys. Node-local memory is declared by a node manifest. Compiled node records contain deterministic access tables mapping every declared Tree-scope read/write to slot indices; reference handlers access slots only through those tables.

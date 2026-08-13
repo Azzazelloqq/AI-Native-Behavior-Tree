@@ -8,7 +8,7 @@
 - Exact typed contracts for humans, tools, tests, and AI agents.
 - Forward evolution through explicit migrations.
 
-Draft JSON Schemas live in `Schemas~/`. They establish direction and may evolve before the first runtime vertical slice.
+Normative Phase 1 JSON Schemas live in `Schemas~/` and are governed by `specifications/canonical-json-v1.md` and `specifications/behavior-case-v1.md`. Persisted changes require an accepted decision and migration fixture.
 
 ## Semantic tree: `.aibt.json`
 

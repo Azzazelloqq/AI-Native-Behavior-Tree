@@ -1,0 +1,23 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.enum-snapshot",
+  "name": "Enum Snapshot",
+  "root": "root",
+  "blackboard": {
+    "state": {
+      "type": "Enum32",
+      "enumContract": "aibt.test.alert-state",
+      "default": {
+        "contract": "aibt.test.alert-state",
+        "value": 0
+      }
+    }
+  },
+  "nodes": {
+    "root": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    }
+  }
+}

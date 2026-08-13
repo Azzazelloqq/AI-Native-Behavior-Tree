@@ -1,0 +1,51 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "cancellation",
+  "tree": "Trees/async.aibt.json",
+  "treeInstanceId": 7,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "completions": [
+        {
+          "sourceId": 4,
+          "sourceSequence": 1,
+          "operationId": {
+            "treeInstanceId": 7,
+            "nodeIndex": 0,
+            "activationGeneration": 1,
+            "sequence": 1
+          },
+          "outcome": "cancelled",
+          "snapshotRevision": 1,
+          "payload": {
+            "type": "Registered",
+            "typeId": 101,
+            "typeVersion": 1,
+            "encoding": "base64",
+            "value": "AQ=="
+          }
+        }
+      ],
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "failure",
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-active-operation-leaks"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "async",
+    "cancellation"
+  ]
+}

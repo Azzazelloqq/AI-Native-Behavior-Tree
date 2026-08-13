@@ -1,0 +1,33 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "parallel decorator completes",
+  "tree": "Trees/parallel-decorator.aibt.json",
+  "treeInstanceId": 3,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "success",
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-error-diagnostics"
+          },
+          {
+            "kind": "terminal-root-has-no-active-nodes"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "decorator",
+    "parallel"
+  ]
+}

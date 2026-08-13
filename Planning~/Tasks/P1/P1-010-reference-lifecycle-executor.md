@@ -1,6 +1,6 @@
 # P1-010 — Reference lifecycle and leaf executor
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -16,6 +16,7 @@ Execute one compiled tree instance synchronously with exact Enter/Tick/Abort/Exi
 - `specifications/execution-semantics-v1.md`
 - `specifications/update-phases-v1.md`
 - `specifications/trace-v1.md`
+- `specifications/reference-executor-machine-v1.md`
 
 ## Allowed changes
 
@@ -30,7 +31,7 @@ Execute one compiled tree instance synchronously with exact Enter/Tick/Abort/Exi
 
 ## Deliverables
 
-- Instance lifecycle/state, stack/cursor, reference leaf dispatch, trace recorder test double, and explicit terminal-root restart API.
+- Explicit frame-machine lifecycle/state, stack/cursor, reference leaf dispatch, Runtime trace record contract, trace recorder test double, and explicit terminal-root restart API.
 
 ## Acceptance criteria
 

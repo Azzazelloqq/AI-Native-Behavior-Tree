@@ -1,6 +1,6 @@
 # P1-018 — End-to-end golden semantic slice
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -20,10 +20,11 @@ Prove canonical JSON through parse, validate, compile, execute, and behavior ass
 - `Tests/Integration/SemanticSlice/`
 - `Tests/Fixtures/Golden/`
 - `Samples~/SemanticSlice/`
+- `Tests/Integration/AIBT.Integration.Tests.asmdef` (the existing integration-test assembly)
 
 ## Forbidden changes
 
-- Fixing production behavior inside integration tests, adding editor UI, jobs, source generation, or MCP.
+- Fixing production behavior inside integration tests, adding editor UI, jobs, source generation, MCP, or new assembly definitions.
 
 ## Deliverables
 

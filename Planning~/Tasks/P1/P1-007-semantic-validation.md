@@ -1,10 +1,18 @@
 # P1-007 — Structural and semantic validator
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 Validate a complete authoring document and return deterministic structured diagnostics without compiling or mutating it.
+
+## Required reading
+
+- `specifications/diagnostics-v1.md`
+- `specifications/execution-semantics-v1.md`
+- `specifications/blackboard-v1.md`
+- `Schemas~/tree.schema.json`
+- `Schemas~/policy.schema.json`
 
 ## Depends on
 
@@ -26,6 +34,7 @@ Validate a complete authoring document and return deterministic structured diagn
 ## Deliverables
 
 - Root, identity, reference, cycle, reachability, child-policy, parameter, blackboard, scope, capability, and project-policy validators.
+- Observer-context, watched-key, parallel-threshold, and decorator-configuration validators.
 - Stable diagnostic code catalog for implemented rules.
 
 ## Acceptance criteria

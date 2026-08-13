@@ -1,0 +1,23 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "fixture.invalid-graph",
+  "name": "Invalid graph",
+  "root": "root",
+  "nodes": {
+    "orphan": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1
+    },
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": ["cycle", "missing"]
+    },
+    "cycle": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": ["root"]
+    }
+  }
+}

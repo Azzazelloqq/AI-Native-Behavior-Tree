@@ -29,10 +29,12 @@ An implementation task cannot silently amend a higher-priority source.
 ## Delivery strategy
 
 ```text
-P0 toolchain and evidence
+P0 toolchain + verification entrypoints
         |
         v
 P1 semantic vertical slice
+        |
+        +--> platform/CI evidence and P0 evidence gate
         |
         v
 P2 data-oriented Burst runtime
@@ -92,4 +94,4 @@ See `PARALLELIZATION.md` for safe execution waves.
 
 ## Current assignable frontier
 
-Phase 0 tasks become ready after the user actions in `USER_ACTIONS.md`. Phase 1 contracts are written, but implementation tasks depend on the toolchain baseline and on predecessors listed in `work-items.json`.
+P1-001 becomes ready after P0-002 is merged. Android and CI evidence may proceed from the verified toolchain; the representative Web spike follows P1-018. P0-006 and P1-019 then close the platform/evidence and semantic gates without a dependency cycle. Agents use `work-items.json`, not phase numbers, to determine readiness.

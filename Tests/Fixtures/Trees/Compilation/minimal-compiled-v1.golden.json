@@ -1,0 +1,10 @@
+{
+  "format": "aibt.compiled-program-golden",
+  "formatVersion": 1,
+  "sourceId": "trees/minimal.aibt.json",
+  "compiledContentHash": "8dfd848ff76637ea04469643707e561e905db88fdb7d3cc37c1079a735719f40",
+  "nodeOrder": ["root"],
+  "childIndices": [],
+  "configHex": "",
+  "defaultValueHex": ""
+}

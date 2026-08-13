@@ -4,6 +4,9 @@
   "references": [
     "AIBT.Runtime"
   ],
+  "includePlatforms": [
+    "Editor"
+  ],
   "optionalUnityReferences": [
     "TestAssemblies"
   ],

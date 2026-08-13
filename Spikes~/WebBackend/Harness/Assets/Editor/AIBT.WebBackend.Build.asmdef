@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.WebBackend.Build",
+  "rootNamespace": "AIBT.Spikes.WebBackend.Editor",
+  "references": [
+    "AIBT.Integration.Tests"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

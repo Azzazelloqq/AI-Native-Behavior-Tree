@@ -1,0 +1,43 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "schema valid minimal",
+  "tree": "Trees/minimal.aibt.json",
+  "treeInstanceId": 1,
+  "rootSeed": 0,
+  "initialBlackboard": {
+    "ready": {
+      "type": "Bool",
+      "value": true
+    },
+    "opaque": {
+      "type": "Registered",
+      "typeId": 100,
+      "typeVersion": 1,
+      "encoding": "base64",
+      "value": "AQ=="
+    }
+  },
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "success",
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-error-diagnostics"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "schema",
+    "smoke"
+  ]
+}

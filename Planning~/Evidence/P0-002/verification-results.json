@@ -1,0 +1,34 @@
+{
+  "taskId": "P0-002",
+  "observedDate": "2026-08-13",
+  "unityVersion": "6000.5.8f1",
+  "staticVerification": {
+    "exitCode": 0,
+    "schemaCount": 6,
+    "workItemCount": 25
+  },
+  "compile": {
+    "exitCode": 0,
+    "project": "isolated-aibt-harness"
+  },
+  "focusedEditMode": {
+    "exitCode": 0,
+    "total": 11,
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0
+  },
+  "fullEditMode": {
+    "exitCode": 0,
+    "total": 75,
+    "passed": 75,
+    "failed": 0,
+    "skipped": 0
+  },
+  "controlledFailure": {
+    "entrypoint": "Run-UnityTests.ps1",
+    "condition": "Focused scope without TestFilter",
+    "exitCode": 1,
+    "launchedUnity": false
+  }
+}

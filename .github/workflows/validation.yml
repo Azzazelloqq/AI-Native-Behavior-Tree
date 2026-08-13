@@ -1,0 +1,152 @@
+name: Validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Static and schemas
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install pinned uv
+        shell: pwsh
+        run: python -m pip install --disable-pip-version-check uv==0.6.17
+
+      - name: Run repository static verification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & './Tools~/Verification/Verify-Static.ps1' *>&1 |
+            Tee-Object -FilePath static-verification.log
+
+      - name: Upload static log
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: static-verification
+          path: static-verification.log
+          if-no-files-found: error
+          retention-days: 14
+
+  unity:
+    name: Unity compile and EditMode
+    needs: static
+    runs-on: [self-hosted, Windows, X64, unity-6000.5.8f1]
+    timeout-minutes: 45
+    steps:
+      - name: Checkout package into isolated Unity project
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: project/Packages/com.azzazello.aibt
+
+      - name: Validate runner and create isolated harness
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:UNITY_EDITOR_PATH) -or
+              -not (Test-Path -LiteralPath $env:UNITY_EDITOR_PATH -PathType Leaf)) {
+            throw 'The self-hosted runner must define UNITY_EDITOR_PATH for Unity 6000.5.8f1.'
+          }
+
+          $package = Join-Path $env:GITHUB_WORKSPACE 'project/Packages/com.azzazello.aibt'
+          $project = Join-Path $env:GITHUB_WORKSPACE 'project'
+          New-Item -ItemType Directory -Force -Path (Join-Path $project 'ProjectSettings') | Out-Null
+          Copy-Item -LiteralPath (Join-Path $package 'Planning~/Evidence/P0-001/Harness/ProjectSettings/ProjectVersion.txt') `
+            -Destination (Join-Path $project 'ProjectSettings/ProjectVersion.txt')
+
+          $manifest = [ordered]@{
+            dependencies = [ordered]@{
+              'com.azzazello.aibt' = 'file:com.azzazello.aibt'
+              'com.unity.burst' = '1.8.29'
+              'com.unity.collections' = '6.5.0'
+              'com.unity.nuget.newtonsoft-json' = '3.2.2'
+              'com.unity.test-framework' = '1.7.0'
+            }
+            testables = @('com.azzazello.aibt')
+          }
+          $manifest | ConvertTo-Json -Depth 4 |
+            Set-Content -LiteralPath (Join-Path $project 'Packages/manifest.json') -Encoding UTF8
+
+      - name: Restore Unity Library cache
+        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        with:
+          path: project/Library
+          key: ${{ runner.os }}-unity-6000.5.8f1-${{ hashFiles('project/Packages/com.azzazello.aibt/package.json', 'project/Packages/com.azzazello.aibt/Planning~/Evidence/P0-001/Harness/ProjectSettings/ProjectVersion.txt', 'project/Packages/com.azzazello.aibt/Planning~/Evidence/P0-001/Harness/Packages/manifest.json') }}
+
+      - name: Compile package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Join-Path $env:GITHUB_WORKSPACE 'project/Packages/com.azzazello.aibt'
+          & (Join-Path $package 'Tools~/Verification/Run-UnityCompile.ps1') `
+            -UnityPath $env:UNITY_EDITOR_PATH `
+            -ProjectPath (Join-Path $env:GITHUB_WORKSPACE 'project')
+
+      - name: Run full EditMode suite
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Join-Path $env:GITHUB_WORKSPACE 'project/Packages/com.azzazello.aibt'
+          & (Join-Path $package 'Tools~/Verification/Run-UnityTests.ps1') `
+            -UnityPath $env:UNITY_EDITOR_PATH `
+            -ProjectPath (Join-Path $env:GITHUB_WORKSPACE 'project') `
+            -Mode EditMode `
+            -Scope Full
+
+      - name: Prove verification failures return nonzero
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:GITHUB_WORKSPACE 'project/Packages/com.azzazello.aibt'
+          $failedAsExpected = $false
+          try {
+            & (Join-Path $package 'Tools~/Verification/Run-UnityTests.ps1') `
+              -UnityPath $env:UNITY_EDITOR_PATH `
+              -ProjectPath (Join-Path $env:GITHUB_WORKSPACE 'project') `
+              -Mode EditMode `
+              -Scope Focused
+          }
+          catch {
+            $failedAsExpected = $true
+          }
+          if (-not $failedAsExpected) {
+            throw 'The controlled invalid invocation unexpectedly returned success.'
+          }
+
+      - name: Sanitize Unity artifacts
+        if: always()
+        shell: pwsh
+        run: |
+          $source = Join-Path $env:GITHUB_WORKSPACE 'project/Packages/com.azzazello.aibt/Tools~/Verification/TestResults'
+          $target = Join-Path $env:GITHUB_WORKSPACE 'ci-artifacts'
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+          if (Test-Path -LiteralPath $source) {
+            Get-ChildItem -LiteralPath $source -File | ForEach-Object {
+              $content = Get-Content -LiteralPath $_.FullName -Raw -Encoding UTF8
+              $content = $content.Replace($env:GITHUB_WORKSPACE, '<WORKSPACE>')
+              $content = $content.Replace((Split-Path -Parent $env:UNITY_EDITOR_PATH), '<UNITY_EDITOR>')
+              Set-Content -LiteralPath (Join-Path $target $_.Name) -Value $content -Encoding UTF8
+            }
+          }
+
+      - name: Upload sanitized Unity logs and results
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: unity-validation
+          path: ci-artifacts
+          if-no-files-found: error
+          retention-days: 14

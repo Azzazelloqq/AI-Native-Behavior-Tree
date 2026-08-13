@@ -1,6 +1,6 @@
 # P1-008 — Logical compiled-program model
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -15,6 +15,7 @@ Define concrete immutable C# records for Compiled Program v1 without native allo
 ## Required reading
 
 - `specifications/compiled-program-v1.md`
+- `specifications/canonical-json-v1.md`
 
 ## Allowed changes
 
@@ -27,7 +28,7 @@ Define concrete immutable C# records for Compiled Program v1 without native allo
 
 ## Deliverables
 
-- Header, node records, child indices, config blob, blackboard slots/defaults, debug map, and named invalid index.
+- Header, node records, child and access indices, observer records, config blob, blackboard slots/defaults, debug map, and named invalid index.
 - Constructor/builder boundary that validates bounds, offsets, alignment, and immutability.
 
 ## Acceptance criteria

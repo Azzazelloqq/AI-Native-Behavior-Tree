@@ -8,6 +8,11 @@
   "requireTreeDescription": true,
   "requireNodeDescriptions": true,
   "blackboardNaming": "snake_case",
+  "requireDeterministicNodes": true,
+  "allowSideEffects": true,
+  "unreachableNodes": "error",
+  "supportsAgentScope": false,
+  "supportsSharedScope": false,
   "forbiddenNodeTypes": [],
   "warningsAsErrors": [
     "unreachable_node",

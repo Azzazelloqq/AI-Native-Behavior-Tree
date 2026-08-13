@@ -1,6 +1,6 @@
 # P1-013 — Parallel and core decorators
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -14,12 +14,14 @@ Implement reference `Parallel`, `Inverter`, `Succeeder`, `Failer`, finite `Repea
 ## Required reading
 
 - `specifications/time-and-random-v1.md`
+- `specifications/execution-semantics-v1.md`
+- `specifications/reference-executor-machine-v1.md`
 
 ## Allowed changes
 
 - `Runtime/Execution/Reference/Composites/Parallel/`
 - `Runtime/Execution/Reference/Decorators/`
-- Focused tests under `Tests/Runtime/ReferenceExecutor/`
+- `Tests/Runtime/ReferenceExecutor/ParallelAndDecorators/`
 
 ## Forbidden changes
 
@@ -35,6 +37,7 @@ Implement reference `Parallel`, `Inverter`, `Succeeder`, `Failer`, finite `Repea
 - Running children abort in reverse semantic order on completion/abort.
 - Threshold ambiguity without tie-break is rejected before execution.
 - Timeout/cooldown tests use controlled clocks.
+- Repeater failure policy, exact deadline behavior, cooldown blocked result, and cooldown start policy match the normative contracts.
 
 ## Required verification
 

@@ -10,7 +10,7 @@ Public node statuses are exactly:
 - `Failure`: activation completed unsuccessfully.
 - `Running`: activation remains active.
 
-`Inactive` and `BudgetYielded` are internal runtime states and MUST NOT be returned by user nodes.
+`Inactive` and budget suspension are internal executor states and MUST NOT be returned by user nodes. Exact reference-machine state and step accounting follow `reference-executor-machine-v1.md`.
 
 ## Lifecycle
 
@@ -27,7 +27,7 @@ Rules:
 2. A terminal result from `Tick` MUST be followed by `Exit` before the parent observes completion.
 3. Abort traversal is deepest active descendant first, then its ancestors.
 4. `Abort` requests cancellation and MAY emit cancellation commands. `Exit(Aborted)` performs final cleanup.
-5. Node memory is zero-initialized before `Enter` and cleared after `Exit` in v1. Persistent data belongs in a declared blackboard scope.
+5. `Activation` node memory is zero-initialized immediately before `Enter` and cleared immediately after the matching `Exit`, including `Exit(Aborted)`. `Instance` node memory is zero-initialized only when the tree instance is created, restarted, or reset and persists through terminal Exit and abort. Every node manifest declares one lifetime explicitly; Phase 1 uses `Instance` only for `Cooldown`.
 6. A completed node cannot be ticked again without a new activation.
 7. Exceptions MUST NOT cross a Burst execution boundary. Managed exceptions become structured diagnostics and fail the affected update according to the host error policy.
 
@@ -49,13 +49,12 @@ The index of a running child is retained. Earlier successful children are not re
 
 ## Reactive sequence
 
-`ReactiveSequence` reevaluates from child zero on every eligible update.
+`ReactiveSequence` reevaluates from child zero on every eligible update. If it has a running child from the previous update, that subtree is aborted and exited before reevaluation begins. It may then be re-entered if selected again.
 
 - It advances through successful children in semantic order.
 - On `Failure`, the sequence fails.
 - On `Running`, that child becomes the active child and the sequence runs.
-- If reevaluation selects a different child than the previously active child, the old active subtree is aborted before the new child is entered.
-- If an earlier child fails, any previously active later subtree is aborted before the sequence exits.
+- No candidate child is entered while the previous running subtree is still active.
 
 An empty reactive sequence succeeds.
 
@@ -71,12 +70,12 @@ The index of a running child is retained. Earlier failed children are not reeval
 
 ## Reactive selector
 
-`ReactiveSelector` reevaluates from child zero on every eligible update.
+`ReactiveSelector` reevaluates from child zero on every eligible update. If it has a running child from the previous update, that subtree is aborted and exited before reevaluation begins. It may then be re-entered if selected again.
 
 - It advances through failed children in semantic order.
 - On `Success`, the selector succeeds.
 - On `Running`, that child becomes the active child and the selector runs.
-- When a higher-priority child becomes `Running` or `Success`, a previously active lower-priority subtree is aborted before the new branch takes ownership.
+- No candidate child is entered while the previous running subtree is still active.
 
 An empty reactive selector fails.
 
@@ -90,24 +89,38 @@ Supported completion policies are:
 - `RequireAnySuccess`: succeed when any child succeeds; fail when every child fails.
 - `Threshold`: explicit positive success and failure thresholds.
 
-Thresholds MUST NOT exceed child count. For `Threshold`, if both thresholds are satisfied after the full visit, the node MUST declare `SuccessFirst` or `FailureFirst`; omission is a validation error. When the parallel node completes or is aborted, every running child is aborted in reverse semantic order. An empty parallel node is invalid.
+Thresholds MUST NOT exceed child count and MUST satisfy `successThreshold + failureThreshold <= childCount + 1`, ensuring a terminal outcome after all children complete. For `Threshold`, if both thresholds are satisfied after the full visit, the node MUST declare `SuccessFirst` or `FailureFirst`; omission is a validation error. When the parallel node completes or is aborted, every running child is aborted in reverse semantic order. An empty parallel node is invalid.
 
 ## Decorators
 
 - `Inverter` maps `Success` to `Failure`, `Failure` to `Success`, and preserves `Running`.
 - `Succeeder` returns `Running` while its child runs and `Success` after any terminal child result.
 - `Failer` returns `Running` while its child runs and `Failure` after any terminal child result.
-- `Repeater` MUST declare a finite count or an explicit unbounded flag allowed by project policy. It resets the child between iterations.
-- `Timeout` uses the tree's declared clock source, aborts a running child when the deadline is reached, and returns its configured terminal result.
-- `Cooldown` uses a declared blackboard or instance memory clock and has explicit start-on-enter or start-on-exit policy.
+- Phase 1 `Repeater` declares a positive finite `count` and `stopOnFailure`. Count zero is invalid. Each terminal child result ends one iteration and fully exits the child before the next Enter. With `stopOnFailure`, the first child failure returns `Failure`; otherwise child failures count as completed iterations. Completing `count` iterations returns `Success`. At most one new iteration begins per composite transition, so budgeting can suspend between iterations.
+- `Timeout` declares a positive duration and terminal result (`Success` or `Failure`). It captures `deadline = enterTime + duration`. On each eligible update it checks `now >= deadline` before ticking or entering the child. At deadline it aborts a running child and returns the configured result; a child that completed on an earlier update keeps its result.
+- Phase 1 `Cooldown` uses instance memory, declares positive duration, blocked result (`Success` or `Failure`), and start policy `OnEnter` or `OnSuccessfulExit`. If `now < nextAllowed`, it does not enter its child and returns the blocked result. `OnEnter` records the next deadline immediately before child Enter. `OnSuccessfulExit` records it only after the child exits `Success`; failure and abort do not start cooldown. Tree-blackboard-backed cooldown is deferred beyond Phase 1.
 
 Decorators accept exactly one child unless their node contract states a stricter rule.
+
+## Built-in configuration names
+
+Phase 1 canonical parameters are fixed:
+
+- `Parallel`: `policy` (`require-all-success`, `require-any-success`, or `threshold`); threshold additionally requires positive `successThreshold`, positive `failureThreshold`, and `tieBreak` (`success-first` or `failure-first`). Non-threshold policies forbid threshold fields.
+- `Repeater`: positive `count` and Boolean `stopOnFailure`.
+- `Timeout`: positive `durationMicroseconds` and `terminalResult` (`success` or `failure`).
+- `Cooldown`: positive `durationMicroseconds`, `blockedResult` (`success` or `failure`), and `startPolicy` (`on-enter` or `on-successful-exit`).
+- Sequence, selector, inverter, succeeder, and failer have no parameters in Phase 1.
+
+Unknown parameters are validation errors. These names and values are persisted contracts, not implementation choices.
 
 ## Abort observers
 
 Observer modes are `None`, `Self`, `LowerPriority`, and `Both`.
 
-Observers declare their blackboard keys and event dependencies. A dependency change queues reevaluation; it MUST NOT recursively execute a tree from inside a write. Reevaluations are processed in the next defined reevaluation phase in stable tree-instance and node order.
+An observer belongs to a condition child within a reactive composite and declares watched Tree-scope blackboard keys. Phase 1 does not implement external event observers. When a watched slot version changes during Execute, the observer is queued once. The queue is drained at the observer reevaluation point after the current atomic node step and before selecting the next ordinary frame transition. A write never recursively invokes a callback.
+
+Queued observers are ordered by tree instance ID and runtime observer node index. Re-evaluation ticks the observer condition once using the current Tree blackboard. A changed condition result triggers its mode: `Self` aborts its active descendant when the condition no longer permits it; `LowerPriority` is valid only for a condition under a reactive selector and, when the condition becomes successful, aborts the active sibling with greater child index; `Both` applies both transitions in that order. `None` records no observer and never queues. Repeating the same result performs no abort.
 
 - `Self` may abort the observer's active descendant branch.
 - `LowerPriority` may abort an active lower-priority sibling branch.
@@ -119,7 +132,7 @@ Priority is semantic child order under a selector: lower index means higher prio
 
 ## Budget suspension
 
-Budgets may suspend only between node steps. Suspension preserves activation and cursor state and does not call `Abort` or `Exit`. `BudgetYielded` is internal and MUST NOT be stored as a node result.
+Budgets may suspend only between node steps. Suspension preserves activation and cursor state and does not call `Abort` or `Exit`. Budget suspension is internal and MUST NOT be stored as a node result. Exact steps and resume behavior follow `reference-executor-machine-v1.md`.
 
 Step budgets are deterministic for identical inputs. Wall-clock budgets can change when behavior observes frame-varying input and therefore MUST be explicitly enabled and reported by diagnostics.
 

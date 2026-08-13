@@ -32,3 +32,5 @@ Event order follows actual semantic order and `update-phases-v1.md`. Worker comp
 Value capture is separately configurable. Sensitive or project-designated blackboard values are redacted by default. Trace buffers are bounded; overflow produces one explicit dropped-record summary and never changes tree semantics.
 
 Phase 1 may use an in-memory test recorder. Persisted/binary transport is not defined until its dedicated task.
+
+Reference executor trace emission points and budget accounting are defined by `reference-executor-machine-v1.md`.

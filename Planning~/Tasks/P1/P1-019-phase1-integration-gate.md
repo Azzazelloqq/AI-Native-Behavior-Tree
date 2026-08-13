@@ -9,6 +9,7 @@ Review and integrate the semantic vertical slice without introducing new behavio
 ## Depends on
 
 - `P1-018`
+- `P0-006`
 - Every Phase 1 task accepted by independent review.
 
 ## Allowed changes

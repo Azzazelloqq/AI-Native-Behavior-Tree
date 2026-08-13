@@ -1,0 +1,46 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "initial blackboard affects execution",
+  "tree": "Trees/patrol-react.aibt.json",
+  "treeInstanceId": 5,
+  "rootSeed": 0,
+  "initialBlackboard": {
+    "alert": {
+      "type": "Bool",
+      "value": true
+    }
+  },
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "success",
+        "blackboard": [
+          {
+            "key": "alert",
+            "value": {
+              "type": "Bool",
+              "value": true
+            },
+            "version": 0
+          }
+        ],
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "terminal-root-has-no-active-nodes"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "blackboard",
+    "initial-value"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "format": "aibt.web-platform-pilot",
+  "formatVersion": 1,
+  "observedDate": "2026-08-13",
+  "unityVersion": "6000.5.8f1",
+  "warmupCycles": 25,
+  "measurementCycles": 250,
+  "semanticStepsPerPolicy": 6250,
+  "sampleRunsPerBrowser": 1,
+  "results": [
+    {
+      "browser": "Chrome 151.0.7922.137 headless",
+      "graphicsDevice": "ANGLE SwiftShader Vulkan",
+      "immediate": {
+        "elapsedMilliseconds": 13.7,
+        "semanticStepsPerSecond": 456204.3796,
+        "gen0CollectionDelta": 0,
+        "managedHeapDeltaBytes": 1777664
+      },
+      "budgetedOneStep": {
+        "elapsedMilliseconds": 30.9,
+        "semanticStepsPerSecond": 202265.3722,
+        "gen0CollectionDelta": 0,
+        "managedHeapDeltaBytes": 8966144
+      }
+    },
+    {
+      "browser": "Firefox 153.0.4 headless",
+      "graphicsDevice": "ANGLE Intel HD Direct3D11 or similar",
+      "immediate": {
+        "elapsedMilliseconds": 11.0,
+        "semanticStepsPerSecond": 568181.8182,
+        "gen0CollectionDelta": 0,
+        "managedHeapDeltaBytes": 1777664
+      },
+      "budgetedOneStep": {
+        "elapsedMilliseconds": 37.0,
+        "semanticStepsPerSecond": 168918.9189,
+        "gen0CollectionDelta": 0,
+        "managedHeapDeltaBytes": 8966144
+      }
+    }
+  ],
+  "limitations": [
+    "One measured run per browser on one machine; values are not stable baselines.",
+    "Browsers used different graphics routes and must not be compared as rankings.",
+    "GC.GetTotalMemory delta is coarse and does not prove zero allocation.",
+    "Native memory was not measured because the tested executor is managed.",
+    "Safari and mobile browsers were not run."
+  ]
+}

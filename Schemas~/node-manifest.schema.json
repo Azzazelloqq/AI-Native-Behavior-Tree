@@ -9,19 +9,62 @@
     "version",
     "summary",
     "category",
+    "kind",
+    "whenToUse",
+    "whenNotToUse",
     "executionDomain",
     "deterministic",
     "parameters",
-    "possibleStatuses"
+    "childPolicy",
+    "reads",
+    "writes",
+    "sideEffects",
+    "possibleStatuses",
+    "memory",
+    "configuration",
+    "cancellation",
+    "costHint",
+    "examples"
   ],
   "properties": {
     "typeId": { "type": "string", "minLength": 1 },
     "version": { "type": "integer", "minimum": 1 },
     "summary": { "type": "string", "minLength": 1 },
     "category": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["composite", "decorator", "condition", "action"] },
     "whenToUse": { "type": "string" },
     "whenNotToUse": { "type": "string" },
-    "parameters": { "type": "object" },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "required", "packing"],
+        "properties": {
+          "type": { "enum": ["boolean", "uint32", "uint64", "string-enum"] },
+          "required": { "type": "boolean" },
+          "minimum": { "type": "integer", "minimum": 0 },
+          "allowedValues": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "requiredWhen": { "$ref": "#/$defs/parameterCondition" },
+          "forbiddenUnless": { "$ref": "#/$defs/parameterCondition" },
+          "packing": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["offset", "size", "alignment"],
+            "properties": {
+              "offset": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+              "size": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+              "alignment": { "enum": [1, 2, 4, 8, 16] }
+            }
+          }
+        }
+      }
+    },
     "childPolicy": {
       "type": "object",
       "additionalProperties": false,
@@ -40,11 +83,42 @@
       "minItems": 1,
       "uniqueItems": true
     },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size", "alignment", "lifetime"],
+      "properties": {
+        "size": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "alignment": { "enum": [1, 2, 4, 8, 16] },
+        "lifetime": { "enum": ["activation", "instance"] }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size", "alignment"],
+      "properties": {
+        "size": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "alignment": { "enum": [1, 2, 4, 8, 16] }
+      }
+    },
+    "cancellation": { "enum": ["not-applicable", "abort-only", "command"] },
     "executionDomain": { "enum": ["burst", "managed", "main-thread"] },
     "deterministic": { "type": "boolean" },
     "costHint": { "enum": ["trivial", "low", "medium", "high", "variable"] },
     "examples": { "type": "array", "items": { "type": "object" } },
     "deprecated": { "type": "boolean", "default": false },
     "replacementTypeId": { "type": "string" }
+  },
+  "$defs": {
+    "parameterCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parameter", "equals"],
+      "properties": {
+        "parameter": { "type": "string", "minLength": 1 },
+        "equals": { "type": "string" }
+      }
+    }
   }
 }

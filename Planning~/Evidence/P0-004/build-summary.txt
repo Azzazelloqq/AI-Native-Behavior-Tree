@@ -1,0 +1,25 @@
+AIBT P0-004 sanitized Android build summary
+Observed: 2026-08-14
+Unity: 6000.5.8f1
+Target: Android / IL2CPP / ARM64 only / development / Burst enabled
+
+[599/610] CopyFiles <HARNESS>/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/jniLibs/arm64-v8a/lib_burst_generated.so
+[607/610] CopyFiles <HARNESS>/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/jniLibs/arm64-v8a/libil2cpp.so
+Build Successful
+Build Finished, Result: Success.
+Unity batchmode exit code: 0
+
+Clean-build APK bytes: 26965742
+Clean-build APK SHA-256: 7083910f70139956f491964cf34dce8b4ce053f50805f196e85224b03a87853c
+Final-command-repeat APK bytes: 26983139
+Final-command-repeat APK SHA-256: fd63881d23c3dd30b3edb9eab2e9efd1d22e2beb50d00a51153aa08022ff3b81
+APK native entries:
+lib/arm64-v8a/lib_burst_generated.so
+lib/arm64-v8a/libc++_shared.so
+lib/arm64-v8a/libgame.so
+lib/arm64-v8a/libil2cpp.so
+lib/arm64-v8a/libmain.so
+lib/arm64-v8a/libswappywrapper.so
+lib/arm64-v8a/libunity.so
+
+Scope: build compatibility only; no device execution or performance claim.

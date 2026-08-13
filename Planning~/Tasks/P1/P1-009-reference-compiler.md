@@ -1,10 +1,16 @@
 # P1-009 — Deterministic reference compiler
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 Compile a validated authoring document and explicit node registry into an immutable logical compiled program.
+
+## Required reading
+
+- `specifications/canonical-json-v1.md`
+- `specifications/compiled-program-v1.md`
+- `specifications/identity-and-hashing-v1.md`
 
 ## Depends on
 
@@ -29,7 +35,7 @@ Compile a validated authoring document and explicit node registry into an immuta
 
 ## Acceptance criteria
 
-- Equivalent canonical input produces byte-equivalent logical content and hashes.
+- Equivalent canonical input produces structurally identical logical records, byte-identical blobs, and hashes.
 - Registry/version/policy changes affect recorded hashes as specified.
 - Overflow, alignment, collision, and unsupported-capability cases fail deterministically.
 

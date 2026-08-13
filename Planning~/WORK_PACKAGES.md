@@ -4,11 +4,11 @@ Only Phase 0 and Phase 1 are decomposed into assignable atomic cards. Later pack
 
 ## P0 — toolchain and evidence
 
-Purpose: prove the repository can be built and tested on the declared baseline before implementation begins.
+Purpose: prove the repository can be built and tested on the declared baseline, then close mandatory platform and CI evidence. P0-001 and P0-002 gate implementation; the representative Web evidence waits for P1-018 and closes before the final P1 integration gate.
 
 Atomic cards: `P0-001` through `P0-006`.
 
-Exit: all Phase 0 criteria in `MASTER_PLAN.md` pass with recorded evidence.
+Exit: all Phase 0 criteria in `MASTER_PLAN.md` pass with recorded evidence. Phase numbering does not imply that all P0 evidence precedes the P1 reference slice; `work-items.json` is authoritative.
 
 ## P1 — semantic vertical slice
 

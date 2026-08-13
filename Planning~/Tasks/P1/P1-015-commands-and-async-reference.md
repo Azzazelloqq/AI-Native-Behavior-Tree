@@ -1,6 +1,6 @@
 # P1-015 — Reference commands and async operations
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -15,12 +15,13 @@ Implement backend-neutral command records and reference async start/completion/c
 
 - `specifications/async-and-commands-v1.md`
 - `specifications/update-phases-v1.md`
+- `specifications/diagnostics-v1.md`
 
 ## Allowed changes
 
 - `Runtime/Commands/`
 - `Runtime/Execution/Reference/Async/`
-- Focused runtime tests.
+- `Tests/Runtime/ReferenceExecutor/CommandsAndAsync/`
 
 ## Forbidden changes
 
@@ -36,6 +37,7 @@ Implement backend-neutral command records and reference async start/completion/c
 - Matching completion is consumed once.
 - Duplicate, unknown, cancelled, and stale-generation results cannot reactivate old work.
 - Abort emits at most one cancellation and remains idempotent.
+- Completion ordering, outcome mapping, typed payloads, diagnostics, command phases, and sequence-overflow behavior are tested.
 
 ## Required verification
 

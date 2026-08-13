@@ -1,0 +1,13 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "fixture.valid-minimal",
+  "name": "Valid minimal",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1
+    }
+  }
+}

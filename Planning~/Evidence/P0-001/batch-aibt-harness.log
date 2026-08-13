@@ -1,0 +1,395 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.5/staging' branch; Version is '6000.5.8f1 (5cb7df797b7d) revision 6076383'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-User" at "2026-08-13T16:16:51.6052084Z"
+OS: 'Windows 11  (10.0.26200) Core' Language: 'ru' Physical Memory: 32189 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-08-13T16:16:51Z
+
+COMMAND LINE ARGUMENTS:
+<UNITY_INSTALL>\Editor\Unity.exe
+-batchmode
+-nographics
+-projectPath
+<USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af
+-quit
+-logFile
+<REPOSITORY>\Assets\AIBT\Planning~\Evidence\P0-001\batch-aibt-harness.log
+Successfully changed project path to: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af
+<USER_HOME>/AppData/Local/Temp/aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-main-allocator-mimalloc-enabled=0"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Logging is directed to a specific file, skipping project log.Player connection [7128]  Target information:
+
+Player connection [7128]  * "[IP] <LOCAL_IP> [Port] 55505 [Flags] 2 [Guid] 3116687325 [EditorId] 3116687325 [Version] 1048832 [Id] WindowsEditor(7,<HOST>) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [7128] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [7128] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-41732" after 0.2 seconds.
+[Licensing::Module] Licensing is not yet initialized.
+[Licensing::Client] Error: HandshakeResponse reported an error:
+	ResponseCode: 505
+	ResponseStatus: Unsupported protocol version '1.18.1'.
+[Licensing::Module] Error: Failed to handshake to channel: "LicenseClient-User"
+[Licensing::IpcConnector] LicenseClient-User channel disconnected successfully.
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-User-6000.5.8" at "2026-08-13T16:16:52.2119946Z"
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 49480, path: "<UNITY_INSTALL>/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.1+9fbee8e
+  Session Id:              <REDACTED>
+  Correlation Id:          <REDACTED>
+  External correlation Id: <REDACTED>
+  Machine Id:              <REDACTED>
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-User-6000.5.8" (connect: 0.00s, validation: 0.00s, handshake: 0.00s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-User-6000.5.8-notifications" at "2026-08-13T16:16:52.2170885Z"
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 2209603-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.00
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.62s
+[Licensing::Module] Licensing is initialized (took 0.34s).
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Artifact Garbage Collection - Removed 95 unused hashed content files
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path <UNITY_INSTALL>/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path <USER_HOME>/AppData/Local/Temp/aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Initialize mono
+Mono path[0] = '<UNITY_INSTALL>/Editor/Data/Managed'
+Mono path[1] = '<UNITY_INSTALL>/Editor/Data/BCLExtensions/runtime/netstandard2.1'
+Mono path[2] = '<UNITY_INSTALL>/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = '<UNITY_INSTALL>/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56732
+CodeReloadManager initialized
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: <UNITY_INSTALL>/Editor/Data/PlaybackEngines/WebGLSupport/UnityEditor.WebGL.Extensions.dll
+Register platform support module: <UNITY_INSTALL>/Editor/Data/PlaybackEngines/MacStandaloneSupport/UnityEditor.OSXStandalone.Extensions.dll
+Register platform support module: <UNITY_INSTALL>/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: <UNITY_INSTALL>/Editor/Data/PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: <UNITY_INSTALL>/Editor/Data/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll
+Register platform support module: <UNITY_INSTALL>/Editor/Data/PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
+Registered in 0.005738 seconds.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Native extension for WindowsStandalone target not found
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+Package Manager log level set to [2]
+[Licensing::Client] Successfully resolved entitlement details
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:False
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  1.419 seconds
+Domain Reload Profiling: 1818ms
+	BeginReloadAssembly (104ms)
+		CreateAndSetChildDomain (17ms)
+	RebuildCommonClasses (3ms)
+	RebuildNativeTypeToScriptingClass (11ms)
+	initialDomainReloadingComplete (49ms)
+	LoadAllAssembliesAndSetupDomain (231ms)
+		LoadAssemblies (86ms)
+		AnalyzeDomain (165ms)
+			TypeCache.Refresh (164ms)
+				TypeCache.ScanAssembly (151ms)
+	FinalizeReload (1419ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (10ms)
+			BeforeProcessingInitializeOnLoad (67ms)
+			ProcessInitializeOnLoadAttributes (61ms)
+			ProcessInitializeOnLoadMethodAttributes (1234ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 9 packages:
+  Packages from [https://packages.unity.com]:
+    com.unity.burst@1.8.29 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.burst@6bb9aca3ef38)
+    com.unity.nuget.mono-cecil@1.11.6 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.nuget.mono-cecil@ecb9724e46ff)
+    com.unity.test-framework.performance@3.5.0 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.test-framework.performance@8b56083ec0f0)
+  Built-in packages:
+    com.unity.collections@6.5.0 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.collections@ec2c217e4cb2)
+    com.unity.test-framework@1.7.0 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.test-framework@1405238725ab)
+    com.unity.ext.nunit@2.1.0 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.ext.nunit@44f7d31723bd)
+    com.unity.modules.imgui@1.0.0 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.modules.jsonserialize)
+    com.unity.mathematics@1.4.0 (location: <USER_HOME>\AppData\Local\Temp\aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af\Library\PackageCache\com.unity.mathematics@981956d94fb6)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.00 seconds
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+Starting: <UNITY_INSTALL>\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aEDbg.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: <USER_HOME>/AppData/Local/Temp/aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af
+DisplayProgressbar: Compiling Scripts
+ExitCode: 4 Duration: 0s142ms
+Rebuilding DAG because FileSignature timestamp changed: Library/Bee/1900b0aEDbg-inputdata.json
+[257/279    0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+*** Tundra requires additional run (0.12 seconds), 1 items updated, 256 evaluated
+Starting: <UNITY_INSTALL>\Editor\Data\netcorerun\netcorerun.exe "<UNITY_INSTALL>\Editor\Data\Tools\BuildPipeline\ScriptCompilationBuildProgram.exe" "Library/Bee/1900b0aEDbg.dag.json" "Library/Bee/1900b0aEDbg-inputdata.json" "Library\Bee\buildprogram0.traceevents"
+WorkingDir: <USER_HOME>/AppData/Local/Temp/aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af
+ExitCode: 0 Duration: 0s267ms
+Starting: <UNITY_INSTALL>\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aEDbg.dag" --continue-on-failure --dagfilejson="Library\Bee\1900b0aEDbg.dag.json" --profile="Library/Bee/backend2.traceevents" ScriptAssemblies
+WorkingDir: <USER_HOME>/AppData/Local/Temp/aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af
+ExitCode: 0 Duration: 1s676ms
+Finished compiling graph: 332 nodes, 3393 flattened edges (3113 ToBuild, 32 ToUse), maximum node priority 113
+[214/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.rsp2
+[217/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.Tests.rsp
+[222/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.UnityAdditionalFile.txt
+[227/329    0s] WriteResponseFile Library/Bee/artifacts/rsp/6948502770183979997.rsp
+[228/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.dll.mvfrm.rsp
+[229/329    0s] WriteResponseFile Library/Bee/artifacts/rsp/1333384345143347870.rsp
+[230/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Authoring.UnityAdditionalFile.txt
+[231/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Authoring.rsp2
+[232/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.rsp
+[233/329    0s] WriteResponseFile Library/Bee/artifacts/rsp/9410837150876601418.rsp
+[234/329    0s] WriteResponseFile Library/Bee/artifacts/rsp/13163151663746994046.rsp
+[235/329    0s] WriteResponseFile Library/Bee/artifacts/rsp/6710735383472156235.rsp
+[268/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.rsp2
+[269/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Authoring.dll.mvfrm.rsp
+[271/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Authoring.rsp
+[272/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.UnityAdditionalFile.txt
+[273/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.dll.mvfrm.rsp
+[274/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.rsp
+[275/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.Tests.dll.mvfrm.rsp
+[276/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.Tests.UnityAdditionalFile.txt
+[277/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.Tests.rsp2
+[278/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.Tests.rsp2
+[279/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.Tests.dll.mvfrm.rsp
+[280/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.Tests.UnityAdditionalFile.txt
+[281/329    0s] WriteText Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.Tests.rsp
+[282/329    0s] ILPP-Configuration Library/ilpp-configuration.nevergeneratedoutput
+[304/329    0s] MovedFromExtractor-Combine Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.dll.mvfrm
+[305/329    0s] MovedFromExtractor-Combine Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Authoring.dll.mvfrm
+[306/329    0s] MovedFromExtractor-Combine Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.dll.mvfrm
+[307/329    0s] MovedFromExtractor-Combine Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.Tests.dll.mvfrm
+[308/329    0s] MovedFromExtractor-Combine Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.Tests.dll.mvfrm
+[309/329    1s] Csc Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.dll (+2 others)
+[310/329    0s] Csc Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Authoring.dll (+2 others)
+[311/329    0s] Csc Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.Tests.dll (+2 others)
+[312/329    0s] ILPostProcess Library/Bee/artifacts/1900b0aEDbg.dag/post-processed/AIBT.Authoring.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Authoring.dll, with 141 defines and 260 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[313/329    0s] ILPostProcess Library/Bee/artifacts/1900b0aEDbg.dag/post-processed/AIBT.Runtime.Tests.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.Tests.dll, with 141 defines and 253 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[314/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Authoring.dll
+[315/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Authoring.pdb
+[316/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Runtime.Tests.dll
+[317/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Runtime.Tests.pdb
+[318/329    0s] Csc Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.dll (+2 others)
+[319/329    0s] ILPostProcess Library/Bee/artifacts/1900b0aEDbg.dag/post-processed/AIBT.Editor.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.dll, with 139 defines and 304 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[320/329    0s] ILPostProcess Library/Bee/artifacts/1900b0aEDbg.dag/post-processed/AIBT.Runtime.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Runtime.dll, with 141 defines and 261 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[321/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Editor.dll
+[322/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Editor.pdb
+[323/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Runtime.dll
+[324/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Runtime.pdb
+[325/329    0s] Csc Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.Tests.dll (+2 others)
+[326/329    0s] ILPostProcess Library/Bee/artifacts/1900b0aEDbg.dag/post-processed/AIBT.Editor.Tests.dll (+pdb)
+Processing assembly Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Editor.Tests.dll, with 139 defines and 302 references
+
+processors: Unity.Jobs.CodeGen.JobsILPostProcessor, zzzUnity.Burst.CodeGen.BurstILPostProcessor
+
+running Unity.Jobs.CodeGen.JobsILPostProcessor
+
+running zzzUnity.Burst.CodeGen.BurstILPostProcessor
+[327/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Editor.Tests.pdb
+[328/329    0s] CopyFiles Library/ScriptAssemblies/AIBT.Editor.Tests.dll
+*** Tundra build success (1.66 seconds), 51 items updated, 329 evaluated
+AssetDatabase: script compilation time: 2.456220s
+Begin MonoManager ReloadAssembly
+Total cache size 268314700
+Total cache size after purge 268314700, took 00:00:00.1661574
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Native extension for WindowsStandalone target not found
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  1.295 seconds
+Domain Reload Profiling: 1812ms
+	BeginReloadAssembly (251ms)
+		DisableScriptedObjects (112ms)
+		CreateAndSetChildDomain (33ms)
+	RebuildCommonClasses (6ms)
+	RebuildNativeTypeToScriptingClass (11ms)
+	initialDomainReloadingComplete (31ms)
+	LoadAllAssembliesAndSetupDomain (216ms)
+		LoadAssemblies (187ms)
+		AnalyzeDomain (35ms)
+			TypeCache.Refresh (28ms)
+				TypeCache.ScanAssembly (20ms)
+			BuildScriptInfoCaches (6ms)
+	FinalizeReload (1297ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (8ms)
+			BeforeProcessingInitializeOnLoad (70ms)
+			ProcessInitializeOnLoadAttributes (872ms)
+			ProcessInitializeOnLoadMethodAttributes (203ms)
+			AfterProcessingInitializeOnLoad (3ms)
+		AwakeInstancesAfterBackupRestoration (17ms)
+Starting new worker id: 0 with log in <USER_HOME>/AppData/Local/Temp/aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af/Logs/AssetImportWorkerHW0.log
+
+Asset Pipeline Refresh (id=23947b481248c09439e661d69ff51bec): Total: 4.487 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=1407 ms
+		Asset DB Callback time: managed=61 ms, native=6 ms
+		Scripting: domain reloads=1, domain reload time=541 ms, compile time=2458 ms, other=11 ms
+		Project Asset Count: scripts=149, non-scripts=57
+		Asset File Changes: new=5, changed=5, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 5.062ms
+	ApplyChangesToAssetFolders: 0.297ms
+	Scan: 38.782ms
+	Collect global state as custom dependencies: 6.693ms
+	OnSourceAssetsModified: 0.493ms
+	CategorizeScriptCompilationAssets: 3.184ms
+	ProcessAssetsWithTransientArtifactChanges: 6.412ms
+	CategorizeAssets: 1.038ms
+	CompileScripts: 2458.391ms
+	ImportOutOfDateAssets: 1308.889ms (1299.465ms without children)
+		UnloadImportedAssets: 0.135ms
+		ImportSchedulerStart: 9.263ms
+	PostProcessAllAssets: 62.416ms
+		VCAutoAddAssetPostprocess 1.513ms
+		VersionControlSettings.HiddenFilePostprocess 0.145ms
+		MonoPostProcessAllAssets: 60.002ms
+			AssetPostprocessor.OnPostprocessAllAssets 16.356ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 13.903ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 6.517ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 4.863ms
+			AssetChangedListener.OnPostprocessAllAssets 1.435ms
+			SyncVS.PostprocessSyncProject 1.343ms
+			EditModeScopePostprocessor.OnPostprocessAllAssets 1.007ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 0.800ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 0.668ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 0.482ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 0.447ms
+			AssetEvents.OnPostprocessAllAssets 0.362ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.231ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.216ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.210ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.192ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.143ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.107ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.091ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.091ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.070ms
+	PostAssetChangesProfiler: 1.437ms
+	UnloadStreamsBegin: 1.398ms
+	Untracked: 589.108ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 6.797ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-aibt-p0-001-harness-e1ffea1c776e4716ba8d7edd692cd8af
+Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 723 unused Assets / (0.8 MB). Loaded Objects now: 1498.
+Memory consumption went from 233.6 MB to 232.8 MB.
+Total: 4.554700 ms (FindLiveObjects: 0.102000 ms CreateObjectMapping: 0.107400 ms MarkObjects: 3.964600 ms  DeleteObjects: 0.379100 ms)
+
+Batchmode quit successfully invoked - shutting down!
+Curl error 42: Callback aborted
+Worker ready: AssetImportWorkerHW0 0
+Killing ADB server in 2,0790071 seconds.
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-User-6000.5.8-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-User-6000.5.8 channel disconnected successfully.
+Lingering sessions upon destruction of worker manager
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+Exiting batchmode successfully now!
+Exiting without the bug reporter. Application will terminate with return code 0

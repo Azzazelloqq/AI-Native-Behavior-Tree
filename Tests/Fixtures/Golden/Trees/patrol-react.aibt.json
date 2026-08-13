@@ -1,0 +1,37 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.patrol-react",
+  "name": "Patrol React",
+  "root": "root",
+  "blackboard": {
+    "alert": {
+      "type": "Bool",
+      "default": false
+    }
+  },
+  "nodes": {
+    "condition": {
+      "type": "aibt.test.alert-condition",
+      "typeVersion": 1,
+      "observer": {
+        "mode": "lower-priority",
+        "watchedKeys": [
+          "alert"
+        ]
+      }
+    },
+    "raise": {
+      "type": "aibt.test.raise-alert",
+      "typeVersion": 1
+    },
+    "root": {
+      "type": "aibt.core.reactive-selector",
+      "typeVersion": 1,
+      "children": [
+        "condition",
+        "raise"
+      ]
+    }
+  }
+}

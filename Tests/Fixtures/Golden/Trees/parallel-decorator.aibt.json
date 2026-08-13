@@ -1,0 +1,46 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.parallel-decorator",
+  "name": "Parallel Decorator",
+  "root": "root",
+  "nodes": {
+    "fail": {
+      "type": "aibt.test.failure",
+      "typeVersion": 1
+    },
+    "invert": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "children": [
+        "fail"
+      ]
+    },
+    "repeat": {
+      "type": "aibt.core.repeater",
+      "typeVersion": 1,
+      "parameters": {
+        "count": 2,
+        "stopOnFailure": true
+      },
+      "children": [
+        "success"
+      ]
+    },
+    "root": {
+      "type": "aibt.core.parallel",
+      "typeVersion": 1,
+      "parameters": {
+        "policy": "require-all-success"
+      },
+      "children": [
+        "invert",
+        "repeat"
+      ]
+    },
+    "success": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    }
+  }
+}

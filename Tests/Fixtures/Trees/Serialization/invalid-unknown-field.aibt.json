@@ -1,0 +1,14 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.invalid",
+  "name": "Invalid",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.action.success",
+      "typeVersion": 1,
+      "future": true
+    }
+  }
+}

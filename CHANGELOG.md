@@ -8,6 +8,10 @@ All notable changes to this project will be documented here. The project follows
 
 - Initial repository and Unity package structure.
 - Architecture, scope, editor, AI/MCP, benchmark, testing, and roadmap documentation.
-- Draft machine-readable schemas for trees, layouts, node manifests, policies, and behavior test cases.
+- Strict canonical JSON contracts and schemas for semantic trees, node manifests, policies, and behavior cases.
 - Normative v1 contracts for execution, update phases, blackboards, async commands, determinism, compiled programs, and platform backends.
 - Agent execution workflow, dependency-aware work packages, Definition of Done, and atomic Phase 0–1 work items.
+- Immutable authoring and compiled-program models, structured diagnostics, node registry, semantic validation, and deterministic reference compiler.
+- Explicit-stack reference executor with lifecycle safety, memory/reactive/parallel composites, decorators, blackboard observers, commands, async completions, and deterministic step budgeting.
+- Backend-neutral behavior-case runner and an end-to-end golden semantic slice covering canonical parse, validate, compile, and execute.
+- Repeatable static, Unity compile, EditMode, Android ARM64 IL2CPP, and Unity Web verification entrypoints with sanitized evidence.

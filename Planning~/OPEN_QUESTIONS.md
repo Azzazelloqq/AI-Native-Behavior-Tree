@@ -4,8 +4,8 @@ These are the only known unresolved items relevant to the current frontier. They
 
 | ID | Question or evidence gate | Resolution owner | Blocking |
 | --- | --- | --- | --- |
-| OQ-001 | Install exact Unity `6000.5.2f1` or explicitly approve a version-baseline change. | User | P0-001 |
-| OQ-002 | Select CI provider and approve a secure Unity license mechanism. | User | P0-005 |
+| OQ-001 | Unity `6000.5.8f1` baseline and Android/Web modules validated by P0-001 evidence. | Resolved | None |
+| OQ-002 | GitHub Actions selected. Unity validation uses a pre-activated self-hosted Windows runner; workflows receive no license secrets. | Resolved | None |
 | OQ-003 | Select the Unity Web execution entry point from the required WASM spike. | Accepted ADR after P0-003 | P0-006 |
 | OQ-004 | Obtain macOS/Safari verification access and define supported browser versions. | User + platform review | Public Web support matrix |
 | OQ-005 | Select editor graph framework from a dedicated spike. | Accepted ADR in P3 | Editor implementation |

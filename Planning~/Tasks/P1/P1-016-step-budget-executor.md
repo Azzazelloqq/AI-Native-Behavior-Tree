@@ -1,10 +1,16 @@
 # P1-016 — Deterministic step-budget execution
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 Allow the reference executor to suspend and resume between node steps without changing public statuses or lifecycle behavior.
+
+## Required reading
+
+- `specifications/reference-executor-machine-v1.md`
+- `specifications/execution-semantics-v1.md`
+- `specifications/trace-v1.md`
 
 ## Depends on
 
@@ -32,6 +38,7 @@ Allow the reference executor to suspend and resume between node steps without ch
 - Suspension calls neither abort nor exit.
 - Unlimited and arbitrarily partitioned step budgets produce the same final observable result for frozen inputs.
 - Metrics distinguish executed steps from deferred work.
+- Zero budget executes no callback; resume preserves update ID and frozen inputs.
 
 ## Required verification
 

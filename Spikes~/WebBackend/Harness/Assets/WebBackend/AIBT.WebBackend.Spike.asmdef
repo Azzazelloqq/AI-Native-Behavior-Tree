@@ -1,0 +1,14 @@
+{
+  "name": "AIBT.Integration.Tests",
+  "rootNamespace": "AIBT.Spikes.WebBackend",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Newtonsoft.Json.dll"
+  ],
+  "noEngineReferences": false
+}

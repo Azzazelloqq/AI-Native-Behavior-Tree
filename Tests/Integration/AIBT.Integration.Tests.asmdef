@@ -1,0 +1,18 @@
+{
+  "name": "AIBT.Integration.Tests",
+  "rootNamespace": "AIBT.Tests.Integration",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring",
+    "AIBT.BehaviorCases.Tests"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

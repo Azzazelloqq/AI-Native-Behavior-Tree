@@ -2,7 +2,8 @@
   "name": "AIBT.Authoring",
   "rootNamespace": "AIBT.Authoring",
   "references": [
-    "AIBT.Runtime"
+    "AIBT.Runtime",
+    "Newtonsoft.Json"
   ],
   "autoReferenced": true,
   "overrideReferences": false,

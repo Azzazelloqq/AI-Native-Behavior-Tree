@@ -1,6 +1,6 @@
 # P1-002 — Structured diagnostics foundation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -8,8 +8,12 @@ Create stable, machine-readable diagnostics shared by formats, validation, compi
 
 ## Depends on
 
-- `P0-006`
 - `P1-001`
+
+## Required reading
+
+- `specifications/diagnostics-v1.md`
+- `specifications/canonical-json-v1.md`
 
 ## Allowed changes
 
@@ -22,8 +26,7 @@ Create stable, machine-readable diagnostics shared by formats, validation, compi
 
 ## Deliverables
 
-- Severity, stable code, message, document/tree/node identity, JSON path, related locations, and optional safe suggested operation.
-- Immutable diagnostic collection and deterministic ordering.
+- Authoring extensions for message, JSON path, related document locations, optional safe suggested operation, and canonical JSON representation over Runtime diagnostic primitives.
 - Initial code-range registry by subsystem.
 
 ## Acceptance criteria

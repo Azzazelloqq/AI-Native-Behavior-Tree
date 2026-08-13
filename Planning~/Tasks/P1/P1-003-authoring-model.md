@@ -1,6 +1,6 @@
 # P1-003 — Canonical semantic authoring model
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -9,12 +9,14 @@ Represent `.aibt.json` semantics independently of JSON libraries, Unity assets, 
 ## Depends on
 
 - `P1-001`
+- `P1-005`
 
 ## Required reading
 
 - `Documentation~/data-formats.md`
 - `Schemas~/tree.schema.json`
 - `specifications/blackboard-v1.md`
+- `specifications/canonical-json-v1.md`
 
 ## Allowed changes
 

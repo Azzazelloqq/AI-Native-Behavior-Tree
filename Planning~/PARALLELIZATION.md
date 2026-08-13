@@ -9,15 +9,18 @@ P0-001
    |
 P0-002
    |
-   +--------+--------+
-   v        v        v
-P0-003   P0-004   P0-005
-   +--------+--------+
-            v
-          P0-006
+   +--------+
+   v        v
+P0-004   P0-005
+
+P1-018 -> P0-003
+             |
+P0-004 ------+------ P0-005
+             v
+           P0-006 -> P1-019
 ```
 
-`P0-003`, `P0-004`, and `P0-005` may use separate agents/worktrees after verification entrypoints are merged.
+`P0-004` and `P0-005` may use separate agents/worktrees after verification entrypoints are merged. `P0-003` waits for the representative P1-018 executor slice; this avoids benchmarking a throwaway substitute. P1 implementation starts after P0-002 and does not wait for the later platform evidence gate.
 
 ## Phase 1
 
@@ -76,4 +79,4 @@ Do not keep an agent idle waiting for a dependency inside the same session. Fini
 
 ## First Phase 1 parallel frontier
 
-After `P0-006` and `P1-001` are merged, `P1-002` and `P1-003` can proceed independently. After their merge, registry and blackboard work can proceed independently. The compiler and executor remain intentionally serialized behind shared contracts.
+After `P1-001` is merged, P1-002 proceeds, followed by independent P1-004 and P1-005. P1-003 follows P1-005. The compiler and executor remain intentionally serialized behind shared contracts.

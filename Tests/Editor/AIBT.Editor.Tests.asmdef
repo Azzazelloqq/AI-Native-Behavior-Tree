@@ -13,6 +13,9 @@
     "TestAssemblies"
   ],
   "autoReferenced": false,
-  "overrideReferences": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Newtonsoft.Json.dll"
+  ],
   "noEngineReferences": false
 }

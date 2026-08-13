@@ -4,7 +4,23 @@
   "title": "AIBT project policy",
   "type": "object",
   "additionalProperties": false,
-  "required": ["format", "formatVersion"],
+  "required": [
+    "format",
+    "formatVersion",
+    "allowManagedNodes",
+    "allowMainThreadNodes",
+    "requireTreeDescription",
+    "requireNodeDescriptions",
+    "blackboardNaming",
+    "forbiddenNodeTypes",
+    "requireDeterministicNodes",
+    "allowSideEffects",
+    "unreachableNodes",
+    "supportsAgentScope",
+    "supportsSharedScope",
+    "warningsAsErrors",
+    "performance"
+  ],
   "properties": {
     "format": { "const": "aibt.policy" },
     "formatVersion": { "type": "integer", "const": 1 },
@@ -15,6 +31,11 @@
     "requireTreeDescription": { "type": "boolean" },
     "requireNodeDescriptions": { "type": "boolean" },
     "blackboardNaming": { "enum": ["snake_case", "camelCase", "PascalCase", "any"] },
+    "requireDeterministicNodes": { "type": "boolean" },
+    "allowSideEffects": { "type": "boolean" },
+    "unreachableNodes": { "enum": ["error", "warning", "allow"] },
+    "supportsAgentScope": { "type": "boolean" },
+    "supportsSharedScope": { "type": "boolean" },
     "forbiddenNodeTypes": {
       "type": "array",
       "items": { "type": "string" },
@@ -28,6 +49,7 @@
     "performance": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["forbidUnboundedRepeaters", "requireEventDrivenServices"],
       "properties": {
         "maxEstimatedCost": { "type": "number", "minimum": 0 },
         "forbidUnboundedRepeaters": { "type": "boolean" },

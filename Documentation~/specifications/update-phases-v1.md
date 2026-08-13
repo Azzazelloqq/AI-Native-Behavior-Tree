@@ -5,7 +5,7 @@ Every backend preserves this logical phase order:
 1. **Collect input**: integrations publish immutable world snapshot data, completion records, external events, and time values.
 2. **Normalize input**: records are validated, stale async completions are discarded, and deterministic ordering keys are assigned.
 3. **Select work**: scheduler chooses eligible tree instances, backend, batching, and allowed budget.
-4. **Execute**: instances progress using their snapshot and private state. Agent/tree blackboard writes are visible to later nodes in the same instance update.
+4. **Execute**: instances progress using their snapshot and private state. Agent/tree blackboard writes are visible to later nodes in the same instance update. After each atomic node step, queued blackboard observers are reevaluated in stable order before the next ordinary frame transition.
 5. **Reduce shared writes**: declared shared operations are resolved deterministically.
 6. **Publish commands**: command streams are merged by `(phase, treeInstanceId, sequence)`.
 7. **Apply integrations**: allowed main-thread adapters consume commands.

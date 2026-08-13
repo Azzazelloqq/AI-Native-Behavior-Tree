@@ -1,10 +1,16 @@
 # P1-006 — Canonical tree JSON reader and writer
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 Read and write semantic tree documents deterministically with structured syntax and schema diagnostics.
+
+## Required reading
+
+- `specifications/canonical-json-v1.md`
+- `specifications/diagnostics-v1.md`
+- `Schemas~/tree.schema.json`
 
 ## Depends on
 

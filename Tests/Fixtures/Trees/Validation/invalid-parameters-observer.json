@@ -1,0 +1,35 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "fixture.invalid-parameters-observer",
+  "name": "Invalid parameters and observer",
+  "root": "root",
+  "blackboard": {
+    "agent-key": {
+      "type": "Bool",
+      "scope": "agent",
+      "default": false
+    }
+  },
+  "nodes": {
+    "root": {
+      "type": "aibt.core.parallel",
+      "typeVersion": 1,
+      "parameters": {
+        "policy": "threshold",
+        "successThreshold": 2,
+        "failureThreshold": 1,
+        "tieBreak": "success-first"
+      },
+      "observer": {
+        "mode": "lower-priority",
+        "watchedKeys": ["agent-key"]
+      },
+      "children": ["child"]
+    },
+    "child": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1
+    }
+  }
+}

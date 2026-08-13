@@ -1,0 +1,80 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "async completion succeeds",
+  "tree": "Trees/async-action.aibt.json",
+  "treeInstanceId": 2,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "waiting",
+        "commands": {
+          "match": "exact",
+          "records": [
+            {
+              "phase": "execute",
+              "typeId": 4323582739283225081,
+              "typeVersion": 1,
+              "treeInstanceId": 2,
+              "sequence": 1,
+              "payload": {
+                "type": "Registered",
+                "typeId": 4323582739283225081,
+                "typeVersion": 1,
+                "encoding": "base64",
+                "value": ""
+              }
+            }
+          ]
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "operation": "update",
+      "updateId": 2,
+      "snapshotRevision": 2,
+      "timeMicroseconds": 1,
+      "completions": [
+        {
+          "sourceId": 10,
+          "sourceSequence": 1,
+          "operationId": {
+            "treeInstanceId": 2,
+            "nodeIndex": 0,
+            "activationGeneration": 1,
+            "sequence": 1
+          },
+          "outcome": "succeeded",
+          "snapshotRevision": 2
+        }
+      ],
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "success",
+        "commands": {
+          "match": "exact",
+          "records": []
+        },
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-active-operation-leaks"
+          },
+          {
+            "kind": "terminal-root-has-no-active-nodes"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "async",
+    "completion"
+  ]
+}

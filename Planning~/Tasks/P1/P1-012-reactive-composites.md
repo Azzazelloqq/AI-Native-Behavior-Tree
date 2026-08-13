@@ -1,10 +1,15 @@
 # P1-012 — Reactive sequence and selector
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 Implement reevaluation and active-branch replacement for `ReactiveSequence` and `ReactiveSelector`.
+
+## Required reading
+
+- `specifications/execution-semantics-v1.md`
+- `specifications/reference-executor-machine-v1.md`
 
 ## Depends on
 
@@ -27,7 +32,7 @@ Implement reevaluation and active-branch replacement for `ReactiveSequence` and 
 ## Acceptance criteria
 
 - Reevaluation always begins at child zero.
-- A displaced running subtree is aborted before replacement enters.
+- A previous running subtree is aborted before reevaluation enters any candidate, and may be re-entered if selected again.
 - Earlier failure/success rules exactly match the normative sequence/selector contracts.
 - Memory and reactive node types are not runtime configuration modes of one ambiguous node.
 

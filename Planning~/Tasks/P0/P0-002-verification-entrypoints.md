@@ -1,6 +1,6 @@
 # P0-002 — Add repeatable verification entrypoints
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -37,3 +37,7 @@ Provide repository-owned commands for compile validation, focused EditMode tests
 
 - Run every entrypoint once on a clean checkout.
 - Demonstrate one intentional failure is returned as a nonzero exit code.
+
+## Evidence
+
+- [`Planning~/Evidence/P0-002/README.md`](../../Evidence/P0-002/README.md)
