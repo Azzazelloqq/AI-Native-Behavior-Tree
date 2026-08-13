@@ -1,0 +1,8 @@
+Candidate: 5c8d7f4a79fbec5cb5beb8090904b826d3b61365
+Detached clone status before verification: clean
+Static/schema verification: pass (6 schemas, 25 work items)
+Unity package compile: pass
+Full EditMode: 580 passed, 0 failed, 0 skipped
+Tracked Library/Temp/Logs/TestResults/build binaries: none
+Raw platform artifacts: ignored
+Parent repository unrelated dirty files: excluded from the AIBT candidate

@@ -1,0 +1,22 @@
+{
+  "format": "aibt.phase1-gate",
+  "formatVersion": 1,
+  "observedOn": "2026-08-14",
+  "sourceCommit": "5c8d7f4a79fbec5cb5beb8090904b826d3b61365",
+  "unityVersion": "6000.5.8f1",
+  "static": { "schemas": 6, "workItems": 25, "result": "passed" },
+  "compile": { "installation": "UPM package in detached clean harness", "result": "passed" },
+  "editMode": { "total": 580, "passed": 580, "failed": 0, "skipped": 0 },
+  "publicApiSha256": "d8c9a8d537657c6c39bacab4b8990bd8ccfae955374c6923e1025f4c07c26f54",
+  "platformEvidence": {
+    "android": "Planning~/Evidence/P0-004/",
+    "web": "Planning~/Evidence/P0-003/"
+  },
+  "remoteWorkflow": {
+    "runId": 31747538527,
+    "static": "success",
+    "unity": "queued-awaiting-self-hosted-runner"
+  },
+  "implementationVerdict": "accepted",
+  "formalGateVerdict": "blocked-external-ci"
+}

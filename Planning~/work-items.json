@@ -247,7 +247,7 @@
       "id": "P1-019",
       "phase": 1,
       "title": "Phase 1 independent integration gate",
-      "status": "draft",
+      "status": "blocked",
       "kind": "review",
       "card": "Planning~/Tasks/P1/P1-019-phase1-integration-gate.md",
       "dependsOn": ["P1-018", "P0-006"],

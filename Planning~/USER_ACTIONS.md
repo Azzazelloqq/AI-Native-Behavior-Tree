@@ -7,8 +7,7 @@ These actions require owner credentials, hardware, or product decisions and are 
 - Unity `6000.5.8f1` is the approved development baseline and is installed.
 - Android Build Support, SDK, NDK, and OpenJDK are installed for the selected editor.
 - Unity Web Build Support is installed for the selected editor.
-- Decide where CI runs and provide repository Actions permission if GitHub Actions is selected.
-- Provide or approve Unity license activation for CI without committing license data.
+- Connect a pre-activated Windows x64 GitHub Actions runner to `Azzazelloqq/AI-Native-Behavior-Tree` with label `unity-6000.5.8f1`, then rerun the queued `Validation` workflow. The runner must define `UNITY_EDITOR_PATH` for Unity `6000.5.8f1`; no license data belongs in the repository or workflow.
 - Identify at least one Android ARM64 device class for benchmark evidence.
 - Provide access to macOS/Safari hardware or CI before Safari can become a verified Web target.
 

@@ -25,4 +25,6 @@ Machine-readable results are in `local-verification.json`.
 
 ## Pending acceptance evidence
 
-The workflow has not yet run on GitHub. P0-005 remains `Review` until both jobs pass in a repository workflow run. This local environment cannot manufacture that external run, runner labels, or GitHub check conclusion.
+Workflow run [`31747538527`](https://github.com/Azzazelloqq/AI-Native-Behavior-Tree/actions/runs/31747538527) was triggered for candidate `5c8d7f4a79fbec5cb5beb8090904b826d3b61365`. Its GitHub-hosted **Static and schemas** job passed. Its **Unity compile and EditMode** job is queued because no matching self-hosted runner is connected.
+
+The same committed candidate independently passes compile and 580/580 EditMode tests from a detached clean clone installed as `Packages/com.azzazello.aibt`. This local result does not replace the card's required successful remote workflow. P0-005 therefore remains `Review`.

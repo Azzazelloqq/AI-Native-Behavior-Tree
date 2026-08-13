@@ -1,0 +1,22 @@
+{
+  "format": "aibt.assembly-dependencies",
+  "formatVersion": 1,
+  "sourceCommit": "5c8d7f4a79fbec5cb5beb8090904b826d3b61365",
+  "assemblies": [
+    {
+      "name": "AIBT.Runtime",
+      "references": ["Unity.Burst", "Unity.Collections"],
+      "forbiddenReferencesFound": []
+    },
+    {
+      "name": "AIBT.Authoring",
+      "references": ["AIBT.Runtime", "Newtonsoft.Json"],
+      "forbiddenReferencesFound": []
+    },
+    {
+      "name": "AIBT.Editor",
+      "references": ["AIBT.Runtime", "AIBT.Authoring"],
+      "includePlatforms": ["Editor"]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # P1-019 — Phase 1 independent integration gate
 
-Status: `Draft`
+Status: `Blocked`
 
 ## Objective
 
@@ -32,3 +32,7 @@ Review and integrate the semantic vertical slice without introducing new behavio
 - No Editor/MCP/DOTS dependency leaks into Runtime.
 - No claimed Burst/jobs/Web/Android performance exists without corresponding evidence.
 - All remaining open items are explicitly assigned to later work packages.
+
+## Current gate result
+
+The Phase 1 implementation and clean-checkout verification are accepted. Formal closure is blocked only by `P0-005`: the GitHub-hosted static job passes, while the Unity job is queued until a pre-activated self-hosted runner with label `unity-6000.5.8f1` is connected. See [`Planning~/Evidence/P1-GATE/README.md`](../../Evidence/P1-GATE/README.md).

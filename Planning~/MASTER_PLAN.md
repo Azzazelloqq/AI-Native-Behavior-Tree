@@ -94,4 +94,4 @@ See `PARALLELIZATION.md` for safe execution waves.
 
 ## Current assignable frontier
 
-P1-001 becomes ready after P0-002 is merged. Android and CI evidence may proceed from the verified toolchain; the representative Web spike follows P1-018. P0-006 and P1-019 then close the platform/evidence and semantic gates without a dependency cycle. Agents use `work-items.json`, not phase numbers, to determine readiness.
+The Phase 1 semantic slice and local platform evidence are complete. The only remaining Phase 0/1 gate dependency is a successful remote Unity workflow run on the documented pre-activated self-hosted Windows runner. Phase 2 must not begin until that external gate is recorded and `P0-006`/`P1-019` move from `Blocked` to `Done`. Agents use `work-items.json`, not phase numbers, to determine readiness.
