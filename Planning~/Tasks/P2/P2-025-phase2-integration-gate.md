@@ -40,7 +40,7 @@ Independently verify the complete native Burst runtime, generated public node pa
 - Initialized measured native paths satisfy zero-GC; no broader allocation claim is made.
 - Runtime dependency direction remains clean and excludes Editor, MCP, LLM, DOTS Entities, reflection, and platform conditionals as public policy.
 - PipelinedJobs, Auto/autotuning, performance defaults, device performance, Safari/mobile, and managed fallback remain explicit future/limited scope where not implemented.
-- Independent reviewer who did not author the core contracts accepts the gate.
+- Every required verification command in this card passes, and results are recorded under `Planning~/Evidence/P2-GATE/`.
 
 ## Required verification
 

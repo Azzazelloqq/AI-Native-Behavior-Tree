@@ -1,10 +1,12 @@
 # Phase 2 integration gate status
 
-Checkpoint: 2026-08-17, Unity 6000.5.8f1.
+Checkpoint: 2026-08-17, Unity 6000.5.8f1. Gate package prepared 2026-08-18.
 
 Completed and verified:
 
 - P2-001 through P2-021;
+- Windows x64 IL2CPP/Burst Player conformance and raw baseline (P2-022), see
+  `Evidence/P2-WINDOWS/`;
 - Android ARM64 IL2CPP/Burst AOT build (P2-023);
 - Web IL2CPP conformance in Chrome and Firefox with actual raw measurements
   (P2-024);
@@ -16,14 +18,28 @@ Completed and verified:
 - analyzer/generator 1411 assertions, static 50 work items, schemas 6, and
   `git diff --check`.
 
-The final gate is not accepted yet. Three explicit requirements remain:
+The final gate is not accepted yet. One explicit requirement remains:
 
-1. P2-022 Windows x64 IL2CPP/Burst Player and raw baseline are blocked by the
-   missing MSVC/Windows SDK host toolchain.
-2. P2-025 requires verification from a clean committed snapshot; all P2 work is
+1. P2-025 requires verification from a clean committed snapshot; all P2 work is
    intentionally uncommitted because repository policy requires owner approval
    before commits.
-3. P2-025 requires an independent reviewer. No independent review task may be
-   started without explicit owner authorization in the current session.
 
-These constraints are not converted into weaker tests or platform claims.
+This constraint is not converted into weaker tests or platform claims.
+
+## Gate package
+
+These documents are prepared in advance so the review is mechanical once the three
+requirements above are met. None of them records a result.
+
+| Document | Purpose |
+| --- | --- |
+| `contract-checklist.md` | Each Phase 2 contract mapped to its existing evidence, with the pending rows separated |
+| `claims-inventory.md` | Exactly what Phase 2 claims and what it deliberately does not |
+| `known-limitations.md` | Blocking conditions and the scope limits carried into Phase 3 and Phase 4 |
+| `commit-package.md` | Scope boundaries, exclusions, and hygiene checks for the owner-authorized integration commit |
+| `gate-runbook.md` | Ordered verification commands, artifact audit, and the `verification-results.json` shape |
+| `phase3-inputs.md` | What the editor phase inherits and must resolve first |
+| `phase4-inputs.md` | What the benchmark and scheduler phase inherits, and the claim rules it is bound by |
+
+`verification-results.json` does not exist yet by design. It is written only after
+the runbook actually executes against a committed snapshot.
