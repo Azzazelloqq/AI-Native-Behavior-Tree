@@ -625,7 +625,7 @@
       "id": "P2-022",
       "phase": 2,
       "title": "Windows Player conformance and Phase 2 baseline",
-      "status": "blocked",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P2/P2-022-windows-baseline.md",
       "dependsOn": [

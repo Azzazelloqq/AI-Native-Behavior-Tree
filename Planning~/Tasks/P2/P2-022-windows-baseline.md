@@ -1,6 +1,6 @@
 # P2-022 — Windows Player conformance and Phase 2 baseline
 
-Status: `Blocked`
+Status: `Done`
 
 ## Objective
 
