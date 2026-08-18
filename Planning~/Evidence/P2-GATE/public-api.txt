@@ -1,0 +1,2168 @@
+ASSEMBLY AIBT.Authoring, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+ASSEMBLY AIBT.Runtime, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+TYPE AIBT.AgentId
+TYPE AIBT.AssetId
+TYPE AIBT.Authoring.AuthoringDiagnostic
+TYPE AIBT.Authoring.AuthoringDiagnosticCollection
+TYPE AIBT.Authoring.BlackboardDefaultValue
+TYPE AIBT.Authoring.BlackboardDiagnosticCatalog
+TYPE AIBT.Authoring.BlackboardDiagnosticCodes
+TYPE AIBT.Authoring.BlackboardKeyDefinition
+TYPE AIBT.Authoring.BlackboardNamingPolicy
+TYPE AIBT.Authoring.BlackboardReductionKind
+TYPE AIBT.Authoring.BlackboardSchemaValidator
+TYPE AIBT.Authoring.BlackboardScopeContract
+TYPE AIBT.Authoring.BlackboardTypeReference
+TYPE AIBT.Authoring.BuiltInNodeManifests
+TYPE AIBT.Authoring.CanonicalTreeJson
+TYPE AIBT.Authoring.DiagnosticJson
+TYPE AIBT.Authoring.DiagnosticOperationDescriptor
+TYPE AIBT.Authoring.DiagnosticOperationPayload
+TYPE AIBT.Authoring.DiagnosticOperationRegistry
+TYPE AIBT.Authoring.DiagnosticPayloadContract
+TYPE AIBT.Authoring.DiagnosticPayloadKind
+TYPE AIBT.Authoring.DiagnosticPayloadMember
+TYPE AIBT.Authoring.DiagnosticPayloadPropertyContract
+TYPE AIBT.Authoring.GeneratedAccessModeV2
+TYPE AIBT.Authoring.GeneratedBindingDescriptor
+TYPE AIBT.Authoring.GeneratedBindingKind
+TYPE AIBT.Authoring.GeneratedCompiledAccessRecordV2
+TYPE AIBT.Authoring.GeneratedCompiledProgramV2
+TYPE AIBT.Authoring.GeneratedCompiledProgramV2Compiler
+TYPE AIBT.Authoring.GeneratedCompiledProgramV2Result
+TYPE AIBT.Authoring.GeneratedCompiledSlotRecordV2
+TYPE AIBT.Authoring.GeneratedConfigurationPackResult
+TYPE AIBT.Authoring.GeneratedConfigurationPacker
+TYPE AIBT.Authoring.GeneratedFieldEncoding
+TYPE AIBT.Authoring.GeneratedNodeAccessRecord
+TYPE AIBT.Authoring.GeneratedNodeDescriptor
+TYPE AIBT.Authoring.GeneratedNodeRegistry
+TYPE AIBT.Authoring.GeneratedPhaseCapability
+TYPE AIBT.Authoring.GeneratedScopeCompilationInput
+TYPE AIBT.Authoring.GeneratedScopeCompilationResult
+TYPE AIBT.Authoring.GeneratedScopeCompilationSetResult
+TYPE AIBT.Authoring.GeneratedScopeCompiler
+TYPE AIBT.Authoring.GeneratedScopeDescriptor
+TYPE AIBT.Authoring.GeneratedScopeSlot
+TYPE AIBT.Authoring.GeneratedShardMetadataArtifact
+TYPE AIBT.Authoring.GeneratedShardMetadataMaterializer
+TYPE AIBT.Authoring.GeneratedStorageField
+TYPE AIBT.Authoring.GeneratedTypeRecord
+TYPE AIBT.Authoring.GeneratedTypeRole
+TYPE AIBT.Authoring.GeneratedWatchedSlotV2
+TYPE AIBT.Authoring.NodeAccessContract
+TYPE AIBT.Authoring.NodeAccessMode
+TYPE AIBT.Authoring.NodeBehaviorKind
+TYPE AIBT.Authoring.NodeBindingMap
+TYPE AIBT.Authoring.NodeCancellationMode
+TYPE AIBT.Authoring.NodeChildPolicy
+TYPE AIBT.Authoring.NodeConfigurationDescriptor
+TYPE AIBT.Authoring.NodeConfigurationField
+TYPE AIBT.Authoring.NodeCostHint
+TYPE AIBT.Authoring.NodeDocument
+TYPE AIBT.Authoring.NodeExecutionDomain
+TYPE AIBT.Authoring.NodeManifest
+TYPE AIBT.Authoring.NodeManifestExample
+TYPE AIBT.Authoring.NodeManifestSource
+TYPE AIBT.Authoring.NodeMemoryDescriptor
+TYPE AIBT.Authoring.NodeObserver
+TYPE AIBT.Authoring.NodeParameterCondition
+TYPE AIBT.Authoring.NodeParameterContract
+TYPE AIBT.Authoring.NodeParameterType
+TYPE AIBT.Authoring.NodeRegistry
+TYPE AIBT.Authoring.NodeRegistryBuildResult
+TYPE AIBT.Authoring.NodeRegistryBuilder
+TYPE AIBT.Authoring.NodeRegistryCapabilityFlags
+TYPE AIBT.Authoring.NodeRegistryEntry
+TYPE AIBT.Authoring.ReferenceCompilationPolicy
+TYPE AIBT.Authoring.ReferenceCompilationPolicyCodec
+TYPE AIBT.Authoring.ReferenceCompilationResult
+TYPE AIBT.Authoring.ReferenceCompiler
+TYPE AIBT.Authoring.ReferenceCompilerDiagnosticCodes
+TYPE AIBT.Authoring.ReferenceCompilerOptions
+TYPE AIBT.Authoring.RegisteredBlackboardTypeCatalog
+TYPE AIBT.Authoring.RegisteredBlackboardTypeCatalogEntry
+TYPE AIBT.Authoring.SemanticObject
+TYPE AIBT.Authoring.SemanticProperty
+TYPE AIBT.Authoring.SemanticValue
+TYPE AIBT.Authoring.SemanticValueKind
+TYPE AIBT.Authoring.SuggestedDiagnosticOperation
+TYPE AIBT.Authoring.TagSet
+TYPE AIBT.Authoring.TreeDocument
+TYPE AIBT.Authoring.TreeJsonDiagnosticCodes
+TYPE AIBT.Authoring.TreeJsonReadResult
+TYPE AIBT.Authoring.TreeJsonWriteResult
+TYPE AIBT.Authoring.TreeValidationDiagnosticCatalog
+TYPE AIBT.Authoring.TreeValidationDiagnosticCodes
+TYPE AIBT.Authoring.TreeValidationPolicy
+TYPE AIBT.Authoring.TreeValidator
+TYPE AIBT.Authoring.UnreachableNodePolicy
+TYPE AIBT.Authoring.ValidationOptions
+TYPE AIBT.BlackboardFixedStringCapacity
+TYPE AIBT.BlackboardScope
+TYPE AIBT.BlackboardTypeDescriptor
+TYPE AIBT.BlackboardValue
+TYPE AIBT.BlackboardValueType
+TYPE AIBT.BuiltInBlackboardTypes
+TYPE AIBT.Burst.AibtAsyncOperationBindingAttribute
+TYPE AIBT.Burst.AibtBlackboardBindingAttribute
+TYPE AIBT.Burst.AibtBurstNodeAttribute
+TYPE AIBT.Burst.AibtBurstValueAttribute
+TYPE AIBT.Burst.AibtCatalogSetAttribute
+TYPE AIBT.Burst.AibtCatalogShardAttribute
+TYPE AIBT.Burst.AibtCommandBindingAttribute
+TYPE AIBT.Burst.AibtCompletionBindingAttribute
+TYPE AIBT.Burst.AibtConfigFieldAttribute
+TYPE AIBT.Burst.AibtMemoryFieldAttribute
+TYPE AIBT.Burst.AibtNodeDocumentationAttribute
+TYPE AIBT.Burst.AibtObserverConditionAttribute
+TYPE AIBT.Burst.AibtRandomStreamAttribute
+TYPE AIBT.Burst.AibtSnapshotBindingAttribute
+TYPE AIBT.Burst.AibtValueFieldAttribute
+TYPE AIBT.Burst.AsyncOperationHandle`2
+TYPE AIBT.Burst.BlackboardReadHandle`1
+TYPE AIBT.Burst.BlackboardReadWriteHandle`1
+TYPE AIBT.Burst.BlackboardWriteHandle`1
+TYPE AIBT.Burst.BurstAbortContext
+TYPE AIBT.Burst.BurstBlackboardAccess
+TYPE AIBT.Burst.BurstCallbackPhase
+TYPE AIBT.Burst.BurstCancellationMode
+TYPE AIBT.Burst.BurstCatalogFingerprint
+TYPE AIBT.Burst.BurstCatalogHandshake
+TYPE AIBT.Burst.BurstCatalogValidationCode
+TYPE AIBT.Burst.BurstCatalogValidationResult
+TYPE AIBT.Burst.BurstCompletionOutcome
+TYPE AIBT.Burst.BurstConfigurationReader
+TYPE AIBT.Burst.BurstContextResult
+TYPE AIBT.Burst.BurstDispatchFrame
+TYPE AIBT.Burst.BurstEnterContext
+TYPE AIBT.Burst.BurstExecutionBatch
+TYPE AIBT.Burst.BurstExecutionCode
+TYPE AIBT.Burst.BurstExecutionResult
+TYPE AIBT.Burst.BurstExitContext
+TYPE AIBT.Burst.BurstGeneratedRuntimeBridge
+TYPE AIBT.Burst.BurstHash256
+TYPE AIBT.Burst.BurstMemoryAccessor
+TYPE AIBT.Burst.BurstNodeAbortReason
+TYPE AIBT.Burst.BurstNodeCost
+TYPE AIBT.Burst.BurstNodeExitReason
+TYPE AIBT.Burst.BurstNodeKind
+TYPE AIBT.Burst.BurstNodeStatusMask
+TYPE AIBT.Burst.BurstObserverContext
+TYPE AIBT.Burst.BurstTickContext
+TYPE AIBT.Burst.BurstValueReader
+TYPE AIBT.Burst.BurstValueWriter
+TYPE AIBT.Burst.CommandHandle`1
+TYPE AIBT.Burst.CompletionHandle`1
+TYPE AIBT.Burst.ConditionResult
+TYPE AIBT.Burst.SnapshotReadHandle`1
+TYPE AIBT.CommandBatch
+TYPE AIBT.CommandBatchMerger
+TYPE AIBT.CommandPhase
+TYPE AIBT.CommandRecord
+TYPE AIBT.CommandType
+TYPE AIBT.CompiledBlackboardAccessFlags
+TYPE AIBT.CompiledBlackboardSlotRecord
+TYPE AIBT.CompiledCompilerVersion
+TYPE AIBT.CompiledDebugMapEntry
+TYPE AIBT.CompiledHash
+TYPE AIBT.CompiledIndex
+TYPE AIBT.CompiledNodeFlags
+TYPE AIBT.CompiledNodeRecord
+TYPE AIBT.CompiledObserverMode
+TYPE AIBT.CompiledObserverRecord
+TYPE AIBT.CompiledProgram
+TYPE AIBT.CompiledProgramHeader
+TYPE AIBT.CompiledRange
+TYPE AIBT.CompletionBatch
+TYPE AIBT.CompletionOutcome
+TYPE AIBT.CompletionPayloadType
+TYPE AIBT.CompletionRecord
+TYPE AIBT.Diagnostic
+TYPE AIBT.DiagnosticCatalog
+TYPE AIBT.DiagnosticCode
+TYPE AIBT.DiagnosticCodeRange
+TYPE AIBT.DiagnosticCodeRanges
+TYPE AIBT.DiagnosticCollection
+TYPE AIBT.DiagnosticDescriptor
+TYPE AIBT.DiagnosticField
+TYPE AIBT.DiagnosticLocation
+TYPE AIBT.DiagnosticSeverity
+TYPE AIBT.DiagnosticSubsystem
+TYPE AIBT.EntityId
+TYPE AIBT.Enum32Value
+TYPE AIBT.Float2Value
+TYPE AIBT.Float3Value
+TYPE AIBT.NativeAgentBindingV1
+TYPE AIBT.NativeAgentBlackboardV1
+TYPE AIBT.NativeAgentContextCapacityV1
+TYPE AIBT.NativeAgentContextOwnerV1
+TYPE AIBT.NativeAgentContextRegistryV1
+TYPE AIBT.NativeAgentContextViewV1
+TYPE AIBT.NativeAgentExecuteLeaseV1
+TYPE AIBT.NativeAgentExecuteLeaseV2
+TYPE AIBT.NativeAgentExecuteWindowV1
+TYPE AIBT.NativeAgentExecuteWindowV2
+TYPE AIBT.NativeAgentExecutionViewV1
+TYPE AIBT.NativeBlackboardAccessBindingV2
+TYPE AIBT.NativeBlackboardAccessModeV2
+TYPE AIBT.NativeBlackboardAccessRecordV2
+TYPE AIBT.NativeBlackboardFieldEncodingV2
+TYPE AIBT.NativeBlackboardReductionKindV2
+TYPE AIBT.NativeBlackboardScopeBindingV2
+TYPE AIBT.NativeBlackboardScopeRecordV2
+TYPE AIBT.NativeBlackboardSlotAuthorityV2
+TYPE AIBT.NativeBlackboardSlotBindingV2
+TYPE AIBT.NativeBlackboardTypeIdV2
+TYPE AIBT.NativeBlackboardWatchedSlotBindingV2
+TYPE AIBT.NativeBudgetStateV1
+TYPE AIBT.NativeCommandAsyncCapacityV1
+TYPE AIBT.NativeCommandAsyncDiagnosticCodeV1
+TYPE AIBT.NativeCommandAsyncLeaseV1
+TYPE AIBT.NativeCommandAsyncOwnerV1
+TYPE AIBT.NativeCommandAsyncViewV1
+TYPE AIBT.NativeCommandMergeCapacityV1
+TYPE AIBT.NativeCommandMergeOwnerV1
+TYPE AIBT.NativeCommandRecordV1
+TYPE AIBT.NativeCommandStreamViewV1
+TYPE AIBT.NativeCompiledBlackboardSlotRecordV1
+TYPE AIBT.NativeCompiledNodeRecordV1
+TYPE AIBT.NativeCompiledObserverRecordV1
+TYPE AIBT.NativeCompiledProgramHeaderV1
+TYPE AIBT.NativeCompletionDiagnosticV1
+TYPE AIBT.NativeCompletionExpectationV1
+TYPE AIBT.NativeCompletionInputRecordV1
+TYPE AIBT.NativeConsumedCompletionV1
+TYPE AIBT.NativeDiagnosticAppendResultV1
+TYPE AIBT.NativeDiagnosticChannelCapacityV1
+TYPE AIBT.NativeDiagnosticChannelFailureV1
+TYPE AIBT.NativeDiagnosticChannelLeaseV1
+TYPE AIBT.NativeDiagnosticChannelOwnerV1
+TYPE AIBT.NativeDiagnosticChannelSnapshotV1
+TYPE AIBT.NativeDiagnosticFieldIdV1
+TYPE AIBT.NativeDiagnosticFieldPairV1
+TYPE AIBT.NativeDiagnosticLocationFlagsV1
+TYPE AIBT.NativeDiagnosticLocationV1
+TYPE AIBT.NativeDiagnosticMergeV1
+TYPE AIBT.NativeDiagnosticOperationV1
+TYPE AIBT.NativeDiagnosticProjectorV1
+TYPE AIBT.NativeDiagnosticRecordV1
+TYPE AIBT.NativeDiagnosticResourceKindV1
+TYPE AIBT.NativeDiagnosticValueKindV1
+TYPE AIBT.NativeDiagnosticWriterV1
+TYPE AIBT.NativeExecuteSelectionCapacityV1
+TYPE AIBT.NativeExecuteSelectionEntryV1
+TYPE AIBT.NativeExecuteSelectionReadLeaseV1
+TYPE AIBT.NativeExecuteSelectionViewV1
+TYPE AIBT.NativeExecuteSelectionWindowOwnerV1
+TYPE AIBT.NativeExecuteSelectionWindowV1
+TYPE AIBT.NativeFrameLifecycleStateV1
+TYPE AIBT.NativeFrameStateV1
+TYPE AIBT.NativeHash256V1
+TYPE AIBT.NativeInstanceArenaCapacityV1
+TYPE AIBT.NativeInstanceArenaCapacityV2
+TYPE AIBT.NativeInstanceArenaOwnerV1
+TYPE AIBT.NativeInstanceArenaViewV1
+TYPE AIBT.NativeInstanceArenaViewV2
+TYPE AIBT.NativeInstanceExecutionLeaseV1
+TYPE AIBT.NativeInstanceExecutionLeaseV2
+TYPE AIBT.NativeLeaseTokenV1
+TYPE AIBT.NativeMergedCommandViewV1
+TYPE AIBT.NativeNodeBlackboardAccessRangeV2
+TYPE AIBT.NativeObserverStateV1
+TYPE AIBT.NativeOperationStateV1
+TYPE AIBT.NativeOwnerStateV1
+TYPE AIBT.NativeParallelBranchStateV1
+TYPE AIBT.NativePayloadSliceV1
+TYPE AIBT.NativeProgramBlackboardBindingV2
+TYPE AIBT.NativeProgramImageCapacityV1
+TYPE AIBT.NativeProgramImageCapacityV2
+TYPE AIBT.NativeProgramImageOwnerV1
+TYPE AIBT.NativeProgramImageViewV1
+TYPE AIBT.NativeProgramImageViewV2
+TYPE AIBT.NativeProgramReadLeaseV1
+TYPE AIBT.NativeProgramReadLeaseV2
+TYPE AIBT.NativeRegisteredBlackboardFieldBindingV2
+TYPE AIBT.NativeRegisteredBlackboardFieldRecordV2
+TYPE AIBT.NativeRegisteredBlackboardTypeBindingV2
+TYPE AIBT.NativeRegisteredBlackboardTypeRecordV2
+TYPE AIBT.NativeResourceKindV1
+TYPE AIBT.NativeRuntimeDiagnosticCodeV1
+TYPE AIBT.NativeRuntimeFailureV1
+TYPE AIBT.NativeSharedBindingV1
+TYPE AIBT.NativeSharedBlackboardV1
+TYPE AIBT.NativeSharedCommitReportV1
+TYPE AIBT.NativeSharedContextCapacityV1
+TYPE AIBT.NativeSharedContextOwnerV1
+TYPE AIBT.NativeSharedContextViewV1
+TYPE AIBT.NativeSharedContributionLeaseV1
+TYPE AIBT.NativeSharedContributionRecordV1
+TYPE AIBT.NativeSharedContributionStreamV1
+TYPE AIBT.NativeSharedContributionStreamViewV1
+TYPE AIBT.NativeSharedContributionWriterV1
+TYPE AIBT.NativeSharedExecutionViewV1
+TYPE AIBT.NativeSharedReductionLeaseV1
+TYPE AIBT.NativeSharedReductionV1
+TYPE AIBT.NativeSharedReductionViewV1
+TYPE AIBT.NativeSharedUpdateWindowV1
+TYPE AIBT.NativeSnapshotBuilderV1
+TYPE AIBT.NativeSnapshotLeaseTokenV1
+TYPE AIBT.NativeSnapshotOwnerV1
+TYPE AIBT.NativeSnapshotReadHandleV1`1
+TYPE AIBT.NativeSnapshotReadLeaseV1
+TYPE AIBT.NativeSnapshotTypeDescriptorV1
+TYPE AIBT.NativeSnapshotViewV1
+TYPE AIBT.NativeTraceAppendResultV1
+TYPE AIBT.NativeTraceChannelCapacityV1
+TYPE AIBT.NativeTraceChannelFailureV1
+TYPE AIBT.NativeTraceChannelLeaseV1
+TYPE AIBT.NativeTraceChannelOwnerV1
+TYPE AIBT.NativeTraceChannelSnapshotV1
+TYPE AIBT.NativeTraceEventKindV1
+TYPE AIBT.NativeTraceLevelV1
+TYPE AIBT.NativeTraceMergeV1
+TYPE AIBT.NativeTraceNodeAbortReasonV1
+TYPE AIBT.NativeTraceNodeExitReasonV1
+TYPE AIBT.NativeTraceOptionalFieldsV1
+TYPE AIBT.NativeTraceRecordV1
+TYPE AIBT.NativeTraceWriterV1
+TYPE AIBT.NativeTreeBlackboardV1
+TYPE AIBT.NativeUpdatePhaseV1
+TYPE AIBT.NativeUpdateStateV1
+TYPE AIBT.NodeId
+TYPE AIBT.NodeMemoryLifetime
+TYPE AIBT.NodeStatus
+TYPE AIBT.OperationId
+TYPE AIBT.QuaternionValue
+TYPE AIBT.RegisteredUnmanagedTypeDescriptor
+TYPE AIBT.Revision
+TYPE AIBT.RuntimeNodeIndex
+TYPE AIBT.StableHash
+TYPE AIBT.TreeId
+TYPE AIBT.TreeInstanceId
+  FIELD AIBT.Authoring.BlackboardNamingPolicy Any
+  FIELD AIBT.Authoring.BlackboardNamingPolicy CamelCase
+  FIELD AIBT.Authoring.BlackboardNamingPolicy PascalCase
+  FIELD AIBT.Authoring.BlackboardNamingPolicy SnakeCase
+  FIELD AIBT.Authoring.BlackboardReductionKind All
+  FIELD AIBT.Authoring.BlackboardReductionKind Any
+  FIELD AIBT.Authoring.BlackboardReductionKind First
+  FIELD AIBT.Authoring.BlackboardReductionKind Last
+  FIELD AIBT.Authoring.BlackboardReductionKind Max
+  FIELD AIBT.Authoring.BlackboardReductionKind Min
+  FIELD AIBT.Authoring.BlackboardReductionKind None
+  FIELD AIBT.Authoring.BlackboardReductionKind Sum
+  FIELD AIBT.Authoring.DiagnosticPayloadKind Array
+  FIELD AIBT.Authoring.DiagnosticPayloadKind Boolean
+  FIELD AIBT.Authoring.DiagnosticPayloadKind Float32
+  FIELD AIBT.Authoring.DiagnosticPayloadKind Float64
+  FIELD AIBT.Authoring.DiagnosticPayloadKind Int32
+  FIELD AIBT.Authoring.DiagnosticPayloadKind Int64
+  FIELD AIBT.Authoring.DiagnosticPayloadKind Map
+  FIELD AIBT.Authoring.DiagnosticPayloadKind Null
+  FIELD AIBT.Authoring.DiagnosticPayloadKind String
+  FIELD AIBT.Authoring.GeneratedAccessModeV2 Read
+  FIELD AIBT.Authoring.GeneratedAccessModeV2 ReadWrite
+  FIELD AIBT.Authoring.GeneratedAccessModeV2 Write
+  FIELD AIBT.Authoring.GeneratedBindingKind AsyncOperation
+  FIELD AIBT.Authoring.GeneratedBindingKind BlackboardRead
+  FIELD AIBT.Authoring.GeneratedBindingKind BlackboardReadWrite
+  FIELD AIBT.Authoring.GeneratedBindingKind BlackboardWrite
+  FIELD AIBT.Authoring.GeneratedBindingKind Completion
+  FIELD AIBT.Authoring.GeneratedBindingKind EffectCommand
+  FIELD AIBT.Authoring.GeneratedBindingKind SnapshotRead
+  FIELD AIBT.Authoring.GeneratedFieldEncoding Bool8
+  FIELD AIBT.Authoring.GeneratedFieldEncoding FixedBytes
+  FIELD AIBT.Authoring.GeneratedFieldEncoding Float32BitsLE
+  FIELD AIBT.Authoring.GeneratedFieldEncoding Float64BitsLE
+  FIELD AIBT.Authoring.GeneratedFieldEncoding GeneratedHandle
+  FIELD AIBT.Authoring.GeneratedFieldEncoding Int16LE
+  FIELD AIBT.Authoring.GeneratedFieldEncoding Int32LE
+  FIELD AIBT.Authoring.GeneratedFieldEncoding Int64LE
+  FIELD AIBT.Authoring.GeneratedFieldEncoding Int8
+  FIELD AIBT.Authoring.GeneratedFieldEncoding Registered
+  FIELD AIBT.Authoring.GeneratedFieldEncoding UInt16LE
+  FIELD AIBT.Authoring.GeneratedFieldEncoding UInt32LE
+  FIELD AIBT.Authoring.GeneratedFieldEncoding UInt64LE
+  FIELD AIBT.Authoring.GeneratedFieldEncoding UInt8
+  FIELD AIBT.Authoring.GeneratedPhaseCapability Cancel
+  FIELD AIBT.Authoring.GeneratedPhaseCapability Completion
+  FIELD AIBT.Authoring.GeneratedPhaseCapability Execute
+  FIELD AIBT.Authoring.GeneratedPhaseCapability None
+  FIELD AIBT.Authoring.GeneratedTypeRole AsyncCancelPayload
+  FIELD AIBT.Authoring.GeneratedTypeRole AsyncStartPayload
+  FIELD AIBT.Authoring.GeneratedTypeRole CompletionPayload
+  FIELD AIBT.Authoring.GeneratedTypeRole EffectPayload
+  FIELD AIBT.Authoring.GeneratedTypeRole Value
+  FIELD AIBT.Authoring.NodeAccessMode Read
+  FIELD AIBT.Authoring.NodeAccessMode Write
+  FIELD AIBT.Authoring.NodeBehaviorKind Action
+  FIELD AIBT.Authoring.NodeBehaviorKind Composite
+  FIELD AIBT.Authoring.NodeBehaviorKind Condition
+  FIELD AIBT.Authoring.NodeBehaviorKind Decorator
+  FIELD AIBT.Authoring.NodeCancellationMode AbortOnly
+  FIELD AIBT.Authoring.NodeCancellationMode Command
+  FIELD AIBT.Authoring.NodeCancellationMode NotApplicable
+  FIELD AIBT.Authoring.NodeCostHint High
+  FIELD AIBT.Authoring.NodeCostHint Low
+  FIELD AIBT.Authoring.NodeCostHint Medium
+  FIELD AIBT.Authoring.NodeCostHint Trivial
+  FIELD AIBT.Authoring.NodeCostHint Variable
+  FIELD AIBT.Authoring.NodeExecutionDomain Burst
+  FIELD AIBT.Authoring.NodeExecutionDomain MainThread
+  FIELD AIBT.Authoring.NodeExecutionDomain Managed
+  FIELD AIBT.Authoring.NodeManifestSource BuiltIn
+  FIELD AIBT.Authoring.NodeManifestSource TestFixture
+  FIELD AIBT.Authoring.NodeManifestSource UserExtension
+  FIELD AIBT.Authoring.NodeParameterType Boolean
+  FIELD AIBT.Authoring.NodeParameterType StringEnum
+  FIELD AIBT.Authoring.NodeParameterType UInt32
+  FIELD AIBT.Authoring.NodeParameterType UInt64
+  FIELD AIBT.Authoring.NodeRegistryCapabilityFlags Burst
+  FIELD AIBT.Authoring.NodeRegistryCapabilityFlags MainThread
+  FIELD AIBT.Authoring.NodeRegistryCapabilityFlags Managed
+  FIELD AIBT.Authoring.NodeRegistryCapabilityFlags NonDeterministic
+  FIELD AIBT.Authoring.NodeRegistryCapabilityFlags None
+  FIELD AIBT.Authoring.NodeRegistryCapabilityFlags ReferenceHandlerBindings
+  FIELD AIBT.Authoring.NodeRegistryCapabilityFlags SideEffects
+  FIELD AIBT.Authoring.NodeRegistryCapabilityFlags UserExtensions
+  FIELD AIBT.Authoring.SemanticValueKind Array
+  FIELD AIBT.Authoring.SemanticValueKind Boolean
+  FIELD AIBT.Authoring.SemanticValueKind Null
+  FIELD AIBT.Authoring.SemanticValueKind Number
+  FIELD AIBT.Authoring.SemanticValueKind Object
+  FIELD AIBT.Authoring.SemanticValueKind SignedInteger
+  FIELD AIBT.Authoring.SemanticValueKind String
+  FIELD AIBT.Authoring.SemanticValueKind UnsignedInteger
+  FIELD AIBT.Authoring.UnreachableNodePolicy Allow
+  FIELD AIBT.Authoring.UnreachableNodePolicy Error
+  FIELD AIBT.Authoring.UnreachableNodePolicy Warning
+  FIELD AIBT.BlackboardScope Agent
+  FIELD AIBT.BlackboardScope NodeLocal
+  FIELD AIBT.BlackboardScope Shared
+  FIELD AIBT.BlackboardScope Tree
+  FIELD AIBT.BlackboardTypeDescriptor AgentId
+  FIELD AIBT.BlackboardTypeDescriptor AssetId
+  FIELD AIBT.BlackboardTypeDescriptor Bool
+  FIELD AIBT.BlackboardTypeDescriptor EntityId
+  FIELD AIBT.BlackboardTypeDescriptor Enum32
+  FIELD AIBT.BlackboardTypeDescriptor FixedString128
+  FIELD AIBT.BlackboardTypeDescriptor FixedString32
+  FIELD AIBT.BlackboardTypeDescriptor FixedString512
+  FIELD AIBT.BlackboardTypeDescriptor FixedString64
+  FIELD AIBT.BlackboardTypeDescriptor Float2
+  FIELD AIBT.BlackboardTypeDescriptor Float3
+  FIELD AIBT.BlackboardTypeDescriptor Float32
+  FIELD AIBT.BlackboardTypeDescriptor Float64
+  FIELD AIBT.BlackboardTypeDescriptor Int32
+  FIELD AIBT.BlackboardTypeDescriptor Int64
+  FIELD AIBT.BlackboardTypeDescriptor OperationId
+  FIELD AIBT.BlackboardTypeDescriptor Quaternion
+  FIELD AIBT.BlackboardValueType AgentId
+  FIELD AIBT.BlackboardValueType AssetId
+  FIELD AIBT.BlackboardValueType Bool
+  FIELD AIBT.BlackboardValueType EntityId
+  FIELD AIBT.BlackboardValueType Enum32
+  FIELD AIBT.BlackboardValueType FixedString128
+  FIELD AIBT.BlackboardValueType FixedString32
+  FIELD AIBT.BlackboardValueType FixedString512
+  FIELD AIBT.BlackboardValueType FixedString64
+  FIELD AIBT.BlackboardValueType Float2
+  FIELD AIBT.BlackboardValueType Float3
+  FIELD AIBT.BlackboardValueType Float32
+  FIELD AIBT.BlackboardValueType Float64
+  FIELD AIBT.BlackboardValueType Int32
+  FIELD AIBT.BlackboardValueType Int64
+  FIELD AIBT.BlackboardValueType Invalid
+  FIELD AIBT.BlackboardValueType OperationId
+  FIELD AIBT.BlackboardValueType Quaternion
+  FIELD AIBT.BlackboardValueType Registered
+  FIELD AIBT.Burst.BurstBlackboardAccess Read
+  FIELD AIBT.Burst.BurstBlackboardAccess ReadWrite
+  FIELD AIBT.Burst.BurstBlackboardAccess Write
+  FIELD AIBT.Burst.BurstCallbackPhase Abort
+  FIELD AIBT.Burst.BurstCallbackPhase Enter
+  FIELD AIBT.Burst.BurstCallbackPhase Exit
+  FIELD AIBT.Burst.BurstCallbackPhase Observer
+  FIELD AIBT.Burst.BurstCallbackPhase Tick
+  FIELD AIBT.Burst.BurstCancellationMode AbortOnly
+  FIELD AIBT.Burst.BurstCancellationMode Command
+  FIELD AIBT.Burst.BurstCancellationMode NotApplicable
+  FIELD AIBT.Burst.BurstCatalogValidationCode AbiVersionMismatch
+  FIELD AIBT.Burst.BurstCatalogValidationCode AccessLayoutMismatch
+  FIELD AIBT.Burst.BurstCatalogValidationCode CatalogMismatch
+  FIELD AIBT.Burst.BurstCatalogValidationCode CompiledFormatMismatch
+  FIELD AIBT.Burst.BurstCatalogValidationCode ConfigurationLayoutMismatch
+  FIELD AIBT.Burst.BurstCatalogValidationCode MemoryLayoutMismatch
+  FIELD AIBT.Burst.BurstCatalogValidationCode RegistryMismatch
+  FIELD AIBT.Burst.BurstCatalogValidationCode SemanticsMismatch
+  FIELD AIBT.Burst.BurstCatalogValidationCode Success
+  FIELD AIBT.Burst.BurstCompletionOutcome Cancelled
+  FIELD AIBT.Burst.BurstCompletionOutcome Failed
+  FIELD AIBT.Burst.BurstCompletionOutcome Succeeded
+  FIELD AIBT.Burst.BurstContextResult AlreadyCommitted
+  FIELD AIBT.Burst.BurstContextResult CapacityExceeded
+  FIELD AIBT.Burst.BurstContextResult IncompleteValue
+  FIELD AIBT.Burst.BurstContextResult InvalidEncoding
+  FIELD AIBT.Burst.BurstContextResult InvalidHandle
+  FIELD AIBT.Burst.BurstContextResult InvalidStatus
+  FIELD AIBT.Burst.BurstContextResult Overflow
+  FIELD AIBT.Burst.BurstContextResult PhaseViolation
+  FIELD AIBT.Burst.BurstContextResult StaleCompletion
+  FIELD AIBT.Burst.BurstContextResult Success
+  FIELD AIBT.Burst.BurstContextResult TypeMismatch
+  FIELD AIBT.Burst.BurstExecutionCode Faulted
+  FIELD AIBT.Burst.BurstExecutionCode Success
+  FIELD AIBT.Burst.BurstExecutionCode ValidationFailed
+  FIELD AIBT.Burst.BurstNodeAbortReason Explicit
+  FIELD AIBT.Burst.BurstNodeAbortReason HotReload
+  FIELD AIBT.Burst.BurstNodeAbortReason ObserverLowerPriority
+  FIELD AIBT.Burst.BurstNodeAbortReason ObserverSelf
+  FIELD AIBT.Burst.BurstNodeAbortReason Timeout
+  FIELD AIBT.Burst.BurstNodeAbortReason TreeStopped
+  FIELD AIBT.Burst.BurstNodeCost High
+  FIELD AIBT.Burst.BurstNodeCost Low
+  FIELD AIBT.Burst.BurstNodeCost Medium
+  FIELD AIBT.Burst.BurstNodeCost Trivial
+  FIELD AIBT.Burst.BurstNodeCost Variable
+  FIELD AIBT.Burst.BurstNodeExitReason Aborted
+  FIELD AIBT.Burst.BurstNodeExitReason Failure
+  FIELD AIBT.Burst.BurstNodeExitReason Success
+  FIELD AIBT.Burst.BurstNodeKind Action
+  FIELD AIBT.Burst.BurstNodeKind Condition
+  FIELD AIBT.Burst.BurstNodeStatusMask Failure
+  FIELD AIBT.Burst.BurstNodeStatusMask None
+  FIELD AIBT.Burst.BurstNodeStatusMask Running
+  FIELD AIBT.Burst.BurstNodeStatusMask Success
+  FIELD AIBT.Burst.ConditionResult Failure
+  FIELD AIBT.Burst.ConditionResult Success
+  FIELD AIBT.CommandPhase Cancel
+  FIELD AIBT.CommandPhase Execute
+  FIELD AIBT.CompiledBlackboardAccessFlags None
+  FIELD AIBT.CompiledBlackboardAccessFlags Observed
+  FIELD AIBT.CompiledBlackboardAccessFlags Read
+  FIELD AIBT.CompiledBlackboardAccessFlags Write
+  FIELD AIBT.CompiledNodeFlags BurstDomain
+  FIELD AIBT.CompiledNodeFlags MainThreadDomain
+  FIELD AIBT.CompiledNodeFlags ManagedDomain
+  FIELD AIBT.CompiledNodeFlags None
+  FIELD AIBT.CompiledNodeFlags SupportsTracing
+  FIELD AIBT.CompiledObserverMode Both
+  FIELD AIBT.CompiledObserverMode LowerPriority
+  FIELD AIBT.CompiledObserverMode Self
+  FIELD AIBT.CompletionOutcome Cancelled
+  FIELD AIBT.CompletionOutcome Failed
+  FIELD AIBT.CompletionOutcome Succeeded
+  FIELD AIBT.DiagnosticCode ChildPolicy
+  FIELD AIBT.DiagnosticCode ConfigurationPacking
+  FIELD AIBT.DiagnosticCode Cycle
+  FIELD AIBT.DiagnosticCode DefaultTypeMismatch
+  FIELD AIBT.DiagnosticCode DefaultValuePacking
+  FIELD AIBT.DiagnosticCode DuplicateChild
+  FIELD AIBT.DiagnosticCode DuplicateNodeIdentity
+  FIELD AIBT.DiagnosticCode DuplicateParameter
+  FIELD AIBT.DiagnosticCode DuplicateProperty
+  FIELD AIBT.DiagnosticCode DuplicateWatchedKey
+  FIELD AIBT.DiagnosticCode GeneratedLayoutMismatch
+  FIELD AIBT.DiagnosticCode InvalidCompiledStructure
+  FIELD AIBT.DiagnosticCode InvalidDefaultValue
+  FIELD AIBT.DiagnosticCode InvalidDocument
+  FIELD AIBT.DiagnosticCode InvalidFormat
+  FIELD AIBT.DiagnosticCode InvalidGeneratedBinding
+  FIELD AIBT.DiagnosticCode InvalidKeyId
+  FIELD AIBT.DiagnosticCode InvalidKeyName
+  FIELD AIBT.DiagnosticCode InvalidNodeIdentity
+  FIELD AIBT.DiagnosticCode InvalidObserverContext
+  FIELD AIBT.DiagnosticCode InvalidObserverMode
+  FIELD AIBT.DiagnosticCode InvalidOptions
+  FIELD AIBT.DiagnosticCode InvalidReduction
+  FIELD AIBT.DiagnosticCode InvalidRoot
+  FIELD AIBT.DiagnosticCode InvalidScope
+  FIELD AIBT.DiagnosticCode InvalidSyntax
+  FIELD AIBT.DiagnosticCode InvalidTreeIdentity
+  FIELD AIBT.DiagnosticCode InvalidType
+  FIELD AIBT.DiagnosticCode InvalidUnicode
+  FIELD AIBT.DiagnosticCode InvalidUtf8
+  FIELD AIBT.DiagnosticCode InvalidWatchedKey
+  FIELD AIBT.DiagnosticCode LayoutOverflow
+  FIELD AIBT.DiagnosticCode MissingBlackboardAccess
+  FIELD AIBT.DiagnosticCode MissingCanonicalSchema
+  FIELD AIBT.DiagnosticCode MissingChild
+  FIELD AIBT.DiagnosticCode MissingParameter
+  FIELD AIBT.DiagnosticCode MissingRegisteredSchema
+  FIELD AIBT.DiagnosticCode MissingScopeContract
+  FIELD AIBT.DiagnosticCode MissingTreeName
+  FIELD AIBT.DiagnosticCode MultipleParents
+  FIELD AIBT.DiagnosticCode NodeLocalTreeDeclaration
+  FIELD AIBT.DiagnosticCode ParallelThreshold
+  FIELD AIBT.DiagnosticCode ParameterConstraint
+  FIELD AIBT.DiagnosticCode ParameterType
+  FIELD AIBT.DiagnosticCode PolicyHashMismatch
+  FIELD AIBT.DiagnosticCode PolicyViolation
+  FIELD AIBT.DiagnosticCode SchemaViolation
+  FIELD AIBT.DiagnosticCode ScopeContractMismatch
+  FIELD AIBT.DiagnosticCode SharedReductionMissing
+  FIELD AIBT.DiagnosticCode StableIdentityCollision
+  FIELD AIBT.DiagnosticCode UnknownNodeType
+  FIELD AIBT.DiagnosticCode UnknownParameter
+  FIELD AIBT.DiagnosticCode UnreachableNode
+  FIELD AIBT.DiagnosticCode UnrepresentableDocument
+  FIELD AIBT.DiagnosticCode UnsupportedBlackboardScope
+  FIELD AIBT.DiagnosticCode UnsupportedBlackboardWrite
+  FIELD AIBT.DiagnosticCode UnsupportedCapability
+  FIELD AIBT.DiagnosticCode UnsupportedExecutionDomain
+  FIELD AIBT.DiagnosticCode UnsupportedFormatVersion
+  FIELD AIBT.DiagnosticCode UnsupportedNodeCapability
+  FIELD AIBT.DiagnosticCode UnsupportedNodeVersion
+  FIELD AIBT.DiagnosticCode UnsupportedReduction
+  FIELD AIBT.DiagnosticCode UnsupportedVersion
+  FIELD AIBT.DiagnosticField DocumentId
+  FIELD AIBT.DiagnosticField JsonPointer
+  FIELD AIBT.DiagnosticField LineAndColumn
+  FIELD AIBT.DiagnosticField NodeId
+  FIELD AIBT.DiagnosticField None
+  FIELD AIBT.DiagnosticField RelatedLocations
+  FIELD AIBT.DiagnosticField SuggestedOperation
+  FIELD AIBT.DiagnosticField TreeId
+  FIELD AIBT.DiagnosticField TreeInstanceId
+  FIELD AIBT.DiagnosticSeverity Error
+  FIELD AIBT.DiagnosticSeverity Info
+  FIELD AIBT.DiagnosticSeverity Severity
+  FIELD AIBT.DiagnosticSeverity Warning
+  FIELD AIBT.DiagnosticSubsystem CoreRuntime
+  FIELD AIBT.DiagnosticSubsystem Execution
+  FIELD AIBT.DiagnosticSubsystem RegistryAndCompiler
+  FIELD AIBT.DiagnosticSubsystem SemanticValidation
+  FIELD AIBT.DiagnosticSubsystem SyntaxAndSerialization
+  FIELD AIBT.DiagnosticSubsystem ToolingAndTestInput
+  FIELD AIBT.NativeBlackboardAccessModeV2 Read
+  FIELD AIBT.NativeBlackboardAccessModeV2 ReadWrite
+  FIELD AIBT.NativeBlackboardAccessModeV2 Write
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 Bool8
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 FixedBytes
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 Float32BitsLE
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 Float64BitsLE
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 GeneratedHandle
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 Int16LE
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 Int32LE
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 Int64LE
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 Int8
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 Registered
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 UInt16LE
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 UInt32LE
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 UInt64LE
+  FIELD AIBT.NativeBlackboardFieldEncodingV2 UInt8
+  FIELD AIBT.NativeBlackboardReductionKindV2 All
+  FIELD AIBT.NativeBlackboardReductionKindV2 Any
+  FIELD AIBT.NativeBlackboardReductionKindV2 First
+  FIELD AIBT.NativeBlackboardReductionKindV2 Last
+  FIELD AIBT.NativeBlackboardReductionKindV2 Max
+  FIELD AIBT.NativeBlackboardReductionKindV2 Min
+  FIELD AIBT.NativeBlackboardReductionKindV2 None
+  FIELD AIBT.NativeBlackboardReductionKindV2 Sum
+  FIELD AIBT.NativeCommandAsyncDiagnosticCodeV1 AlreadyConsumedOperation
+  FIELD AIBT.NativeCommandAsyncDiagnosticCodeV1 CancelledOperation
+  FIELD AIBT.NativeCommandAsyncDiagnosticCodeV1 CompletionPayloadMismatch
+  FIELD AIBT.NativeCommandAsyncDiagnosticCodeV1 DuplicateCompletionOrderingKey
+  FIELD AIBT.NativeCommandAsyncDiagnosticCodeV1 NonIncreasingSourceSequence
+  FIELD AIBT.NativeCommandAsyncDiagnosticCodeV1 None
+  FIELD AIBT.NativeCommandAsyncDiagnosticCodeV1 StaleOperationGeneration
+  FIELD AIBT.NativeCommandAsyncDiagnosticCodeV1 UnknownOperation
+  FIELD AIBT.NativeDiagnosticAppendResultV1 ChannelFaulted
+  FIELD AIBT.NativeDiagnosticAppendResultV1 InvalidRecord
+  FIELD AIBT.NativeDiagnosticAppendResultV1 Written
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Alignment
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Allocator
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Capacity
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Custom0
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Custom1
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Custom2
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Custom3
+  FIELD AIBT.NativeDiagnosticFieldIdV1 DroppedCount
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Generation
+  FIELD AIBT.NativeDiagnosticFieldIdV1 LeaseId
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Left
+  FIELD AIBT.NativeDiagnosticFieldIdV1 None
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Operation
+  FIELD AIBT.NativeDiagnosticFieldIdV1 OwnerId
+  FIELD AIBT.NativeDiagnosticFieldIdV1 OwnerKind
+  FIELD AIBT.NativeDiagnosticFieldIdV1 OwnerState
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Requested
+  FIELD AIBT.NativeDiagnosticFieldIdV1 ResourceKind
+  FIELD AIBT.NativeDiagnosticFieldIdV1 Right
+  FIELD AIBT.NativeDiagnosticFieldPairV1 Field0
+  FIELD AIBT.NativeDiagnosticFieldPairV1 Field1
+  FIELD AIBT.NativeDiagnosticFieldPairV1 Field2
+  FIELD AIBT.NativeDiagnosticFieldPairV1 Field3
+  FIELD AIBT.NativeDiagnosticFieldPairV1 Field4
+  FIELD AIBT.NativeDiagnosticFieldPairV1 Field5
+  FIELD AIBT.NativeDiagnosticFieldPairV1 Field6
+  FIELD AIBT.NativeDiagnosticFieldPairV1 Field7
+  FIELD AIBT.NativeDiagnosticLocationFlagsV1 DebugIdentity
+  FIELD AIBT.NativeDiagnosticLocationFlagsV1 None
+  FIELD AIBT.NativeDiagnosticLocationFlagsV1 RuntimeNode
+  FIELD AIBT.NativeDiagnosticLocationFlagsV1 TreeInstance
+  FIELD AIBT.NativeDiagnosticLocationV1 PrimaryLocation
+  FIELD AIBT.NativeDiagnosticOperationV1 Acquire
+  FIELD AIBT.NativeDiagnosticOperationV1 Append
+  FIELD AIBT.NativeDiagnosticOperationV1 Dispose
+  FIELD AIBT.NativeDiagnosticOperationV1 Initialize
+  FIELD AIBT.NativeDiagnosticOperationV1 Merge
+  FIELD AIBT.NativeDiagnosticOperationV1 Mutate
+  FIELD AIBT.NativeDiagnosticOperationV1 None
+  FIELD AIBT.NativeDiagnosticOperationV1 Project
+  FIELD AIBT.NativeDiagnosticOperationV1 RegisterDependency
+  FIELD AIBT.NativeDiagnosticOperationV1 Release
+  FIELD AIBT.NativeDiagnosticOperationV1 Reset
+  FIELD AIBT.NativeDiagnosticOperationV1 Schedule
+  FIELD AIBT.NativeDiagnosticResourceKindV1 CommandPayload
+  FIELD AIBT.NativeDiagnosticResourceKindV1 CommandRecords
+  FIELD AIBT.NativeDiagnosticResourceKindV1 CompletionPayload
+  FIELD AIBT.NativeDiagnosticResourceKindV1 CompletionRecords
+  FIELD AIBT.NativeDiagnosticResourceKindV1 DiagnosticLocations
+  FIELD AIBT.NativeDiagnosticResourceKindV1 DiagnosticRecords
+  FIELD AIBT.NativeDiagnosticResourceKindV1 InstanceBytes
+  FIELD AIBT.NativeDiagnosticResourceKindV1 LeaseCounter
+  FIELD AIBT.NativeDiagnosticResourceKindV1 MaximumAlignment
+  FIELD AIBT.NativeDiagnosticResourceKindV1 None
+  FIELD AIBT.NativeDiagnosticResourceKindV1 ProgramConfigOrDefaultBytes
+  FIELD AIBT.NativeDiagnosticResourceKindV1 ProgramRecords
+  FIELD AIBT.NativeDiagnosticResourceKindV1 ScratchBytes
+  FIELD AIBT.NativeDiagnosticResourceKindV1 SharedContributionPayload
+  FIELD AIBT.NativeDiagnosticResourceKindV1 SharedContributionRecords
+  FIELD AIBT.NativeDiagnosticResourceKindV1 SnapshotPayload
+  FIELD AIBT.NativeDiagnosticResourceKindV1 SnapshotRecords
+  FIELD AIBT.NativeDiagnosticResourceKindV1 TracePayload
+  FIELD AIBT.NativeDiagnosticResourceKindV1 TraceRecords
+  FIELD AIBT.NativeDiagnosticResourceKindV1 WorkItems
+  FIELD AIBT.NativeDiagnosticValueKindV1 Boolean
+  FIELD AIBT.NativeDiagnosticValueKindV1 Enum
+  FIELD AIBT.NativeDiagnosticValueKindV1 Identity
+  FIELD AIBT.NativeDiagnosticValueKindV1 Signed
+  FIELD AIBT.NativeDiagnosticValueKindV1 Unsigned
+  FIELD AIBT.NativeFrameLifecycleStateV1 Aborting
+  FIELD AIBT.NativeFrameLifecycleStateV1 Entering
+  FIELD AIBT.NativeFrameLifecycleStateV1 Exiting
+  FIELD AIBT.NativeFrameLifecycleStateV1 Inactive
+  FIELD AIBT.NativeFrameLifecycleStateV1 LifecycleState
+  FIELD AIBT.NativeFrameLifecycleStateV1 Running
+  FIELD AIBT.NativeHash256V1 TreeSemanticHash
+  FIELD AIBT.NativeOperationStateV1 Active
+  FIELD AIBT.NativeOperationStateV1 Cancelled
+  FIELD AIBT.NativeOperationStateV1 Consumed
+  FIELD AIBT.NativeOperationStateV1 Empty
+  FIELD AIBT.NativeOwnerStateV1 Disposed
+  FIELD AIBT.NativeOwnerStateV1 Executing
+  FIELD AIBT.NativeOwnerStateV1 Initialized
+  FIELD AIBT.NativeOwnerStateV1 Uninitialized
+  FIELD AIBT.NativeResourceKindV1 AgentBindings
+  FIELD AIBT.NativeResourceKindV1 AgentExecuteWindowOwners
+  FIELD AIBT.NativeResourceKindV1 ExecuteSelectionEntries
+  FIELD AIBT.NativeResourceKindV1 ExecuteSelectionReaders
+  FIELD AIBT.NativeResourceKindV1 InstanceAgentBlackboard
+  FIELD AIBT.NativeResourceKindV1 InstanceAgentRevision
+  FIELD AIBT.NativeResourceKindV1 InstanceAgentSlotVersions
+  FIELD AIBT.NativeResourceKindV1 InstanceBudgetState
+  FIELD AIBT.NativeResourceKindV1 InstanceFrames
+  FIELD AIBT.NativeResourceKindV1 InstanceGenerations
+  FIELD AIBT.NativeResourceKindV1 InstanceNodeMemory
+  FIELD AIBT.NativeResourceKindV1 InstanceObservers
+  FIELD AIBT.NativeResourceKindV1 InstanceParallelBranches
+  FIELD AIBT.NativeResourceKindV1 InstanceRandomIncrements
+  FIELD AIBT.NativeResourceKindV1 InstanceRandomNodeIndices
+  FIELD AIBT.NativeResourceKindV1 InstanceRandomStates
+  FIELD AIBT.NativeResourceKindV1 InstanceSharedBlackboard
+  FIELD AIBT.NativeResourceKindV1 InstanceSharedRevision
+  FIELD AIBT.NativeResourceKindV1 InstanceSharedSlotVersions
+  FIELD AIBT.NativeResourceKindV1 InstanceTreeBlackboard
+  FIELD AIBT.NativeResourceKindV1 InstanceTreeRevision
+  FIELD AIBT.NativeResourceKindV1 InstanceTreeSlotVersions
+  FIELD AIBT.NativeResourceKindV1 InstanceUpdateState
+  FIELD AIBT.NativeResourceKindV1 LeaseCounter
+  FIELD AIBT.NativeResourceKindV1 LifecycleBatchLanes
+  FIELD AIBT.NativeResourceKindV1 MaximumAlignment
+  FIELD AIBT.NativeResourceKindV1 None
+  FIELD AIBT.NativeResourceKindV1 ProgramBlackboardAccesses
+  FIELD AIBT.NativeResourceKindV1 ProgramBlackboardSlots
+  FIELD AIBT.NativeResourceKindV1 ProgramChildIndices
+  FIELD AIBT.NativeResourceKindV1 ProgramConfigBytes
+  FIELD AIBT.NativeResourceKindV1 ProgramDebugOrdinals
+  FIELD AIBT.NativeResourceKindV1 ProgramDefaultBytes
+  FIELD AIBT.NativeResourceKindV1 ProgramHash
+  FIELD AIBT.NativeResourceKindV1 ProgramNodeAccessRanges
+  FIELD AIBT.NativeResourceKindV1 ProgramNodes
+  FIELD AIBT.NativeResourceKindV1 ProgramObservers
+  FIELD AIBT.NativeResourceKindV1 ProgramReadSlotIndices
+  FIELD AIBT.NativeResourceKindV1 ProgramRegisteredFields
+  FIELD AIBT.NativeResourceKindV1 ProgramRegisteredTypes
+  FIELD AIBT.NativeResourceKindV1 ProgramScopeDescriptors
+  FIELD AIBT.NativeResourceKindV1 ProgramScopeLayoutBytes
+  FIELD AIBT.NativeResourceKindV1 ProgramWatchedSlotIndices
+  FIELD AIBT.NativeResourceKindV1 ProgramWriteSlotIndices
+  FIELD AIBT.NativeResourceKindV1 SharedBindings
+  FIELD AIBT.NativeResourceKindV1 SharedCommitReport
+  FIELD AIBT.NativeResourceKindV1 SharedContributionPayload
+  FIELD AIBT.NativeResourceKindV1 SharedContributionRecords
+  FIELD AIBT.NativeResourceKindV1 SharedContributionStreams
+  FIELD AIBT.NativeResourceKindV1 SharedReductionScratch
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardEqualityFault
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardInvalidSlot
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardInvalidValue
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardMissingTypeBinding
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardRegistryMismatch
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardTypeMismatch
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardUndeclaredAccess
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardUnsupportedScope
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 BlackboardVersionOverflow
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeAllocatorInvalid
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeCapacityArithmeticOverflow
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeCapacityPlanInvalid
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeCompletionCapacityExceeded
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeDiagnosticCapacityExceeded
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeInstanceCapacityExceeded
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeLifetimeStateInvalid
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeLiveJobOwnershipViolation
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeOutputCapacityExceeded
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeProgramCapacityExceeded
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeSnapshotCapacityExceeded
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 NativeTraceCapacityExceeded
+  FIELD AIBT.NativeRuntimeDiagnosticCodeV1 None
+  FIELD AIBT.NativeTraceAppendResultV1 ChannelFaulted
+  FIELD AIBT.NativeTraceAppendResultV1 Dropped
+  FIELD AIBT.NativeTraceAppendResultV1 DuplicateSequence
+  FIELD AIBT.NativeTraceAppendResultV1 Filtered
+  FIELD AIBT.NativeTraceAppendResultV1 InvalidRecord
+  FIELD AIBT.NativeTraceAppendResultV1 Written
+  FIELD AIBT.NativeTraceEventKindV1 BlackboardChanged
+  FIELD AIBT.NativeTraceEventKindV1 BudgetYielded
+  FIELD AIBT.NativeTraceEventKindV1 CommandEmitted
+  FIELD AIBT.NativeTraceEventKindV1 CompletionConsumed
+  FIELD AIBT.NativeTraceEventKindV1 CompletionDiscarded
+  FIELD AIBT.NativeTraceEventKindV1 DiagnosticRaised
+  FIELD AIBT.NativeTraceEventKindV1 ExecutionResumed
+  FIELD AIBT.NativeTraceEventKindV1 Kind
+  FIELD AIBT.NativeTraceEventKindV1 NodeAbortStarted
+  FIELD AIBT.NativeTraceEventKindV1 NodeEntered
+  FIELD AIBT.NativeTraceEventKindV1 NodeExited
+  FIELD AIBT.NativeTraceEventKindV1 NodeTicked
+  FIELD AIBT.NativeTraceEventKindV1 ObserverEvaluated
+  FIELD AIBT.NativeTraceEventKindV1 ObserverQueued
+  FIELD AIBT.NativeTraceEventKindV1 SchedulerDecision
+  FIELD AIBT.NativeTraceEventKindV1 TraceDroppedSummary
+  FIELD AIBT.NativeTraceEventKindV1 UpdateCompleted
+  FIELD AIBT.NativeTraceEventKindV1 UpdateStarted
+  FIELD AIBT.NativeTraceLevelV1 Detailed
+  FIELD AIBT.NativeTraceLevelV1 Errors
+  FIELD AIBT.NativeTraceLevelV1 Lifecycle
+  FIELD AIBT.NativeTraceLevelV1 Off
+  FIELD AIBT.NativeTraceNodeAbortReasonV1 AbortReason
+  FIELD AIBT.NativeTraceNodeAbortReasonV1 Explicit
+  FIELD AIBT.NativeTraceNodeAbortReasonV1 HotReload
+  FIELD AIBT.NativeTraceNodeAbortReasonV1 ObserverLowerPriority
+  FIELD AIBT.NativeTraceNodeAbortReasonV1 ObserverSelf
+  FIELD AIBT.NativeTraceNodeAbortReasonV1 Timeout
+  FIELD AIBT.NativeTraceNodeAbortReasonV1 TreeStopped
+  FIELD AIBT.NativeTraceNodeExitReasonV1 Aborted
+  FIELD AIBT.NativeTraceNodeExitReasonV1 ExitReason
+  FIELD AIBT.NativeTraceNodeExitReasonV1 Failure
+  FIELD AIBT.NativeTraceNodeExitReasonV1 Success
+  FIELD AIBT.NativeTraceOptionalFieldsV1 AbortReason
+  FIELD AIBT.NativeTraceOptionalFieldsV1 BlackboardVersions
+  FIELD AIBT.NativeTraceOptionalFieldsV1 DebugIdentity
+  FIELD AIBT.NativeTraceOptionalFieldsV1 DiagnosticCode
+  FIELD AIBT.NativeTraceOptionalFieldsV1 ExitReason
+  FIELD AIBT.NativeTraceOptionalFieldsV1 None
+  FIELD AIBT.NativeTraceOptionalFieldsV1 OptionalFields
+  FIELD AIBT.NativeTraceOptionalFieldsV1 RuntimeNode
+  FIELD AIBT.NativeTraceOptionalFieldsV1 SourceNode
+  FIELD AIBT.NativeTraceOptionalFieldsV1 Status
+  FIELD AIBT.NativeUpdatePhaseV1 ApplyIntegrations
+  FIELD AIBT.NativeUpdatePhaseV1 CollectInput
+  FIELD AIBT.NativeUpdatePhaseV1 Execute
+  FIELD AIBT.NativeUpdatePhaseV1 NormalizeInput
+  FIELD AIBT.NativeUpdatePhaseV1 Phase
+  FIELD AIBT.NativeUpdatePhaseV1 PublishCommands
+  FIELD AIBT.NativeUpdatePhaseV1 PublishTraceAndMetrics
+  FIELD AIBT.NativeUpdatePhaseV1 ReduceSharedWrites
+  FIELD AIBT.NativeUpdatePhaseV1 SelectWork
+  FIELD AIBT.NodeMemoryLifetime Activation
+  FIELD AIBT.NodeMemoryLifetime Instance
+  FIELD AIBT.NodeStatus Failure
+  FIELD AIBT.NodeStatus PendingStatus
+  FIELD AIBT.NodeStatus Running
+  FIELD AIBT.NodeStatus Status
+  FIELD AIBT.NodeStatus Success
+  FIELD System.Byte Exhausted
+  FIELD System.Byte FieldCount
+  FIELD System.Byte HasLastConditionResult
+  FIELD System.Byte HasPendingChildResult
+  FIELD System.Byte LastConditionResult
+  FIELD System.Byte State
+  FIELD System.Byte value__
+  FIELD System.Int32 CurrentFormatVersion
+  FIELD System.Int32 FixedString128
+  FIELD System.Int32 FixedString32
+  FIELD System.Int32 FixedString512
+  FIELD System.Int32 FixedString64
+  FIELD System.Int32 HexLength
+  FIELD System.Int32 LatestFormatVersion
+  FIELD System.Int32 value__
+  FIELD System.String CooldownTypeId
+  FIELD System.String CurrentFormat
+  FIELD System.String FailerTypeId
+  FIELD System.String Format
+  FIELD System.String InverterTypeId
+  FIELD System.String MemorySelectorTypeId
+  FIELD System.String MemorySequenceTypeId
+  FIELD System.String ParallelTypeId
+  FIELD System.String ReactiveSelectorTypeId
+  FIELD System.String ReactiveSequenceTypeId
+  FIELD System.String RepeaterTypeId
+  FIELD System.String SucceederTypeId
+  FIELD System.String TimeoutTypeId
+  FIELD System.UInt16 CodeNumber
+  FIELD System.UInt16 DiagnosticCodeNumber
+  FIELD System.UInt16 value__
+  FIELD System.UInt32 ActivationGeneration
+  FIELD System.UInt32 AgentScopeCapability
+  FIELD System.UInt32 CapacityOrdinal
+  FIELD System.UInt32 ChildCursor
+  FIELD System.UInt32 CompiledFormatVersion
+  FIELD System.UInt32 DebugIdentityIndex
+  FIELD System.UInt32 ExecutionSemanticsVersion
+  FIELD System.UInt32 ExpectedMagic
+  FIELD System.UInt32 FormatVersion
+  FIELD System.UInt32 Invalid
+  FIELD System.UInt32 InvalidValue
+  FIELD System.UInt32 NodeIndex
+  FIELD System.UInt32 ObserverNodeIndex
+  FIELD System.UInt32 OwningReactiveCompositeIndex
+  FIELD System.UInt32 ParentFrameIndex
+  FIELD System.UInt32 PayloadLength
+  FIELD System.UInt32 PayloadOffset
+  FIELD System.UInt32 Phase
+  FIELD System.UInt32 RelatedLocationCount
+  FIELD System.UInt32 RelatedLocationOffset
+  FIELD System.UInt32 ResumeCursor
+  FIELD System.UInt32 RuntimeNodeIndex
+  FIELD System.UInt32 SharedScopeCapability
+  FIELD System.UInt32 SourceNodeIndex
+  FIELD System.UInt32 StepLimit
+  FIELD System.UInt32 StepsConsumed
+  FIELD System.UInt32 TraceFormatVersion
+  FIELD System.UInt32 WorkCursor
+  FIELD System.UInt32 WorkerOrdinal
+  FIELD System.UInt32 value__
+  FIELD System.UInt64 DroppedCount
+  FIELD System.UInt64 Fnv1A64OffsetBasis
+  FIELD System.UInt64 Fnv1A64Prime
+  FIELD System.UInt64 LastUpdateId
+  FIELD System.UInt64 NewBlackboardVersion
+  FIELD System.UInt64 OldBlackboardVersion
+  FIELD System.UInt64 OperationOrDecisionId
+  FIELD System.UInt64 Sequence
+  FIELD System.UInt64 SnapshotRevision
+  FIELD System.UInt64 StableBlackboardKeyId
+  FIELD System.UInt64 TreeInstanceId
+  FIELD System.UInt64 UpdateId
+  PROPERTY AIBT.AgentId AgentId
+  PROPERTY AIBT.Authoring.AuthoringDiagnostic Item
+  PROPERTY AIBT.Authoring.BlackboardDefaultValue DefaultValue
+  PROPERTY AIBT.Authoring.BlackboardKeyDefinition Key
+  PROPERTY AIBT.Authoring.BlackboardNamingPolicy BlackboardNaming
+  PROPERTY AIBT.Authoring.BlackboardReductionKind Reduction
+  PROPERTY AIBT.Authoring.BlackboardScopeContract AgentContract
+  PROPERTY AIBT.Authoring.BlackboardScopeContract Contract
+  PROPERTY AIBT.Authoring.BlackboardScopeContract SharedContract
+  PROPERTY AIBT.Authoring.BlackboardTypeReference Type
+  PROPERTY AIBT.Authoring.DiagnosticOperationPayload Null
+  PROPERTY AIBT.Authoring.DiagnosticOperationPayload Payload
+  PROPERTY AIBT.Authoring.DiagnosticOperationPayload Value
+  PROPERTY AIBT.Authoring.DiagnosticPayloadContract Contract
+  PROPERTY AIBT.Authoring.DiagnosticPayloadContract ElementContract
+  PROPERTY AIBT.Authoring.DiagnosticPayloadContract PayloadContract
+  PROPERTY AIBT.Authoring.DiagnosticPayloadKind Kind
+  PROPERTY AIBT.Authoring.GeneratedAccessModeV2 Mode
+  PROPERTY AIBT.Authoring.GeneratedBindingDescriptor Binding
+  PROPERTY AIBT.Authoring.GeneratedBindingKind Kind
+  PROPERTY AIBT.Authoring.GeneratedCompiledProgramV2 Program
+  PROPERTY AIBT.Authoring.GeneratedFieldEncoding Encoding
+  PROPERTY AIBT.Authoring.GeneratedPhaseCapability PhaseCapabilities
+  PROPERTY AIBT.Authoring.GeneratedScopeCompilationResult Scopes
+  PROPERTY AIBT.Authoring.GeneratedScopeSlot Slot
+  PROPERTY AIBT.Authoring.GeneratedTypeRole Role
+  PROPERTY AIBT.Authoring.NodeAccessMode Mode
+  PROPERTY AIBT.Authoring.NodeBehaviorKind Kind
+  PROPERTY AIBT.Authoring.NodeBindingMap Bindings
+  PROPERTY AIBT.Authoring.NodeCancellationMode Cancellation
+  PROPERTY AIBT.Authoring.NodeChildPolicy ChildPolicy
+  PROPERTY AIBT.Authoring.NodeConfigurationDescriptor Configuration
+  PROPERTY AIBT.Authoring.NodeCostHint CostHint
+  PROPERTY AIBT.Authoring.NodeExecutionDomain ExecutionDomain
+  PROPERTY AIBT.Authoring.NodeManifest Manifest
+  PROPERTY AIBT.Authoring.NodeManifestSource Source
+  PROPERTY AIBT.Authoring.NodeMemoryDescriptor Memory
+  PROPERTY AIBT.Authoring.NodeObserver Observer
+  PROPERTY AIBT.Authoring.NodeParameterCondition ForbiddenUnless
+  PROPERTY AIBT.Authoring.NodeParameterCondition RequiredWhen
+  PROPERTY AIBT.Authoring.NodeParameterType Type
+  PROPERTY AIBT.Authoring.NodeRegistry Registry
+  PROPERTY AIBT.Authoring.NodeRegistryCapabilityFlags Capabilities
+  PROPERTY AIBT.Authoring.NodeRegistryEntry Item
+  PROPERTY AIBT.Authoring.ReferenceCompilationPolicy Phase1
+  PROPERTY AIBT.Authoring.ReferenceCompilationPolicy Policy
+  PROPERTY AIBT.Authoring.RegisteredBlackboardTypeCatalog RegisteredTypes
+  PROPERTY AIBT.Authoring.SemanticObject Empty
+  PROPERTY AIBT.Authoring.SemanticObject Metadata
+  PROPERTY AIBT.Authoring.SemanticObject Parameters
+  PROPERTY AIBT.Authoring.SemanticValue Null
+  PROPERTY AIBT.Authoring.SemanticValue Value
+  PROPERTY AIBT.Authoring.SemanticValueKind Kind
+  PROPERTY AIBT.Authoring.SuggestedDiagnosticOperation SuggestedOperation
+  PROPERTY AIBT.Authoring.TagSet Empty
+  PROPERTY AIBT.Authoring.TagSet Tags
+  PROPERTY AIBT.Authoring.TreeDocument Document
+  PROPERTY AIBT.Authoring.TreeValidationPolicy Policy
+  PROPERTY AIBT.Authoring.UnreachableNodePolicy UnreachableNodes
+  PROPERTY AIBT.Authoring.ValidationOptions Phase1
+  PROPERTY AIBT.BlackboardScope Scope
+  PROPERTY AIBT.BlackboardTypeDescriptor RuntimeDescriptor
+  PROPERTY AIBT.BlackboardValueType Type
+  PROPERTY AIBT.BlackboardValueType ValueType
+  PROPERTY AIBT.Burst.BurstCatalogFingerprint Catalog
+  PROPERTY AIBT.Burst.BurstCatalogValidationCode Code
+  PROPERTY AIBT.Burst.BurstExecutionCode Code
+  PROPERTY AIBT.Burst.BurstHash256 AccessLayout
+  PROPERTY AIBT.Burst.BurstHash256 ConfigurationLayout
+  PROPERTY AIBT.Burst.BurstHash256 LayoutHash
+  PROPERTY AIBT.Burst.BurstHash256 MemoryLayout
+  PROPERTY AIBT.Burst.BurstHash256 NodeRegistry
+  PROPERTY AIBT.Burst.BurstHash256 SchemaHash
+  PROPERTY AIBT.Burst.BurstHash256 Value
+  PROPERTY AIBT.CommandBatch Empty
+  PROPERTY AIBT.CommandPhase Phase
+  PROPERTY AIBT.CommandType CommandType
+  PROPERTY AIBT.CompiledBlackboardAccessFlags AccessFlags
+  PROPERTY AIBT.CompiledCompilerVersion CompilerVersion
+  PROPERTY AIBT.CompiledHash AccessLayoutHash
+  PROPERTY AIBT.CompiledHash CanonicalPolicyHash
+  PROPERTY AIBT.CompiledHash CanonicalSemanticHash
+  PROPERTY AIBT.CompiledHash CompiledContentHash
+  PROPERTY AIBT.CompiledHash ConfigurationLayoutHash
+  PROPERTY AIBT.CompiledHash ContentHash
+  PROPERTY AIBT.CompiledHash LayoutHash
+  PROPERTY AIBT.CompiledHash MemoryLayoutHash
+  PROPERTY AIBT.CompiledHash NodeRegistryHash
+  PROPERTY AIBT.CompiledHash OuterContentHash
+  PROPERTY AIBT.CompiledHash RegisteredSchemaHash
+  PROPERTY AIBT.CompiledHash SchemaHash
+  PROPERTY AIBT.CompiledNodeFlags Flags
+  PROPERTY AIBT.CompiledObserverMode Mode
+  PROPERTY AIBT.CompiledProgram Program
+  PROPERTY AIBT.CompiledProgram SemanticProgram
+  PROPERTY AIBT.CompiledProgramHeader Header
+  PROPERTY AIBT.CompiledRange Children
+  PROPERTY AIBT.CompiledRange ReadSlots
+  PROPERTY AIBT.CompiledRange WatchedSlots
+  PROPERTY AIBT.CompiledRange WriteSlots
+  PROPERTY AIBT.CompletionBatch Empty
+  PROPERTY AIBT.CompletionOutcome Outcome
+  PROPERTY AIBT.CompletionPayloadType PayloadType
+  PROPERTY AIBT.Diagnostic Diagnostic
+  PROPERTY AIBT.Diagnostic Item
+  PROPERTY AIBT.DiagnosticCatalog Catalog
+  PROPERTY AIBT.DiagnosticCode Code
+  PROPERTY AIBT.DiagnosticCollection Diagnostics
+  PROPERTY AIBT.DiagnosticCollection Empty
+  PROPERTY AIBT.DiagnosticField OptionalFields
+  PROPERTY AIBT.DiagnosticField RequiredFields
+  PROPERTY AIBT.DiagnosticLocation Location
+  PROPERTY AIBT.DiagnosticSeverity DefaultSeverity
+  PROPERTY AIBT.DiagnosticSeverity Severity
+  PROPERTY AIBT.DiagnosticSubsystem Subsystem
+  PROPERTY AIBT.NativeAgentContextViewV1 Context
+  PROPERTY AIBT.NativeAgentExecuteWindowV1 Window
+  PROPERTY AIBT.NativeAgentExecuteWindowV2 Window
+  PROPERTY AIBT.NativeAgentExecutionViewV1 View
+  PROPERTY AIBT.NativeBlackboardAccessModeV2 Mode
+  PROPERTY AIBT.NativeBlackboardFieldEncodingV2 Encoding
+  PROPERTY AIBT.NativeBlackboardReductionKindV2 Reduction
+  PROPERTY AIBT.NativeCommandAsyncDiagnosticCodeV1 Code
+  PROPERTY AIBT.NativeCommandAsyncViewV1 View
+  PROPERTY AIBT.NativeCompiledProgramHeaderV1 Header
+  PROPERTY AIBT.NativeCompletionExpectationV1 Any
+  PROPERTY AIBT.NativeCompletionExpectationV1 NoPayload
+  PROPERTY AIBT.NativeDiagnosticChannelCapacityV1 Capacity
+  PROPERTY AIBT.NativeDiagnosticFieldIdV1 FieldId
+  PROPERTY AIBT.NativeDiagnosticLocationFlagsV1 Flags
+  PROPERTY AIBT.NativeDiagnosticRecordV1 Rejection
+  PROPERTY AIBT.NativeDiagnosticResourceKindV1 ResourceKind
+  PROPERTY AIBT.NativeDiagnosticValueKindV1 ValueKind
+  PROPERTY AIBT.NativeDiagnosticWriterV1 Writer
+  PROPERTY AIBT.NativeExecuteSelectionCapacityV1 Capacity
+  PROPERTY AIBT.NativeExecuteSelectionViewV1 View
+  PROPERTY AIBT.NativeExecuteSelectionWindowV1 Window
+  PROPERTY AIBT.NativeHash256V1 CanonicalPolicyHash
+  PROPERTY AIBT.NativeHash256V1 CanonicalSemanticHash
+  PROPERTY AIBT.NativeHash256V1 CompiledContentHash
+  PROPERTY AIBT.NativeHash256V1 LayoutHash
+  PROPERTY AIBT.NativeHash256V1 NodeRegistryHash
+  PROPERTY AIBT.NativeHash256V1 RegisteredSchemaHash
+  PROPERTY AIBT.NativeHash256V1 SchemaHash
+  PROPERTY AIBT.NativeInstanceArenaCapacityV1 Capacity
+  PROPERTY AIBT.NativeInstanceArenaCapacityV1 Semantic
+  PROPERTY AIBT.NativeInstanceArenaViewV1 Semantic
+  PROPERTY AIBT.NativeInstanceArenaViewV1 View
+  PROPERTY AIBT.NativeInstanceArenaViewV2 View
+  PROPERTY AIBT.NativeInstanceExecutionLeaseV2 Execution
+  PROPERTY AIBT.NativeInstanceExecutionLeaseV2 TreeLease
+  PROPERTY AIBT.NativeLeaseTokenV1 Token
+  PROPERTY AIBT.NativeOwnerStateV1 State
+  PROPERTY AIBT.NativePayloadSliceV1 Empty
+  PROPERTY AIBT.NativeProgramImageCapacityV1 Semantic
+  PROPERTY AIBT.NativeProgramImageViewV1 Semantic
+  PROPERTY AIBT.NativeProgramImageViewV1 View
+  PROPERTY AIBT.NativeProgramImageViewV2 Program
+  PROPERTY AIBT.NativeProgramImageViewV2 View
+  PROPERTY AIBT.NativeResourceKindV1 ResourceKind
+  PROPERTY AIBT.NativeRuntimeDiagnosticCodeV1 Code
+  PROPERTY AIBT.NativeSharedContextCapacityV1 Capacity
+  PROPERTY AIBT.NativeSharedContextViewV1 Context
+  PROPERTY AIBT.NativeSharedContributionStreamV1 Stream
+  PROPERTY AIBT.NativeSharedContributionWriterV1 Writer
+  PROPERTY AIBT.NativeSharedReductionViewV1 View
+  PROPERTY AIBT.NativeSharedUpdateWindowV1 Update
+  PROPERTY AIBT.NativeSnapshotLeaseTokenV1 Token
+  PROPERTY AIBT.NativeSnapshotViewV1 View
+  PROPERTY AIBT.NativeTraceChannelCapacityV1 Capacity
+  PROPERTY AIBT.NativeTraceLevelV1 Level
+  PROPERTY AIBT.NativeTraceWriterV1 Writer
+  PROPERTY AIBT.NodeId AuthoringNodeId
+  PROPERTY AIBT.NodeId Id
+  PROPERTY AIBT.NodeId NodeId
+  PROPERTY AIBT.NodeId Root
+  PROPERTY AIBT.NodeMemoryLifetime Lifetime
+  PROPERTY AIBT.NodeMemoryLifetime MemoryLifetime
+  PROPERTY AIBT.OperationId OperationId
+  PROPERTY AIBT.RegisteredUnmanagedTypeDescriptor Descriptor
+  PROPERTY AIBT.RegisteredUnmanagedTypeDescriptor RegisteredDescriptor
+  PROPERTY AIBT.Revision Revision
+  PROPERTY AIBT.Revision SnapshotRevision
+  PROPERTY AIBT.RuntimeNodeIndex Invalid
+  PROPERTY AIBT.RuntimeNodeIndex NodeIndex
+  PROPERTY AIBT.TreeId TreeId
+  PROPERTY AIBT.TreeInstanceId TreeInstanceId
+  PROPERTY System.Boolean AllowMainThreadNodes
+  PROPERTY System.Boolean AllowManagedNodes
+  PROPERTY System.Boolean AllowSideEffects
+  PROPERTY System.Boolean BooleanValue
+  PROPERTY System.Boolean Deprecated
+  PROPERTY System.Boolean Deterministic
+  PROPERTY System.Boolean DeterministicModeCompatible
+  PROPERTY System.Boolean ForbidUnboundedRepeaters
+  PROPERTY System.Boolean HasBlackboardV2
+  PROPERTY System.Boolean HasCanonicalSchema
+  PROPERTY System.Boolean HasDefault
+  PROPERTY System.Boolean HasDocumentId
+  PROPERTY System.Boolean HasDuplicateValues
+  PROPERTY System.Boolean HasJsonPointer
+  PROPERTY System.Boolean HasLocalFileId
+  PROPERTY System.Boolean HasMigration
+  PROPERTY System.Boolean HasRandomStream
+  PROPERTY System.Boolean HasReferenceHandlerBinding
+  PROPERTY System.Boolean HasRuntimeValue
+  PROPERTY System.Boolean HasSharedCapacity
+  PROPERTY System.Boolean HasValidHeader
+  PROPERTY System.Boolean IsBlackboard
+  PROPERTY System.Boolean IsCanonical
+  PROPERTY System.Boolean IsCreated
+  PROPERTY System.Boolean IsEmpty
+  PROPERTY System.Boolean IsFaulted
+  PROPERTY System.Boolean IsGeneratedHandle
+  PROPERTY System.Boolean IsKnown
+  PROPERTY System.Boolean IsRegistered
+  PROPERTY System.Boolean IsRequired
+  PROPERTY System.Boolean IsSuccess
+  PROPERTY System.Boolean IsValid
+  PROPERTY System.Boolean Ordered
+  PROPERTY System.Boolean RequireDeterministicNodes
+  PROPERTY System.Boolean RequireEventDrivenServices
+  PROPERTY System.Boolean RequireNodeDescriptions
+  PROPERTY System.Boolean RequireTreeDescription
+  PROPERTY System.Boolean Required
+  PROPERTY System.Boolean StripDisplayMetadata
+  PROPERTY System.Boolean Success
+  PROPERTY System.Boolean SupportsAgentScope
+  PROPERTY System.Boolean SupportsSharedScope
+  PROPERTY System.Byte Alignment
+  PROPERTY System.Byte CallbackCapabilities
+  PROPERTY System.Byte DeterministicModeCompatible
+  PROPERTY System.Byte[] Bytes
+  PROPERTY System.Byte[] DefaultBytes
+  PROPERTY System.Byte[] SemanticHash
+  PROPERTY System.Byte[] SourceUtf8
+  PROPERTY System.Byte[] Utf8
+  PROPERTY System.Collections.Generic.IReadOnlyDictionary`2<AIBT.NodeId,System.Byte[]> Configurations
+  PROPERTY System.Collections.Generic.IReadOnlyDictionary`2<System.String,System.String> Values
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.BlackboardKeyDefinition> Blackboard
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.DiagnosticOperationPayload> Items
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.DiagnosticPayloadMember> Members
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.DiagnosticPayloadPropertyContract> Properties
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedBindingDescriptor> Bindings
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedCompiledAccessRecordV2> Accesses
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedCompiledSlotRecordV2> Slots
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedNodeAccessRecord> Accesses
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedNodeDescriptor> GeneratedNodes
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedNodeDescriptor> Nodes
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedScopeCompilationResult> Results
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedScopeDescriptor> Descriptors
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedScopeSlot> Slots
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedStorageField> Configuration
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedStorageField> Fields
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedStorageField> Memory
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedTypeRecord> Types
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedWatchedSlotV2> WatchedSlots
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.NodeAccessContract> Accesses
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.NodeConfigurationField> Fields
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.NodeDocument> Nodes
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.NodeManifest> All
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.NodeManifestExample> Examples
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.NodeParameterContract> Parameters
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.RegisteredBlackboardTypeCatalogEntry> Entries
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.SemanticProperty> Properties
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.CommandRecord> Records
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.CompiledBlackboardSlotRecord> BlackboardSlots
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.CompiledDebugMapEntry> DebugMap
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.CompiledDebugMapEntry> HostDebugMap
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.CompiledNodeRecord> Nodes
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.CompiledObserverRecord> Observers
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.CompletionRecord> Records
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.DiagnosticCode> WarningsAsErrors
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.DiagnosticLocation> RelatedLocations
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NativeBlackboardAccessBindingV2> Accesses
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NativeBlackboardScopeBindingV2> Scopes
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NativeBlackboardSlotAuthorityV2> SlotAuthorities
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NativeBlackboardSlotBindingV2> Slots
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NativeBlackboardWatchedSlotBindingV2> WatchedSlots
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NativeRegisteredBlackboardFieldBindingV2> RegisteredFields
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NativeRegisteredBlackboardTypeBindingV2> RegisteredTypes
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NodeId> Children
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NodeStatus> PossibleStatuses
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.Byte> ConfigBlob
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.Byte> DefaultValueBlob
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> AllowedValues
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> ForbiddenNodeTypes
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> Reads
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> SideEffects
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> Values
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> WatchedKeys
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> Writes
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.UInt32> ChildIndices
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.UInt32> ReadSlotIndices
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.UInt32> WatchedSlotIndices
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.UInt32> WriteSlotIndices
+  PROPERTY System.Double Float64Value
+  PROPERTY System.Int32 ActiveReaderCount
+  PROPERTY System.Int32 Alignment
+  PROPERTY System.Int32 Count
+  PROPERTY System.Int32 First
+  PROPERTY System.Int32 FormatVersion
+  PROPERTY System.Int32 Int32Value
+  PROPERTY System.Int32 Last
+  PROPERTY System.Int32 PayloadSize
+  PROPERTY System.Int32 Size
+  PROPERTY System.Int32 TypeVersion
+  PROPERTY System.Int32 Value
+  PROPERTY System.Int64 Int64Value
+  PROPERTY System.Int64 LocalFileId
+  PROPERTY System.Nullable`1<System.Double> MaxEstimatedCost
+  PROPERTY System.Nullable`1<System.Int32> Column
+  PROPERTY System.Nullable`1<System.Int32> Line
+  PROPERTY System.Nullable`1<System.Int32> MaxNodesPerTree
+  PROPERTY System.Nullable`1<System.Int32> MaxTreeDepth
+  PROPERTY System.Nullable`1<System.UInt32> Maximum
+  PROPERTY System.Nullable`1<System.UInt64> Minimum
+  PROPERTY System.Single Float32Value
+  PROPERTY System.Single W
+  PROPERTY System.Single X
+  PROPERTY System.Single Y
+  PROPERTY System.Single Z
+  PROPERTY System.String BindingId
+  PROPERTY System.String CanonicalKeyId
+  PROPERTY System.String CanonicalSchemaId
+  PROPERTY System.String CanonicalTypeId
+  PROPERTY System.String Category
+  PROPERTY System.String ContractId
+  PROPERTY System.String Description
+  PROPERTY System.String DisplayName
+  PROPERTY System.String DocumentId
+  PROPERTY System.String EnumContract
+  PROPERTY System.String ExpectedBehavior
+  PROPERTY System.String FieldId
+  PROPERTY System.String Format
+  PROPERTY System.String Hash
+  PROPERTY System.String HexadecimalValue
+  PROPERTY System.String Id
+  PROPERTY System.String JsonPointer
+  PROPERTY System.String Key
+  PROPERTY System.String Message
+  PROPERTY System.String Mode
+  PROPERTY System.String Name
+  PROPERTY System.String OperationId
+  PROPERTY System.String ParameterName
+  PROPERTY System.String PayloadType
+  PROPERTY System.String RegisteredSchemaHash
+  PROPERTY System.String RegisteredTypeId
+  PROPERTY System.String ReplacementTypeId
+  PROPERTY System.String RequiredValue
+  PROPERTY System.String SchemaHash
+  PROPERTY System.String ShardId
+  PROPERTY System.String SourceId
+  PROPERTY System.String SourcePath
+  PROPERTY System.String SourceText
+  PROPERTY System.String StringValue
+  PROPERTY System.String Summary
+  PROPERTY System.String Title
+  PROPERTY System.String TypeId
+  PROPERTY System.String Value
+  PROPERTY System.String ValueTypeId
+  PROPERTY System.String WhenNotToUse
+  PROPERTY System.String WhenToUse
+  PROPERTY System.UInt16 CompilerMajor
+  PROPERTY System.UInt16 CompilerMinor
+  PROPERTY System.UInt16 CompilerPatch
+  PROPERTY System.UInt16 DiagnosticNumber
+  PROPERTY System.UInt16 Major
+  PROPERTY System.UInt16 Minor
+  PROPERTY System.UInt16 Patch
+  PROPERTY System.UInt32 AbiVersion
+  PROPERTY System.UInt32 AccessOrdinal
+  PROPERTY System.UInt32 Accesses
+  PROPERTY System.UInt32 ActivationGeneration
+  PROPERTY System.UInt32 Alignment
+  PROPERTY System.UInt32 BlackboardSlotCount
+  PROPERTY System.UInt32 BlackboardSlots
+  PROPERTY System.UInt32 BudgetStateCount
+  PROPERTY System.UInt32 BuildRevision
+  PROPERTY System.UInt32 CancelCommandRecords
+  PROPERTY System.UInt32 CancelCount
+  PROPERTY System.UInt32 CapabilityFlags
+  PROPERTY System.UInt32 Capacity
+  PROPERTY System.UInt32 ChangedSlotCount
+  PROPERTY System.UInt32 ChildCount
+  PROPERTY System.UInt32 ChildIndexCount
+  PROPERTY System.UInt32 ChildIndices
+  PROPERTY System.UInt32 ChildOffset
+  PROPERTY System.UInt32 CommandPayloadBytes
+  PROPERTY System.UInt32 CompiledFormatVersion
+  PROPERTY System.UInt32 CompilerBuildRevision
+  PROPERTY System.UInt32 CompletionInputRecords
+  PROPERTY System.UInt32 CompletionPayloadBytes
+  PROPERTY System.UInt32 CompletionSources
+  PROPERTY System.UInt32 ConfigAlignment
+  PROPERTY System.UInt32 ConfigBlobSize
+  PROPERTY System.UInt32 ConfigBytes
+  PROPERTY System.UInt32 ConfigOffset
+  PROPERTY System.UInt32 ConfigSize
+  PROPERTY System.UInt32 ContractVersion
+  PROPERTY System.UInt32 ContributionPayloadBytes
+  PROPERTY System.UInt32 ContributionRecords
+  PROPERTY System.UInt32 Count
+  PROPERTY System.UInt32 DebugIdentityIndex
+  PROPERTY System.UInt32 DebugMapCount
+  PROPERTY System.UInt32 DebugOrdinals
+  PROPERTY System.UInt32 DefaultBytes
+  PROPERTY System.UInt32 DefaultOffset
+  PROPERTY System.UInt32 DefaultSize
+  PROPERTY System.UInt32 DefaultValueOffset
+  PROPERTY System.UInt32 DiagnosticRecords
+  PROPERTY System.UInt32 EmissionCapacity
+  PROPERTY System.UInt32 EntryCount
+  PROPERTY System.UInt32 ExecuteCommandRecords
+  PROPERTY System.UInt32 ExecuteCount
+  PROPERTY System.UInt32 ExecutionSemanticsVersion
+  PROPERTY System.UInt32 FieldCount
+  PROPERTY System.UInt32 FirstField
+  PROPERTY System.UInt32 FirstSlot
+  PROPERTY System.UInt32 FrameCount
+  PROPERTY System.UInt32 Generation
+  PROPERTY System.UInt32 GenerationCount
+  PROPERTY System.UInt32 InstanceMemoryAlignment
+  PROPERTY System.UInt32 InstanceMemoryOffset
+  PROPERTY System.UInt32 InstanceMemorySize
+  PROPERTY System.UInt32 InstanceNodeMemorySize
+  PROPERTY System.UInt32 InstancesVisited
+  PROPERTY System.UInt32 Magic
+  PROPERTY System.UInt32 MaximumAlignment
+  PROPERTY System.UInt32 MaximumBindings
+  PROPERTY System.UInt32 MaximumEntries
+  PROPERTY System.UInt32 MaximumPayloadBytes
+  PROPERTY System.UInt32 MaximumReaders
+  PROPERTY System.UInt32 MaximumSelectedInstances
+  PROPERTY System.UInt32 MigrationSourceVersion
+  PROPERTY System.UInt32 Minimum
+  PROPERTY System.UInt32 NodeAccessRanges
+  PROPERTY System.UInt32 NodeCount
+  PROPERTY System.UInt32 NodeIndex
+  PROPERTY System.UInt32 NodeMemoryBytes
+  PROPERTY System.UInt32 NodeRecords
+  PROPERTY System.UInt32 NodeTypeVersion
+  PROPERTY System.UInt32 ObserverCount
+  PROPERTY System.UInt32 ObserverNodeIndex
+  PROPERTY System.UInt32 Observers
+  PROPERTY System.UInt32 Offset
+  PROPERTY System.UInt32 OperationCancellationPayloadBytes
+  PROPERTY System.UInt32 OperationRecords
+  PROPERTY System.UInt32 Ordinal
+  PROPERTY System.UInt32 OrdinaryRecordCapacity
+  PROPERTY System.UInt32 OwningReactiveCompositeIndex
+  PROPERTY System.UInt32 ParallelBranchCapacity
+  PROPERTY System.UInt32 PayloadByteCapacity
+  PROPERTY System.UInt32 PayloadByteCount
+  PROPERTY System.UInt32 PayloadBytes
+  PROPERTY System.UInt32 PayloadBytesUsed
+  PROPERTY System.UInt32 PayloadCapacity
+  PROPERTY System.UInt32 PayloadCount
+  PROPERTY System.UInt32 PayloadLength
+  PROPERTY System.UInt32 PayloadOffset
+  PROPERTY System.UInt32 PayloadSize
+  PROPERTY System.UInt32 PendingCompletionRecords
+  PROPERTY System.UInt32 PolicyFormatVersion
+  PROPERTY System.UInt32 ProgramGeneration
+  PROPERTY System.UInt32 RandomStreamCount
+  PROPERTY System.UInt32 RawLayoutLength
+  PROPERTY System.UInt32 RawLayoutOffset
+  PROPERTY System.UInt32 ReadSlotCount
+  PROPERTY System.UInt32 ReadSlotIndices
+  PROPERTY System.UInt32 ReadSlotOffset
+  PROPERTY System.UInt32 ReaderCapacity
+  PROPERTY System.UInt32 RecordCapacity
+  PROPERTY System.UInt32 RecordCount
+  PROPERTY System.UInt32 Records
+  PROPERTY System.UInt32 RegisteredFields
+  PROPERTY System.UInt32 RegisteredTypeIndex
+  PROPERTY System.UInt32 RegisteredTypeVersion
+  PROPERTY System.UInt32 RegisteredTypes
+  PROPERTY System.UInt32 RelatedLocationCapacity
+  PROPERTY System.UInt32 RelatedLocationCount
+  PROPERTY System.UInt32 RequiredMaximumAlignment
+  PROPERTY System.UInt32 ResolvedSlotIndex
+  PROPERTY System.UInt32 RootNodeIndex
+  PROPERTY System.UInt32 RuntimeNodeIndex
+  PROPERTY System.UInt32 ScopeDescriptorIndex
+  PROPERTY System.UInt32 ScopeDescriptors
+  PROPERTY System.UInt32 ScopeLayoutBytes
+  PROPERTY System.UInt32 ScopeSlot
+  PROPERTY System.UInt32 ScopeSlotIndex
+  PROPERTY System.UInt32 SelectionGeneration
+  PROPERTY System.UInt32 ShardVersion
+  PROPERTY System.UInt32 SharedPayloadCapacity
+  PROPERTY System.UInt32 SharedRecordCapacity
+  PROPERTY System.UInt32 Size
+  PROPERTY System.UInt32 SlotCount
+  PROPERTY System.UInt32 SlotIndex
+  PROPERTY System.UInt32 SlotVersions
+  PROPERTY System.UInt32 Slots
+  PROPERTY System.UInt32 TreeBlackboardBytes
+  PROPERTY System.UInt32 TreeRevisionCount
+  PROPERTY System.UInt32 TreeSlotVersions
+  PROPERTY System.UInt32 TypeVersion
+  PROPERTY System.UInt32 UpdateStateCount
+  PROPERTY System.UInt32 Value
+  PROPERTY System.UInt32 ValueBytes
+  PROPERTY System.UInt32 ValueTypeVersion
+  PROPERTY System.UInt32 Version
+  PROPERTY System.UInt32 WatchedSlotCount
+  PROPERTY System.UInt32 WatchedSlotIndices
+  PROPERTY System.UInt32 WatchedSlotOffset
+  PROPERTY System.UInt32 Word0
+  PROPERTY System.UInt32 Word1
+  PROPERTY System.UInt32 Word2
+  PROPERTY System.UInt32 Word3
+  PROPERTY System.UInt32 Word4
+  PROPERTY System.UInt32 Word5
+  PROPERTY System.UInt32 Word6
+  PROPERTY System.UInt32 Word7
+  PROPERTY System.UInt32 WriteSlotCount
+  PROPERTY System.UInt32 WriteSlotIndices
+  PROPERTY System.UInt32 WriteSlotOffset
+  PROPERTY System.UInt64 BindingId
+  PROPERTY System.UInt64 CanonicalSchemaId
+  PROPERTY System.UInt64 Capacity
+  PROPERTY System.UInt64 ContractId
+  PROPERTY System.UInt64 ContractNumericId
+  PROPERTY System.UInt64 ContractTypeId
+  PROPERTY System.UInt64 ContributionSequence
+  PROPERTY System.UInt64 DroppedCount
+  PROPERTY System.UInt64 EligibleUpdateId
+  PROPERTY System.UInt64 EndExclusive
+  PROPERTY System.UInt64 EnumContractId
+  PROPERTY System.UInt64 EqualityContractId
+  PROPERTY System.UInt64 FieldId
+  PROPERTY System.UInt64 GuidHigh
+  PROPERTY System.UInt64 GuidLow
+  PROPERTY System.UInt64 LeaseId
+  PROPERTY System.UInt64 MigrationContractId
+  PROPERTY System.UInt64 NodeTypeId
+  PROPERTY System.UInt64 NumericBindingId
+  PROPERTY System.UInt64 NumericFieldId
+  PROPERTY System.UInt64 NumericTypeId
+  PROPERTY System.UInt64 OwnerId
+  PROPERTY System.UInt64 ProgramOwnerId
+  PROPERTY System.UInt64 RegisteredSchemaId
+  PROPERTY System.UInt64 ReportId
+  PROPERTY System.UInt64 Requested
+  PROPERTY System.UInt64 Revision
+  PROPERTY System.UInt64 SchemaId
+  PROPERTY System.UInt64 SegmentSteps
+  PROPERTY System.UInt64 SelectionOwnerId
+  PROPERTY System.UInt64 SelectionWindowId
+  PROPERTY System.UInt64 Sequence
+  PROPERTY System.UInt64 SourceId
+  PROPERTY System.UInt64 SourceSequence
+  PROPERTY System.UInt64 SourceUpdateId
+  PROPERTY System.UInt64 StableKeyId
+  PROPERTY System.UInt64 TreeInstanceId
+  PROPERTY System.UInt64 TypeId
+  PROPERTY System.UInt64 UpdateId
+  PROPERTY System.UInt64 Value
+  PROPERTY System.UInt64 ValueTypeId
+  PROPERTY System.UInt64 WindowId
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeBlackboardAccessRecordV2> Accesses
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeBlackboardScopeRecordV2> Scopes
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeBlackboardSlotBindingV2> Slots
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeCompiledBlackboardSlotRecordV1> BlackboardSlots
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeCompiledNodeRecordV1> Nodes
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeCompiledObserverRecordV1> Observers
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeDiagnosticLocationV1> RelatedLocations
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeDiagnosticRecordV1> Records
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeExecuteSelectionEntryV1> Entries
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeNodeBlackboardAccessRangeV2> NodeAccessRanges
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeRegisteredBlackboardFieldRecordV2> RegisteredFields
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeRegisteredBlackboardTypeRecordV2> RegisteredTypes
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeSharedContributionRecordV1> Records
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeTraceRecordV1> Records
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.Byte> Bytes
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.Byte> ConfigBlob
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.Byte> DefaultValueBlob
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.Byte> Payload
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.Byte> ScopeLayoutBytes
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.Byte> Values
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt32> ChangedScopeSlots
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt32> ChildIndices
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt32> DebugRuntimeNodeIndices
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt32> RandomNodeIndices
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt32> ReadSlotIndices
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt32> WatchedSlotIndices
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt32> WriteSlotIndices
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt64> RandomIncrements
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt64> Revision
+  PROPERTY Unity.Collections.NativeArray`1+ReadOnly<System.UInt64> SlotVersions
+  PROPERTY Unity.Collections.NativeArray`1<AIBT.NativeBudgetStateV1> BudgetState
+  PROPERTY Unity.Collections.NativeArray`1<AIBT.NativeFrameStateV1> Frames
+  PROPERTY Unity.Collections.NativeArray`1<AIBT.NativeObserverStateV1> Observers
+  PROPERTY Unity.Collections.NativeArray`1<AIBT.NativeParallelBranchStateV1> ParallelBranches
+  PROPERTY Unity.Collections.NativeArray`1<AIBT.NativeUpdateStateV1> UpdateState
+  PROPERTY Unity.Collections.NativeArray`1<System.Byte> NodeMemory
+  PROPERTY Unity.Collections.NativeArray`1<System.Byte> TreeBlackboard
+  PROPERTY Unity.Collections.NativeArray`1<System.Byte> Values
+  PROPERTY Unity.Collections.NativeArray`1<System.UInt32> Generations
+  PROPERTY Unity.Collections.NativeArray`1<System.UInt64> RandomStates
+  PROPERTY Unity.Collections.NativeArray`1<System.UInt64> Revision
+  PROPERTY Unity.Collections.NativeArray`1<System.UInt64> SlotVersions
+  PROPERTY Unity.Collections.NativeArray`1<System.UInt64> TreeRevision
+  PROPERTY Unity.Collections.NativeArray`1<System.UInt64> TreeSlotVersions
+METHOD AIBT.AgentId Parse(System.String)
+METHOD AIBT.AssetId Parse(System.String,System.Nullable`1<System.Int64>)
+METHOD AIBT.Authoring.AuthoringDiagnostic CreateValidated(AIBT.DiagnosticCatalog,AIBT.Diagnostic,AIBT.Authoring.SuggestedDiagnosticOperation)
+METHOD AIBT.Authoring.BlackboardDefaultValue AgentId(AIBT.AgentId)
+METHOD AIBT.Authoring.BlackboardDefaultValue AssetId(AIBT.AssetId)
+METHOD AIBT.Authoring.BlackboardDefaultValue Bool(System.Boolean)
+METHOD AIBT.Authoring.BlackboardDefaultValue CreateDefault(System.String,System.UInt32,AIBT.Authoring.SemanticObject)
+METHOD AIBT.Authoring.BlackboardDefaultValue EntityId(AIBT.EntityId)
+METHOD AIBT.Authoring.BlackboardDefaultValue Enum32(System.String,System.Int32)
+METHOD AIBT.Authoring.BlackboardDefaultValue FixedString128(System.String)
+METHOD AIBT.Authoring.BlackboardDefaultValue FixedString32(System.String)
+METHOD AIBT.Authoring.BlackboardDefaultValue FixedString512(System.String)
+METHOD AIBT.Authoring.BlackboardDefaultValue FixedString64(System.String)
+METHOD AIBT.Authoring.BlackboardDefaultValue Float2(System.Single,System.Single)
+METHOD AIBT.Authoring.BlackboardDefaultValue Float3(System.Single,System.Single,System.Single)
+METHOD AIBT.Authoring.BlackboardDefaultValue Float32(System.Single)
+METHOD AIBT.Authoring.BlackboardDefaultValue Float64(System.Double)
+METHOD AIBT.Authoring.BlackboardDefaultValue Int32(System.Int32)
+METHOD AIBT.Authoring.BlackboardDefaultValue Int64(System.Int64)
+METHOD AIBT.Authoring.BlackboardDefaultValue OperationId(AIBT.OperationId)
+METHOD AIBT.Authoring.BlackboardDefaultValue Quaternion(System.Single,System.Single,System.Single,System.Single)
+METHOD AIBT.Authoring.BlackboardDefaultValue RegisteredSource(System.String,System.UInt32,System.String)
+METHOD AIBT.Authoring.BlackboardTypeReference BuiltIn(AIBT.BlackboardValueType)
+METHOD AIBT.Authoring.BlackboardTypeReference Enum32(System.String)
+METHOD AIBT.Authoring.BlackboardTypeReference Registered(System.String,AIBT.RegisteredUnmanagedTypeDescriptor)
+METHOD AIBT.Authoring.DiagnosticOperationPayload Array(AIBT.Authoring.DiagnosticOperationPayload[])
+METHOD AIBT.Authoring.DiagnosticOperationPayload Array(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.DiagnosticOperationPayload>)
+METHOD AIBT.Authoring.DiagnosticOperationPayload From(System.Boolean)
+METHOD AIBT.Authoring.DiagnosticOperationPayload From(System.Double)
+METHOD AIBT.Authoring.DiagnosticOperationPayload From(System.Int32)
+METHOD AIBT.Authoring.DiagnosticOperationPayload From(System.Int64)
+METHOD AIBT.Authoring.DiagnosticOperationPayload From(System.Single)
+METHOD AIBT.Authoring.DiagnosticOperationPayload From(System.String)
+METHOD AIBT.Authoring.DiagnosticOperationPayload Map(AIBT.Authoring.DiagnosticPayloadMember[])
+METHOD AIBT.Authoring.DiagnosticOperationPayload Map(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.DiagnosticPayloadMember>)
+METHOD AIBT.Authoring.DiagnosticPayloadContract ArrayOf(AIBT.Authoring.DiagnosticPayloadContract)
+METHOD AIBT.Authoring.DiagnosticPayloadContract Map(AIBT.Authoring.DiagnosticPayloadPropertyContract[])
+METHOD AIBT.Authoring.DiagnosticPayloadContract Map(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.DiagnosticPayloadPropertyContract>)
+METHOD AIBT.Authoring.DiagnosticPayloadContract Scalar(AIBT.Authoring.DiagnosticPayloadKind)
+METHOD AIBT.Authoring.GeneratedCompiledProgramV2Result Compile(AIBT.Authoring.TreeDocument,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,AIBT.Authoring.ReferenceCompilerOptions)
+METHOD AIBT.Authoring.GeneratedCompiledProgramV2Result Compile(AIBT.Authoring.TreeDocument,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,AIBT.Authoring.RegisteredBlackboardTypeCatalog,AIBT.Authoring.ReferenceCompilerOptions)
+METHOD AIBT.Authoring.GeneratedConfigurationPackResult Pack(AIBT.Authoring.GeneratedNodeDescriptor,AIBT.Authoring.SemanticObject,System.Collections.Generic.IReadOnlyDictionary`2<System.String,System.UInt32>,System.String,AIBT.NodeId)
+METHOD AIBT.Authoring.GeneratedScopeCompilationResult Compile(AIBT.Authoring.TreeDocument,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,AIBT.Authoring.RegisteredBlackboardTypeCatalog,System.String)
+METHOD AIBT.Authoring.GeneratedScopeCompilationResult Compile(AIBT.Authoring.TreeDocument,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,System.String)
+METHOD AIBT.Authoring.GeneratedScopeCompilationSetResult CompileSet(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedScopeCompilationInput>)
+METHOD AIBT.Authoring.GeneratedShardMetadataArtifact MaterializeArtifact(System.String,System.String,System.String,System.String)
+METHOD AIBT.Authoring.GeneratedShardMetadataArtifact MaterializeArtifact(System.String,System.UInt32,System.String,System.String,System.String,System.String)
+METHOD AIBT.Authoring.NodeDocument CreateVersion2(AIBT.NodeId,System.String,System.Int32,AIBT.Authoring.NodeBindingMap,System.Collections.Generic.IEnumerable`1<AIBT.NodeId>,AIBT.Authoring.SemanticObject,AIBT.Authoring.NodeObserver,System.String,System.String,AIBT.Authoring.TagSet)
+METHOD AIBT.Authoring.NodeDocument WithBindings(AIBT.Authoring.NodeBindingMap)
+METHOD AIBT.Authoring.NodeDocument WithChildren(System.Collections.Generic.IEnumerable`1<AIBT.NodeId>)
+METHOD AIBT.Authoring.NodeDocument WithDetails(System.String,System.String,AIBT.Authoring.TagSet)
+METHOD AIBT.Authoring.NodeDocument WithObserver(AIBT.Authoring.NodeObserver)
+METHOD AIBT.Authoring.NodeDocument WithParameters(AIBT.Authoring.SemanticObject)
+METHOD AIBT.Authoring.NodeDocument WithType(System.String,System.Int32)
+METHOD AIBT.Authoring.NodeRegistryBuildResult Build()
+METHOD AIBT.Authoring.NodeRegistryBuildResult Build(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,System.Boolean)
+METHOD AIBT.Authoring.NodeRegistryBuilder AddUserExtension(AIBT.Authoring.NodeManifest)
+METHOD AIBT.Authoring.NodeRegistryBuilder CreateWithBuiltIns()
+METHOD AIBT.Authoring.ReferenceCompilationResult Compile(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ReferenceCompilerOptions)
+METHOD AIBT.Authoring.SemanticValue FromArray(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.SemanticValue>)
+METHOD AIBT.Authoring.SemanticValue FromBoolean(System.Boolean)
+METHOD AIBT.Authoring.SemanticValue FromInt64(System.Int64)
+METHOD AIBT.Authoring.SemanticValue FromNumber(System.Double)
+METHOD AIBT.Authoring.SemanticValue FromObject(AIBT.Authoring.SemanticObject)
+METHOD AIBT.Authoring.SemanticValue FromString(System.String)
+METHOD AIBT.Authoring.SemanticValue FromUInt64(System.UInt64)
+METHOD AIBT.Authoring.SuggestedDiagnosticOperation Create(System.String,System.String,AIBT.Authoring.DiagnosticOperationPayload)
+METHOD AIBT.Authoring.TreeDocument CreateVersion2(AIBT.TreeId,System.String,AIBT.NodeId,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeDocument>,AIBT.Authoring.BlackboardScopeContract,AIBT.Authoring.BlackboardScopeContract,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.SemanticObject,AIBT.Revision)
+METHOD AIBT.Authoring.TreeJsonReadResult Parse(System.Byte[],AIBT.Authoring.RegisteredBlackboardTypeCatalog,System.String)
+METHOD AIBT.Authoring.TreeJsonReadResult Parse(System.Byte[],System.String)
+METHOD AIBT.Authoring.TreeJsonReadResult Parse(System.String,AIBT.Authoring.RegisteredBlackboardTypeCatalog,System.String)
+METHOD AIBT.Authoring.TreeJsonReadResult Parse(System.String,System.String)
+METHOD AIBT.Authoring.TreeJsonWriteResult Serialize(AIBT.Authoring.TreeDocument)
+METHOD AIBT.Authoring.TreeJsonWriteResult Serialize(AIBT.Authoring.TreeDocument,AIBT.Authoring.RegisteredBlackboardTypeCatalog)
+METHOD AIBT.BlackboardTypeDescriptor FromRegistered(AIBT.RegisteredUnmanagedTypeDescriptor)
+METHOD AIBT.BlackboardValue FromAgentId(AIBT.AgentId)
+METHOD AIBT.BlackboardValue FromAssetId(AIBT.AssetId)
+METHOD AIBT.BlackboardValue FromBool(System.Boolean)
+METHOD AIBT.BlackboardValue FromEntityId(AIBT.EntityId)
+METHOD AIBT.BlackboardValue FromEnum32(AIBT.Enum32Value)
+METHOD AIBT.BlackboardValue FromFloat2(AIBT.Float2Value)
+METHOD AIBT.BlackboardValue FromFloat3(AIBT.Float3Value)
+METHOD AIBT.BlackboardValue FromFloat32(System.Single)
+METHOD AIBT.BlackboardValue FromFloat64(System.Double)
+METHOD AIBT.BlackboardValue FromInt32(System.Int32)
+METHOD AIBT.BlackboardValue FromInt64(System.Int64)
+METHOD AIBT.BlackboardValue FromOperationId(AIBT.OperationId)
+METHOD AIBT.BlackboardValue FromQuaternion(AIBT.QuaternionValue)
+METHOD AIBT.BlackboardValue FromString128(System.String)
+METHOD AIBT.BlackboardValue FromString32(System.String)
+METHOD AIBT.BlackboardValue FromString512(System.String)
+METHOD AIBT.BlackboardValue FromString64(System.String)
+METHOD AIBT.Burst.BurstContextResult TryAcquireDispatchFrame(AIBT.Burst.BurstExecutionBatch&,System.UInt32,System.UInt32,System.UInt32,AIBT.Burst.BurstCallbackPhase,AIBT.Burst.BurstDispatchFrame&)
+METHOD AIBT.Burst.BurstContextResult TryAcquireExecution(AIBT.NativeCommandAsyncLeaseV1&)
+METHOD AIBT.Burst.BurstContextResult TryAcquireRead(AIBT.NativeSnapshotReadLeaseV1&)
+METHOD AIBT.Burst.BurstContextResult TryAdd(AIBT.NativeSnapshotTypeDescriptorV1&,)
+METHOD AIBT.Burst.BurstContextResult TryAddStream(AIBT.NativeCommandStreamViewV1&)
+METHOD AIBT.Burst.BurstContextResult TryBeginBlackboardRead(AIBT.Burst.BlackboardReadHandle`1<>,AIBT.Burst.BurstValueReader&)
+METHOD AIBT.Burst.BurstContextResult TryBeginBlackboardRead(AIBT.Burst.BlackboardReadWriteHandle`1<>,AIBT.Burst.BurstValueReader&)
+METHOD AIBT.Burst.BurstContextResult TryBeginBlackboardWrite(AIBT.Burst.BlackboardReadWriteHandle`1<>,AIBT.Burst.BurstValueWriter&)
+METHOD AIBT.Burst.BurstContextResult TryBeginBlackboardWrite(AIBT.Burst.BlackboardWriteHandle`1<>,AIBT.Burst.BurstValueWriter&)
+METHOD AIBT.Burst.BurstContextResult TryBeginCancel(AIBT.Burst.AsyncOperationHandle`2<,>,AIBT.OperationId,AIBT.Burst.BurstValueWriter&)
+METHOD AIBT.Burst.BurstContextResult TryBeginConsume(AIBT.Burst.CompletionHandle`1<>,AIBT.OperationId,AIBT.Burst.BurstCompletionOutcome&,AIBT.Burst.BurstValueReader&)
+METHOD AIBT.Burst.BurstContextResult TryBeginEffect(AIBT.Burst.CommandHandle`1<>,AIBT.Burst.BurstValueWriter&)
+METHOD AIBT.Burst.BurstContextResult TryBeginSnapshotRead(AIBT.Burst.SnapshotReadHandle`1<>,AIBT.Burst.BurstValueReader&)
+METHOD AIBT.Burst.BurstContextResult TryBeginStart(AIBT.Burst.AsyncOperationHandle`2<,>,AIBT.Burst.BurstValueWriter&,AIBT.Burst.BurstValueWriter&)
+METHOD AIBT.Burst.BurstContextResult TryCancel(AIBT.OperationId,AIBT.CommandType,AIBT.NativePayloadSliceV1,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryCommitBlackboardWrite(AIBT.Burst.BurstValueWriter&)
+METHOD AIBT.Burst.BurstContextResult TryCommitCancel(AIBT.Burst.BurstValueWriter&)
+METHOD AIBT.Burst.BurstContextResult TryCommitConsume(AIBT.Burst.BurstValueReader&)
+METHOD AIBT.Burst.BurstContextResult TryCommitEffect(AIBT.Burst.BurstValueWriter&)
+METHOD AIBT.Burst.BurstContextResult TryCommitMemory(AIBT.Burst.BurstMemoryAccessor&)
+METHOD AIBT.Burst.BurstContextResult TryCommitStart(AIBT.Burst.BurstValueWriter&,AIBT.Burst.BurstValueWriter&,AIBT.OperationId&)
+METHOD AIBT.Burst.BurstContextResult TryCompleteAbort(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstDispatchFrame&)
+METHOD AIBT.Burst.BurstContextResult TryCompleteEnter(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstEnterContext&)
+METHOD AIBT.Burst.BurstContextResult TryCompleteExit(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstDispatchFrame&)
+METHOD AIBT.Burst.BurstContextResult TryCompleteObserver(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.ConditionResult)
+METHOD AIBT.Burst.BurstContextResult TryCompleteTick(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstTickContext&,AIBT.NodeStatus)
+METHOD AIBT.Burst.BurstContextResult TryCompleteValueRead(AIBT.Burst.BurstValueReader&)
+METHOD AIBT.Burst.BurstContextResult TryConsume(AIBT.RuntimeNodeIndex,System.UInt32,AIBT.OperationId,AIBT.NativeCompletionExpectationV1,AIBT.NativeConsumedCompletionV1&)
+METHOD AIBT.Burst.BurstContextResult TryContribute(AIBT.NativeSharedContributionWriterV1,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,Unity.Collections.NativeArray`1<>)
+METHOD AIBT.Burst.BurstContextResult TryCreate(AIBT.NativeCommandMergeCapacityV1,Unity.Collections.Allocator,AIBT.NativeCommandMergeOwnerV1&)
+METHOD AIBT.Burst.BurstContextResult TryCreate(AIBT.TreeInstanceId,AIBT.NativeCommandAsyncCapacityV1,Unity.Collections.Allocator,AIBT.NativeCommandAsyncOwnerV1&)
+METHOD AIBT.Burst.BurstContextResult TryCreate(AIBT.TreeInstanceId,AIBT.NativeCommandAsyncCapacityV1,Unity.Collections.Allocator,System.UInt64,System.UInt64,AIBT.NativeCommandAsyncOwnerV1&)
+METHOD AIBT.Burst.BurstContextResult TryCreate(System.UInt32,System.UInt32,AIBT.NativeSnapshotBuilderV1&)
+METHOD AIBT.Burst.BurstContextResult TryCreateAbortContext(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstAbortContext&)
+METHOD AIBT.Burst.BurstContextResult TryCreateConfigurationReader(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstConfigurationReader&)
+METHOD AIBT.Burst.BurstContextResult TryCreateEnterContext(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstEnterContext&)
+METHOD AIBT.Burst.BurstContextResult TryCreateExitContext(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstExitContext&)
+METHOD AIBT.Burst.BurstContextResult TryCreateMemoryAccessor(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstMemoryAccessor&)
+METHOD AIBT.Burst.BurstContextResult TryCreateObserverContext(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstObserverContext&)
+METHOD AIBT.Burst.BurstContextResult TryCreateTickContext(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstTickContext&)
+METHOD AIBT.Burst.BurstContextResult TryDeclareMissing(AIBT.NativeSnapshotTypeDescriptorV1&)
+METHOD AIBT.Burst.BurstContextResult TryDispose()
+METHOD AIBT.Burst.BurstContextResult TryEmitEffect(AIBT.CommandType,AIBT.CommandPhase,AIBT.NativePayloadSliceV1,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryFailDispatch(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstContextResult)
+METHOD AIBT.Burst.BurstContextResult TryFaultCancelAll(System.UInt32&)
+METHOD AIBT.Burst.BurstContextResult TryFinalize(AIBT.NativeMergedCommandViewV1&)
+METHOD AIBT.Burst.BurstContextResult TryFreeze(System.UInt64,System.UInt32,AIBT.NativeSnapshotOwnerV1&)
+METHOD AIBT.Burst.BurstContextResult TryGetAbortReason(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstNodeAbortReason&)
+METHOD AIBT.Burst.BurstContextResult TryGetCatalogHandshake(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstCatalogHandshake&)
+METHOD AIBT.Burst.BurstContextResult TryGetCommandStream(AIBT.NativeCommandAsyncLeaseV1&,AIBT.NativeCommandStreamViewV1&)
+METHOD AIBT.Burst.BurstContextResult TryGetDiagnostic(AIBT.NativeCommandAsyncLeaseV1&,System.UInt32,AIBT.NativeCompletionDiagnosticV1&)
+METHOD AIBT.Burst.BurstContextResult TryGetDiagnostic(System.UInt32,AIBT.NativeCompletionDiagnosticV1&)
+METHOD AIBT.Burst.BurstContextResult TryGetExecutionRequest(AIBT.Burst.BurstExecutionBatch&,System.UInt32&,System.UInt32&,System.UInt32&,AIBT.Burst.BurstCallbackPhase&,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryGetExecutionResult(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstExecutionResult&)
+METHOD AIBT.Burst.BurstContextResult TryGetExitReason(AIBT.Burst.BurstDispatchFrame&,AIBT.Burst.BurstNodeExitReason&)
+METHOD AIBT.Burst.BurstContextResult TryGetOperationState(AIBT.OperationId,AIBT.NativeOperationStateV1&)
+METHOD AIBT.Burst.BurstContextResult TryGetOutput(AIBT.NativeMergedCommandViewV1&)
+METHOD AIBT.Burst.BurstContextResult TryGetPayloadByte(System.UInt32,System.Byte&)
+METHOD AIBT.Burst.BurstContextResult TryGetRecord(System.UInt32,AIBT.NativeCommandRecordV1&)
+METHOD AIBT.Burst.BurstContextResult TryGetTimeMicroseconds(System.Int64&)
+METHOD AIBT.Burst.BurstContextResult TryNextFloat32(System.Single&)
+METHOD AIBT.Burst.BurstContextResult TryNextUInt32(System.UInt32&)
+METHOD AIBT.Burst.BurstContextResult TryNextUInt32(System.UInt32,System.UInt32&)
+METHOD AIBT.Burst.BurstContextResult TryNormalizeCompletions(Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeCompletionInputRecordV1>,Unity.Collections.NativeArray`1+ReadOnly<System.Byte>,Unity.Collections.NativeArray`1+ReadOnly<System.UInt32>)
+METHOD AIBT.Burst.BurstContextResult TryPrepareSchedule(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstExecutionBatch&)
+METHOD AIBT.Burst.BurstContextResult TryRead(AIBT.NativeAgentExecuteLeaseV1,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryRead(AIBT.NativeAgentExecuteLeaseV2,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryRead(AIBT.NativeAgentExecutionViewV1,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryRead(AIBT.NativeProgramImageViewV2,AIBT.NativeInstanceArenaViewV2,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryRead(AIBT.NativeSharedExecutionViewV1,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryRead(AIBT.NativeSnapshotReadHandleV1`1<>,)
+METHOD AIBT.Burst.BurstContextResult TryReadAsyncOperationHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,System.UInt64,System.UInt32,)
+METHOD AIBT.Burst.BurstContextResult TryReadBlackboardReadHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,)
+METHOD AIBT.Burst.BurstContextResult TryReadBlackboardReadWriteHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,)
+METHOD AIBT.Burst.BurstContextResult TryReadBlackboardWriteHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,)
+METHOD AIBT.Burst.BurstContextResult TryReadBoolean(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt32,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryReadCommandHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,)
+METHOD AIBT.Burst.BurstContextResult TryReadCompletionHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryBoolean(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryFloat32(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Single&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryFloat64(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Double&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryInt16(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Int16&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryInt32(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Int32&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryInt64(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Int64&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryInt8(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.SByte&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryUInt16(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.UInt16&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryUInt32(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.UInt32&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryUInt64(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryReadMemoryUInt8(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Byte&)
+METHOD AIBT.Burst.BurstContextResult TryReadSnapshotHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,)
+METHOD AIBT.Burst.BurstContextResult TryReadUInt32(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt32,System.UInt32&)
+METHOD AIBT.Burst.BurstContextResult TryReadUInt64(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt32,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.Byte&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.Double&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.Int16&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.Int32&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.Int64&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.SByte&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.Single&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.UInt16&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.UInt32&)
+METHOD AIBT.Burst.BurstContextResult TryReadValue(AIBT.Burst.BurstValueReader&,System.UInt32,System.UInt32,System.UInt64&)
+METHOD AIBT.Burst.BurstContextResult TryReduce(AIBT.NativeSharedReductionViewV1)
+METHOD AIBT.Burst.BurstContextResult TryRegisterDependency(AIBT.NativeCommandAsyncLeaseV1&,Unity.Jobs.JobHandle)
+METHOD AIBT.Burst.BurstContextResult TryRegisterDependency(AIBT.NativeSnapshotReadLeaseV1&,Unity.Jobs.JobHandle)
+METHOD AIBT.Burst.BurstContextResult TryRejectBatch(AIBT.Burst.BurstExecutionBatch&,AIBT.Burst.BurstCatalogValidationResult&)
+METHOD AIBT.Burst.BurstContextResult TryRelease(AIBT.NativeCommandAsyncLeaseV1&)
+METHOD AIBT.Burst.BurstContextResult TryRelease(AIBT.NativeSnapshotReadLeaseV1&)
+METHOD AIBT.Burst.BurstContextResult TryReset()
+METHOD AIBT.Burst.BurstContextResult TryResetPublishedBuffers()
+METHOD AIBT.Burst.BurstContextResult TryResolve(AIBT.NativeSnapshotTypeDescriptorV1&,)
+METHOD AIBT.Burst.BurstContextResult TryRestart(System.UInt32&)
+METHOD AIBT.Burst.BurstContextResult TryStart(AIBT.RuntimeNodeIndex,System.UInt32,AIBT.CommandType,AIBT.CommandType,AIBT.NativePayloadSliceV1,AIBT.NativePayloadSliceV1,AIBT.OperationId&)
+METHOD AIBT.Burst.BurstContextResult TryWrite(AIBT.NativeAgentExecuteLeaseV1,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,Unity.Collections.NativeArray`1<>,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryWrite(AIBT.NativeAgentExecuteLeaseV2,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,Unity.Collections.NativeArray`1<>,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryWrite(AIBT.NativeAgentExecutionViewV1,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,Unity.Collections.NativeArray`1<>,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryWrite(AIBT.NativeProgramImageViewV2,AIBT.NativeInstanceArenaViewV2,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,Unity.Collections.NativeArray`1<>,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryWrite(AIBT.NativeSharedExecutionViewV1,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,Unity.Collections.NativeArray`1<>,System.Boolean&)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryBoolean(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Boolean)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryFloat32(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Single)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryFloat64(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Double)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryInt16(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Int16)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryInt32(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Int32)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryInt64(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Int64)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryInt8(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.SByte)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryUInt16(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.UInt16)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryUInt32(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.UInt32)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryUInt64(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.UInt64)
+METHOD AIBT.Burst.BurstContextResult TryWriteMemoryUInt8(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Byte)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.Boolean)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.Byte)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.Double)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.Int16)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.Int32)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.Int64)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.SByte)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.Single)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.UInt16)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.UInt32)
+METHOD AIBT.Burst.BurstContextResult TryWriteValue(AIBT.Burst.BurstValueWriter&,System.UInt32,System.UInt32,System.UInt64)
+METHOD AIBT.CommandBatch Merge(System.Collections.Generic.IEnumerable`1<AIBT.CommandBatch>)
+METHOD AIBT.CompiledHash ComputeHash()
+METHOD AIBT.Diagnostic Create(AIBT.DiagnosticCode,System.String,AIBT.DiagnosticLocation,System.Collections.Generic.IEnumerable`1<AIBT.DiagnosticLocation>)
+METHOD AIBT.DiagnosticCode Parse(System.String)
+METHOD AIBT.DiagnosticCodeRange For(AIBT.DiagnosticSubsystem)
+METHOD AIBT.DiagnosticCollection Validate(AIBT.Authoring.BlackboardKeyDefinition)
+METHOD AIBT.DiagnosticCollection Validate(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ValidationOptions)
+METHOD AIBT.DiagnosticCollection Validate(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ValidationOptions,AIBT.Authoring.RegisteredBlackboardTypeCatalog)
+METHOD AIBT.DiagnosticCollection Validate(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>)
+METHOD AIBT.EntityId Parse(System.String)
+METHOD AIBT.NativeBlackboardSlotAuthorityV2 CreateBuiltIn(System.String,AIBT.BlackboardTypeDescriptor,System.String,System.Byte[])
+METHOD AIBT.NativeBlackboardTypeIdV2 BuiltIn(AIBT.BlackboardTypeDescriptor,System.UInt64)
+METHOD AIBT.NativeBlackboardTypeIdV2 Registered(System.UInt32,AIBT.NativeRegisteredBlackboardTypeRecordV2)
+METHOD AIBT.NativeCompiledProgramHeaderV1 CreateNativeHeaderProjection()
+METHOD AIBT.NativeCompletionExpectationV1 Typed(AIBT.CompletionPayloadType,System.UInt32)
+METHOD AIBT.NativeDiagnosticAppendResultV1 TryAppend(AIBT.NativeDiagnosticRecordV1&)
+METHOD AIBT.NativeDiagnosticAppendResultV1 TryAppend(AIBT.NativeDiagnosticRecordV1&,Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeDiagnosticLocationV1>,System.UInt32)
+METHOD AIBT.NativeDiagnosticFieldPairV1 GetField(System.Int32)
+METHOD AIBT.NativeProgramBlackboardBindingV2 CreateNativeBlackboardBindingV2(AIBT.Authoring.RegisteredBlackboardTypeCatalog)
+METHOD AIBT.NativeProgramImageCapacityV1 Exact(AIBT.CompiledProgram)
+METHOD AIBT.NativeProgramImageCapacityV2 Exact(AIBT.NativeProgramBlackboardBindingV2)
+METHOD AIBT.NativeTraceAppendResultV1 TryAppend(AIBT.NativeTraceRecordV1&)
+METHOD AIBT.NativeTraceAppendResultV1 TryAppend(AIBT.NativeTraceRecordV1&,Unity.Collections.NativeArray`1+ReadOnly<System.Byte>,System.UInt32)
+METHOD AIBT.NodeId Parse(System.String)
+METHOD AIBT.OperationId Parse(System.String)
+METHOD AIBT.Revision Parse(System.String)
+METHOD AIBT.RuntimeNodeIndex Parse(System.String)
+METHOD AIBT.TreeId Parse(System.String)
+METHOD AIBT.TreeInstanceId Parse(System.String)
+METHOD Newtonsoft.Json.Linq.JObject GetParametersCopy()
+METHOD System.Boolean Contains(AIBT.DiagnosticCode)
+METHOD System.Boolean Contains(System.String)
+METHOD System.Boolean Equals(AIBT.AgentId)
+METHOD System.Boolean Equals(AIBT.AssetId)
+METHOD System.Boolean Equals(AIBT.Authoring.AuthoringDiagnostic)
+METHOD System.Boolean Equals(AIBT.Authoring.BlackboardTypeReference)
+METHOD System.Boolean Equals(AIBT.Authoring.DiagnosticOperationPayload)
+METHOD System.Boolean Equals(AIBT.Authoring.NodeBindingMap)
+METHOD System.Boolean Equals(AIBT.Authoring.NodeDocument)
+METHOD System.Boolean Equals(AIBT.Authoring.NodeObserver)
+METHOD System.Boolean Equals(AIBT.Authoring.SemanticObject)
+METHOD System.Boolean Equals(AIBT.Authoring.SemanticProperty)
+METHOD System.Boolean Equals(AIBT.Authoring.SemanticValue)
+METHOD System.Boolean Equals(AIBT.Authoring.SuggestedDiagnosticOperation)
+METHOD System.Boolean Equals(AIBT.Authoring.TagSet)
+METHOD System.Boolean Equals(AIBT.BlackboardTypeDescriptor)
+METHOD System.Boolean Equals(AIBT.BlackboardValue)
+METHOD System.Boolean Equals(AIBT.CommandRecord)
+METHOD System.Boolean Equals(AIBT.CommandType)
+METHOD System.Boolean Equals(AIBT.CompiledCompilerVersion)
+METHOD System.Boolean Equals(AIBT.CompiledHash)
+METHOD System.Boolean Equals(AIBT.CompiledRange)
+METHOD System.Boolean Equals(AIBT.CompletionPayloadType)
+METHOD System.Boolean Equals(AIBT.CompletionRecord)
+METHOD System.Boolean Equals(AIBT.Diagnostic)
+METHOD System.Boolean Equals(AIBT.DiagnosticCode)
+METHOD System.Boolean Equals(AIBT.DiagnosticLocation)
+METHOD System.Boolean Equals(AIBT.EntityId)
+METHOD System.Boolean Equals(AIBT.Enum32Value)
+METHOD System.Boolean Equals(AIBT.Float2Value)
+METHOD System.Boolean Equals(AIBT.Float3Value)
+METHOD System.Boolean Equals(AIBT.NativeBlackboardTypeIdV2)
+METHOD System.Boolean Equals(AIBT.NativeDiagnosticFieldPairV1)
+METHOD System.Boolean Equals(AIBT.NativeDiagnosticLocationV1)
+METHOD System.Boolean Equals(AIBT.NativeHash256V1)
+METHOD System.Boolean Equals(AIBT.NativeLeaseTokenV1)
+METHOD System.Boolean Equals(AIBT.NativeRuntimeFailureV1)
+METHOD System.Boolean Equals(AIBT.NativeSnapshotLeaseTokenV1)
+METHOD System.Boolean Equals(AIBT.NativeSnapshotTypeDescriptorV1)
+METHOD System.Boolean Equals(AIBT.NodeId)
+METHOD System.Boolean Equals(AIBT.OperationId)
+METHOD System.Boolean Equals(AIBT.QuaternionValue)
+METHOD System.Boolean Equals(AIBT.RegisteredUnmanagedTypeDescriptor)
+METHOD System.Boolean Equals(AIBT.Revision)
+METHOD System.Boolean Equals(AIBT.RuntimeNodeIndex)
+METHOD System.Boolean Equals(AIBT.TreeId)
+METHOD System.Boolean Equals(AIBT.TreeInstanceId)
+METHOD System.Boolean Equals(System.Object)
+METHOD System.Boolean IsExactCanonicalEncoding(AIBT.Authoring.ReferenceCompilationPolicy,System.Byte[])
+METHOD System.Boolean RemoveNodeAt(System.Int32)
+METHOD System.Boolean ReplaceNodeAt(System.Int32,AIBT.Authoring.NodeDocument)
+METHOD System.Boolean SetBlackboard(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>)
+METHOD System.Boolean SetDescription(System.String)
+METHOD System.Boolean SetFormat(System.String,System.Int32)
+METHOD System.Boolean SetIdentity(AIBT.TreeId)
+METHOD System.Boolean SetMetadata(AIBT.Authoring.SemanticObject)
+METHOD System.Boolean SetName(System.String)
+METHOD System.Boolean SetRoot(AIBT.NodeId)
+METHOD System.Boolean SetTags(AIBT.Authoring.TagSet)
+METHOD System.Boolean TryAbort(AIBT.NativeExecuteSelectionWindowV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAbortExecuteWindow(AIBT.NativeAgentExecuteWindowV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAbortExecuteWindow(AIBT.NativeAgentExecuteWindowV2,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAbortUpdate(AIBT.NativeSharedUpdateWindowV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireContributionStream(AIBT.NativeSharedUpdateWindowV1,AIBT.NativeSharedBindingV1,AIBT.NativeAgentExecuteLeaseV2,AIBT.NativeSharedContributionLeaseV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireContributionStream(AIBT.NativeSharedUpdateWindowV1,AIBT.NativeSharedBindingV1,AIBT.NativeInstanceExecutionLeaseV2,AIBT.NativeSharedContributionLeaseV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireExecutionLease(AIBT.NativeProgramReadLeaseV1,AIBT.NativeInstanceExecutionLeaseV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireExecutionLeaseV2(AIBT.NativeProgramReadLeaseV2,AIBT.NativeInstanceExecutionLeaseV2&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireExecutionView(AIBT.NativeSharedBindingV1,AIBT.NativeInstanceExecutionLeaseV2,AIBT.NativeSharedExecutionViewV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireNext(AIBT.NativeAgentExecuteWindowV1,AIBT.NativeAgentExecuteLeaseV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireNext(AIBT.NativeAgentExecuteWindowV2,AIBT.NativeAgentExecuteLeaseV2&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireReadLease(AIBT.NativeExecuteSelectionWindowV1,AIBT.NativeExecuteSelectionReadLeaseV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireReadLease(AIBT.NativeProgramReadLeaseV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireReadLeaseV2(AIBT.NativeProgramReadLeaseV2&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireReductionLease(AIBT.NativeSharedUpdateWindowV1,AIBT.NativeSharedReductionLeaseV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryAcquireWriter(AIBT.NativeDiagnosticChannelLeaseV1&,AIBT.NativeDiagnosticChannelFailureV1&)
+METHOD System.Boolean TryAcquireWriter(AIBT.NativeTraceChannelLeaseV1&,AIBT.NativeTraceChannelFailureV1&)
+METHOD System.Boolean TryBegin(Unity.Collections.NativeArray`1<AIBT.NativeExecuteSelectionEntryV1>,AIBT.NativeExecuteSelectionWindowV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryBeginExecuteWindow(AIBT.NativeExecuteSelectionWindowOwnerV1,AIBT.NativeExecuteSelectionWindowV1,AIBT.NativeAgentExecuteWindowV2&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryBeginExecuteWindow(Unity.Collections.NativeArray`1<AIBT.TreeInstanceId>,AIBT.NativeAgentExecuteWindowV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryBeginUpdate(AIBT.NativeExecuteSelectionWindowOwnerV1,AIBT.NativeExecuteSelectionWindowV1,AIBT.NativeSharedUpdateWindowV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryBind(AIBT.TreeInstanceId,AIBT.NativeProgramReadLeaseV2,AIBT.NativeInstanceArenaOwnerV1,AIBT.NativeAgentBindingV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryBind(AIBT.TreeInstanceId,AIBT.NativeProgramReadLeaseV2,AIBT.NativeInstanceArenaOwnerV1,AIBT.NativeSharedBindingV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCancelContributionStream(AIBT.NativeSharedContributionLeaseV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCancelNext(AIBT.NativeAgentExecuteWindowV1,AIBT.TreeInstanceId,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCancelNext(AIBT.NativeAgentExecuteWindowV2,AIBT.TreeInstanceId,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCompleteAbortedExit(System.UInt32,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCompleteReduction(AIBT.NativeSharedReductionLeaseV1,AIBT.NativeSharedCommitReportV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCompleteTerminalExit(System.UInt32,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCreate(AIBT.CompiledProgram,AIBT.NativeProgramImageCapacityV1,Unity.Collections.Allocator,AIBT.NativeProgramImageOwnerV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCreate(AIBT.NativeDiagnosticChannelCapacityV1,AIBT.TreeInstanceId,System.UInt32,Unity.Collections.Allocator,AIBT.NativeDiagnosticChannelOwnerV1&,AIBT.NativeDiagnosticChannelFailureV1&)
+METHOD System.Boolean TryCreate(AIBT.NativeExecuteSelectionCapacityV1,Unity.Collections.Allocator,AIBT.NativeExecuteSelectionWindowOwnerV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCreate(AIBT.NativeProgramReadLeaseV1,AIBT.NativeInstanceArenaCapacityV1,Unity.Collections.Allocator,AIBT.NativeInstanceArenaOwnerV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCreate(AIBT.NativeProgramReadLeaseV2,AIBT.NativeSharedContextCapacityV1,Unity.Collections.Allocator,AIBT.NativeSharedContextOwnerV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCreate(AIBT.NativeTraceChannelCapacityV1,AIBT.NativeTraceLevelV1,AIBT.TreeInstanceId,System.UInt32,Unity.Collections.Allocator,AIBT.NativeTraceChannelOwnerV1&,AIBT.NativeTraceChannelFailureV1&)
+METHOD System.Boolean TryCreate(System.UInt32,Unity.Collections.Allocator,AIBT.NativeAgentContextRegistryV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCreateContext(AIBT.AgentId,AIBT.NativeProgramReadLeaseV2,AIBT.NativeAgentContextCapacityV1,AIBT.NativeAgentContextOwnerV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCreateV2(AIBT.NativeProgramBlackboardBindingV2,AIBT.NativeProgramImageCapacityV2,Unity.Collections.Allocator,AIBT.NativeProgramImageOwnerV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryCreateV2(AIBT.NativeProgramReadLeaseV2,AIBT.NativeInstanceArenaCapacityV2,Unity.Collections.Allocator,AIBT.NativeInstanceArenaOwnerV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryDerive(AIBT.NativeProgramImageViewV1,AIBT.NativeInstanceArenaCapacityV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryDerive(AIBT.NativeProgramImageViewV2,AIBT.NativeInstanceArenaCapacityV2&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryDerive(AIBT.NativeProgramImageViewV2,System.UInt32,AIBT.NativeAgentContextCapacityV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryDerive(AIBT.NativeProgramImageViewV2,System.UInt32,System.UInt32,System.UInt32,System.UInt32,AIBT.NativeSharedContextCapacityV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryDestroyContext(AIBT.NativeAgentContextOwnerV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryDispose(AIBT.NativeDiagnosticChannelFailureV1&)
+METHOD System.Boolean TryDispose(AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryDispose(AIBT.NativeTraceChannelFailureV1&)
+METHOD System.Boolean TryEnd(AIBT.NativeExecuteSelectionWindowV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryEndExecuteWindow(AIBT.NativeAgentExecuteWindowV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryEndExecuteWindow(AIBT.NativeAgentExecuteWindowV2,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryGet(AIBT.BlackboardValueType,AIBT.BlackboardTypeDescriptor&)
+METHOD System.Boolean TryGet(AIBT.DiagnosticCode,AIBT.DiagnosticDescriptor&)
+METHOD System.Boolean TryGet(System.String,AIBT.Authoring.DiagnosticOperationDescriptor&)
+METHOD System.Boolean TryGet(System.String,AIBT.Authoring.NodeRegistryEntry&)
+METHOD System.Boolean TryGet(System.String,System.UInt32,AIBT.Authoring.RegisteredBlackboardTypeCatalogEntry&)
+METHOD System.Boolean TryGet(System.UInt64,AIBT.Authoring.NodeRegistryEntry&)
+METHOD System.Boolean TryGetAgentId(AIBT.AgentId&)
+METHOD System.Boolean TryGetArray(System.Collections.Generic.IReadOnlyList`1[[AIBT.Authoring.SemanticValue, AIBT.Authoring, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]&)
+METHOD System.Boolean TryGetAssetId(AIBT.AssetId&)
+METHOD System.Boolean TryGetBool(System.Boolean&)
+METHOD System.Boolean TryGetBoolean(System.Boolean&)
+METHOD System.Boolean TryGetEntityId(AIBT.EntityId&)
+METHOD System.Boolean TryGetEnum32(AIBT.Enum32Value&)
+METHOD System.Boolean TryGetFixedString(System.String&)
+METHOD System.Boolean TryGetFloat2(AIBT.Float2Value&)
+METHOD System.Boolean TryGetFloat3(AIBT.Float3Value&)
+METHOD System.Boolean TryGetFloat32(System.Single&)
+METHOD System.Boolean TryGetFloat64(System.Double&)
+METHOD System.Boolean TryGetInt32(System.Int32&)
+METHOD System.Boolean TryGetInt64(System.Int64&)
+METHOD System.Boolean TryGetNumber(System.Double&)
+METHOD System.Boolean TryGetObject(AIBT.Authoring.SemanticObject&)
+METHOD System.Boolean TryGetOperationId(AIBT.OperationId&)
+METHOD System.Boolean TryGetQuaternion(AIBT.QuaternionValue&)
+METHOD System.Boolean TryGetRegisteredValue(AIBT.Authoring.SemanticObject&)
+METHOD System.Boolean TryGetRuntimeValue(AIBT.BlackboardValue&)
+METHOD System.Boolean TryGetSnapshot(AIBT.NativeDiagnosticChannelSnapshotV1&,AIBT.NativeDiagnosticChannelFailureV1&)
+METHOD System.Boolean TryGetSnapshot(AIBT.NativeTraceChannelSnapshotV1&,AIBT.NativeTraceChannelFailureV1&)
+METHOD System.Boolean TryGetString(System.String&)
+METHOD System.Boolean TryGetUInt64(System.UInt64&)
+METHOD System.Boolean TryGetValue(System.String,AIBT.Authoring.SemanticValue&)
+METHOD System.Boolean TryInitializeRandomStreams(AIBT.NativeProgramReadLeaseV2,System.UInt64,System.UInt64,Unity.Collections.NativeArray`1<System.UInt32>,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryMerge(AIBT.NativeDiagnosticChannelSnapshotV1&,AIBT.NativeDiagnosticChannelSnapshotV1&,Unity.Collections.NativeArray`1<AIBT.NativeDiagnosticRecordV1>,Unity.Collections.NativeArray`1<AIBT.NativeDiagnosticLocationV1>,System.UInt32&,System.UInt32&)
+METHOD System.Boolean TryMerge(AIBT.NativeTraceChannelSnapshotV1&,AIBT.NativeTraceChannelSnapshotV1&,Unity.Collections.NativeArray`1<AIBT.NativeTraceRecordV1>,Unity.Collections.NativeArray`1<System.Byte>,System.UInt32&,System.UInt32&)
+METHOD System.Boolean TryMerge(Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeDiagnosticRecordV1>,System.UInt32,Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeDiagnosticLocationV1>,System.UInt32,Unity.Collections.NativeArray`1<AIBT.NativeDiagnosticRecordV1>,Unity.Collections.NativeArray`1<AIBT.NativeDiagnosticLocationV1>,System.UInt32&,System.UInt32&)
+METHOD System.Boolean TryMerge(Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeTraceRecordV1>,System.UInt32,Unity.Collections.NativeArray`1+ReadOnly<System.Byte>,System.UInt32,Unity.Collections.NativeArray`1<AIBT.NativeTraceRecordV1>,Unity.Collections.NativeArray`1<System.Byte>,System.UInt32&,System.UInt32&)
+METHOD System.Boolean TryMerge(Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeTraceRecordV1>,System.UInt32,Unity.Collections.NativeArray`1<AIBT.NativeTraceRecordV1>,System.UInt32&)
+METHOD System.Boolean TryMergeRecords(Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeDiagnosticRecordV1>,System.UInt32,Unity.Collections.NativeArray`1<AIBT.NativeDiagnosticRecordV1>,System.UInt32&)
+METHOD System.Boolean TryParse(System.String,AIBT.AgentId&)
+METHOD System.Boolean TryParse(System.String,AIBT.DiagnosticCode&)
+METHOD System.Boolean TryParse(System.String,AIBT.EntityId&)
+METHOD System.Boolean TryParse(System.String,AIBT.NodeId&)
+METHOD System.Boolean TryParse(System.String,AIBT.OperationId&)
+METHOD System.Boolean TryParse(System.String,AIBT.Revision&)
+METHOD System.Boolean TryParse(System.String,AIBT.RuntimeNodeIndex&)
+METHOD System.Boolean TryParse(System.String,AIBT.TreeId&)
+METHOD System.Boolean TryParse(System.String,AIBT.TreeInstanceId&)
+METHOD System.Boolean TryParse(System.String,System.Nullable`1<System.Int64>,AIBT.AssetId&)
+METHOD System.Boolean TryProject(AIBT.NativeDiagnosticRecordV1&,System.Collections.Generic.IReadOnlyList`1<AIBT.CompiledDebugMapEntry>,System.Collections.Generic.IReadOnlyList`1<AIBT.NativeDiagnosticLocationV1>,AIBT.Diagnostic&)
+METHOD System.Boolean TryReduceUpdate(AIBT.NativeSharedUpdateWindowV1,AIBT.NativeSharedCommitReportV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeAgentExecuteLeaseV1,Unity.Jobs.JobHandle,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeAgentExecuteLeaseV2,Unity.Jobs.JobHandle,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeDiagnosticChannelLeaseV1,Unity.Jobs.JobHandle,AIBT.NativeDiagnosticChannelFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeInstanceExecutionLeaseV1,Unity.Jobs.JobHandle,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeInstanceExecutionLeaseV2,Unity.Jobs.JobHandle,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeProgramReadLeaseV1,Unity.Jobs.JobHandle,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeProgramReadLeaseV2,Unity.Jobs.JobHandle,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeSharedContributionLeaseV1,Unity.Jobs.JobHandle,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRegisterDependency(AIBT.NativeTraceChannelLeaseV1,Unity.Jobs.JobHandle,AIBT.NativeTraceChannelFailureV1&)
+METHOD System.Boolean TryRegisterReductionDependency(AIBT.NativeSharedReductionLeaseV1,Unity.Jobs.JobHandle,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReleaseExecuteLease(AIBT.NativeAgentExecuteLeaseV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReleaseExecuteLease(AIBT.NativeAgentExecuteLeaseV2,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReleaseExecutionLease(AIBT.NativeInstanceExecutionLeaseV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReleaseExecutionLease(AIBT.NativeInstanceExecutionLeaseV2,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReleaseReadLease(AIBT.NativeExecuteSelectionReadLeaseV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReleaseReadLease(AIBT.NativeProgramReadLeaseV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReleaseReadLease(AIBT.NativeProgramReadLeaseV2,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReleaseWriter(AIBT.NativeDiagnosticChannelLeaseV1,AIBT.NativeDiagnosticChannelFailureV1&)
+METHOD System.Boolean TryReleaseWriter(AIBT.NativeTraceChannelLeaseV1,AIBT.NativeTraceChannelFailureV1&)
+METHOD System.Boolean TryReset(AIBT.NativeDiagnosticChannelFailureV1&)
+METHOD System.Boolean TryReset(AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryReset(AIBT.NativeTraceChannelFailureV1&)
+METHOD System.Boolean TryResetTreeBlackboard(AIBT.NativeProgramReadLeaseV2,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryRestart(AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TrySealContributionStream(AIBT.NativeSharedContributionLeaseV1,AIBT.NativeSharedContributionStreamViewV1&,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TrySelectRejection(Unity.Collections.NativeArray`1+ReadOnly<AIBT.NativeDiagnosticRecordV1>,System.UInt32,AIBT.NativeDiagnosticRecordV1&)
+METHOD System.Boolean TryUnbind(AIBT.NativeAgentBindingV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Boolean TryUnbind(AIBT.NativeSharedBindingV1,AIBT.NativeRuntimeFailureV1&)
+METHOD System.Byte GetByte(System.Int32)
+METHOD System.Byte GetPayloadByte(System.Int32)
+METHOD System.Byte[] GetBytesCopy()
+METHOD System.Byte[] GetCanonicalDefaultJsonCopy()
+METHOD System.Byte[] GetConfigBlobCopy()
+METHOD System.Byte[] GetDefaultValueBlobCopy()
+METHOD System.Byte[] GetOuterPreimageCopy()
+METHOD System.Byte[] GetRawLayoutCopy()
+METHOD System.Byte[] GetSchemaBytesCopy()
+METHOD System.Byte[] GetSchemaPreimageCopy()
+METHOD System.Byte[] Serialize(AIBT.Authoring.ReferenceCompilationPolicy)
+METHOD System.Byte[] SerializeUtf8(AIBT.Authoring.AuthoringDiagnostic)
+METHOD System.Byte[] ToCanonicalUtf8()
+METHOD System.Collections.Generic.IEnumerator`1<AIBT.Authoring.AuthoringDiagnostic> GetEnumerator()
+METHOD System.Collections.Generic.IEnumerator`1<AIBT.Authoring.NodeRegistryEntry> GetEnumerator()
+METHOD System.Collections.Generic.IEnumerator`1<AIBT.Diagnostic> GetEnumerator()
+METHOD System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.GeneratedNodeDescriptor> Materialize(System.String,System.String,System.String,System.String)
+METHOD System.Int32 CompareTo(AIBT.Authoring.AuthoringDiagnostic)
+METHOD System.Int32 CompareTo(AIBT.Authoring.DiagnosticOperationPayload)
+METHOD System.Int32 CompareTo(AIBT.Authoring.SuggestedDiagnosticOperation)
+METHOD System.Int32 CompareTo(AIBT.Diagnostic)
+METHOD System.Int32 CompareTo(AIBT.DiagnosticCode)
+METHOD System.Int32 CompareTo(AIBT.DiagnosticLocation)
+METHOD System.Int32 CompareTo(AIBT.TreeInstanceId)
+METHOD System.Int32 GetHashCode()
+METHOD System.ReadOnlySpan`1<System.Byte> GetPayload(AIBT.CommandRecord&)
+METHOD System.ReadOnlySpan`1<System.Byte> GetPayload(AIBT.CompletionRecord&)
+METHOD System.String Serialize(AIBT.Authoring.AuthoringDiagnostic)
+METHOD System.String Sha256Hex(System.Byte[])
+METHOD System.String Sha256Hex(System.String)
+METHOD System.String ToGuidString()
+METHOD System.String ToString()
+METHOD System.UInt64 Fnv1A64(System.Byte[])
+METHOD System.UInt64 Fnv1A64(System.String)
+METHOD System.Void .ctor()
+METHOD System.Void .ctor(AIBT.Authoring.GeneratedTypeRole,System.String,System.UInt32,System.String,AIBT.RegisteredUnmanagedTypeDescriptor)
+METHOD System.Void .ctor(AIBT.Authoring.NodeManifest,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedStorageField>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedStorageField>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedBindingDescriptor>)
+METHOD System.Void .ctor(AIBT.Authoring.NodeManifest,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedStorageField>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedStorageField>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedBindingDescriptor>,System.Byte,System.Boolean)
+METHOD System.Void .ctor(AIBT.Authoring.TreeDocument,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,System.String)
+METHOD System.Void .ctor(AIBT.BlackboardScope,System.String,System.UInt32,System.UInt32,System.UInt32,System.Byte[],System.Byte[])
+METHOD System.Void .ctor(AIBT.BlackboardScope,System.UInt32)
+METHOD System.Void .ctor(AIBT.Burst.BurstCatalogValidationCode,System.UInt16)
+METHOD System.Void .ctor(AIBT.Burst.BurstExecutionCode,System.UInt16,System.UInt32,System.UInt64)
+METHOD System.Void .ctor(AIBT.Burst.BurstHash256)
+METHOD System.Void .ctor(AIBT.CommandType,AIBT.OperationId,System.UInt32,System.UInt32,AIBT.CommandPhase,AIBT.TreeInstanceId,System.UInt64)
+METHOD System.Void .ctor(AIBT.CompiledHash)
+METHOD System.Void .ctor(AIBT.CompiledProgram,System.Byte[],System.Collections.Generic.IEnumerable`1<AIBT.NativeBlackboardScopeBindingV2>,System.Collections.Generic.IEnumerable`1<AIBT.NativeBlackboardSlotBindingV2>,System.Collections.Generic.IEnumerable`1<AIBT.NativeBlackboardSlotAuthorityV2>,System.Collections.Generic.IEnumerable`1<AIBT.NativeBlackboardAccessBindingV2>,System.Collections.Generic.IEnumerable`1<AIBT.NativeBlackboardWatchedSlotBindingV2>,System.Collections.Generic.IEnumerable`1<AIBT.NativeRegisteredBlackboardTypeBindingV2>,System.Collections.Generic.IEnumerable`1<AIBT.NativeRegisteredBlackboardFieldBindingV2>)
+METHOD System.Void .ctor(AIBT.CompiledProgramHeader,System.Collections.Generic.IEnumerable`1<AIBT.CompiledNodeRecord>,System.Collections.Generic.IEnumerable`1<System.UInt32>,System.Collections.Generic.IEnumerable`1<System.UInt32>,System.Collections.Generic.IEnumerable`1<System.UInt32>,System.Collections.Generic.IEnumerable`1<AIBT.CompiledBlackboardSlotRecord>,System.Collections.Generic.IEnumerable`1<AIBT.CompiledObserverRecord>,System.Collections.Generic.IEnumerable`1<System.UInt32>,System.Collections.Generic.IEnumerable`1<System.Byte>,System.Collections.Generic.IEnumerable`1<System.Byte>,System.Collections.Generic.IEnumerable`1<AIBT.CompiledDebugMapEntry>)
+METHOD System.Void .ctor(AIBT.Diagnostic,AIBT.Authoring.SuggestedDiagnosticOperation)
+METHOD System.Void .ctor(AIBT.DiagnosticCode,AIBT.DiagnosticSeverity,System.String,AIBT.DiagnosticLocation,System.Collections.Generic.IEnumerable`1<AIBT.DiagnosticLocation>)
+METHOD System.Void .ctor(AIBT.DiagnosticCode,AIBT.DiagnosticSubsystem,AIBT.DiagnosticSeverity,AIBT.DiagnosticField,AIBT.DiagnosticField)
+METHOD System.Void .ctor(AIBT.NativeDiagnosticFieldIdV1,AIBT.NativeDiagnosticValueKindV1,System.UInt64)
+METHOD System.Void .ctor(AIBT.NativeDiagnosticLocationFlagsV1,System.UInt64,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(AIBT.NativeInstanceArenaCapacityV1,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(AIBT.NativeInstanceArenaCapacityV1,System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(AIBT.NativeProgramImageCapacityV1,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(AIBT.NativeRuntimeDiagnosticCodeV1,AIBT.NativeDiagnosticResourceKindV1,System.UInt64,System.UInt64,System.UInt64,System.UInt32,System.UInt64)
+METHOD System.Void .ctor(AIBT.NativeRuntimeDiagnosticCodeV1,AIBT.NativeResourceKindV1,System.UInt64,System.UInt64,System.UInt32,System.UInt64,System.UInt32,System.UInt64)
+METHOD System.Void .ctor(AIBT.NodeId,System.String,System.Int32,System.Collections.Generic.IEnumerable`1<AIBT.NodeId>,AIBT.Authoring.SemanticObject,AIBT.Authoring.NodeObserver,System.String,System.String,AIBT.Authoring.TagSet)
+METHOD System.Void .ctor(AIBT.NodeId,System.String,System.Int32,System.Collections.Generic.IEnumerable`1<AIBT.NodeId>,AIBT.Authoring.SemanticObject,AIBT.Authoring.NodeObserver,System.String,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.NodeBindingMap)
+METHOD System.Void .ctor(AIBT.OperationId,AIBT.CompletionOutcome,AIBT.CompletionPayloadType,System.UInt32,System.UInt32,System.UInt64,System.UInt64,AIBT.Revision)
+METHOD System.Void .ctor(AIBT.RegisteredUnmanagedTypeDescriptor,AIBT.CompiledHash,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(AIBT.RegisteredUnmanagedTypeDescriptor,System.Byte[],System.UInt32,System.UInt32)
+METHOD System.Void .ctor(AIBT.TreeInstanceId,AIBT.RuntimeNodeIndex,System.UInt32,System.UInt64)
+METHOD System.Void .ctor(AIBT.TreeInstanceId,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.AuthoringDiagnostic>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.DiagnosticOperationDescriptor>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.RegisteredBlackboardTypeCatalogEntry>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.Authoring.SemanticProperty>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.CommandRecord>,System.Collections.Generic.IEnumerable`1<System.Byte>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.CompletionRecord>,System.Collections.Generic.IEnumerable`1<System.Byte>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.Diagnostic>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.DiagnosticDescriptor>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<System.Collections.Generic.KeyValuePair`2<System.String,System.String>>)
+METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<System.String>)
+METHOD System.Void .ctor(System.Nullable`1<System.Int32>,System.Nullable`1<System.Int32>,System.Boolean,System.Boolean,System.Boolean,System.Boolean,AIBT.Authoring.BlackboardNamingPolicy,System.Collections.Generic.IEnumerable`1<System.String>,System.Boolean,System.Boolean,AIBT.Authoring.UnreachableNodePolicy,System.Boolean,System.Boolean,System.Collections.Generic.IEnumerable`1<AIBT.DiagnosticCode>,System.Nullable`1<System.Double>,System.Boolean,System.Boolean)
+METHOD System.Void .ctor(System.Nullable`1<System.Int32>,System.Nullable`1<System.Int32>,System.Boolean,System.Boolean,System.Boolean,System.Boolean,AIBT.Authoring.BlackboardNamingPolicy,System.Collections.Generic.IEnumerable`1<System.String>,System.Boolean,System.Boolean,System.Collections.Generic.IEnumerable`1<AIBT.DiagnosticCode>,System.Nullable`1<System.Double>,System.Boolean,System.Boolean)
+METHOD System.Void .ctor(System.Single,System.Single)
+METHOD System.Void .ctor(System.Single,System.Single,System.Single)
+METHOD System.Void .ctor(System.Single,System.Single,System.Single,System.Single)
+METHOD System.Void .ctor(System.String)
+METHOD System.Void .ctor(System.String,AIBT.Authoring.DiagnosticOperationPayload)
+METHOD System.Void .ctor(System.String,AIBT.Authoring.DiagnosticPayloadContract,System.Boolean)
+METHOD System.Void .ctor(System.String,AIBT.Authoring.GeneratedBindingKind,AIBT.BlackboardScope,AIBT.Authoring.GeneratedPhaseCapability,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedTypeRecord>)
+METHOD System.Void .ctor(System.String,AIBT.Authoring.NodeAccessMode)
+METHOD System.Void .ctor(System.String,AIBT.Authoring.NodeParameterType,System.Boolean,System.Nullable`1<System.UInt64>,System.Collections.Generic.IEnumerable`1<System.String>,AIBT.Authoring.NodeParameterCondition,AIBT.Authoring.NodeParameterCondition)
+METHOD System.Void .ctor(System.String,AIBT.Authoring.ReferenceCompilationPolicy,AIBT.CompiledCompilerVersion,System.Boolean)
+METHOD System.Void .ctor(System.String,AIBT.Authoring.SemanticValue)
+METHOD System.Void .ctor(System.String,AIBT.Authoring.UnreachableNodePolicy,System.Boolean,System.Boolean,AIBT.Authoring.TreeValidationPolicy)
+METHOD System.Void .ctor(System.String,AIBT.Burst.BurstBlackboardAccess,AIBT.BlackboardScope,System.String,System.UInt32)
+METHOD System.Void .ctor(System.String,System.Collections.Generic.IEnumerable`1<System.String>)
+METHOD System.Void .ctor(System.String,System.Int32,AIBT.TreeId,System.String,AIBT.NodeId,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeDocument>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.SemanticObject,AIBT.Revision)
+METHOD System.Void .ctor(System.String,System.Int32,AIBT.TreeId,System.String,AIBT.NodeId,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeDocument>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.SemanticObject,AIBT.Revision,AIBT.Authoring.BlackboardScopeContract,AIBT.Authoring.BlackboardScopeContract)
+METHOD System.Void .ctor(System.String,System.String)
+METHOD System.Void .ctor(System.String,System.String,AIBT.Authoring.BlackboardTypeReference,AIBT.BlackboardScope,AIBT.Authoring.BlackboardDefaultValue,System.String)
+METHOD System.Void .ctor(System.String,System.String,AIBT.Authoring.BlackboardTypeReference,AIBT.BlackboardScope,AIBT.Authoring.BlackboardDefaultValue,System.String,AIBT.Authoring.BlackboardReductionKind)
+METHOD System.Void .ctor(System.String,System.String,AIBT.Authoring.DiagnosticPayloadContract)
+METHOD System.Void .ctor(System.String,System.String,System.Nullable`1<System.Int32>,System.Nullable`1<System.Int32>,AIBT.TreeId,AIBT.NodeId,AIBT.TreeInstanceId)
+METHOD System.Void .ctor(System.String,System.String,System.String)
+METHOD System.Void .ctor(System.String,System.String,System.String,System.Byte[])
+METHOD System.Void .ctor(System.String,System.String,System.String,System.String,System.String[])
+METHOD System.Void .ctor(System.String,System.String,System.UInt32)
+METHOD System.Void .ctor(System.String,System.String,System.UInt32,System.String,System.UInt32)
+METHOD System.Void .ctor(System.String,System.String,System.UInt32,System.UInt32,System.Byte,AIBT.Authoring.GeneratedFieldEncoding,System.String,System.String,AIBT.RegisteredUnmanagedTypeDescriptor)
+METHOD System.Void .ctor(System.String,System.UInt32)
+METHOD System.Void .ctor(System.String,System.UInt32,AIBT.Burst.BurstNodeKind,System.Type,System.Type,AIBT.NodeMemoryLifetime,System.Boolean,AIBT.Burst.BurstCancellationMode,AIBT.Burst.BurstNodeCost,AIBT.Burst.BurstNodeStatusMask)
+METHOD System.Void .ctor(System.String,System.UInt32,System.String)
+METHOD System.Void .ctor(System.String,System.UInt32,System.String,System.String,AIBT.Authoring.NodeBehaviorKind,System.String,System.String,AIBT.Authoring.NodeExecutionDomain,System.Boolean,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeParameterContract>,AIBT.Authoring.NodeChildPolicy,System.Collections.Generic.IEnumerable`1<System.String>,System.Collections.Generic.IEnumerable`1<System.String>,System.Collections.Generic.IEnumerable`1<System.String>,System.Collections.Generic.IEnumerable`1<AIBT.NodeStatus>,AIBT.Authoring.NodeMemoryDescriptor,AIBT.Authoring.NodeConfigurationDescriptor,AIBT.Authoring.NodeCancellationMode,AIBT.Authoring.NodeCostHint,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeManifestExample>,System.Boolean,System.String)
+METHOD System.Void .ctor(System.String,System.UInt32,System.String,System.String,AIBT.RegisteredUnmanagedTypeDescriptor,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedStorageField>)
+METHOD System.Void .ctor(System.String,System.UInt32,System.Type[])
+METHOD System.Void .ctor(System.String,System.UInt32,System.UInt32,System.Byte)
+METHOD System.Void .ctor(System.String,System.UInt32,System.UInt32,System.Byte,System.Boolean)
+METHOD System.Void .ctor(System.UInt16,System.UInt16,System.UInt16,System.UInt32)
+METHOD System.Void .ctor(System.UInt32)
+METHOD System.Void .ctor(System.UInt32,AIBT.Burst.BurstCatalogFingerprint,AIBT.Burst.BurstHash256,System.UInt32,System.UInt32,AIBT.Burst.BurstHash256,AIBT.Burst.BurstHash256,AIBT.Burst.BurstHash256)
+METHOD System.Void .ctor(System.UInt32,AIBT.NodeId,System.String,System.String)
+METHOD System.Void .ctor(System.UInt32,System.Byte,AIBT.NodeMemoryLifetime)
+METHOD System.Void .ctor(System.UInt32,System.Byte,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeConfigurationField>)
+METHOD System.Void .ctor(System.UInt32,System.Nullable`1<System.UInt32>,System.Boolean)
+METHOD System.Void .ctor(System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,AIBT.BlackboardScope,System.UInt32,AIBT.NativeBlackboardAccessModeV2,System.UInt64,System.UInt32,System.UInt64,System.UInt32,AIBT.NativeBlackboardReductionKindV2)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,AIBT.CompiledCompilerVersion,AIBT.CompiledHash,AIBT.CompiledHash,AIBT.CompiledHash,System.UInt32,AIBT.CompiledHash,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.Boolean)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,AIBT.CompiledObserverMode,AIBT.CompiledRange)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt64)
+METHOD System.Void .ctor(System.UInt64,System.Int32)
+METHOD System.Void .ctor(System.UInt64,System.UInt32)
+METHOD System.Void .ctor(System.UInt64,System.UInt32,System.Int32,System.Int32,System.UInt64,System.UInt64,System.UInt32,System.UInt64)
+METHOD System.Void .ctor(System.UInt64,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,AIBT.NodeMemoryLifetime,AIBT.CompiledRange,AIBT.CompiledNodeFlags,System.UInt32,AIBT.CompiledRange,AIBT.CompiledRange)
+METHOD System.Void .ctor(System.UInt64,System.UInt64,System.Int64,System.Boolean)
+METHOD System.Void .ctor(System.UInt64,System.UInt64,System.UInt32,AIBT.Burst.BurstHash256,AIBT.Burst.BurstHash256,System.UInt32,System.UInt32)
+METHOD System.Void .ctor(System.UInt64,System.UInt64,System.UInt32,System.UInt32,System.UInt32,System.UInt32,AIBT.NativeBlackboardFieldEncodingV2,System.UInt64,AIBT.CompiledHash,System.UInt64)
+METHOD System.Void .ctor(System.UInt64,System.UInt64,System.UInt32,System.UInt64,AIBT.BlackboardScope,System.UInt32,System.UInt32,System.UInt32,System.UInt32,AIBT.CompiledBlackboardAccessFlags)
+METHOD System.Void .ctor(System.UInt64,System.UInt64,System.UInt32,System.UInt64,AIBT.BlackboardScope,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,System.UInt32,AIBT.CompiledBlackboardAccessFlags,System.UInt32,System.UInt32,AIBT.NativeBlackboardReductionKindV2)
+METHOD System.Void .ctor(Unity.Collections.NativeArray`1+ReadOnly<System.Byte>,System.UInt32,System.UInt32)
+METHOD System.Void AddNode(AIBT.Authoring.NodeDocument)
+METHOD System.Void Validate(AIBT.Authoring.DiagnosticOperationPayload)
+METHOD System.Void Validate(AIBT.Diagnostic,System.Boolean)

@@ -1,0 +1,87 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using UnityEditor;
+
+internal static class PublicApiDump
+{
+    private static string TypeDisplayName(Type type)
+    {
+        if (type.IsGenericType)
+        {
+            var name = type.GetGenericTypeDefinition().FullName;
+            var args = string.Join(",", type.GetGenericArguments().Select(TypeDisplayName));
+            return name + "<" + args + ">";
+        }
+        return type.FullName;
+    }
+
+    private static string MethodSignature(MethodBase method)
+    {
+        var name = method.IsConstructor ? ".ctor" : method.Name;
+        var parameters = string.Join(",", method.GetParameters().Select(p => TypeDisplayName(p.ParameterType)));
+        var returnType = method is MethodInfo methodInfo ? TypeDisplayName(methodInfo.ReturnType) : "System.Void";
+        return "METHOD " + returnType + " " + name + "(" + parameters + ")";
+    }
+
+    public static void Run()
+    {
+        var args = Environment.GetCommandLineArgs();
+        var outputIndex = Array.IndexOf(args, "-aibtPublicApiOutput");
+        var outputPath = args[outputIndex + 1];
+
+        var assemblies = new[]
+        {
+            AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == "AIBT.Runtime"),
+            AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == "AIBT.Authoring"),
+        };
+
+        var assemblyLines = assemblies.Select(a => "ASSEMBLY " + a.FullName).OrderBy(s => s, StringComparer.Ordinal).ToList();
+
+        var publicTypes = assemblies.SelectMany(a => a.GetExportedTypes()).Where(t => t.IsPublic).ToList();
+        var typeLines = publicTypes.Select(t => "TYPE " + t.FullName).Distinct().OrderBy(s => s, StringComparer.Ordinal).ToList();
+
+        var memberLines = new List<string>();
+        foreach (var type in publicTypes)
+        {
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+            foreach (var field in type.GetFields(flags))
+            {
+                if (field.Name.EndsWith(">k__BackingField", StringComparison.Ordinal)) continue;
+                memberLines.Add("  FIELD " + TypeDisplayName(field.FieldType) + " " + field.Name);
+            }
+            foreach (var ctor in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            {
+                memberLines.Add(MethodSignature(ctor));
+            }
+            foreach (var methodInfo in type.GetMethods(flags))
+            {
+                if (methodInfo.IsSpecialName) continue;
+                memberLines.Add(MethodSignature(methodInfo));
+            }
+            foreach (var property in type.GetProperties(flags))
+            {
+                memberLines.Add("  PROPERTY " + TypeDisplayName(property.PropertyType) + " " + property.Name);
+            }
+        }
+        var sortedMemberLines = memberLines.Distinct().OrderBy(s => s, StringComparer.Ordinal).ToList();
+
+        var allLines = assemblyLines.Concat(typeLines).Concat(sortedMemberLines);
+        var text = string.Join("\n", allLines) + "\n";
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+        File.WriteAllText(outputPath, text, new UTF8Encoding(false));
+
+        using (var sha = SHA256.Create())
+        {
+            var hex = BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(outputPath))).Replace("-", "").ToLowerInvariant();
+            File.WriteAllText(outputPath.Replace(".txt", ".sha256"), hex, new UTF8Encoding(false));
+            Console.WriteLine("AIBT_PUBLIC_API_OK|assemblies=" + assemblies.Length + "|types=" + typeLines.Count + "|members=" + sortedMemberLines.Count + "|sha256=" + hex);
+        }
+
+        EditorApplication.Exit(0);
+    }
+}

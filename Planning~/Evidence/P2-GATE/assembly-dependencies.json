@@ -1,0 +1,21 @@
+{
+  "format": "aibt.assembly-dependencies",
+  "formatVersion": 1,
+  "sourceCommit": "85624655880725b62cd89f164a7ba6b0263228f2",
+  "assemblies": [
+    {
+      "name": "AIBT.Runtime",
+      "asmdef": "Runtime/AIBT.Runtime.asmdef",
+      "references": ["Unity.Burst", "Unity.Collections"],
+      "forbiddenReferencesFound": []
+    },
+    {
+      "name": "AIBT.Authoring",
+      "asmdef": "Authoring/AIBT.Authoring.asmdef",
+      "references": ["AIBT.Runtime", "Newtonsoft.Json"],
+      "forbiddenReferencesFound": []
+    }
+  ],
+  "forbiddenCategories": ["UnityEditor", "MCP", "LLM provider", "Unity.Entities (DOTS)"],
+  "method": "Enumerated every .asmdef under Runtime/ and Authoring/ (2 total, unchanged in count and shape since P1-GATE), confirmed their references contain none of the forbidden categories, and confirmed no source file under either tree imports UnityEditor, Unity.Entities, or an MCP/LLM-provider namespace (grep for 'using UnityEditor', 'Unity.Entities', 'using UnityEngine.AI' across Runtime/ and Authoring/ returned no matches). The detached-harness compile (P2-025 gate step 3) independently proves this: neither assembly references UnityEditor, so any accidental UnityEditor API usage would have failed to compile rather than merely being unobserved."
+}
