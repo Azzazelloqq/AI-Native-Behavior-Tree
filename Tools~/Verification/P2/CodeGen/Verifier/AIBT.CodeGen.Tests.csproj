@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>annotations</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>AIBT.CodeGen.Tests</AssemblyName>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="RuntimeStubs.cs" />
+    <None Include="RuntimeStubs.cs" />
+    <Compile Include="../../../../../Authoring/Compilation/Generated/GeneratedBurstDispatchPrebindingV2.cs" Link="GeneratedBurstDispatchPrebindingV2.cs" />
+    <ProjectReference Include="../../../../../CodeGen~/AIBT.CodeGen/AIBT.CodeGen.csproj" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" />
+  </ItemGroup>
+</Project>
