@@ -694,6 +694,231 @@
       "owns": [
         "Planning~/Evidence/P2-GATE/"
       ]
+    },
+    {
+      "id": "P3-001",
+      "phase": 3,
+      "title": "Editor graph framework spike",
+      "status": "done",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P3/P3-001-editor-graph-framework-spike.md",
+      "dependsOn": [
+        "P2-025"
+      ],
+      "owns": [
+        "Spikes~/EditorGraphFramework/",
+        "Planning~/Evidence/P3-001/"
+      ]
+    },
+    {
+      "id": "P3-002",
+      "phase": 3,
+      "title": "Layout model v1 contract",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-002-layout-model-v1-contract.md",
+      "dependsOn": [
+        "P3-001",
+        "P3-014"
+      ],
+      "owns": [
+        "Documentation~/specifications/editor-layout-v1.md",
+        "Planning~/Evidence/P3-002/"
+      ]
+    },
+    {
+      "id": "P3-003",
+      "phase": 3,
+      "title": "Graph adapter foundation (read-only)",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-003-graph-adapter-foundation.md",
+      "dependsOn": [
+        "P3-001",
+        "P3-002"
+      ],
+      "owns": [
+        "Editor/",
+        "Planning~/Evidence/P3-003/"
+      ]
+    },
+    {
+      "id": "P3-004",
+      "phase": 3,
+      "title": "Deterministic auto-layout service",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-004-deterministic-auto-layout-service.md",
+      "dependsOn": [
+        "P3-003"
+      ],
+      "owns": [
+        "Editor/Layout/",
+        "Planning~/Evidence/P3-004/"
+      ]
+    },
+    {
+      "id": "P3-005",
+      "phase": 3,
+      "title": "Manual organization and layout persistence",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-005-manual-organization-and-layout-persistence.md",
+      "dependsOn": [
+        "P3-003",
+        "P3-004"
+      ],
+      "owns": [
+        "Editor/Organization/",
+        "Planning~/Evidence/P3-005/"
+      ]
+    },
+    {
+      "id": "P3-006",
+      "phase": 3,
+      "title": "Semantic graph editing",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-006-semantic-graph-editing.md",
+      "dependsOn": [
+        "P3-003"
+      ],
+      "owns": [
+        "Editor/Editing/",
+        "Planning~/Evidence/P3-006/"
+      ]
+    },
+    {
+      "id": "P3-007",
+      "phase": 3,
+      "title": "Layout/semantic isolation proof",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-007-layout-semantic-isolation-proof.md",
+      "dependsOn": [
+        "P3-005",
+        "P3-006"
+      ],
+      "owns": [
+        "Planning~/Evidence/P3-007/"
+      ]
+    },
+    {
+      "id": "P3-008",
+      "phase": 3,
+      "title": "Validation UX",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-008-validation-ux.md",
+      "dependsOn": [
+        "P3-006"
+      ],
+      "owns": [
+        "Editor/Validation/",
+        "Planning~/Evidence/P3-008/"
+      ]
+    },
+    {
+      "id": "P3-009",
+      "phase": 3,
+      "title": "Editor preview via reference oracle",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-009-editor-preview-reference-oracle.md",
+      "dependsOn": [
+        "P3-006"
+      ],
+      "owns": [
+        "Editor/Preview/",
+        "Planning~/Evidence/P3-009/"
+      ]
+    },
+    {
+      "id": "P3-010",
+      "phase": 3,
+      "title": "Native execution debugger attachment",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-010-native-debugger-attachment.md",
+      "dependsOn": [
+        "P3-006"
+      ],
+      "owns": [
+        "Editor/Debugger/",
+        "Planning~/Evidence/P3-010/"
+      ]
+    },
+    {
+      "id": "P3-011",
+      "phase": 3,
+      "title": "Trace views",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-011-trace-views.md",
+      "dependsOn": [
+        "P3-010"
+      ],
+      "owns": [
+        "Editor/Trace/",
+        "Planning~/Evidence/P3-011/"
+      ]
+    },
+    {
+      "id": "P3-012",
+      "phase": 3,
+      "title": "Large-graph interaction and performance tests",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P3/P3-012-large-graph-interaction-tests.md",
+      "dependsOn": [
+        "P3-005",
+        "P3-006"
+      ],
+      "owns": [
+        "Tests/Editor/Performance/",
+        "Benchmarks~/Platform/Editor/",
+        "Planning~/Evidence/P3-012/"
+      ]
+    },
+    {
+      "id": "P3-013",
+      "phase": 3,
+      "title": "Phase 3 integration gate",
+      "status": "draft",
+      "kind": "review",
+      "card": "Planning~/Tasks/P3/P3-013-phase3-integration-gate.md",
+      "dependsOn": [
+        "P3-002",
+        "P3-003",
+        "P3-004",
+        "P3-005",
+        "P3-006",
+        "P3-007",
+        "P3-008",
+        "P3-009",
+        "P3-010",
+        "P3-011",
+        "P3-012"
+      ],
+      "owns": [
+        "Planning~/Evidence/P3-GATE/"
+      ]
+    },
+    {
+      "id": "P3-014",
+      "phase": 3,
+      "title": "GraphView editor framework spike",
+      "status": "done",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P3/P3-014-graphview-editor-framework-spike.md",
+      "dependsOn": [
+        "P3-001"
+      ],
+      "owns": [
+        "Spikes~/EditorGraphFramework/HarnessGraphView/",
+        "Spikes~/EditorGraphFramework/Run-GraphViewEditorFrameworkSpike.ps1",
+        "Planning~/Evidence/P3-014/"
+      ]
     }
   ]
 }

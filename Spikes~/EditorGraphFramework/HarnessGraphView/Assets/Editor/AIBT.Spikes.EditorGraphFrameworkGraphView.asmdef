@@ -1,0 +1,11 @@
+{
+  "name": "AIBT.Spikes.EditorGraphFrameworkGraphView",
+  "rootNamespace": "AIBT.Spikes.EditorGraphFrameworkGraphView",
+  "references": [],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

@@ -43,9 +43,13 @@ Exit: representative public custom nodes execute through generated dispatch in f
 
 ## P3 — editor and layout
 
-Entry: authoring/compiler APIs are stable enough for an adapter and the graph-framework spike is accepted.
+Entry: authoring/compiler APIs are stable enough for an adapter and the graph-framework spike is accepted. Phase 2 is complete, satisfying the stability half of this entry; `P3-001`'s spike (`OQ-005`) satisfies the rest and gates every other P3 card.
 
-Planned outputs: semantic graph editing, deterministic layout service, manual organization, validation UX, debugger, trace views, and large-graph interaction tests.
+Atomic cards: `P3-001` through `P3-013`, decomposed 2026-08-18. Outputs: editor graph framework selection, the `*.aibt.layout.json` contract, semantic graph editing, deterministic auto-layout, manual organization, a proven layout/semantic isolation invariant, validation UX, reference-oracle preview, a native debugger, trace views, and large-graph interaction measurements.
+
+The atomic dependency graph is recorded in `work-items.json`; agents may not implement P3 directly from this summary.
+
+Exit: `P3-013` accepts the gate from a clean committed snapshot, re-running the layout/semantic isolation proof rather than citing an earlier run.
 
 ## P4 — scheduler research
 

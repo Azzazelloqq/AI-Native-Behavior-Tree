@@ -1,0 +1,421 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.5/staging' branch; Version is '6000.5.8f1 (5cb7df797b7d) revision 6076383'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-User" at "2026-08-18T17:24:44.5099281Z"
+OS: 'Windows 11  (10.0.26200) Core' Language: 'ru' Physical Memory: 32189 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-08-18T17:24:44Z
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Unity.exe
+-batchmode
+-nographics
+-projectPath
+C:\UnityProjects\Modules\Assets\AIBT\Spikes~\EditorGraphFramework\Harness
+-executeMethod
+AIBT.Spikes.EditorGraphFramework.SpikeRunner.Run
+-aibtSpikeOutput
+C:\Users\User\AppData\Local\Temp\claude\C--UnityProjects-Modules\f46255d2-99a9-460d-940b-bd849fed9ff5\scratchpad\p3-001-spike-results-3.json
+-logFile
+C:\UnityProjects\Modules\Assets\AIBT\Spikes~\EditorGraphFramework\Harness\spike-run.log
+-quit
+Successfully changed project path to: C:\UnityProjects\Modules\Assets\AIBT\Spikes~\EditorGraphFramework\Harness
+C:/UnityProjects/Modules/Assets/AIBT/Spikes~/EditorGraphFramework/Harness
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gfx=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-main-allocator-mimalloc-enabled=0"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+Logging is directed to a specific file, skipping project log.Player connection [45480]  Target information:
+
+Player connection [45480]  * "[IP] 192.168.11.51 [Port] 55504 [Flags] 2 [Guid] 323039262 [EditorId] 323039262 [Version] 1048832 [Id] WindowsEditor(7,LAPTOP-MKHRTFP6) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" 
+
+Player connection [45480] Host joined multi-casting on [225.0.0.222:54997]...
+Player connection [45480] Host joined alternative multi-casting on [225.0.0.222:34997]...
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-41728" after 0.2 seconds.
+[Licensing::Module] Licensing is not yet initialized.
+[Licensing::Client] Error: HandshakeResponse reported an error:
+	ResponseCode: 505
+	ResponseStatus: Unsupported protocol version '1.18.1'.
+[Licensing::Module] Error: Failed to handshake to channel: "LicenseClient-User"
+[Licensing::IpcConnector] LicenseClient-User channel disconnected successfully.
+[Licensing::IpcConnector] Channel LicenseClient-User-6000.5.8 doesn't exist
+[Licensing::Module] Successfully launched the LicensingClient (PId: 8424)
+Starting IPC server.
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-User-6000.5.8" at "2026-08-18T17:24:45.4440858Z"
+Waiting for clients to connect on \\.\pipe\Unity-LicenseClient-User-6000.5.8, press Ctrl-C to exit.
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 8424, path: "C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] LicensingClient has failed validation; ignoring
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.18.1+9fbee8e
+  Session Id:              0d2ffea7b477404b99405ebceb53d897
+  Correlation Id:          b27508bf9716063cd36b74cbee0875a8
+  External correlation Id: 8065659429171618096
+  Machine Id:              nD94IOA/oQO4X00SaYhbzqTnHuU=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-User-6000.5.8" (connect: 0.16s, validation: 0.12s, handshake: 0.01s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-User-6000.5.8-notifications" at "2026-08-18T17:24:45.5726251Z"
+[Licensing::Module] Connected to LicensingClient (PId: 8424, launch time: 0.01, total connection time: 0.29s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 2209603-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 1.09s
+[Licensing::Module] Licensing is initialized (took 0.70s).
+[Licensing::Client] Successfully resolved entitlement details
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Artifact Garbage Collection - Removed 4 unused hashed content files
+Initialize engine version: 6000.5.8f1 (5cb7df797b7d)
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/UnityProjects/Modules/Assets/AIBT/Spikes~/EditorGraphFramework/Harness/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/BCLExtensions/runtime/netstandard2.1'
+Mono path[2] = 'C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56728
+CodeReloadManager initialized
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/PlaybackEngines/WebGLSupport/UnityEditor.WebGL.Extensions.dll
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/PlaybackEngines/MacStandaloneSupport/UnityEditor.OSXStandalone.Extensions.dll
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll
+Register platform support module: C:/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Data/PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
+Registered in 0.006147 seconds.
+Native extension for LinuxStandalone target not found
+[usbmuxd] Start listen thread
+[usbmuxd] Listen thread started
+Native extension for iOS target not found
+Native extension for Android target not found
+Native extension for WindowsStandalone target not found
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+Package Manager log level set to [2]
+ScheduleIndexationOnStartup MainProcess:False IndexOnStartup:False
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.771 seconds
+Domain Reload Profiling: 1180ms
+	BeginReloadAssembly (107ms)
+		CreateAndSetChildDomain (8ms)
+	RebuildCommonClasses (3ms)
+	RebuildNativeTypeToScriptingClass (10ms)
+	initialDomainReloadingComplete (56ms)
+	LoadAllAssembliesAndSetupDomain (231ms)
+		LoadAssemblies (98ms)
+		AnalyzeDomain (166ms)
+			TypeCache.Refresh (164ms)
+				TypeCache.ScanAssembly (150ms)
+	FinalizeReload (771ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (11ms)
+			BeforeProcessingInitializeOnLoad (72ms)
+			ProcessInitializeOnLoadAttributes (68ms)
+			ProcessInitializeOnLoadMethodAttributes (573ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Package Manager] Registered 0 packages:
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.00 seconds
+[ScriptCompilation] Requested script compilation because: AssetDatabase observed changes in script compilation related files
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:80
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\UnityProjects\Modules\Assets\AIBT\Spikes~\EditorGraphFramework\Harness
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - application/grpc -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping - 200 - application/grpc 20.3145ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --defer-dag-verification --dagfile="Library/Bee/1900b0aEDbg.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: C:/UnityProjects/Modules/Assets/AIBT/Spikes~/EditorGraphFramework/Harness
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 1s297ms
+[167/170    1s] Csc Library/Bee/artifacts/1900b0aEDbg.dag/AIBT.Spikes.EditorGraphFramework.dll (+2 others)
+Assets\Editor\SpikeRunner.cs(74,59): warning CS0184: The given expression is never of the provided ('ScriptableObject') type
+[168/170    0s] CopyFiles Library/ScriptAssemblies/AIBT.Spikes.EditorGraphFramework.pdb
+[169/170    0s] CopyFiles Library/ScriptAssemblies/AIBT.Spikes.EditorGraphFramework.dll
+*** Tundra build success (1.27 seconds), 3 items updated, 170 evaluated
+Assets\Editor\SpikeRunner.cs(74,59): warning CS0184: The given expression is never of the provided ('ScriptableObject') type
+AssetDatabase: script compilation time: 1.649001s
+Begin MonoManager ReloadAssembly
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Native extension for WindowsStandalone target not found
+Native extension for OSXStandalone target not found
+Native extension for WebGL target not found
+ScheduleIndexationOnStartup MainProcess:True IndexOnStartup:True
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.331 seconds
+Domain Reload Profiling: 794ms
+	BeginReloadAssembly (310ms)
+		DisableScriptedObjects (28ms)
+		CreateAndSetChildDomain (157ms)
+	RebuildCommonClasses (7ms)
+	RebuildNativeTypeToScriptingClass (11ms)
+	initialDomainReloadingComplete (32ms)
+	LoadAllAssembliesAndSetupDomain (103ms)
+		LoadAssemblies (88ms)
+		AnalyzeDomain (18ms)
+			TypeCache.Refresh (14ms)
+				TypeCache.ScanAssembly (7ms)
+	FinalizeReload (332ms)
+		SetupLoadedEditorAssemblies (0ms)
+			InitializePlatformSupportModulesInManaged (7ms)
+			BeforeProcessingInitializeOnLoad (68ms)
+			ProcessInitializeOnLoadAttributes (48ms)
+			ProcessInitializeOnLoadMethodAttributes (52ms)
+			AfterProcessingInitializeOnLoad (4ms)
+		AwakeInstancesAfterBackupRestoration (19ms)
+Starting new worker id: 0 with log in C:/UnityProjects/Modules/Assets/AIBT/Spikes~/EditorGraphFramework/Harness/Logs/AssetImportWorkerHW0.log
+
+Asset Pipeline Refresh (id=a265d0d60f6c05f42b0cc5b0821e4e2f): Total: 2.601 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	(Values over 0.05ms)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=412 ms
+		Asset DB Callback time: managed=39 ms, native=3 ms
+		Scripting: domain reloads=1, domain reload time=487 ms, compile time=1651 ms, other=6 ms
+		Project Asset Count: scripts=24, non-scripts=1
+		Asset File Changes: new=0, changed=1, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokePackagesCallback: 1.810ms
+	ApplyChangesToAssetFolders: 0.197ms
+	Scan: 26.187ms
+	Collect global state as custom dependencies: 6.924ms
+	OnSourceAssetsModified: 0.488ms
+	ProcessAssetsWithTransientArtifactChanges: 0.116ms
+	CategorizeAssets: 0.155ms
+	CompileScripts: 1650.769ms
+	ImportOutOfDateAssets: 340.347ms (333.185ms without children)
+		UnloadImportedAssets: 0.115ms
+		ImportSchedulerStart: 7.038ms
+	PostProcessAllAssets: 41.060ms
+		VCAutoAddAssetPostprocess 1.030ms
+		MonoPostProcessAllAssets: 39.577ms
+			AssetPostprocessor.OnPostprocessAllAssets 8.483ms
+			StyleCatalogPostProcessor.OnPostprocessAllAssets 6.296ms
+			WindowAssetPostprocessingWatcher.OnPostprocessAllAssets 5.761ms
+			BuilderAssetPostprocessor.OnPostprocessAllAssets 2.892ms
+			AssetChangedListener.OnPostprocessAllAssets 1.603ms
+			SyncVS.PostprocessSyncProject 1.426ms
+			EditModeScopePostprocessor.OnPostprocessAllAssets 1.223ms
+			TextAssetPostProcessor.OnPostprocessAllAssets 1.176ms
+			RetainedModeAssetPostprocessor.OnPostprocessAllAssets 0.882ms
+			SpeedTree9Postprocessor.OnPostprocessAllAssets 0.615ms
+			ArtifactBrowserPostProcessor.OnPostprocessAllAssets 0.597ms
+			AudioMixerPostprocessor.OnPostprocessAllAssets 0.248ms
+			TerrainToolbarOverlayPostProcessor.OnPostprocessAllAssets 0.203ms
+			AssetEvents.OnPostprocessAllAssets 0.171ms
+			SpeedTreePostProcessor.OnPostprocessAllAssets 0.153ms
+			AssetDatabaseCallbacks.OnPostprocessAllAssets 0.127ms
+			ConfigAssetsTracker.OnPostprocessAllAssets 0.120ms
+			ReferencedClipsPostProcessor.OnPostprocessAllAssets 0.115ms
+			RenderPipelineGlobalSettingsPostprocessor.OnPostprocessAllAssets 0.113ms
+			ScenarioDriftAssetsTracker.OnPostprocessAllAssets 0.101ms
+			AudioContainerPostProcessor.OnPostprocessAllAssets 0.081ms
+	PostAssetChangesProfiler: 1.554ms
+	UnloadStreamsBegin: 1.368ms
+	Untracked: 525.249ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 1.478ms
+Initializing Unity extensions:
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-Harness
+GetVirtualKey: Could not map char: z (122) to any virtual key
+GetVirtualKey: Could not map char: y (121) to any virtual key
+GetVirtualKey: Could not map char: x (120) to any virtual key
+GetVirtualKey: Could not map char: c (99) to any virtual key
+GetVirtualKey: Could not map char: v (118) to any virtual key
+GetVirtualKey: Could not map char: V (86) to any virtual key
+GetVirtualKey: Could not map char: d (100) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: a (97) to any virtual key
+GetVirtualKey: Could not map char: d (100) to any virtual key
+GetVirtualKey: Could not map char: c (99) to any virtual key
+GetVirtualKey: Could not map char: r (114) to any virtual key
+GetVirtualKey: Could not map char: i (105) to any virtual key
+GetVirtualKey: Could not map char: l (108) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: k (107) to any virtual key
+GetVirtualKey: Could not map char: p (112) to any virtual key
+GetVirtualKey: Could not map char: p (112) to any virtual key
+GetVirtualKey: Could not map char: p (112) to any virtual key
+GetVirtualKey: Could not map char: c (99) to any virtual key
+GetVirtualKey: Could not map char: r (114) to any virtual key
+GetVirtualKey: Could not map char: P (80) to any virtual key
+GetVirtualKey: Could not map char: n (110) to any virtual key
+GetVirtualKey: Could not map char: n (110) to any virtual key
+GetVirtualKey: Could not map char: g (103) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: a (97) to any virtual key
+GetVirtualKey: Could not map char: a (97) to any virtual key
+GetVirtualKey: Could not map char: n (110) to any virtual key
+GetVirtualKey: Could not map char: o (111) to any virtual key
+GetVirtualKey: Could not map char: s (115) to any virtual key
+GetVirtualKey: Could not map char: s (115) to any virtual key
+GetVirtualKey: Could not map char: b (98) to any virtual key
+GetVirtualKey: Could not map char: b (98) to any virtual key
+GetVirtualKey: Could not map char: c (99) to any virtual key
+GetVirtualKey: Could not map char: u (117) to any virtual key
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 16 unused Assets / (0.5 MB). Loaded Objects now: 798.
+Memory consumption went from 201.6 MB to 201.1 MB.
+Total: 4.222900 ms (FindLiveObjects: 0.057500 ms CreateObjectMapping: 0.009300 ms MarkObjects: 3.958500 ms  DeleteObjects: 0.194700 ms)
+
+GetVirtualKey: Could not map char: z (122) to any virtual key
+GetVirtualKey: Could not map char: y (121) to any virtual key
+GetVirtualKey: Could not map char: x (120) to any virtual key
+GetVirtualKey: Could not map char: c (99) to any virtual key
+GetVirtualKey: Could not map char: v (118) to any virtual key
+GetVirtualKey: Could not map char: V (86) to any virtual key
+GetVirtualKey: Could not map char: d (100) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: a (97) to any virtual key
+GetVirtualKey: Could not map char: d (100) to any virtual key
+GetVirtualKey: Could not map char: c (99) to any virtual key
+GetVirtualKey: Could not map char: r (114) to any virtual key
+GetVirtualKey: Could not map char: i (105) to any virtual key
+GetVirtualKey: Could not map char: l (108) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: k (107) to any virtual key
+GetVirtualKey: Could not map char: p (112) to any virtual key
+GetVirtualKey: Could not map char: p (112) to any virtual key
+GetVirtualKey: Could not map char: p (112) to any virtual key
+GetVirtualKey: Could not map char: c (99) to any virtual key
+GetVirtualKey: Could not map char: r (114) to any virtual key
+GetVirtualKey: Could not map char: P (80) to any virtual key
+GetVirtualKey: Could not map char: n (110) to any virtual key
+GetVirtualKey: Could not map char: n (110) to any virtual key
+GetVirtualKey: Could not map char: g (103) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: f (102) to any virtual key
+GetVirtualKey: Could not map char: a (97) to any virtual key
+GetVirtualKey: Could not map char: a (97) to any virtual key
+GetVirtualKey: Could not map char: n (110) to any virtual key
+GetVirtualKey: Could not map char: o (111) to any virtual key
+GetVirtualKey: Could not map char: s (115) to any virtual key
+GetVirtualKey: Could not map char: s (115) to any virtual key
+GetVirtualKey: Could not map char: b (98) to any virtual key
+GetVirtualKey: Could not map char: b (98) to any virtual key
+GetVirtualKey: Could not map char: c (99) to any virtual key
+GetVirtualKey: Could not map char: u (117) to any virtual key
+The type AIBT.Spikes.EditorGraphFramework AIBT.Spikes.EditorGraphFramework.BehaviorTreeGraph is being serialized by [SerializeReference], but is missing the [Serializable] attribute. To suppress this warning add [Serializable] or use [MakeSerializable].
+Importing 'GUID: 5a7d6056ebf6a414093743fc1abe2afb - Path: Assets/aibt-spike-graph.aibtspike' with importer (DefaultImporter)
+Imported 'GUID: 5a7d6056ebf6a414093743fc1abe2afb' -> (Import Result ID: 'fc93e19f92527890f02af1e3a6c482f9') in 0.038 seconds [static dependencies only]. Details - ImportResultOutputID=5699a41dcb0d716f1e74c4039c5c953b DependenciesID=cf2057039a85cb8ef9dad3e50115b63c StaticDependenciesID=76a7740f9fc99520f4a87aaa114b3c53 
+Asset Pipeline Refresh (id=17e2a4e5815ce7f498cfcb320f34ca13): Total: 0.063 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+The type AIBT.Spikes.EditorGraphFramework AIBT.Spikes.EditorGraphFramework.RootNode is being serialized by [SerializeReference], but is missing the [Serializable] attribute. To suppress this warning add [Serializable] or use [MakeSerializable].
+The type AIBT.Spikes.EditorGraphFramework AIBT.Spikes.EditorGraphFramework.SelectorNode is being serialized by [SerializeReference], but is missing the [Serializable] attribute. To suppress this warning add [Serializable] or use [MakeSerializable].
+The type AIBT.Spikes.EditorGraphFramework AIBT.Spikes.EditorGraphFramework.ConditionNode is being serialized by [SerializeReference], but is missing the [Serializable] attribute. To suppress this warning add [Serializable] or use [MakeSerializable].
+The type AIBT.Spikes.EditorGraphFramework AIBT.Spikes.EditorGraphFramework.ActionNode is being serialized by [SerializeReference], but is missing the [Serializable] attribute. To suppress this warning add [Serializable] or use [MakeSerializable].
+The type AIBT.Spikes.EditorGraphFramework AIBT.Spikes.EditorGraphFramework.SequenceNode is being serialized by [SerializeReference], but is missing the [Serializable] attribute. To suppress this warning add [Serializable] or use [MakeSerializable].
+Importing 'GUID: 5a7d6056ebf6a414093743fc1abe2afb - Path: Assets/aibt-spike-graph.aibtspike' with importer (DefaultImporter)
+Imported 'GUID: 5a7d6056ebf6a414093743fc1abe2afb' -> (Import Result ID: 'fb689a8d26a80c8a1a52bcd8bfa573a6') in 0.001 seconds [static dependencies only]. Details - ImportResultOutputID=5699a41dcb0d716f1e74c4039c5c953b DependenciesID=4c3bf82741e696a25c026e5bc751ffd3 StaticDependenciesID=a9319d5e7b8cf2772ff197d3503b2bcf 
+Asset Pipeline Refresh (id=9f35004cbc9e2f54680f245741473b0e): Total: 0.008 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Asset Pipeline Refresh (id=23f88ca9b0380e145bed488acacd9af9): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+AIBT_P3_001_SPIKE_OK|C:\Users\User\AppData\Local\Temp\claude\C--UnityProjects-Modules\f46255d2-99a9-460d-940b-bd849fed9ff5\scratchpad\p3-001-spike-results-3.json
+MonoPathRemapper: Attempts to remap: 4264; Successful remaps: 0
+Serialized file version minimum: 23, current 23
+Curl error 42: Callback aborted
+Request timed out while processing request "https://public-cdn.cloud.unity3d.com/config/production", HTTP error code 0
+.[UnityConnect] Request timed out.
+Worker ready: AssetImportWorkerHW0 0
+Killing ADB server in 2,0507137 seconds.
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-User-6000.5.8-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-User-6000.5.8 channel disconnected successfully.
+Shut down.
+Lingering sessions upon destruction of worker manager
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+abort_threads: Failed aborting id: 0000000000006918, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 000000000000A424, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000006918, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 000000000000A424, mono_thread_manage will ignore it
+
+debugger-agent: Unable to listen on 3620
+[usbmuxd] Stop listen thread
+[usbmuxd] Listen thread exiting
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+[Package Manager] Server process was shutdown
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1787073895386,"processId":41728,"allocatedMemory":11254204,"memoryLabels":[{"Default":174060},{"Permanent":15516},{"NewDelete":65785},{"Thread":4197600},{"Manager":36677},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":830932},{"Material":24},{"GfxDevice":55328},{"Animation":952},{"Audio":1544},{"FreeType":8},{"FontEngine":736},{"Physics":2146},{"Physics2D":16},{"Serialization":632},{"Input":42840},{"JobScheduler":256},{"TextLib":280},{"Mono":48},{"ScriptingNativeRuntime":654356},{"BaseObject":1622344},{"Resource":1208},{"Renderer":3080},{"Transform":4685},{"File":1032},{"WebCam":616},{"Culling":32},{"Terrain":11442},{"Wind":24},{"STL":40},{"String":14613},{"StaticString":3808},{"Utility":2674870},{"Curl":1712},{"PoolAlloc":2168},{"AI":80},{"TypeTree":29133},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7816},{"Director":8296},{"CloudService":8936},{"WebRequest":589},{"VR":47114},{"SceneManager":608},{"Video":64},{"LazyScriptCache":32},{"Camera":17},{"Secure":2377},{"SerializationCache":1576},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":552},{"Hierarchy":1176},{"UIElements":72},{"CoreStats":13688},{"Identifiers":6768},{"Gui":128},{"EditorUtility":81388},{"VersionControl":8},{"Undo":931},{"AssetDatabase":216965},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":38868},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":64},{"DrivenProperties":72},{"LocalIPC":210},{"ProfilerEditor":9746},{"CoreBusinessMetrics":3498},{"Windowing":456},{"Licensing":664},{"AssetReference":32},{"IPCStream":32}]}
+~StackAllocator(ALLOC_TEMP_MAIN) m_LastAlloc not NULL. Did you forget to call FreeAllStackAllocations()? To get more information, run app with -diag-temp-memory-leak-validation cmd line argument
