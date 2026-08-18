@@ -352,23 +352,34 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
             const int warmup = 32;
             const int iterations = 1024;
             const int samples = 7;
-            using (var scenario = new Scenario())
-            using (var execution = new NativeArray<BurstExecutionResult>(
-                1, Allocator.Persistent, NativeArrayOptions.ClearMemory))
-            using (var managedPath = new NativeArray<int>(
-                1, Allocator.Persistent, NativeArrayOptions.ClearMemory))
+            var scenario = new Scenario();
+            var execution = new NativeArray<BurstExecutionResult>(
+                1, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            var managedPath = new NativeArray<int>(
+                1, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            Exception cycleException = null;
+            var cycleIndex = -1;
+            var cyclePhase = "warmup";
+            try
             {
                 for (var index = 0; index < warmup; index++)
+                {
+                    cycleIndex = index;
                     ExecuteMeasuredCycle(scenario, execution, managedPath);
+                }
                 rawNanosecondsPerDispatch = new double[samples];
                 GC.Collect();
                 var beforeCollections = GC.CollectionCount(0);
                 var beforeHeap = GC.GetTotalMemory(false);
+                cyclePhase = "measured";
                 for (var sample = 0; sample < samples; sample++)
                 {
                     var started = Stopwatch.GetTimestamp();
                     for (var index = 0; index < iterations; index++)
+                    {
+                        cycleIndex = sample * iterations + index;
                         ExecuteMeasuredCycle(scenario, execution, managedPath);
+                    }
                     var elapsed = Stopwatch.GetTimestamp() - started;
                     rawNanosecondsPerDispatch[sample] = elapsed * 1_000_000_000d
                         / Stopwatch.Frequency / iterations;
@@ -378,14 +389,22 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
                 measuredHeapDeltaBytes = GC.GetTotalMemory(false) - beforeHeap;
                 gen0CollectionDelta = GC.CollectionCount(0) - beforeCollections;
 #if UNITY_WEBGL && !UNITY_EDITOR
+                cyclePhase = "alternative-warmup";
                 for (var index = 0; index < warmup; index++)
+                {
+                    cycleIndex = index;
                     ExecuteScheduledCycle(scenario, execution, managedPath);
+                }
                 rawAlternativeNanosecondsPerDispatch = new double[samples];
+                cyclePhase = "alternative-measured";
                 for (var sample = 0; sample < samples; sample++)
                 {
                     var started = Stopwatch.GetTimestamp();
                     for (var index = 0; index < iterations; index++)
+                    {
+                        cycleIndex = sample * iterations + index;
                         ExecuteScheduledCycle(scenario, execution, managedPath);
+                    }
                     var elapsed = Stopwatch.GetTimestamp() - started;
                     rawAlternativeNanosecondsPerDispatch[sample] = elapsed * 1_000_000_000d
                         / Stopwatch.Frequency / iterations;
@@ -395,6 +414,45 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
 #else
                 rawAlternativeNanosecondsPerDispatch = Array.Empty<double>();
 #endif
+            }
+            catch (Exception exception)
+            {
+                cycleException = exception;
+                rawNanosecondsPerDispatch = Array.Empty<double>();
+                rawAlternativeNanosecondsPerDispatch = Array.Empty<double>();
+                measuredHeapDeltaBytes = 0L;
+                gen0CollectionDelta = 0;
+            }
+            finally
+            {
+                managedPath.Dispose();
+                execution.Dispose();
+                try
+                {
+                    scenario.Dispose();
+                }
+                catch (Exception disposeException)
+                {
+                    if (cycleException != null)
+                    {
+                        throw new InvalidOperationException(
+                            "MeasureGeneratedDispatch cycle failed at phase '" + cyclePhase
+                            + "' index " + cycleIndex + ": " + cycleException.Message
+                            + " (scenario disposal subsequently also failed: "
+                            + disposeException.Message + ")",
+                            cycleException);
+                    }
+
+                    throw;
+                }
+            }
+
+            if (cycleException != null)
+            {
+                throw new InvalidOperationException(
+                    "MeasureGeneratedDispatch cycle failed at phase '" + cyclePhase
+                    + "' index " + cycleIndex + ": " + cycleException.Message,
+                    cycleException);
             }
 
             var canary = new byte[1024 * 1024];
@@ -462,12 +520,17 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
             Require(scenario.Owner.TryAcquireCompletedBatch(in lease, out _, out failure),
                 "Measured completed batch acquisition failed.");
             Require(execution[0].Code == BurstExecutionCode.Success && managedPath[0] == 0,
-                "Measured Burst dispatch failed.");
+                "Measured Burst dispatch failed. executionCode=" + execution[0].Code
+                + " diagnosticNumber=" + execution[0].DiagnosticNumber
+                + " instancesVisited=" + execution[0].InstancesVisited
+                + " managedPathSentinel=" + managedPath[0]);
             Require(scenario.Owner.TryConsumeResult(in lease, out var result, out failure),
                 "Measured TryConsumeResult failed.");
             Require(result.Execution.Code == BurstExecutionCode.Success
                 && result.CallbackFailure == BurstContextResult.Success,
-                "Measured runtime result failed.");
+                "Measured runtime result failed. resultCode=" + result.Execution.Code
+                + " callbackFailure=" + result.CallbackFailure
+                + " callbackStatus=" + result.Status);
             Require(scenario.Owner.TryReset(in lease, out failure),
                 "Measured TryReset failed.");
         }
@@ -708,9 +771,12 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
                     _bindings.AsReadOnly(),
                     _valueFields.AsReadOnly(),
                     canonical);
+                // Value sessions are an append-only per-frame ledger (never reused within
+                // a frame), and GenerationNode.Tick performs 32 sequential blackboard reads
+                // of a 4-byte Int32 each, so capacity must cover all 32, not just one.
                 var capacity = new NativeBurstDispatchWorkspaceCapacityV2(
                     48u,
-                    new NativeBurstDispatchBindingCapacityV2(1u, 4u, 0u, 0u, 0u, 7UL));
+                    new NativeBurstDispatchBindingCapacityV2(32u, 128u, 0u, 0u, 0u, 7UL));
                 Require(NativeBurstDispatchWorkspaceOwnerV2.TryCreate(
                     in shape,
                     in capacity,
