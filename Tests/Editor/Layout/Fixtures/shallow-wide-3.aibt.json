@@ -1,0 +1,30 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.test.layout-shallow-wide-3",
+  "name": "Shallow Wide Three",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "sample.composite",
+      "typeVersion": 1,
+      "children": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "a": {
+      "type": "sample.leaf",
+      "typeVersion": 1
+    },
+    "b": {
+      "type": "sample.leaf",
+      "typeVersion": 1
+    },
+    "c": {
+      "type": "sample.leaf",
+      "typeVersion": 1
+    }
+  }
+}

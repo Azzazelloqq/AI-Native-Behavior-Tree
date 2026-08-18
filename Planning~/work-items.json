@@ -746,7 +746,7 @@
       "id": "P3-004",
       "phase": 3,
       "title": "Deterministic auto-layout service",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-004-deterministic-auto-layout-service.md",
       "dependsOn": [
@@ -761,7 +761,7 @@
       "id": "P3-005",
       "phase": 3,
       "title": "Manual organization and layout persistence",
-      "status": "draft",
+      "status": "ready",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-005-manual-organization-and-layout-persistence.md",
       "dependsOn": [

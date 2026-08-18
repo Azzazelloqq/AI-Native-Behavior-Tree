@@ -1,0 +1,38 @@
+{
+  "format": "aibt.layout",
+  "formatVersion": 1,
+  "treeId": "tree.test.layout-shallow-wide-4",
+  "direction": "topToBottom",
+  "nodes": {
+    "a": {
+      "position": {
+        "x": 0,
+        "y": 120
+      }
+    },
+    "b": {
+      "position": {
+        "x": 160,
+        "y": 120
+      }
+    },
+    "c": {
+      "position": {
+        "x": 320,
+        "y": 120
+      }
+    },
+    "d": {
+      "position": {
+        "x": 480,
+        "y": 120
+      }
+    },
+    "root": {
+      "position": {
+        "x": 240,
+        "y": 0
+      }
+    }
+  }
+}

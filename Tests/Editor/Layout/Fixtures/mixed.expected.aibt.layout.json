@@ -1,0 +1,38 @@
+{
+  "format": "aibt.layout",
+  "formatVersion": 1,
+  "treeId": "tree.test.layout-mixed",
+  "direction": "topToBottom",
+  "nodes": {
+    "leaf1": {
+      "position": {
+        "x": 0,
+        "y": 240
+      }
+    },
+    "leaf2": {
+      "position": {
+        "x": 160,
+        "y": 240
+      }
+    },
+    "leaf3": {
+      "position": {
+        "x": 320,
+        "y": 120
+      }
+    },
+    "root": {
+      "position": {
+        "x": 200,
+        "y": 0
+      }
+    },
+    "sub": {
+      "position": {
+        "x": 80,
+        "y": 120
+      }
+    }
+  }
+}

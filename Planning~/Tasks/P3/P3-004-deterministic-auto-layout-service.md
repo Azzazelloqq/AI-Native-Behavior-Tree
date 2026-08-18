@@ -1,6 +1,6 @@
 # P3-004 — Deterministic auto-layout service
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -47,3 +47,20 @@ Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter <auto-layout fixtur
 ## Handoff notes
 
 - `P3-005` overrides this service's output via pinning; keep the two concerns separable (auto-layout never overwrites a pinned position).
+
+## Outcome
+
+- `Editor/Layout/LayoutDocument.cs`, `CanonicalLayoutJsonWriter.cs`,
+  `DeterministicAutoLayoutService.cs`: post-order tidy-tree algorithm
+  (leaf = next sequential slot in semantic order; internal node = mean of
+  children's x; y = depth), producing canonical `.aibt.layout.json` bytes.
+  Existing positions from a passed-in `LayoutDocument` are preserved
+  verbatim, never recomputed.
+- 8/8 tests passing: 3 golden byte-exact fixtures (shallow-wide, deep-chain,
+  mixed), determinism-on-repeat for all three, superset non-repositioning,
+  and a synthetic 240-node tree with zero position collisions.
+- **Not wired into `P3-003`'s adapter** — that would touch `Editor/Graph/`,
+  outside this card's `Allowed changes`. Flagged as a small follow-up in
+  `Planning~/Evidence/P3-004/README.md`'s Scope and limitations rather than
+  silently done or silently skipped.
+- Full evidence: `Planning~/Evidence/P3-004/README.md`, `verification-results.json`.

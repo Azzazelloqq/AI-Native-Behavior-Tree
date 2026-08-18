@@ -1,0 +1,24 @@
+{
+  "schema": "aibt-p3-004-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Run-UnityCompile.ps1 (Unity 6000.5.8f1, C:/UnityProjects/Modules)|PASSED",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Layout.DeterministicAutoLayoutServiceTests|FAILED_THEN_PASSED|first attempt: test assertion itself was wrong (expected 4 nodes on a 5-node fixture); fixed the test, not the service",
+    "TEST_TOTAL|8|PASSED|8",
+    "TEST_RESULT|MatchesGoldenLayoutBytes(shallow-wide-4)|Passed",
+    "TEST_RESULT|MatchesGoldenLayoutBytes(deep-chain)|Passed",
+    "TEST_RESULT|MatchesGoldenLayoutBytes(mixed)|Passed",
+    "TEST_RESULT|RunningTwiceProducesByteIdenticalOutput(shallow-wide-4)|Passed",
+    "TEST_RESULT|RunningTwiceProducesByteIdenticalOutput(deep-chain)|Passed",
+    "TEST_RESULT|RunningTwiceProducesByteIdenticalOutput(mixed)|Passed",
+    "TEST_RESULT|SupersetTreeDoesNotRepositionPreviouslyPlacedNodes|Passed",
+    "TEST_RESULT|LargeSyntheticTreeLaysOutWithoutOverlappingPositions|Passed",
+    "DELIVERABLE|Editor/Layout/LayoutDocument.cs|created",
+    "DELIVERABLE|Editor/Layout/CanonicalLayoutJsonWriter.cs|created",
+    "DELIVERABLE|Editor/Layout/DeterministicAutoLayoutService.cs|created",
+    "DELIVERABLE|Tests/Editor/Layout/DeterministicAutoLayoutServiceTests.cs|created",
+    "WORK_ITEM_STATUS|P3-004|draft->done",
+    "WORK_ITEM_STATUS|P3-005|draft->ready"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.test.layout-deep-chain",
+  "name": "Deep Chain",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "sample.decorator",
+      "typeVersion": 1,
+      "children": [
+        "n1"
+      ]
+    },
+    "n1": {
+      "type": "sample.decorator",
+      "typeVersion": 1,
+      "children": [
+        "n2"
+      ]
+    },
+    "n2": {
+      "type": "sample.decorator",
+      "typeVersion": 1,
+      "children": [
+        "n3"
+      ]
+    },
+    "n3": {
+      "type": "sample.decorator",
+      "typeVersion": 1,
+      "children": [
+        "leaf"
+      ]
+    },
+    "leaf": {
+      "type": "sample.leaf",
+      "typeVersion": 1
+    }
+  }
+}

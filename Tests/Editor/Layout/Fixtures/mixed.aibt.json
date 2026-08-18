@@ -1,0 +1,37 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.test.layout-mixed",
+  "name": "Mixed",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "sample.composite",
+      "typeVersion": 1,
+      "children": [
+        "sub",
+        "leaf3"
+      ]
+    },
+    "sub": {
+      "type": "sample.composite",
+      "typeVersion": 1,
+      "children": [
+        "leaf1",
+        "leaf2"
+      ]
+    },
+    "leaf1": {
+      "type": "sample.leaf",
+      "typeVersion": 1
+    },
+    "leaf2": {
+      "type": "sample.leaf",
+      "typeVersion": 1
+    },
+    "leaf3": {
+      "type": "sample.leaf",
+      "typeVersion": 1
+    }
+  }
+}
