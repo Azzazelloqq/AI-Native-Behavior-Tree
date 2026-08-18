@@ -1,0 +1,24 @@
+{
+  "name": "AIBT.CodeGen.ContractTests",
+  "rootNamespace": "AIBT.Tests.CodeGen.Contracts",
+  "references": [
+    "AIBT.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "analyzers": [
+    "GUID:31a3f09584684895a0a72916d3ad4de0"
+  ]
+}

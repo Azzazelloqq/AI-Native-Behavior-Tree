@@ -1,0 +1,82 @@
+{
+  "formatVersion": 2,
+  "header": {
+    "magic": 1413630273,
+    "executionSemanticsVersion": 1,
+    "compilerVersion": { "major": 0, "minor": 2, "patch": 0, "build": 3 },
+    "semanticHash": "1111111111111111111111111111111111111111111111111111111111111111",
+    "registryHash": "2222222222222222222222222222222222222222222222222222222222222222",
+    "policyHash": "3333333333333333333333333333333333333333333333333333333333333333",
+    "policyFormatVersion": 1,
+    "rootNodeIndex": 0,
+    "capabilityFlags": 16,
+    "deterministicCompatible": true
+  },
+  "nodes": [
+    {
+      "nodeType": "aibt.test.shared-writer",
+      "nodeTypeVersion": 1,
+      "configOffset": 0,
+      "configSize": 4,
+      "configAlignment": 4,
+      "memoryOffset": 0,
+      "memorySize": 8,
+      "memoryAlignment": 8,
+      "memoryLifetime": "activation",
+      "firstChildOffset": 0,
+      "childCount": 0,
+      "nodeFlags": 1,
+      "debugIdentityIndex": 0
+    }
+  ],
+  "childIndices": [],
+  "configBlobHex": "01000000",
+  "tree": {
+    "slots": [
+      { "keyId": "tree_counter", "slotIndex": 0, "offset": 0, "size": 4, "alignment": 4 }
+    ]
+  },
+  "agent": {
+    "slots": [
+      { "keyId": "agent_health", "slotIndex": 0, "offset": 0, "size": 4, "alignment": 4 },
+      { "keyId": "agent_ready", "slotIndex": 1, "offset": 4, "size": 1, "alignment": 1 }
+    ]
+  },
+  "shared": {
+    "slots": [
+      { "keyId": "shared_all_ready", "slotIndex": 0, "offset": 0, "size": 1, "alignment": 1 },
+      { "keyId": "shared_any_alert", "slotIndex": 1, "offset": 1, "size": 1, "alignment": 1 },
+      { "keyId": "shared_first_label", "slotIndex": 2, "offset": 2, "size": 32, "alignment": 2 },
+      { "keyId": "shared_last_target", "slotIndex": 3, "offset": 40, "size": 8, "alignment": 8 },
+      { "keyId": "shared_max_threat", "slotIndex": 4, "offset": 48, "size": 4, "alignment": 4 },
+      { "keyId": "shared_min_distance", "slotIndex": 5, "offset": 56, "size": 8, "alignment": 8 },
+      { "keyId": "shared_read_only", "slotIndex": 6, "offset": 64, "size": 4, "alignment": 4 },
+      { "keyId": "shared_sum_score", "slotIndex": 7, "offset": 72, "size": 8, "alignment": 8 }
+    ]
+  },
+  "accesses": [
+    { "nodeIndex": 0, "accessOrdinal": 0, "scope": "tree", "slotIndex": 0, "mode": "read" },
+    { "nodeIndex": 0, "accessOrdinal": 1, "scope": "agent", "slotIndex": 0, "mode": "read" },
+    { "nodeIndex": 0, "accessOrdinal": 2, "scope": "shared", "slotIndex": 7, "mode": "write", "reduction": "sum" }
+  ],
+  "observers": [
+    {
+      "observerNodeIndex": 0,
+      "owningReactiveCompositeIndex": 4294967295,
+      "mode": "self",
+      "firstWatchedSlot": 0,
+      "watchedSlotCount": 1
+    }
+  ],
+  "watchedSlots": [
+    { "scope": "shared", "slotIndex": 6 }
+  ],
+  "debugIdentities": [
+    {
+      "runtimeNodeIndex": 0,
+      "nodeId": "root",
+      "sourcePath": "Fixtures/tree-v2.valid.aibt.json",
+      "displayName": "Root"
+    }
+  ]
+}

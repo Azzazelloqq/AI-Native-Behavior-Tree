@@ -5,6 +5,8 @@ namespace AIBT.Authoring
     public sealed class BlackboardDefaultValue
     {
         private readonly BlackboardValue _runtimeValue;
+        private readonly SemanticObject _registeredValue;
+        private readonly byte[] _registeredBytes;
 
         private BlackboardDefaultValue(
             BlackboardValueType valueType,
@@ -13,7 +15,9 @@ namespace AIBT.Authoring
             string enumContract = null,
             string sourceText = null,
             string registeredTypeId = null,
-            uint registeredTypeVersion = 0)
+            uint registeredTypeVersion = 0,
+            SemanticObject registeredValue = null,
+            byte[] registeredBytes = null)
         {
             ValueType = valueType;
             _runtimeValue = runtimeValue;
@@ -22,6 +26,8 @@ namespace AIBT.Authoring
             SourceText = sourceText;
             RegisteredTypeId = registeredTypeId;
             RegisteredTypeVersion = registeredTypeVersion;
+            _registeredValue = registeredValue;
+            _registeredBytes = registeredBytes == null ? null : (byte[])registeredBytes.Clone();
         }
 
         public BlackboardValueType ValueType { get; }
@@ -149,11 +155,38 @@ namespace AIBT.Authoring
                 registeredTypeVersion: version);
         }
 
+        internal static BlackboardDefaultValue RegisteredCanonical(
+            string canonicalTypeId,
+            uint version,
+            SemanticObject value,
+            byte[] canonicalBytes)
+        {
+            if (value == null) throw new ArgumentNullException(nameof(value));
+            if (canonicalBytes == null || canonicalBytes.Length == 0) throw new ArgumentException("Canonical registered bytes are required.", nameof(canonicalBytes));
+            return new BlackboardDefaultValue(
+                BlackboardValueType.Registered,
+                default,
+                true,
+                registeredTypeId: canonicalTypeId,
+                registeredTypeVersion: version,
+                registeredValue: value,
+                registeredBytes: canonicalBytes);
+        }
+
         public bool TryGetRuntimeValue(out BlackboardValue value)
         {
             value = _runtimeValue;
             return IsCanonical && _runtimeValue.IsValid;
         }
+
+        public bool TryGetRegisteredValue(out SemanticObject value)
+        {
+            value = _registeredValue;
+            return IsCanonical && ValueType == BlackboardValueType.Registered && value != null;
+        }
+
+        internal byte[] GetRegisteredBytesCopy()
+            => _registeredBytes == null ? null : (byte[])_registeredBytes.Clone();
 
         private static BlackboardDefaultValue Runtime(BlackboardValue value)
             => new BlackboardDefaultValue(value.Type, value, true);

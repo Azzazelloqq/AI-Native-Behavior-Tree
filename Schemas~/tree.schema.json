@@ -7,11 +7,20 @@
   "required": ["format", "formatVersion", "treeId", "name", "root", "nodes"],
   "properties": {
     "format": { "const": "aibt.tree" },
-    "formatVersion": { "type": "integer", "const": 1 },
+    "formatVersion": { "type": "integer", "enum": [1, 2] },
     "treeId": { "$ref": "#/$defs/id" },
     "name": { "type": "string", "minLength": 1 },
     "description": { "type": "string" },
     "root": { "$ref": "#/$defs/id" },
+    "blackboardContracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent": { "$ref": "#/$defs/scopeContract" },
+        "shared": { "$ref": "#/$defs/scopeContract" }
+      },
+      "minProperties": 1
+    },
     "blackboard": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/blackboardEntry" }
@@ -28,21 +37,40 @@
     },
     "metadata": { "$ref": "#/$defs/metadataObject" }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "formatVersion": { "const": 1 } }, "required": ["formatVersion"] },
+      "then": {
+        "properties": {
+          "blackboardContracts": false,
+          "blackboard": { "type": "object", "additionalProperties": { "$ref": "#/$defs/blackboardEntryV1" } },
+          "nodes": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/nodeV1" } }
+        }
+      }
+    }
+  ],
   "$defs": {
     "id": {
       "type": "string",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
     },
-    "blackboardEntry": {
+    "scopeContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractId", "contractVersion"],
+      "properties": {
+        "contractId": { "$ref": "#/$defs/bindingId" },
+        "contractVersion": { "type": "integer", "minimum": 1, "maximum": 4294967295 }
+      }
+    },
+    "blackboardEntryV1": {
       "type": "object",
       "additionalProperties": false,
       "required": ["type"],
       "properties": {
         "type": { "type": "string", "minLength": 1 },
         "enumContract": { "type": "string", "minLength": 1 },
-        "scope": {
-          "enum": ["tree", "agent", "shared"]
-        },
+        "scope": { "enum": ["tree", "agent", "shared"] },
         "description": { "type": "string" },
         "default": true
       },
@@ -53,6 +81,65 @@
           "else": { "not": { "required": ["enumContract"] } }
         }
       ]
+    },
+    "blackboardEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "typeVersion": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "enumContract": { "type": "string", "minLength": 1 },
+        "scope": {
+          "enum": ["tree", "agent", "shared"]
+        },
+        "reduction": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "enum": ["min", "max", "sum", "any", "all", "first", "last"] } }
+        },
+        "description": { "type": "string" },
+        "default": true
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "scope": { "enum": ["agent", "shared"] } }, "required": ["scope"] },
+          "then": { "required": ["typeVersion", "scope", "default"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "Enum32" } }, "required": ["type"] },
+          "then": { "required": ["enumContract"] },
+          "else": { "not": { "required": ["enumContract"] } }
+        },
+        {
+          "if": { "properties": { "scope": { "const": "shared" } }, "required": ["scope"] },
+          "else": { "not": { "required": ["reduction"] } }
+        },
+        {
+          "if": { "properties": { "reduction": { "properties": { "kind": { "enum": ["min", "max", "sum"] } }, "required": ["kind"] } }, "required": ["reduction"] },
+          "then": { "properties": { "type": { "enum": ["Int32", "Int64", "Float32", "Float64"] } } }
+        },
+        {
+          "if": { "properties": { "reduction": { "properties": { "kind": { "enum": ["any", "all"] } }, "required": ["kind"] } }, "required": ["reduction"] },
+          "then": { "properties": { "type": { "const": "Bool" } } }
+        }
+      ]
+    },
+    "nodeV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "typeVersion"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "typeVersion": { "type": "integer", "minimum": 1 },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "parameters": { "type": "object", "additionalProperties": { "$ref": "#/$defs/semanticValue" } },
+        "observer": { "$ref": "#/$defs/observer" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "tags": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
     },
     "node": {
       "type": "object",
@@ -67,20 +154,8 @@
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/semanticValue" }
         },
-        "observer": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["mode", "watchedKeys"],
-          "properties": {
-            "mode": { "enum": ["self", "lower-priority", "both"] },
-            "watchedKeys": {
-              "type": "array",
-              "minItems": 1,
-              "items": { "$ref": "#/$defs/id" },
-              "uniqueItems": true
-            }
-          }
-        },
+        "bindings": { "type": "object", "propertyNames": { "$ref": "#/$defs/bindingId" }, "additionalProperties": { "$ref": "#/$defs/bindingId" } },
+        "observer": { "$ref": "#/$defs/observer" },
         "children": {
           "type": "array",
           "items": { "$ref": "#/$defs/id" },
@@ -93,6 +168,15 @@
         }
       }
     },
+    "observer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "watchedKeys"],
+      "properties": {
+        "mode": { "enum": ["self", "lower-priority", "both"] },
+        "watchedKeys": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/id" }, "uniqueItems": true }
+      }
+    },
     "semanticValue": {
       "anyOf": [
         { "type": "null" },
@@ -103,6 +187,11 @@
         { "type": "array", "items": { "$ref": "#/$defs/semanticValue" } },
         { "type": "object", "additionalProperties": { "$ref": "#/$defs/semanticValue" } }
       ]
+    },
+    "bindingId": {
+      "type": "string",
+      "maxLength": 255,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
     },
     "metadataObject": {
       "type": "object",

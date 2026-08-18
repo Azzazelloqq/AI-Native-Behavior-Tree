@@ -1,0 +1,352 @@
+T|class|AIBT.Burst.AibtAsyncOperationBindingAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Field,multi=False,inherited=False
+C|value:System.String:bindingId:optional=False,value:System.String:startPayloadTypeId:optional=False,value:System.UInt32:startPayloadTypeVersion:optional=False,value:System.String:cancelPayloadTypeId:optional=False,value:System.UInt32:cancelPayloadTypeVersion:optional=False
+T|class|AIBT.Burst.AibtBlackboardBindingAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Field,multi=False,inherited=False
+C|value:System.String:bindingId:optional=False,value:AIBT.Burst.BurstBlackboardAccess:access:optional=False,value:AIBT.BlackboardScope:scope:optional=False,value:System.String:valueTypeId:optional=False,value:System.UInt32:valueTypeVersion:optional=False
+T|class|AIBT.Burst.AibtBurstNodeAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Struct,multi=False,inherited=False
+C|value:System.String:canonicalTypeId:optional=False,value:System.UInt32:nodeTypeVersion:optional=False,value:AIBT.Burst.BurstNodeKind:kind:optional=False,value:System.Type:configurationType:optional=False,value:System.Type:memoryType:optional=False,value:AIBT.NodeMemoryLifetime:memoryLifetime:optional=False,value:System.Boolean:deterministic:optional=False,value:AIBT.Burst.BurstCancellationMode:cancellation:optional=False,value:AIBT.Burst.BurstNodeCost:cost:optional=False,value:AIBT.Burst.BurstNodeStatusMask:possibleStatuses:optional=False
+T|class|AIBT.Burst.AibtBurstValueAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Struct,multi=False,inherited=False
+C|value:System.String:canonicalTypeId:optional=False,value:System.UInt32:valueTypeVersion:optional=False,value:System.String:canonicalSchemaId:optional=False
+T|class|AIBT.Burst.AibtCatalogSetAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Class,multi=False,inherited=False
+C|value:System.String:catalogId:optional=False,value:System.UInt32:catalogVersion:optional=False,value:System.Type[]:shardTypes:optional=False
+T|class|AIBT.Burst.AibtCatalogShardAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Struct,multi=False,inherited=False
+C|value:System.String:shardId:optional=False,value:System.UInt32:shardVersion:optional=False
+T|class|AIBT.Burst.AibtCommandBindingAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Field,multi=False,inherited=False
+C|value:System.String:bindingId:optional=False,value:System.String:payloadTypeId:optional=False,value:System.UInt32:payloadTypeVersion:optional=False
+T|class|AIBT.Burst.AibtCompletionBindingAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Field,multi=False,inherited=False
+C|value:System.String:bindingId:optional=False,value:System.String:payloadTypeId:optional=False,value:System.UInt32:payloadTypeVersion:optional=False
+T|class|AIBT.Burst.AibtConfigFieldAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Field,multi=False,inherited=False
+C|value:System.String:fieldId:optional=False,value:System.String:valueTypeId:optional=False,value:System.UInt32:valueTypeVersion:optional=False
+T|class|AIBT.Burst.AibtMemoryFieldAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Field,multi=False,inherited=False
+C|value:System.String:fieldId:optional=False,value:System.String:valueTypeId:optional=False,value:System.UInt32:valueTypeVersion:optional=False
+T|class|AIBT.Burst.AibtNodeDocumentationAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Struct,multi=False,inherited=False
+C|value:System.String:summary:optional=False,value:System.String:category:optional=False,value:System.String:whenToUse:optional=False,value:System.String:whenNotToUse:optional=False,value:System.String[]:exampleIds:optional=False
+T|class|AIBT.Burst.AibtObserverConditionAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Struct,multi=False,inherited=False
+C|
+T|class|AIBT.Burst.AibtRandomStreamAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Struct,multi=False,inherited=False
+C|
+T|class|AIBT.Burst.AibtSnapshotBindingAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Field,multi=False,inherited=False
+C|value:System.String:bindingId:optional=False,value:System.String:valueTypeId:optional=False,value:System.UInt32:valueTypeVersion:optional=False
+T|class|AIBT.Burst.AibtValueFieldAttribute|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi|usage=Field,multi=False,inherited=False
+C|value:System.String:fieldId:optional=False,value:System.String:valueTypeId:optional=False,value:System.UInt32:valueTypeVersion:optional=False
+T|struct|AIBT.Burst.AsyncOperationHandle<!TStart,!TCancel>|abstract=False|sealed=True|generic=TStart:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType;TCancel:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi
+T|struct|AIBT.Burst.BlackboardReadHandle<!T>|abstract=False|sealed=True|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi
+T|struct|AIBT.Burst.BlackboardReadWriteHandle<!T>|abstract=False|sealed=True|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi
+T|struct|AIBT.Burst.BlackboardWriteHandle<!T>|abstract=False|sealed=True|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi
+T|struct|AIBT.Burst.BurstAbortContext|abstract=False|sealed=True|layout=Sequential,pack=0,size=0,charset=Ansi
+M|instance|TryBeginCancel|return=AIBT.Burst.BurstContextResult|generic=TStart:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType;TCancel:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.AsyncOperationHandle<!TStart,!TCancel>:handle:optional=False,value:AIBT.OperationId:operationId:optional=False,out:AIBT.Burst.BurstValueWriter:writer:optional=False
+T|enum|AIBT.Burst.BurstBlackboardAccess|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Read=0
+E|Write=1
+E|ReadWrite=2
+F|instance|mutable|value__|System.Byte
+F|static|const|ReadWrite|AIBT.Burst.BurstBlackboardAccess|2
+F|static|const|Read|AIBT.Burst.BurstBlackboardAccess|0
+F|static|const|Write|AIBT.Burst.BurstBlackboardAccess|1
+T|enum|AIBT.Burst.BurstCallbackPhase|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Enter=0
+E|Tick=1
+E|Abort=2
+E|Exit=3
+E|Observer=4
+F|instance|mutable|value__|System.Byte
+F|static|const|Abort|AIBT.Burst.BurstCallbackPhase|2
+F|static|const|Enter|AIBT.Burst.BurstCallbackPhase|0
+F|static|const|Exit|AIBT.Burst.BurstCallbackPhase|3
+F|static|const|Observer|AIBT.Burst.BurstCallbackPhase|4
+F|static|const|Tick|AIBT.Burst.BurstCallbackPhase|1
+T|enum|AIBT.Burst.BurstCancellationMode|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|NotApplicable=0
+E|AbortOnly=1
+E|Command=2
+F|instance|mutable|value__|System.Byte
+F|static|const|AbortOnly|AIBT.Burst.BurstCancellationMode|1
+F|static|const|Command|AIBT.Burst.BurstCancellationMode|2
+F|static|const|NotApplicable|AIBT.Burst.BurstCancellationMode|0
+T|struct|AIBT.Burst.BurstCatalogFingerprint|abstract=False|sealed=True|layout=Sequential,pack=4,size=32,charset=Ansi
+C|value:AIBT.Burst.BurstHash256:value:optional=False
+P|instance|Value|AIBT.Burst.BurstHash256|get=True|set=False|index=
+T|struct|AIBT.Burst.BurstCatalogHandshake|abstract=False|sealed=True|layout=Sequential,pack=4,size=172,charset=Ansi
+C|value:System.UInt32:abiVersion:optional=False,value:AIBT.Burst.BurstCatalogFingerprint:catalog:optional=False,value:AIBT.Burst.BurstHash256:nodeRegistry:optional=False,value:System.UInt32:compiledFormatVersion:optional=False,value:System.UInt32:executionSemanticsVersion:optional=False,value:AIBT.Burst.BurstHash256:configurationLayout:optional=False,value:AIBT.Burst.BurstHash256:memoryLayout:optional=False,value:AIBT.Burst.BurstHash256:accessLayout:optional=False
+P|instance|AbiVersion|System.UInt32|get=True|set=False|index=
+P|instance|AccessLayout|AIBT.Burst.BurstHash256|get=True|set=False|index=
+P|instance|Catalog|AIBT.Burst.BurstCatalogFingerprint|get=True|set=False|index=
+P|instance|CompiledFormatVersion|System.UInt32|get=True|set=False|index=
+P|instance|ConfigurationLayout|AIBT.Burst.BurstHash256|get=True|set=False|index=
+P|instance|ExecutionSemanticsVersion|System.UInt32|get=True|set=False|index=
+P|instance|MemoryLayout|AIBT.Burst.BurstHash256|get=True|set=False|index=
+P|instance|NodeRegistry|AIBT.Burst.BurstHash256|get=True|set=False|index=
+T|enum|AIBT.Burst.BurstCatalogValidationCode|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Success=0
+E|AbiVersionMismatch=1
+E|CatalogMismatch=2
+E|RegistryMismatch=3
+E|CompiledFormatMismatch=4
+E|SemanticsMismatch=5
+E|ConfigurationLayoutMismatch=6
+E|MemoryLayoutMismatch=7
+E|AccessLayoutMismatch=8
+F|instance|mutable|value__|System.Byte
+F|static|const|AbiVersionMismatch|AIBT.Burst.BurstCatalogValidationCode|1
+F|static|const|AccessLayoutMismatch|AIBT.Burst.BurstCatalogValidationCode|8
+F|static|const|CatalogMismatch|AIBT.Burst.BurstCatalogValidationCode|2
+F|static|const|CompiledFormatMismatch|AIBT.Burst.BurstCatalogValidationCode|4
+F|static|const|ConfigurationLayoutMismatch|AIBT.Burst.BurstCatalogValidationCode|6
+F|static|const|MemoryLayoutMismatch|AIBT.Burst.BurstCatalogValidationCode|7
+F|static|const|RegistryMismatch|AIBT.Burst.BurstCatalogValidationCode|3
+F|static|const|SemanticsMismatch|AIBT.Burst.BurstCatalogValidationCode|5
+F|static|const|Success|AIBT.Burst.BurstCatalogValidationCode|0
+T|struct|AIBT.Burst.BurstCatalogValidationResult|abstract=False|sealed=True|layout=Sequential,pack=2,size=4,charset=Ansi
+C|value:AIBT.Burst.BurstCatalogValidationCode:code:optional=False,value:System.UInt16:diagnosticNumber:optional=False
+P|instance|Code|AIBT.Burst.BurstCatalogValidationCode|get=True|set=False|index=
+P|instance|DiagnosticNumber|System.UInt16|get=True|set=False|index=
+P|instance|Success|System.Boolean|get=True|set=False|index=
+T|enum|AIBT.Burst.BurstCompletionOutcome|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Succeeded=0
+E|Failed=1
+E|Cancelled=2
+F|instance|mutable|value__|System.Byte
+F|static|const|Cancelled|AIBT.Burst.BurstCompletionOutcome|2
+F|static|const|Failed|AIBT.Burst.BurstCompletionOutcome|1
+F|static|const|Succeeded|AIBT.Burst.BurstCompletionOutcome|0
+T|struct|AIBT.Burst.BurstConfigurationReader|abstract=False|sealed=True|layout=Sequential,pack=0,size=0,charset=Ansi
+T|enum|AIBT.Burst.BurstContextResult|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Success=0
+E|InvalidHandle=1
+E|TypeMismatch=2
+E|PhaseViolation=3
+E|CapacityExceeded=4
+E|StaleCompletion=5
+E|Overflow=6
+E|InvalidEncoding=7
+E|IncompleteValue=8
+E|AlreadyCommitted=9
+E|InvalidStatus=10
+F|instance|mutable|value__|System.Byte
+F|static|const|AlreadyCommitted|AIBT.Burst.BurstContextResult|9
+F|static|const|CapacityExceeded|AIBT.Burst.BurstContextResult|4
+F|static|const|IncompleteValue|AIBT.Burst.BurstContextResult|8
+F|static|const|InvalidEncoding|AIBT.Burst.BurstContextResult|7
+F|static|const|InvalidHandle|AIBT.Burst.BurstContextResult|1
+F|static|const|InvalidStatus|AIBT.Burst.BurstContextResult|10
+F|static|const|Overflow|AIBT.Burst.BurstContextResult|6
+F|static|const|PhaseViolation|AIBT.Burst.BurstContextResult|3
+F|static|const|StaleCompletion|AIBT.Burst.BurstContextResult|5
+F|static|const|Success|AIBT.Burst.BurstContextResult|0
+F|static|const|TypeMismatch|AIBT.Burst.BurstContextResult|2
+T|struct|AIBT.Burst.BurstDispatchFrame|abstract=False|sealed=True|layout=Sequential,pack=0,size=0,charset=Ansi
+T|struct|AIBT.Burst.BurstEnterContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=0,charset=Ansi
+M|instance|TryBeginBlackboardRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardReadHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginBlackboardRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardReadWriteHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginBlackboardWrite|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardReadWriteHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|instance|TryBeginBlackboardWrite|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardWriteHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|instance|TryBeginConsume|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.CompletionHandle<!T>:handle:optional=False,value:AIBT.OperationId:operationId:optional=False,out:AIBT.Burst.BurstCompletionOutcome:outcome:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginEffect|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.CommandHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|instance|TryBeginSnapshotRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.SnapshotReadHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginStart|return=AIBT.Burst.BurstContextResult|generic=TStart:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType;TCancel:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.AsyncOperationHandle<!TStart,!TCancel>:handle:optional=False,out:AIBT.Burst.BurstValueWriter:startWriter:optional=False,out:AIBT.Burst.BurstValueWriter:faultCancelWriter:optional=False
+M|instance|TryGetTimeMicroseconds|return=AIBT.Burst.BurstContextResult|generic=0|params=out:System.Int64:value:optional=False
+M|instance|TryNextFloat32|return=AIBT.Burst.BurstContextResult|generic=0|params=out:System.Single:value:optional=False
+M|instance|TryNextUInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=out:System.UInt32:value:optional=False
+M|instance|TryNextUInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=value:System.UInt32:boundExclusive:optional=False,out:System.UInt32:value:optional=False
+T|struct|AIBT.Burst.BurstExecutionBatch|abstract=False|sealed=True|layout=Sequential,pack=0,size=0,charset=Ansi
+T|enum|AIBT.Burst.BurstExecutionCode|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Success=0
+E|ValidationFailed=1
+E|Faulted=2
+F|instance|mutable|value__|System.Byte
+F|static|const|Faulted|AIBT.Burst.BurstExecutionCode|2
+F|static|const|Success|AIBT.Burst.BurstExecutionCode|0
+F|static|const|ValidationFailed|AIBT.Burst.BurstExecutionCode|1
+T|struct|AIBT.Burst.BurstExecutionResult|abstract=False|sealed=True|layout=Sequential,pack=4,size=16,charset=Ansi
+C|value:AIBT.Burst.BurstExecutionCode:code:optional=False,value:System.UInt16:diagnosticNumber:optional=False,value:System.UInt32:instancesVisited:optional=False,value:System.UInt64:segmentSteps:optional=False
+P|instance|Code|AIBT.Burst.BurstExecutionCode|get=True|set=False|index=
+P|instance|DiagnosticNumber|System.UInt16|get=True|set=False|index=
+P|instance|InstancesVisited|System.UInt32|get=True|set=False|index=
+P|instance|SegmentSteps|System.UInt64|get=True|set=False|index=
+P|instance|Success|System.Boolean|get=True|set=False|index=
+T|struct|AIBT.Burst.BurstExitContext|abstract=False|sealed=True|layout=Sequential,pack=0,size=1,charset=Ansi
+T|class|AIBT.Burst.BurstGeneratedRuntimeBridge|abstract=True|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+M|static|TryAcquireDispatchFrame|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,value:System.UInt32:instanceOrdinal:optional=False,value:System.UInt32:runtimeNodeIndex:optional=False,value:System.UInt32:catalogCaseIndex:optional=False,value:AIBT.Burst.BurstCallbackPhase:phase:optional=False,out:AIBT.Burst.BurstDispatchFrame:frame:optional=False
+M|static|TryCommitBlackboardWrite|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|static|TryCommitCancel|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|static|TryCommitConsume|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False
+M|static|TryCommitEffect|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|static|TryCommitMemory|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False
+M|static|TryCommitStart|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:startWriter:optional=False,ref:AIBT.Burst.BurstValueWriter:faultCancelWriter:optional=False,out:AIBT.OperationId:operationId:optional=False
+M|static|TryCompleteAbort|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,in:AIBT.Burst.BurstDispatchFrame:frame:optional=False
+M|static|TryCompleteEnter|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,ref:AIBT.Burst.BurstEnterContext:context:optional=False
+M|static|TryCompleteExit|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,in:AIBT.Burst.BurstDispatchFrame:frame:optional=False
+M|static|TryCompleteObserver|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,value:AIBT.Burst.ConditionResult:result:optional=False
+M|static|TryCompleteTick|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,ref:AIBT.Burst.BurstTickContext:context:optional=False,value:AIBT.NodeStatus:status:optional=False
+M|static|TryCompleteValueRead|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False
+M|static|TryCreateAbortContext|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstAbortContext:context:optional=False
+M|static|TryCreateConfigurationReader|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstConfigurationReader:reader:optional=False
+M|static|TryCreateEnterContext|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstEnterContext:context:optional=False
+M|static|TryCreateExitContext|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstExitContext:context:optional=False
+M|static|TryCreateMemoryAccessor|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False
+M|static|TryCreateObserverContext|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstObserverContext:context:optional=False
+M|static|TryCreateTickContext|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstTickContext:context:optional=False
+M|static|TryFailDispatch|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,value:AIBT.Burst.BurstContextResult:failure:optional=False
+M|static|TryGetAbortReason|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstNodeAbortReason:reason:optional=False
+M|static|TryGetCatalogHandshake|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstExecutionBatch:batch:optional=False,out:AIBT.Burst.BurstCatalogHandshake:handshake:optional=False
+M|static|TryGetExecutionRequest|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstExecutionBatch:batch:optional=False,out:System.UInt32:instanceOrdinal:optional=False,out:System.UInt32:runtimeNodeIndex:optional=False,out:System.UInt32:catalogCaseIndex:optional=False,out:AIBT.Burst.BurstCallbackPhase:phase:optional=False,out:System.Boolean:hasWork:optional=False
+M|static|TryGetExecutionResult|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstExecutionBatch:batch:optional=False,out:AIBT.Burst.BurstExecutionResult:result:optional=False
+M|static|TryGetExitReason|return=AIBT.Burst.BurstContextResult|generic=0|params=in:AIBT.Burst.BurstDispatchFrame:frame:optional=False,out:AIBT.Burst.BurstNodeExitReason:reason:optional=False
+M|static|TryPrepareSchedule|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,out:AIBT.Burst.BurstExecutionBatch:scheduledView:optional=False
+M|static|TryReadAsyncOperationHandle|return=AIBT.Burst.BurstContextResult|generic=TStart:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType;TCancel:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt64:startPayloadTypeNumericId:optional=False,value:System.UInt32:startPayloadTypeVersion:optional=False,value:System.UInt64:cancelPayloadTypeNumericId:optional=False,value:System.UInt32:cancelPayloadTypeVersion:optional=False,out:AIBT.Burst.AsyncOperationHandle<!TStart,!TCancel>:value:optional=False
+M|static|TryReadBlackboardReadHandle|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt64:valueTypeNumericId:optional=False,value:System.UInt32:valueTypeVersion:optional=False,out:AIBT.Burst.BlackboardReadHandle<!T>:value:optional=False
+M|static|TryReadBlackboardReadWriteHandle|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt64:valueTypeNumericId:optional=False,value:System.UInt32:valueTypeVersion:optional=False,out:AIBT.Burst.BlackboardReadWriteHandle<!T>:value:optional=False
+M|static|TryReadBlackboardWriteHandle|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt64:valueTypeNumericId:optional=False,value:System.UInt32:valueTypeVersion:optional=False,out:AIBT.Burst.BlackboardWriteHandle<!T>:value:optional=False
+M|static|TryReadBoolean|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Boolean:value:optional=False
+M|static|TryReadCommandHandle|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt64:payloadTypeNumericId:optional=False,value:System.UInt32:payloadTypeVersion:optional=False,out:AIBT.Burst.CommandHandle<!T>:value:optional=False
+M|static|TryReadCompletionHandle|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt64:payloadTypeNumericId:optional=False,value:System.UInt32:payloadTypeVersion:optional=False,out:AIBT.Burst.CompletionHandle<!T>:value:optional=False
+M|static|TryReadMemoryBoolean|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Boolean:value:optional=False
+M|static|TryReadMemoryFloat32|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Single:value:optional=False
+M|static|TryReadMemoryFloat64|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Double:value:optional=False
+M|static|TryReadMemoryInt16|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Int16:value:optional=False
+M|static|TryReadMemoryInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Int32:value:optional=False
+M|static|TryReadMemoryInt64|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Int64:value:optional=False
+M|static|TryReadMemoryInt8|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.SByte:value:optional=False
+M|static|TryReadMemoryUInt16|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.UInt16:value:optional=False
+M|static|TryReadMemoryUInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.UInt32:value:optional=False
+M|static|TryReadMemoryUInt64|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.UInt64:value:optional=False
+M|static|TryReadMemoryUInt8|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Byte:value:optional=False
+M|static|TryReadSnapshotHandle|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt64:valueTypeNumericId:optional=False,value:System.UInt32:valueTypeVersion:optional=False,out:AIBT.Burst.SnapshotReadHandle<!T>:value:optional=False
+M|static|TryReadUInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.UInt32:value:optional=False
+M|static|TryReadUInt64|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.UInt64:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Boolean:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Byte:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Double:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Int16:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Int32:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Int64:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.SByte:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Single:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.UInt16:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.UInt32:value:optional=False
+M|static|TryReadValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.UInt64:value:optional=False
+M|static|TryRejectBatch|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,in:AIBT.Burst.BurstCatalogValidationResult:validationResult:optional=False
+M|static|TryWriteMemoryBoolean|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Boolean:value:optional=False
+M|static|TryWriteMemoryFloat32|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Single:value:optional=False
+M|static|TryWriteMemoryFloat64|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Double:value:optional=False
+M|static|TryWriteMemoryInt16|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Int16:value:optional=False
+M|static|TryWriteMemoryInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Int32:value:optional=False
+M|static|TryWriteMemoryInt64|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Int64:value:optional=False
+M|static|TryWriteMemoryInt8|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.SByte:value:optional=False
+M|static|TryWriteMemoryUInt16|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.UInt16:value:optional=False
+M|static|TryWriteMemoryUInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.UInt32:value:optional=False
+M|static|TryWriteMemoryUInt64|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.UInt64:value:optional=False
+M|static|TryWriteMemoryUInt8|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstMemoryAccessor:accessor:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Byte:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Boolean:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Byte:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Double:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Int16:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Int32:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Int64:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.SByte:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.Single:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.UInt16:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.UInt32:value:optional=False
+M|static|TryWriteValue|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstValueWriter:writer:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,value:System.UInt64:value:optional=False
+T|struct|AIBT.Burst.BurstHash256|abstract=False|sealed=True|layout=Sequential,pack=4,size=32,charset=Ansi
+C|value:System.UInt32:word0:optional=False,value:System.UInt32:word1:optional=False,value:System.UInt32:word2:optional=False,value:System.UInt32:word3:optional=False,value:System.UInt32:word4:optional=False,value:System.UInt32:word5:optional=False,value:System.UInt32:word6:optional=False,value:System.UInt32:word7:optional=False
+P|instance|Word0|System.UInt32|get=True|set=False|index=
+P|instance|Word1|System.UInt32|get=True|set=False|index=
+P|instance|Word2|System.UInt32|get=True|set=False|index=
+P|instance|Word3|System.UInt32|get=True|set=False|index=
+P|instance|Word4|System.UInt32|get=True|set=False|index=
+P|instance|Word5|System.UInt32|get=True|set=False|index=
+P|instance|Word6|System.UInt32|get=True|set=False|index=
+P|instance|Word7|System.UInt32|get=True|set=False|index=
+T|struct|AIBT.Burst.BurstMemoryAccessor|abstract=False|sealed=True|layout=Sequential,pack=0,size=0,charset=Ansi
+T|enum|AIBT.Burst.BurstNodeAbortReason|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Explicit=0
+E|ObserverSelf=1
+E|ObserverLowerPriority=2
+E|TreeStopped=3
+E|HotReload=4
+E|Timeout=5
+F|instance|mutable|value__|System.Byte
+F|static|const|Explicit|AIBT.Burst.BurstNodeAbortReason|0
+F|static|const|HotReload|AIBT.Burst.BurstNodeAbortReason|4
+F|static|const|ObserverLowerPriority|AIBT.Burst.BurstNodeAbortReason|2
+F|static|const|ObserverSelf|AIBT.Burst.BurstNodeAbortReason|1
+F|static|const|Timeout|AIBT.Burst.BurstNodeAbortReason|5
+F|static|const|TreeStopped|AIBT.Burst.BurstNodeAbortReason|3
+T|enum|AIBT.Burst.BurstNodeCost|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Trivial=0
+E|Low=1
+E|Medium=2
+E|High=3
+E|Variable=4
+F|instance|mutable|value__|System.Byte
+F|static|const|High|AIBT.Burst.BurstNodeCost|3
+F|static|const|Low|AIBT.Burst.BurstNodeCost|1
+F|static|const|Medium|AIBT.Burst.BurstNodeCost|2
+F|static|const|Trivial|AIBT.Burst.BurstNodeCost|0
+F|static|const|Variable|AIBT.Burst.BurstNodeCost|4
+T|enum|AIBT.Burst.BurstNodeExitReason|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Success=0
+E|Failure=1
+E|Aborted=2
+F|instance|mutable|value__|System.Byte
+F|static|const|Aborted|AIBT.Burst.BurstNodeExitReason|2
+F|static|const|Failure|AIBT.Burst.BurstNodeExitReason|1
+F|static|const|Success|AIBT.Burst.BurstNodeExitReason|0
+T|enum|AIBT.Burst.BurstNodeKind|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Condition=0
+E|Action=1
+F|instance|mutable|value__|System.Byte
+F|static|const|Action|AIBT.Burst.BurstNodeKind|1
+F|static|const|Condition|AIBT.Burst.BurstNodeKind|0
+T|enum|AIBT.Burst.BurstNodeStatusMask|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|None=0
+E|Success=1
+E|Failure=2
+E|Running=4
+F|instance|mutable|value__|System.Byte
+F|static|const|Failure|AIBT.Burst.BurstNodeStatusMask|2
+F|static|const|None|AIBT.Burst.BurstNodeStatusMask|0
+F|static|const|Running|AIBT.Burst.BurstNodeStatusMask|4
+F|static|const|Success|AIBT.Burst.BurstNodeStatusMask|1
+T|struct|AIBT.Burst.BurstObserverContext|abstract=False|sealed=True|layout=Sequential,pack=0,size=0,charset=Ansi
+M|instance|TryBeginBlackboardRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardReadHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginBlackboardRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardReadWriteHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginSnapshotRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.SnapshotReadHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryGetTimeMicroseconds|return=AIBT.Burst.BurstContextResult|generic=0|params=out:System.Int64:value:optional=False
+T|struct|AIBT.Burst.BurstTickContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=0,charset=Ansi
+M|instance|TryBeginBlackboardRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardReadHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginBlackboardRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardReadWriteHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginBlackboardWrite|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardReadWriteHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|instance|TryBeginBlackboardWrite|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.BlackboardWriteHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|instance|TryBeginConsume|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.CompletionHandle<!T>:handle:optional=False,value:AIBT.OperationId:operationId:optional=False,out:AIBT.Burst.BurstCompletionOutcome:outcome:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginEffect|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.CommandHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueWriter:writer:optional=False
+M|instance|TryBeginSnapshotRead|return=AIBT.Burst.BurstContextResult|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.SnapshotReadHandle<!T>:handle:optional=False,out:AIBT.Burst.BurstValueReader:reader:optional=False
+M|instance|TryBeginStart|return=AIBT.Burst.BurstContextResult|generic=TStart:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType;TCancel:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|params=value:AIBT.Burst.AsyncOperationHandle<!TStart,!TCancel>:handle:optional=False,out:AIBT.Burst.BurstValueWriter:startWriter:optional=False,out:AIBT.Burst.BurstValueWriter:faultCancelWriter:optional=False
+M|instance|TryGetTimeMicroseconds|return=AIBT.Burst.BurstContextResult|generic=0|params=out:System.Int64:value:optional=False
+M|instance|TryNextFloat32|return=AIBT.Burst.BurstContextResult|generic=0|params=out:System.Single:value:optional=False
+M|instance|TryNextUInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=out:System.UInt32:value:optional=False
+M|instance|TryNextUInt32|return=AIBT.Burst.BurstContextResult|generic=0|params=value:System.UInt32:boundExclusive:optional=False,out:System.UInt32:value:optional=False
+T|struct|AIBT.Burst.BurstValueReader|abstract=False|sealed=True|layout=Sequential,pack=0,size=0,charset=Ansi
+T|struct|AIBT.Burst.BurstValueWriter|abstract=False|sealed=True|layout=Sequential,pack=0,size=0,charset=Ansi
+T|struct|AIBT.Burst.CommandHandle<!T>|abstract=False|sealed=True|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi
+T|struct|AIBT.Burst.CompletionHandle<!T>|abstract=False|sealed=True|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi
+T|enum|AIBT.Burst.ConditionResult|abstract=False|sealed=True|layout=Auto,pack=0,size=0,charset=Ansi
+E|underlying=System.Byte
+E|Success=0
+E|Failure=1
+F|instance|mutable|value__|System.Byte
+F|static|const|Failure|AIBT.Burst.ConditionResult|1
+F|static|const|Success|AIBT.Burst.ConditionResult|0
+T|struct|AIBT.Burst.SnapshotReadHandle<!T>|abstract=False|sealed=True|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi

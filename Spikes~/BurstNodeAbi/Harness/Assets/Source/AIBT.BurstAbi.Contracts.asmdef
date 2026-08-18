@@ -1,0 +1,8 @@
+{
+  "name": "AIBT.BurstAbi.Contracts",
+  "rootNamespace": "AIBT.Burst",
+  "references": ["AIBT.Runtime", "Unity.Burst", "Unity.Collections"],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

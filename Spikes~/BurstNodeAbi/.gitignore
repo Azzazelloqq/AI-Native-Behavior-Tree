@@ -1,0 +1,16 @@
+artifacts/
+Harness/Library/
+Harness/Logs/
+Harness/Temp/
+Harness/UserSettings/
+Harness/TestResults/
+Harness/Assets/Analyzers/*.dll
+Harness/Assets/Analyzers/*.pdb
+Harness/Assets/**/*.meta
+!Harness/Assets/Analyzers/AIBT.BurstNodeAbi.Feasibility.dll.meta
+Harness/ProjectSettings/*.asset
+Harness/Assets/AnalyzerProbe/
+!Harness/Packages/packages-lock.json
+!Generator/*.csproj
+!Runner/*.csproj
+!Build-And-Verify.ps1

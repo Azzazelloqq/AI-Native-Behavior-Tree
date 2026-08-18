@@ -1,0 +1,9 @@
+{
+  "name": "AIBT.NativeOwnership.Spike.Editor",
+  "rootNamespace": "AIBT.NativeOwnership.Spike.Editor",
+  "references": ["AIBT.NativeOwnership.Spike"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

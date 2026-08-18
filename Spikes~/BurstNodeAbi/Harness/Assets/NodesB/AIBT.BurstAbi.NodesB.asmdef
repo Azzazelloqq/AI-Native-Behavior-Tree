@@ -1,0 +1,9 @@
+{
+  "name": "AIBT.BurstAbi.NodesB",
+  "rootNamespace": "AIBT.BurstAbi.NodesB",
+  "references": ["AIBT.Runtime", "AIBT.BurstAbi.Contracts"],
+  "analyzers": ["GUID:8f79970e34924dc1a4e944a9ed8b6281"],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

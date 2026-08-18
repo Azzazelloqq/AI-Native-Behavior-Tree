@@ -1,0 +1,19 @@
+{
+  "name": "AIBT.NativeTreeAgentBlackboard.Tests",
+  "rootNamespace": "AIBT.Tests.Runtime.NativeExecution.Blackboard.TreeAndAgent",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

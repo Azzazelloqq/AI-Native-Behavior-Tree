@@ -16,6 +16,13 @@
     "Authoring",
     "Reference Runtime"
   ],
+  "samples": [
+    {
+      "displayName": "Public Burst Nodes",
+      "description": "Condition and asynchronous Action nodes using only the public generated Burst API.",
+      "path": "Samples~/BurstNodes"
+    }
+  ],
   "author": {
     "name": "Dmitry Bogdanov",
     "email": "bog22232@ya.ru",

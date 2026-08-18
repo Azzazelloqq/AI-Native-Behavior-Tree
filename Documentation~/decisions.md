@@ -23,5 +23,8 @@ This file records accepted direction. Detailed ADR files may be introduced when 
 | AIBT-017 | Support Windows x64, Android ARM64, and single-threaded Unity Web as mandatory pre-1.0 validation targets. | Accepted |
 | AIBT-018 | Keep the product short name and namespace `AIBT` and package ID `com.azzazello.aibt`. | Accepted |
 | AIBT-019 | Use English for canonical code, APIs, identifiers, diagnostics, schemas, and documentation; translations may be supplemental. | Accepted |
+| AIBT-020 | Use the versioned generated public Burst node ABI, per-assembly metadata shards, and explicit consumer-owned catalog-set facade defined by [ADR P2-001](decisions/ADR-P2-001-public-burst-node-abi.md). | Accepted |
+| AIBT-021 | Use explicit native owners, immutable preflight capacity plans, staged atomic publication, and dependency-complete disposal defined by [ADR P2-002](decisions/ADR-P2-002-native-ownership-and-capacity.md). | Accepted |
+| AIBT-022 | Use Burst node ABI v2 with source-stable public signatures, Runtime-private job-safe carrier backing, and an implicit metadata-only Runtime built-in authority as defined by [ADR P2-012](decisions/ADR-P2-012-burst-node-abi-v2.md). | Accepted |
 
 Normative details are in `Documentation~/specifications/`. An implementation may change them only through an accepted decision and corresponding specification update.

@@ -1,0 +1,31 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "tree.only",
+  "name": "Tree-only v1 shape",
+  "description": "Proves that v2 is additive over the v1 semantic shape.",
+  "root": "root",
+  "blackboard": {
+    "local_flag": {
+      "type": "Bool",
+      "description": "No v2-only fields are required for Tree scope."
+    }
+  },
+  "nodes": {
+    "root": {
+      "type": "aibt.test.leaf",
+      "typeVersion": 1,
+      "displayName": "Root",
+      "description": "Retains every v1 node property.",
+      "parameters": {},
+      "observer": {
+        "mode": "self",
+        "watchedKeys": ["local_flag"]
+      },
+      "children": [],
+      "tags": ["fixture", "tree-only"]
+    }
+  },
+  "tags": ["additive", "fixture"],
+  "metadata": { "shape": "v1-compatible" }
+}

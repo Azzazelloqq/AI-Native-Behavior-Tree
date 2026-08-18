@@ -1,0 +1,29 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "invalid.custom",
+  "name": "Invalid custom reducer",
+  "root": "root",
+  "blackboardContracts": {
+    "shared": {
+      "contractId": "aibt.shared.invalid",
+      "contractVersion": 1
+    }
+  },
+  "blackboard": {
+    "value": {
+      "type": "Int32",
+      "typeVersion": 1,
+      "scope": "shared",
+      "reduction": { "kind": "custom" },
+      "default": 0
+    }
+  },
+  "nodes": {
+    "root": {
+      "type": "aibt.test.leaf",
+      "typeVersion": 1
+    }
+  }
+}
+

@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aibt.dev/schemas/phase2/windows-baseline-acceptance-v1.schema.json",
+  "type": "object",
+  "required": ["schema", "passed", "observedAtUtc", "environment", "generator", "build", "runtime", "windowsBaseline", "packages", "proofs", "artifacts", "logs", "processes", "cleanup"],
+  "properties": {
+    "schema": { "const": "aibt-p2-012-player-aot-acceptance-v1" },
+    "passed": { "const": true },
+    "observedAtUtc": { "type": "string", "format": "date-time" },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshot", "sha256"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "snapshot": {
+          "type": "object",
+          "required": ["operatingSystem", "processorType", "processArchitecture", "logicalProcessorCount", "jobWorkerCount", "unityVersion", "burstVersion", "collectionsVersion", "msvcCompiler", "msvcFileVersion", "windowsSdkRoot", "windowsSdkVersion", "developmentBuild", "scriptingBackend", "architecture"],
+          "properties": {
+            "operatingSystem": { "type": "string", "minLength": 1 },
+            "processorType": { "type": "string", "minLength": 1 },
+            "processArchitecture": { "const": "X64" },
+            "logicalProcessorCount": { "type": "integer", "minimum": 1 },
+            "jobWorkerCount": { "type": "integer", "minimum": 1 },
+            "unityVersion": { "type": "string", "minLength": 1 },
+            "burstVersion": { "const": "1.8.29" },
+            "collectionsVersion": { "const": "6.5.0" },
+            "msvcCompiler": { "type": "string", "minLength": 1 },
+            "msvcFileVersion": { "type": "string", "minLength": 1 },
+            "windowsSdkRoot": { "type": "string", "minLength": 1 },
+            "windowsSdkVersion": { "type": "string", "minLength": 1 },
+            "developmentBuild": { "const": false },
+            "scriptingBackend": { "const": "IL2CPP" },
+            "architecture": { "const": "x86_64" }
+          }
+        }
+      }
+    },
+    "windowsBaseline": {
+      "type": "object",
+      "required": ["schema", "warmupCount", "rawEvidence", "rawEvidenceSha256", "scenarios", "behaviorMatrix", "behaviorMatrixApplicability", "interpretation", "nativeByteMetric"],
+      "properties": {
+        "schema": { "const": "aibt-p2-022-windows-baseline-v1" },
+        "warmupCount": { "type": "integer", "minimum": 1 },
+        "rawEvidence": { "type": "string", "minLength": 1 },
+        "rawEvidenceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "scenarios": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": [
+              "name", "iterationsPerSample", "p50FrameContributionNanoseconds",
+              "p95FrameContributionNanoseconds", "p99FrameContributionNanoseconds",
+              "p50NanosecondsPerIteration", "p50StepsPerSecond", "p50CommandsPerSecond",
+              "p50SchedulingNanoseconds", "p50CompletionNanoseconds",
+              "nativeProgramBytes", "nativeBytesPerInstance", "measuredHeapDeltaBytes",
+              "gen0CollectionDelta", "allocationMetricLimitation"
+            ],
+            "properties": {
+              "name": { "enum": ["scheduling-overhead", "cheap-tree", "blackboard-heavy-generated-dispatch", "command-heavy", "mixed-population"] },
+              "iterationsPerSample": { "type": "integer", "minimum": 1 },
+              "p50FrameContributionNanoseconds": { "type": "number", "exclusiveMinimum": 0 },
+              "p95FrameContributionNanoseconds": { "type": "number", "exclusiveMinimum": 0 },
+              "p99FrameContributionNanoseconds": { "type": "number", "exclusiveMinimum": 0 },
+              "p50NanosecondsPerIteration": { "type": "number", "exclusiveMinimum": 0 },
+              "p50StepsPerSecond": { "type": "number", "minimum": 0 },
+              "p50CommandsPerSecond": { "type": "number", "minimum": 0 },
+              "p50SchedulingNanoseconds": { "type": "number", "minimum": 0 },
+              "p50CompletionNanoseconds": { "type": "number", "minimum": 0 },
+              "nativeProgramBytes": { "type": "integer", "minimum": 0 },
+              "nativeBytesPerInstance": { "type": "integer", "minimum": 0 },
+              "measuredHeapDeltaBytes": { "type": "integer" },
+              "gen0CollectionDelta": { "type": "integer", "minimum": 0 },
+              "allocationMetricLimitation": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "behaviorMatrix": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "behaviorMatrixApplicability": { "type": "string", "minLength": 1 },
+        "interpretation": { "type": "string", "minLength": 1 },
+        "nativeByteMetric": { "type": "string", "minLength": 1 }
+      }
+    },
+    "generator": {
+      "type": "object",
+      "required": ["sourceAnalyzerSha256", "isolatedAnalyzerSha256", "sourceRuntimeFileSetSha256", "isolatedRuntimeFileSetSha256", "sourceHarnessFileSetSha256", "isolatedHarnessFileSetSha256", "windowsBaselineProbeSha256"],
+      "properties": {
+        "sourceAnalyzerSha256": { "$ref": "#/$defs/sha256" },
+        "isolatedAnalyzerSha256": { "$ref": "#/$defs/sha256" },
+        "sourceRuntimeFileSetSha256": { "$ref": "#/$defs/sha256" },
+        "isolatedRuntimeFileSetSha256": { "$ref": "#/$defs/sha256" },
+        "sourceHarnessFileSetSha256": { "$ref": "#/$defs/sha256" },
+        "isolatedHarnessFileSetSha256": { "$ref": "#/$defs/sha256" },
+        "windowsBaselineProbeSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "build": {
+      "type": "object",
+      "required": ["result", "target", "architecture", "scriptingBackend", "burstEnabled", "developmentBuild", "catalogUsable"],
+      "properties": {
+        "result": { "const": "Succeeded" },
+        "target": { "const": "StandaloneWindows64" },
+        "architecture": { "const": "x86_64" },
+        "scriptingBackend": { "const": "IL2CPP" },
+        "burstEnabled": { "const": true },
+        "developmentBuild": { "const": false },
+        "catalogUsable": { "const": true }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["passed", "il2cpp", "process64Bit", "burstEnabled", "catalogUsable", "dispatchMeasurementMode", "managedPathSentinel", "executionCode", "callbackFailure", "callbackStatus", "memoryValue", "zeroAssetIdSentinelPreserved", "behaviorMatrixPassed", "behaviorMatrixCases", "rawNanosecondsPerDispatch"],
+      "properties": {
+        "passed": { "const": true },
+        "il2cpp": { "const": true },
+        "process64Bit": { "const": true },
+        "burstEnabled": { "const": true },
+        "catalogUsable": { "const": true },
+        "dispatchMeasurementMode": { "const": "ScheduledBurstJob" },
+        "managedPathSentinel": { "const": 0 },
+        "executionCode": { "const": "Success" },
+        "callbackFailure": { "const": "Success" },
+        "callbackStatus": { "const": "Success" },
+        "memoryValue": { "const": 38 },
+        "zeroAssetIdSentinelPreserved": { "const": true },
+        "behaviorMatrixPassed": { "const": true },
+        "behaviorMatrixCases": { "type": "array", "minItems": 3, "uniqueItems": true },
+        "rawNanosecondsPerDispatch": { "type": "array", "minItems": 7, "items": { "type": "number", "exclusiveMinimum": 0 } }
+      }
+    },
+    "packages": {
+      "type": "object",
+      "required": ["burst", "collections", "newtonsoftJson", "lockFile", "lockFileSha256"],
+      "properties": {
+        "burst": { "const": "1.8.29" },
+        "collections": { "const": "6.5.0" },
+        "newtonsoftJson": { "const": "3.2.2" },
+        "lockFile": { "type": "string", "minLength": 1 },
+        "lockFileSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "proofs": {
+      "type": "object",
+      "required": ["sourceGeneratorExecuted", "nonDevelopmentIl2CppX64", "burstAotLibraryPresent", "burstDiscardManagedPathSentinelZero", "generatedMemoryAndStatusAssertionsPassed", "zeroAssetIdSentinelPathPassed", "positiveBurstIlppLogMarkersPresent"],
+      "properties": {
+        "sourceGeneratorExecuted": { "const": true },
+        "nonDevelopmentIl2CppX64": { "const": true },
+        "burstAotLibraryPresent": { "const": true },
+        "burstDiscardManagedPathSentinelZero": { "const": true },
+        "generatedMemoryAndStatusAssertionsPassed": { "const": true },
+        "zeroAssetIdSentinelPathPassed": { "const": true },
+        "positiveBurstIlppLogMarkersPresent": { "const": true }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["playerExecutable", "playerExecutableSha256", "gameAssembly", "gameAssemblySha256", "globalMetadata", "globalMetadataSha256", "burstLibrary", "burstLibrarySha256"],
+      "properties": {
+        "playerExecutable": { "type": "string", "minLength": 1 },
+        "playerExecutableSha256": { "$ref": "#/$defs/sha256" },
+        "gameAssembly": { "type": "string", "minLength": 1 },
+        "gameAssemblySha256": { "$ref": "#/$defs/sha256" },
+        "globalMetadata": { "type": "string", "minLength": 1 },
+        "globalMetadataSha256": { "$ref": "#/$defs/sha256" },
+        "burstLibrary": { "type": "string", "minLength": 1 },
+        "burstLibrarySha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "logs": {
+      "type": "object",
+      "required": ["build", "player", "buildRawEvidence", "playerRawEvidence", "windowsBaselineRawEvidence", "buildSha256", "playerSha256", "buildRawEvidenceSha256", "playerRawEvidenceSha256", "windowsBaselineRawEvidenceSha256"],
+      "properties": {
+        "build": { "type": "string", "minLength": 1 },
+        "player": { "type": "string", "minLength": 1 },
+        "buildRawEvidence": { "type": "string", "minLength": 1 },
+        "playerRawEvidence": { "type": "string", "minLength": 1 },
+        "windowsBaselineRawEvidence": { "type": "string", "minLength": 1 },
+        "buildSha256": { "$ref": "#/$defs/sha256" },
+        "playerSha256": { "$ref": "#/$defs/sha256" },
+        "buildRawEvidenceSha256": { "$ref": "#/$defs/sha256" },
+        "playerRawEvidenceSha256": { "$ref": "#/$defs/sha256" },
+        "windowsBaselineRawEvidenceSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "processes": {
+      "type": "object",
+      "required": ["buildExitCode", "playerExitCode", "buildTimeoutSeconds", "playerTimeoutSeconds"],
+      "properties": { "buildExitCode": { "const": 0 }, "playerExitCode": { "const": 0 } }
+    },
+    "cleanup": {
+      "type": "object",
+      "required": ["mode", "isolatedProject", "buildArtifacts", "recursiveDeletePerformed"],
+      "properties": {
+        "mode": { "const": "preserved-for-inspection" },
+        "isolatedProject": { "type": "string", "minLength": 1 },
+        "buildArtifacts": { "type": "string", "minLength": 1 },
+        "recursiveDeletePerformed": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aibt.dev/schemas/phase2/windows-baseline-raw-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "passed", "unityVersion", "platform", "stopwatchFrequency", "warmupCount", "generatedDispatchProgramPayloadBytes", "generatedDispatchInstancePayloadBytes", "behaviorCasesPassed", "behaviorCases", "samples"],
+  "properties": {
+    "schema": { "const": "aibt-p2-022-windows-baseline-raw-v1" },
+    "passed": { "type": "boolean" },
+    "unityVersion": { "type": "string", "minLength": 1 },
+    "platform": { "type": "string", "minLength": 1 },
+    "stopwatchFrequency": { "type": "integer", "minimum": 1 },
+    "warmupCount": { "type": "integer", "minimum": 1 },
+    "generatedDispatchProgramPayloadBytes": { "type": "integer", "minimum": 1 },
+    "generatedDispatchInstancePayloadBytes": { "type": "integer", "minimum": 1 },
+    "behaviorCasesPassed": { "const": true },
+    "behaviorCases": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "samples": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/scenario" }
+    },
+    "error": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name", "iterationsPerSample", "stepsPerSample", "commandsPerSample",
+        "nativeProgramBytes", "nativeBytesPerInstance", "rawElapsedTicks",
+        "measuredHeapDeltaBytes", "gen0CollectionDelta", "allocationMetricLimitation"
+      ],
+      "properties": {
+        "name": { "enum": ["scheduling-overhead", "cheap-tree", "command-heavy", "mixed-population"] },
+        "iterationsPerSample": { "type": "integer", "minimum": 1 },
+        "stepsPerSample": { "type": "integer", "minimum": 0 },
+        "commandsPerSample": { "type": "integer", "minimum": 0 },
+        "nativeProgramBytes": { "type": "integer", "minimum": 0 },
+        "nativeBytesPerInstance": { "type": "integer", "minimum": 0 },
+        "rawElapsedTicks": {
+          "type": "array",
+          "minItems": 15,
+          "maxItems": 15,
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "rawSchedulingTicks": {
+          "type": ["array", "null"],
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "rawCompletionTicks": {
+          "type": ["array", "null"],
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "measuredHeapDeltaBytes": { "type": "integer" },
+        "gen0CollectionDelta": { "type": "integer", "minimum": 0 },
+        "allocationMetricLimitation": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "AIBT.NativeBurstDispatch.Tests",
+  "rootNamespace": "AIBT.Tests.Runtime.NativeExecution.Dispatch",
+  "references": [
+    "AIBT.GeneratedDispatchPlayerAot.Nodes",
+    "AIBT.Runtime",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "analyzers": [
+    "GUID:31a3f09584684895a0a72916d3ad4de0"
+  ]
+}

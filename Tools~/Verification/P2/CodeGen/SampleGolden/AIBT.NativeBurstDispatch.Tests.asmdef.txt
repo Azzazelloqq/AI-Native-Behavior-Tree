@@ -1,0 +1,19 @@
+{
+  "name": "AIBT.NativeBurstDispatch.Tests",
+  "rootNamespace": "AIBT.Samples.BurstNodes.Tests",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.BurstNodes.Sample",
+    "AIBT.BurstNodes.Sample.Catalog",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

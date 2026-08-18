@@ -80,7 +80,7 @@ Only the coordinator updates the machine-readable index. Individual implementati
 - End-to-end sample passes from JSON through validation, compilation, execution, and assertions.
 - No normative contract was weakened to satisfy implementation.
 
-Future phase gates are defined at work-package level and become atomic only after their prerequisite implementation evidence exists.
+The Phase 2 gate is decomposed in `Planning~/Tasks/P2/` and `work-items.json`. Later phase gates remain work-package summaries until their prerequisite implementation evidence exists.
 
 ## Parallelism rules
 
@@ -94,4 +94,4 @@ See `PARALLELIZATION.md` for safe execution waves.
 
 ## Current assignable frontier
 
-The Phase 1 semantic slice and local platform evidence are complete. The only remaining Phase 0/1 gate dependency is a successful remote Unity workflow run on the documented pre-activated self-hosted Windows runner. Phase 2 must not begin until that external gate is recorded and `P0-006`/`P1-019` move from `Blocked` to `Done`. Agents use `work-items.json`, not phase numbers, to determine readiness.
+The Phase 1 semantic slice and local platform evidence are complete. The remote Unity workflow dependency remains unresolved and `P0-005`, `P0-006`, and `P1-019` retain their honest states. By explicit owner direction on 2026-08-14, Phase 2 implementation proceeded from the accepted `P1-018` semantic source without treating that infrastructure gate as passed. `P2-001` through `P2-021`, Android AOT `P2-023`, and Web conformance `P2-024` are complete. `P2-022` remains blocked by the missing Windows MSVC/SDK host toolchain; consequently the clean committed and independently reviewed `P2-025` integration gate also remains blocked.

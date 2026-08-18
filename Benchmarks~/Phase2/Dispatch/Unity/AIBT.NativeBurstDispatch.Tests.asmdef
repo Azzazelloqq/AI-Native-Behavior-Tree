@@ -1,0 +1,15 @@
+{
+  "name": "AIBT.NativeBurstDispatch.Tests",
+  "rootNamespace": "AIBT.Benchmarks.Phase2.Dispatch",
+  "references": [
+    "AIBT.Runtime",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

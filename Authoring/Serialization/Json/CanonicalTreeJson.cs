@@ -14,6 +14,9 @@ namespace AIBT.Authoring
         private static readonly UTF8Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
         public static TreeJsonReadResult Parse(byte[] utf8, string documentId = null)
+            => Parse(utf8, null, documentId);
+
+        public static TreeJsonReadResult Parse(byte[] utf8, RegisteredBlackboardTypeCatalog registeredTypes, string documentId = null)
         {
             if (utf8 == null) throw new ArgumentNullException(nameof(utf8));
             string source;
@@ -29,19 +32,25 @@ namespace AIBT.Authoring
                     documentId));
             }
 
-            return ParseCore(source, (byte[])utf8.Clone(), documentId);
+            return ParseCore(source, (byte[])utf8.Clone(), documentId, registeredTypes);
         }
 
         public static TreeJsonReadResult Parse(string json, string documentId = null)
+            => Parse(json, null, documentId);
+
+        public static TreeJsonReadResult Parse(string json, RegisteredBlackboardTypeCatalog registeredTypes, string documentId = null)
         {
             if (json == null) throw new ArgumentNullException(nameof(json));
-            return ParseCore(json, null, documentId);
+            return ParseCore(json, null, documentId, registeredTypes);
         }
 
         public static TreeJsonWriteResult Serialize(TreeDocument document)
+            => Serialize(document, null);
+
+        public static TreeJsonWriteResult Serialize(TreeDocument document, RegisteredBlackboardTypeCatalog registeredTypes)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
-            var diagnostics = ValidateRepresentable(document);
+            var diagnostics = ValidateRepresentable(document, registeredTypes);
             if (diagnostics.Count != 0)
                 return new TreeJsonWriteResult(null, null, diagnostics);
 
@@ -65,7 +74,7 @@ namespace AIBT.Authoring
             }
         }
 
-        private static TreeJsonReadResult ParseCore(string source, byte[] sourceUtf8, string documentId)
+        private static TreeJsonReadResult ParseCore(string source, byte[] sourceUtf8, string documentId, RegisteredBlackboardTypeCatalog registeredTypes)
         {
             if (source.Length > 0 && source[0] == '\ufeff')
                 return ReadFailure(source, sourceUtf8, TreeJsonDiagnostics.Create(
@@ -127,7 +136,7 @@ namespace AIBT.Authoring
 
             try
             {
-                var document = ReadDocument(RequireObject(token, "", documentId), documentId);
+                var document = ReadDocument(RequireObject(token, "", documentId), documentId, registeredTypes);
                 return new TreeJsonReadResult(document, DiagnosticCollection.Empty, source, sourceUtf8);
             }
             catch (TreeJsonReadException exception)
@@ -138,24 +147,26 @@ namespace AIBT.Authoring
             {
                 return ReadFailure(source, sourceUtf8, TreeJsonDiagnostics.Create(
                     TreeJsonDiagnosticCodes.SchemaViolation,
-                    "JSON value cannot be represented by the Phase 1 authoring model: " + exception.Message,
+                    "JSON value cannot be represented by the versioned authoring model: " + exception.Message,
                     documentId));
             }
         }
 
-        private static TreeDocument ReadDocument(JObject root, string documentId)
+        private static TreeDocument ReadDocument(JObject root, string documentId, RegisteredBlackboardTypeCatalog registeredTypes)
         {
             RequireProperties(root, "", documentId,
                 new[] { "format", "formatVersion", "treeId", "name", "root", "nodes" },
-                new[] { "description", "blackboard", "tags", "metadata" });
+                new[] { "description", "blackboardContracts", "blackboard", "tags", "metadata" });
 
             var format = StringValue(root["format"], "/format", documentId, false);
             if (!string.Equals(format, TreeDocument.CurrentFormat, StringComparison.Ordinal))
                 throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "The format must be 'aibt.tree'.", root["format"], documentId, "/format");
 
             var version = Int32Value(root["formatVersion"], "/formatVersion", documentId);
-            if (version != TreeDocument.CurrentFormatVersion)
-                throw Error(TreeJsonDiagnosticCodes.UnsupportedVersion, "Only tree format version 1 is supported.", root["formatVersion"], documentId, "/formatVersion");
+            if (version != TreeDocument.CurrentFormatVersion && version != TreeDocument.LatestFormatVersion)
+                throw Error(TreeJsonDiagnosticCodes.UnsupportedVersion, "Only tree format versions 1 and 2 are supported.", root["formatVersion"], documentId, "/formatVersion");
+            if (version == TreeDocument.CurrentFormatVersion && root["blackboardContracts"] != null)
+                throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "blackboardContracts requires tree format version 2.", root["blackboardContracts"], documentId, "/blackboardContracts");
 
             var treeIdText = IdValue(root["treeId"], "/treeId", documentId);
             var rootIdText = IdValue(root["root"], "/root", documentId);
@@ -163,8 +174,11 @@ namespace AIBT.Authoring
             if (name.Length == 0)
                 throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Tree name cannot be empty.", root["name"], documentId, "/name");
 
-            var blackboard = ReadBlackboard(root["blackboard"], documentId);
-            var nodes = ReadNodes(root["nodes"], documentId);
+            var contracts = ReadScopeContracts(root["blackboardContracts"], version, documentId);
+            var blackboard = ReadBlackboard(root["blackboard"], version, documentId, registeredTypes);
+            var nodes = ReadNodes(root["nodes"], version, documentId);
+            if (version == TreeDocument.LatestFormatVersion)
+                ValidateScopeContractPresence(blackboard, contracts.Agent, contracts.Shared, root["blackboardContracts"], documentId);
             var tags = ReadTags(root["tags"], "/tags", documentId);
             var metadata = root["metadata"] == null
                 ? SemanticObject.Empty
@@ -180,10 +194,13 @@ namespace AIBT.Authoring
                 blackboard,
                 OptionalString(root["description"], "/description", documentId),
                 tags,
-                metadata);
+                metadata,
+                default,
+                contracts.Agent,
+                contracts.Shared);
         }
 
-        private static List<BlackboardKeyDefinition> ReadBlackboard(JToken token, string documentId)
+        private static List<BlackboardKeyDefinition> ReadBlackboard(JToken token, int formatVersion, string documentId, RegisteredBlackboardTypeCatalog registeredTypes)
         {
             var result = new List<BlackboardKeyDefinition>();
             if (token == null) return result;
@@ -194,8 +211,11 @@ namespace AIBT.Authoring
                     throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Blackboard map keys must be valid AIBT IDs.", property.Value, documentId, "/blackboard/" + Escape(property.Name));
                 var pointer = "/blackboard/" + Escape(property.Name);
                 var entry = RequireObject(property.Value, pointer, documentId);
-                RequireProperties(entry, pointer, documentId, new[] { "type" }, new[] { "enumContract", "scope", "description", "default" });
+                RequireProperties(entry, pointer, documentId, new[] { "type" }, formatVersion == 2
+                    ? new[] { "typeVersion", "enumContract", "scope", "reduction", "description", "default" }
+                    : new[] { "enumContract", "scope", "description", "default" });
                 var typeName = StringValue(entry["type"], pointer + "/type", documentId, false);
+                var scope = ReadScope(entry["scope"], pointer + "/scope", documentId);
                 BlackboardTypeReference type;
                 if (string.Equals(typeName, "Enum32", StringComparison.Ordinal))
                 {
@@ -222,25 +242,54 @@ namespace AIBT.Authoring
                         pointer + "/enumContract");
                 }
                 else if (!TryBuiltInType(typeName, out type))
-                    throw Error(TreeJsonDiagnosticCodes.MissingRegisteredSchema,
-                        "Registered blackboard type '" + typeName + "' cannot be loaded without a registered canonical schema implementation.",
-                        entry["type"], documentId, pointer + "/type");
-                var scope = ReadScope(entry["scope"], pointer + "/scope", documentId);
+                {
+                    if (registeredTypes == null || entry["typeVersion"] == null)
+                        throw Error(TreeJsonDiagnosticCodes.MissingRegisteredSchema,
+                            "Registered blackboard type '" + typeName + "' requires an explicit accepted catalog and typeVersion.",
+                            entry["type"], documentId, pointer + "/type");
+                    var registeredVersion = UInt32Value(entry["typeVersion"], pointer + "/typeVersion", documentId);
+                    if (!registeredTypes.TryGet(typeName, registeredVersion, out var registered))
+                        throw Error(TreeJsonDiagnosticCodes.MissingRegisteredSchema,
+                            "Registered blackboard type/version is absent from the accepted catalog.", entry["type"], documentId, pointer + "/type");
+                    type = BlackboardTypeReference.Registered(typeName, registered.Descriptor);
+                }
+                if (formatVersion == 2 && scope != BlackboardScope.Tree)
+                {
+                    if (entry["typeVersion"] == null || entry["default"] == null)
+                        throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Agent/Shared entries require typeVersion, scope, and default.", entry, documentId, pointer);
+                    var typeVersion = UInt32Value(entry["typeVersion"], pointer + "/typeVersion", documentId);
+                    if (typeVersion != type.RuntimeDescriptor.Version)
+                        throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Blackboard typeVersion does not match the registered type descriptor.", entry["typeVersion"], documentId, pointer + "/typeVersion");
+                }
                 BlackboardDefaultValue defaultValue = null;
                 if (entry["default"] != null)
-                    defaultValue = ReadDefault(entry["default"], type.ValueType, pointer + "/default", documentId);
+                {
+                    if (type.IsRegistered)
+                    {
+                        var source = ReadSemanticObject(RequireObject(entry["default"], pointer + "/default", documentId), pointer + "/default", documentId);
+                        if (!registeredTypes.TryGet(type.CanonicalTypeId, type.RegisteredDescriptor.Version, out var registered))
+                            throw Error(TreeJsonDiagnosticCodes.MissingRegisteredSchema, "Registered default type is absent from the accepted catalog.", entry["default"], documentId, pointer + "/default");
+                        var bytes = RegisteredBlackboardDefaultCodec.Encode(registered, source, registeredTypes);
+                        defaultValue = BlackboardDefaultValue.RegisteredCanonical(type.CanonicalTypeId, type.RegisteredDescriptor.Version, source, bytes);
+                    }
+                    else defaultValue = ReadDefault(entry["default"], type.ValueType, pointer + "/default", documentId);
+                }
+                var reduction = formatVersion == 2
+                    ? ReadReduction(entry["reduction"], scope, pointer + "/reduction", documentId)
+                    : BlackboardReductionKind.None;
                 result.Add(new BlackboardKeyDefinition(
                     property.Name,
                     property.Name,
                     type,
                     scope,
                     defaultValue,
-                    OptionalString(entry["description"], pointer + "/description", documentId)));
+                    OptionalString(entry["description"], pointer + "/description", documentId),
+                    reduction));
             }
             return result;
         }
 
-        private static List<NodeDocument> ReadNodes(JToken token, string documentId)
+        private static List<NodeDocument> ReadNodes(JToken token, int formatVersion, string documentId)
         {
             var objectToken = RequireObject(token, "/nodes", documentId);
             if (!objectToken.HasValues)
@@ -254,7 +303,9 @@ namespace AIBT.Authoring
                 var node = RequireObject(property.Value, pointer, documentId);
                 RequireProperties(node, pointer, documentId,
                     new[] { "type", "typeVersion" },
-                    new[] { "displayName", "description", "parameters", "observer", "children", "tags" });
+                    formatVersion == 2
+                        ? new[] { "displayName", "description", "parameters", "bindings", "observer", "children", "tags" }
+                        : new[] { "displayName", "description", "parameters", "observer", "children", "tags" });
                 var type = StringValue(node["type"], pointer + "/type", documentId, false);
                 if (type.Length == 0)
                     throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Node type cannot be empty.", node["type"], documentId, pointer + "/type");
@@ -266,11 +317,15 @@ namespace AIBT.Authoring
                     : ReadSemanticObject(RequireObject(node["parameters"], pointer + "/parameters", documentId), pointer + "/parameters", documentId);
                 var observer = node["observer"] == null ? null : ReadObserver(node["observer"], pointer + "/observer", documentId);
                 var children = ReadIds(node["children"], pointer + "/children", documentId, false);
+                var bindings = formatVersion == 2 && node["bindings"] != null
+                    ? ReadBindings(node["bindings"], pointer + "/bindings", documentId)
+                    : null;
                 result.Add(new NodeDocument(
                     new NodeId(property.Name), type, typeVersion, children, parameters, observer,
                     OptionalString(node["displayName"], pointer + "/displayName", documentId),
                     OptionalString(node["description"], pointer + "/description", documentId),
-                    ReadTags(node["tags"], pointer + "/tags", documentId)));
+                    ReadTags(node["tags"], pointer + "/tags", documentId),
+                    bindings));
             }
             return result;
         }
@@ -284,6 +339,84 @@ namespace AIBT.Authoring
                 throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Observer mode must be self, lower-priority, or both.", observer["mode"], documentId, pointer + "/mode");
             var keys = ReadStringArray(observer["watchedKeys"], pointer + "/watchedKeys", documentId, true, true);
             return new NodeObserver(mode, keys);
+        }
+
+        private static ScopeContracts ReadScopeContracts(JToken token, int formatVersion, string documentId)
+        {
+            if (token == null) return new ScopeContracts(null, null);
+            if (formatVersion != TreeDocument.LatestFormatVersion)
+                throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Scope contracts require tree format version 2.", token, documentId, "/blackboardContracts");
+            var value = RequireObject(token, "/blackboardContracts", documentId);
+            RequireProperties(value, "/blackboardContracts", documentId, Array.Empty<string>(), new[] { "agent", "shared" });
+            if (!value.HasValues)
+                throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "blackboardContracts cannot be empty.", token, documentId, "/blackboardContracts");
+            return new ScopeContracts(
+                ReadScopeContract(value["agent"], "/blackboardContracts/agent", documentId),
+                ReadScopeContract(value["shared"], "/blackboardContracts/shared", documentId));
+        }
+
+        private static BlackboardScopeContract ReadScopeContract(JToken token, string pointer, string documentId)
+        {
+            if (token == null) return null;
+            var value = RequireObject(token, pointer, documentId);
+            RequireProperties(value, pointer, documentId, new[] { "contractId", "contractVersion" }, Array.Empty<string>());
+            return new BlackboardScopeContract(
+                IdValue(value["contractId"], pointer + "/contractId", documentId),
+                UInt32Value(value["contractVersion"], pointer + "/contractVersion", documentId));
+        }
+
+        private static void ValidateScopeContractPresence(
+            IReadOnlyList<BlackboardKeyDefinition> keys,
+            BlackboardScopeContract agent,
+            BlackboardScopeContract shared,
+            JToken token,
+            string documentId)
+        {
+            var hasAgent = false;
+            var hasShared = false;
+            for (var index = 0; index < keys.Count; index++)
+            {
+                hasAgent |= keys[index].Scope == BlackboardScope.Agent;
+                hasShared |= keys[index].Scope == BlackboardScope.Shared;
+            }
+            if (hasAgent != (agent != null) || hasShared != (shared != null))
+                throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Scope contract presence must exactly match Agent/Shared blackboard entries.", token, documentId, "/blackboardContracts");
+        }
+
+        private static NodeBindingMap ReadBindings(JToken token, string pointer, string documentId)
+        {
+            var value = RequireObject(token, pointer, documentId);
+            var pairs = new List<KeyValuePair<string, string>>();
+            foreach (var property in value.Properties())
+            {
+                var keyId = IdValue(property.Value, pointer + "/" + Escape(property.Name), documentId);
+                pairs.Add(new KeyValuePair<string, string>(property.Name, keyId));
+            }
+            try { return new NodeBindingMap(pairs); }
+            catch (ArgumentException exception)
+            {
+                throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Invalid generated binding map: " + exception.Message, token, documentId, pointer);
+            }
+        }
+
+        private static BlackboardReductionKind ReadReduction(JToken token, BlackboardScope scope, string pointer, string documentId)
+        {
+            if (token == null) return BlackboardReductionKind.None;
+            if (scope != BlackboardScope.Shared)
+                throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Only Shared entries may declare reduction.", token, documentId, pointer);
+            var value = RequireObject(token, pointer, documentId);
+            RequireProperties(value, pointer, documentId, new[] { "kind" }, Array.Empty<string>());
+            switch (StringValue(value["kind"], pointer + "/kind", documentId, false))
+            {
+                case "min": return BlackboardReductionKind.Min;
+                case "max": return BlackboardReductionKind.Max;
+                case "sum": return BlackboardReductionKind.Sum;
+                case "any": return BlackboardReductionKind.Any;
+                case "all": return BlackboardReductionKind.All;
+                case "first": return BlackboardReductionKind.First;
+                case "last": return BlackboardReductionKind.Last;
+                default: throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Unknown Shared reduction kind.", token, documentId, pointer + "/kind");
+            }
         }
 
         private static SemanticObject ReadSemanticObject(JObject value, string pointer, string documentId)
@@ -374,12 +507,14 @@ namespace AIBT.Authoring
             }
         }
 
-        private static DiagnosticCollection ValidateRepresentable(TreeDocument document)
+        private static DiagnosticCollection ValidateRepresentable(TreeDocument document, RegisteredBlackboardTypeCatalog registeredTypes)
         {
             var diagnostics = new List<Diagnostic>();
             void Add(string message, string pointer = null, DiagnosticCode? code = null) => diagnostics.Add(TreeJsonDiagnostics.Create(code ?? TreeJsonDiagnosticCodes.UnrepresentableDocument, message, pointer: pointer));
             if (document.Format != TreeDocument.CurrentFormat) Add("Tree format must be 'aibt.tree'.", "/format");
-            if (document.FormatVersion != TreeDocument.CurrentFormatVersion) Add("Only tree format version 1 can be serialized.", "/formatVersion", TreeJsonDiagnosticCodes.UnsupportedVersion);
+            if (document.FormatVersion != TreeDocument.CurrentFormatVersion && document.FormatVersion != TreeDocument.LatestFormatVersion)
+                Add("Only tree format versions 1 and 2 can be serialized.", "/formatVersion", TreeJsonDiagnosticCodes.UnsupportedVersion);
+            var version2 = document.FormatVersion == TreeDocument.LatestFormatVersion;
             if (!document.TreeId.IsValid) Add("Tree ID is invalid.", "/treeId");
             if (string.IsNullOrEmpty(document.Name)) Add("Tree name is required.", "/name");
             if (!document.Root.IsValid) Add("Root node ID is invalid.", "/root");
@@ -390,6 +525,8 @@ namespace AIBT.Authoring
             ValidateTags(document.Tags, "/tags", Add);
 
             var blackboardIds = new HashSet<string>(StringComparer.Ordinal);
+            var hasAgent = false;
+            var hasShared = false;
             foreach (var key in document.Blackboard)
             {
                 var pointer = "/blackboard/" + Escape(key?.Id ?? string.Empty);
@@ -397,12 +534,35 @@ namespace AIBT.Authoring
                 if (!IsId(key.Id) || !blackboardIds.Add(key.Id)) Add("Blackboard IDs must be valid and unique.", pointer);
                 if (!string.Equals(key.Name, key.Id, StringComparison.Ordinal)) Add("The v1 JSON schema has no separate blackboard display-name field; Name must equal Id.", pointer);
                 if (!key.Type.IsValid) Add("Blackboard type is invalid.", pointer + "/type");
-                if (key.Type.IsRegistered) Add("Registered type requires a canonical schema implementation, which is not present in the Phase 1 descriptor.", pointer + "/type", TreeJsonDiagnosticCodes.MissingRegisteredSchema);
+                if (key.Type.IsRegistered
+                    && (registeredTypes == null || !registeredTypes.TryGet(key.Type.CanonicalTypeId, key.Type.RegisteredDescriptor.Version, out var registered)
+                        || registered.Descriptor != key.Type.RegisteredDescriptor))
+                    Add("Registered type requires an exact accepted canonical schema/equality catalog entry.", pointer + "/type", TreeJsonDiagnosticCodes.MissingRegisteredSchema);
                 if (key.Scope == BlackboardScope.NodeLocal || !Enum.IsDefined(typeof(BlackboardScope), key.Scope)) Add("Tree blackboard scope is invalid.", pointer + "/scope");
+                hasAgent |= key.Scope == BlackboardScope.Agent;
+                hasShared |= key.Scope == BlackboardScope.Shared;
+                if (!version2 && key.Reduction != BlackboardReductionKind.None) Add("Shared reduction requires tree format version 2.", pointer + "/reduction");
+                if (version2 && key.Scope != BlackboardScope.Shared && key.Reduction != BlackboardReductionKind.None) Add("Only Shared entries may declare reduction.", pointer + "/reduction");
+                if (version2 && key.Scope != BlackboardScope.Tree && !key.HasDefault) Add("Agent/Shared entries require a canonical default.", pointer + "/default");
                 ValidateText(key.Description, pointer + "/description", Add);
-                if (key.HasDefault && (!key.DefaultValue.IsCanonical || !key.DefaultValue.HasRuntimeValue)) Add("Blackboard default is not canonical or representable.", pointer + "/default");
+                if (key.HasDefault && (!key.DefaultValue.IsCanonical || (!key.DefaultValue.HasRuntimeValue && !key.DefaultValue.TryGetRegisteredValue(out _)))) Add("Blackboard default is not canonical or representable.", pointer + "/default");
                 if (key.HasDefault && key.DefaultValue.ValueType != key.Type.ValueType) Add("Blackboard default type does not match its declaration.", pointer + "/default");
+                if (key.HasDefault && key.Type.IsRegistered && registeredTypes != null
+                    && registeredTypes.TryGet(key.Type.CanonicalTypeId, key.Type.RegisteredDescriptor.Version, out var catalogEntry)
+                    && key.DefaultValue.TryGetRegisteredValue(out var registeredValue))
+                {
+                    try
+                    {
+                        var expected = RegisteredBlackboardDefaultCodec.Encode(catalogEntry, registeredValue, registeredTypes);
+                        if (!BytesEqual(expected, key.DefaultValue.GetRegisteredBytesCopy())) throw new ArgumentException();
+                    }
+                    catch (ArgumentException) { Add("Registered default differs from the exact accepted catalog codec.", pointer + "/default"); }
+                }
             }
+            if (!version2 && (document.AgentContract != null || document.SharedContract != null))
+                Add("Scope contracts require tree format version 2.", "/blackboardContracts");
+            if (version2 && (hasAgent != (document.AgentContract != null) || hasShared != (document.SharedContract != null)))
+                Add("Scope contract presence must exactly match Agent/Shared entries.", "/blackboardContracts");
 
             var nodeIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var node in document.Nodes)
@@ -416,6 +576,7 @@ namespace AIBT.Authoring
                 ValidateText(node.DisplayName, pointer + "/displayName", Add);
                 ValidateText(node.Description, pointer + "/description", Add);
                 ValidateSemanticObject(node.Parameters, pointer + "/parameters", Add);
+                if (!version2 && node.Bindings != null) Add("Generated bindings require tree format version 2.", pointer + "/bindings");
                 ValidateTags(node.Tags, pointer + "/tags", Add);
                 var children = new HashSet<NodeId>();
                 foreach (var child in node.Children) if (!child.IsValid || !children.Add(child)) Add("Child IDs must be valid and unique.", pointer + "/children");
@@ -428,6 +589,13 @@ namespace AIBT.Authoring
                 }
             }
             return new DiagnosticCollection(diagnostics);
+        }
+
+        private static bool BytesEqual(byte[] left, byte[] right)
+        {
+            if (left == null || right == null || left.Length != right.Length) return false;
+            for (var index = 0; index < left.Length; index++) if (left[index] != right[index]) return false;
+            return true;
         }
 
         private static void ValidateTags(TagSet tags, string pointer, Action<string, string, DiagnosticCode?> add)
@@ -546,6 +714,18 @@ namespace AIBT.Authoring
         {
             if (token == null || token.Type != JTokenType.Integer) throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Expected an integer.", token, documentId, pointer);
             try { return token.Value<int>(); } catch (Exception) { throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Integer is outside Int32 range.", token, documentId, pointer); }
+        }
+
+        private static uint UInt32Value(JToken token, string pointer, string documentId)
+        {
+            if (token == null || token.Type != JTokenType.Integer) throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Expected an integer.", token, documentId, pointer);
+            try
+            {
+                var result = token.Value<ulong>();
+                if (result == 0 || result > uint.MaxValue) throw new OverflowException();
+                return (uint)result;
+            }
+            catch (Exception) { throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Integer is outside the positive UInt32 range.", token, documentId, pointer); }
         }
 
         private static long Int64Value(JToken token, string pointer, string documentId)
@@ -770,6 +950,18 @@ namespace AIBT.Authoring
         {
             public TreeJsonReadException(Diagnostic diagnostic) { Diagnostic = diagnostic; }
             public Diagnostic Diagnostic { get; }
+        }
+
+        private readonly struct ScopeContracts
+        {
+            internal ScopeContracts(BlackboardScopeContract agent, BlackboardScopeContract shared)
+            {
+                Agent = agent;
+                Shared = shared;
+            }
+
+            internal BlackboardScopeContract Agent { get; }
+            internal BlackboardScopeContract Shared { get; }
         }
     }
 }

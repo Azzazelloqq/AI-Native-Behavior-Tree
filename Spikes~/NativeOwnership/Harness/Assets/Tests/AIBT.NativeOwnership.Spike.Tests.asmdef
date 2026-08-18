@@ -1,0 +1,10 @@
+{
+  "name": "AIBT.NativeOwnership.Spike.Tests",
+  "rootNamespace": "AIBT.NativeOwnership.Spike.Tests",
+  "references": ["AIBT.NativeOwnership.Spike", "Unity.Burst", "Unity.Collections"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

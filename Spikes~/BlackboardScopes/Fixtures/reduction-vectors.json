@@ -1,0 +1,12 @@
+{
+  "vectors": [
+    { "name": "min-int32", "kind": "min", "type": "Int32", "values": [7, -2, 4], "expected": -2 },
+    { "name": "max-float64", "kind": "max", "type": "Float64", "values": [3.5, 9.25, -4], "expected": 9.25 },
+    { "name": "sum-int64", "kind": "sum", "type": "Int64", "values": [5, -2, 4], "expected": 7 },
+    { "name": "sum-float32", "kind": "sum", "type": "Float32", "values": [0.1, 0.2, 0.3], "expected": 0.6000000238418579 },
+    { "name": "any-bool", "kind": "any", "type": "Bool", "values": [false, true, false], "expected": true },
+    { "name": "all-bool", "kind": "all", "type": "Bool", "values": [true, false, true], "expected": false },
+    { "name": "first-string", "kind": "first", "type": "FixedString32", "values": ["first", "middle", "last"], "expected": "first" },
+    { "name": "last-registered", "kind": "last", "type": "example.Target", "values": [{ "entity": 1, "weight": 0 }, { "entity": 2, "weight": 0 }, { "entity": 3, "weight": 0 }], "expected": { "entity": 3, "weight": 0 } }
+  ]
+}

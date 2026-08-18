@@ -47,7 +47,7 @@ namespace AIBT.Tests.Editor.Serialization
         [TestCase("{\"format\":\"aibt.tree\",}", "AIBT1002")]
         [TestCase("{/*comment*/\"format\":\"aibt.tree\"}", "AIBT1002")]
         [TestCase("{\"format\":\"aibt.tree\",\"formatVersion\":1,\"treeId\":\"t\",\"name\":\"T\",\"root\":\"n\",\"nodes\":{\"n\":{\"type\":\"x\",\"typeVersion\":1,\"future\":true}}}", "AIBT1004")]
-        [TestCase("{\"format\":\"aibt.tree\",\"formatVersion\":2,\"treeId\":\"t\",\"name\":\"T\",\"root\":\"n\",\"nodes\":{\"n\":{\"type\":\"x\",\"typeVersion\":1}}}", "AIBT1005")]
+        [TestCase("{\"format\":\"aibt.tree\",\"formatVersion\":3,\"treeId\":\"t\",\"name\":\"T\",\"root\":\"n\",\"nodes\":{\"n\":{\"type\":\"x\",\"typeVersion\":1}}}", "AIBT1005")]
         [TestCase("{\"format\":\"aibt.tree\",\"formatVersion\":1,\"treeId\":\"t\",\"name\":\"\\uD800\",\"root\":\"n\",\"nodes\":{\"n\":{\"type\":\"x\",\"typeVersion\":1}}}", "AIBT1006")]
         public void StrictReaderRejectsInvalidInputsWithStableCodes(string json, string code)
         {

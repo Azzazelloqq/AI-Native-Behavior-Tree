@@ -9,6 +9,13 @@ namespace AIBT.Authoring
             TreeDocument document,
             NodeRegistry registry,
             ValidationOptions options = null)
+            => Validate(document, registry, options, null);
+
+        public static DiagnosticCollection Validate(
+            TreeDocument document,
+            NodeRegistry registry,
+            ValidationOptions options,
+            RegisteredBlackboardTypeCatalog registeredTypes)
         {
             options = options ?? ValidationOptions.Phase1;
             var diagnostics = new List<Diagnostic>();
@@ -25,7 +32,7 @@ namespace AIBT.Authoring
             ValidateHeader(document, options, diagnostics);
             ValidatePolicyContract(options, diagnostics);
 
-            var blackboard = ValidateBlackboard(document, options, diagnostics);
+            var blackboard = ValidateBlackboard(document, options, registeredTypes, diagnostics);
             var graph = BuildGraph(document, options, diagnostics);
             ValidateGraph(document, graph, options, diagnostics);
 
@@ -58,7 +65,8 @@ namespace AIBT.Authoring
                     "Tree format must be 'aibt.tree'.", "/format", document.TreeId));
             }
 
-            if (document.FormatVersion != TreeDocument.CurrentFormatVersion)
+            if (document.FormatVersion != TreeDocument.CurrentFormatVersion
+                && document.FormatVersion != TreeDocument.LatestFormatVersion)
             {
                 diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.UnsupportedFormatVersion,
                     "Tree format version is unsupported.", "/formatVersion", document.TreeId));
@@ -80,6 +88,7 @@ namespace AIBT.Authoring
         private static Dictionary<string, BlackboardKeyDefinition> ValidateBlackboard(
             TreeDocument document,
             ValidationOptions options,
+            RegisteredBlackboardTypeCatalog registeredTypes,
             ICollection<Diagnostic> diagnostics)
         {
             var result = new Dictionary<string, BlackboardKeyDefinition>(StringComparer.Ordinal);
@@ -144,7 +153,7 @@ namespace AIBT.Authoring
                     }
                 }
 
-                ValidateBlackboardTypeAndDefault(key, location, diagnostics);
+                ValidateBlackboardTypeAndDefault(key, location, registeredTypes, diagnostics);
                 ValidateBlackboardScope(document, key, options, diagnostics);
             }
 
@@ -154,6 +163,7 @@ namespace AIBT.Authoring
         private static void ValidateBlackboardTypeAndDefault(
             BlackboardKeyDefinition key,
             DiagnosticLocation location,
+            RegisteredBlackboardTypeCatalog registeredTypes,
             ICollection<Diagnostic> diagnostics)
         {
             if (!key.Type.IsValid)
@@ -177,9 +187,12 @@ namespace AIBT.Authoring
             var value = key.DefaultValue;
             if (key.Type.IsRegistered)
             {
-                diagnostics.Add(BlackboardDiagnosticCatalog.Create(
-                    BlackboardDiagnosticCodes.MissingCanonicalSchema,
-                    "Phase 1 has no registered canonical-schema implementation for this blackboard type.", location));
+                if (registeredTypes == null
+                    || !registeredTypes.TryGet(key.Type.CanonicalTypeId, key.Type.RegisteredDescriptor.Version, out var registered)
+                    || registered.Descriptor != key.Type.RegisteredDescriptor)
+                    diagnostics.Add(BlackboardDiagnosticCatalog.Create(
+                        BlackboardDiagnosticCodes.MissingCanonicalSchema,
+                        "Registered blackboard type is absent from the exact accepted canonical schema/equality catalog.", location));
             }
 
             if (value == null)
@@ -210,6 +223,31 @@ namespace AIBT.Authoring
                     "Registered blackboard default does not match the declared type ID and version.", location));
             }
 
+            if (key.Type.IsRegistered && registeredTypes != null
+                && registeredTypes.TryGet(key.Type.CanonicalTypeId, key.Type.RegisteredDescriptor.Version, out var catalogEntry)
+                && value.TryGetRegisteredValue(out var registeredValue))
+            {
+                try
+                {
+                    var expected = RegisteredBlackboardDefaultCodec.Encode(catalogEntry, registeredValue, registeredTypes);
+                    if (!BytesEqual(expected, value.GetRegisteredBytesCopy()))
+                        throw new ArgumentException("Stored registered bytes differ from the closed codec.");
+                }
+                catch (ArgumentException)
+                {
+                    diagnostics.Add(BlackboardDiagnosticCatalog.Create(
+                        BlackboardDiagnosticCodes.InvalidDefaultValue,
+                        "Registered blackboard default differs from the exact accepted catalog codec.", location));
+                }
+            }
+
+        }
+
+        private static bool BytesEqual(byte[] left, byte[] right)
+        {
+            if (left == null || right == null || left.Length != right.Length) return false;
+            for (var index = 0; index < left.Length; index++) if (left[index] != right[index]) return false;
+            return true;
         }
 
         private static void ValidateBlackboardScope(
@@ -707,7 +745,9 @@ namespace AIBT.Authoring
             if (observer.WatchedKeys.Count == 0)
             {
                 diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.InvalidWatchedKey,
-                    "Observer must watch at least one Tree-scope blackboard key.", pointer + "/watchedKeys",
+                    document.FormatVersion == TreeDocument.CurrentFormatVersion
+                        ? "Observer must watch at least one Tree-scope blackboard key."
+                        : "Observer must watch at least one declared blackboard key.", pointer + "/watchedKeys",
                     document.TreeId, node.Id));
             }
 
@@ -723,13 +763,31 @@ namespace AIBT.Authoring
                     continue;
                 }
 
-                if (!blackboard.TryGetValue(keyId, out var key) || key.Scope != BlackboardScope.Tree)
+                if (!blackboard.TryGetValue(keyId, out var key) || !IsSupportedObserverScope(document, key.Scope))
                 {
                     diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.InvalidWatchedKey,
-                        "Observer watched key must identify a declared Tree-scope blackboard key.", keyPointer,
+                        document.FormatVersion == TreeDocument.CurrentFormatVersion
+                            ? "Observer watched key must identify a declared Tree-scope blackboard key."
+                            : "Observer watched key must identify a declared key in a contracted persisted scope.", keyPointer,
                         document.TreeId, node.Id));
                 }
             }
+        }
+
+        private static bool IsSupportedObserverScope(TreeDocument document, BlackboardScope scope)
+        {
+            if (scope == BlackboardScope.Tree)
+            {
+                return true;
+            }
+
+            if (document.FormatVersion != TreeDocument.LatestFormatVersion)
+            {
+                return false;
+            }
+
+            return scope == BlackboardScope.Agent && document.AgentContract != null
+                || scope == BlackboardScope.Shared && document.SharedContract != null;
         }
 
         private static void ValidateNodeCapabilities(

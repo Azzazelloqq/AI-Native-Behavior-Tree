@@ -9,6 +9,18 @@ namespace AIBT.Authoring
             BlackboardScope scope = BlackboardScope.Tree,
             BlackboardDefaultValue defaultValue = null,
             string description = null)
+            : this(id, name, type, scope, defaultValue, description, BlackboardReductionKind.None)
+        {
+        }
+
+        public BlackboardKeyDefinition(
+            string id,
+            string name,
+            BlackboardTypeReference type,
+            BlackboardScope scope,
+            BlackboardDefaultValue defaultValue,
+            string description,
+            BlackboardReductionKind reduction)
         {
             Id = id;
             Name = name;
@@ -16,6 +28,7 @@ namespace AIBT.Authoring
             Scope = scope;
             DefaultValue = defaultValue;
             Description = description;
+            Reduction = reduction;
         }
 
         public string Id { get; }
@@ -29,6 +42,8 @@ namespace AIBT.Authoring
         public BlackboardDefaultValue DefaultValue { get; }
 
         public string Description { get; }
+
+        public BlackboardReductionKind Reduction { get; }
 
         public bool HasDefault => DefaultValue != null;
     }

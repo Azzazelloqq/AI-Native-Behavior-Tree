@@ -1,0 +1,104 @@
+using System;
+using System.IO;
+using AIBT.Tests.Runtime.NativeExecution.Dispatch;
+using Unity.Burst;
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+namespace AIBT.Benchmarks.Phase2.Dispatch.Player.Editor
+{
+    public static class GeneratedDispatchWebBuild
+    {
+        private const string OutputArgument = "-aibtP2WebOutput";
+        private const string EvidenceArgument = "-aibtP2WebEvidence";
+        private const string ScenePath = "Assets/AIBTP2GeneratedDispatchWeb.unity";
+
+        public static void Build()
+        {
+            var output = RequiredArgument(OutputArgument);
+            var evidencePath = RequiredArgument(EvidenceArgument);
+            Directory.CreateDirectory(output);
+            Directory.CreateDirectory(Path.GetDirectoryName(evidencePath));
+            if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.WebGL, BuildTarget.WebGL))
+                throw new InvalidOperationException("WebGL Build Support is not installed.");
+            if (!EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.WebGL, BuildTarget.WebGL))
+                throw new InvalidOperationException("Unity could not activate WebGL.");
+
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.WebGL, ScriptingImplementation.IL2CPP);
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
+            PlayerSettings.WebGL.decompressionFallback = false;
+            BurstCompiler.Options.EnableBurstCompilation = true;
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            try
+            {
+                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = new[] { ScenePath },
+                    locationPathName = output,
+                    target = BuildTarget.WebGL,
+                    targetGroup = BuildTargetGroup.WebGL,
+                    options = BuildOptions.CleanBuildCache,
+                });
+                var summary = report.summary;
+                var evidence = new BuildEvidence
+                {
+                    schema = "aibt-p2-024-web-build-v1",
+                    unityVersion = Application.unityVersion,
+                    target = summary.platform.ToString(),
+                    result = summary.result.ToString(),
+                    totalErrors = summary.totalErrors,
+                    totalWarnings = summary.totalWarnings,
+                    outputBytes = checked((long)summary.totalSize),
+                    scriptingBackend = PlayerSettings.GetScriptingBackend(NamedBuildTarget.WebGL).ToString(),
+                    burstEnabled = BurstCompiler.Options.EnableBurstCompilation,
+                    developmentBuild = (summary.options & BuildOptions.Development) != 0,
+                    catalogUsable = GeneratedDispatchCanaryCatalog.IsUsable,
+                    generatedEntryPoint = "GeneratedDispatchCanaryCatalog.ExecuteImmediate",
+                    compression = PlayerSettings.WebGL.compressionFormat.ToString(),
+                    output = output,
+                };
+                File.WriteAllText(evidencePath, JsonUtility.ToJson(evidence, true));
+                if (summary.result != BuildResult.Succeeded || evidence.scriptingBackend != "IL2CPP"
+                    || !evidence.burstEnabled || evidence.developmentBuild || !evidence.catalogUsable)
+                    throw new InvalidOperationException("Web acceptance build failed: " + summary.result);
+                Debug.Log("AIBT_P2_024_WEB_BUILD_OK|" + JsonUtility.ToJson(evidence));
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(ScenePath);
+            }
+        }
+
+        private static string RequiredArgument(string name)
+        {
+            var args = Environment.GetCommandLineArgs();
+            for (var index = 0; index < args.Length - 1; index++)
+                if (string.Equals(args[index], name, StringComparison.Ordinal))
+                    return Path.GetFullPath(args[index + 1]);
+            throw new ArgumentException("Missing required argument " + name + ".");
+        }
+
+        [Serializable]
+        private sealed class BuildEvidence
+        {
+            public string schema;
+            public string unityVersion;
+            public string target;
+            public string result;
+            public int totalErrors;
+            public int totalWarnings;
+            public long outputBytes;
+            public string scriptingBackend;
+            public bool burstEnabled;
+            public bool developmentBuild;
+            public bool catalogUsable;
+            public string generatedEntryPoint;
+            public string compression;
+            public string output;
+        }
+    }
+}

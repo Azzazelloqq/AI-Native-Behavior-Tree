@@ -10,6 +10,7 @@ namespace AIBT.Authoring
         private readonly StringBuilder _builder = new StringBuilder();
         private readonly bool _semanticOnly;
         private int _depth;
+        private int _formatVersion;
 
         private CanonicalTreeJsonWriter(bool semanticOnly)
         {
@@ -26,6 +27,7 @@ namespace AIBT.Authoring
 
         private void WriteDocument(TreeDocument document)
         {
+            _formatVersion = document.FormatVersion;
             BeginObject();
             var first = true;
             Property(ref first, "format", () => String(document.Format));
@@ -35,6 +37,9 @@ namespace AIBT.Authoring
             if (!_semanticOnly && document.Description != null)
                 Property(ref first, "description", () => String(document.Description));
             Property(ref first, "root", () => String(document.Root.Value));
+            if (document.FormatVersion == TreeDocument.LatestFormatVersion
+                && (document.AgentContract != null || document.SharedContract != null))
+                Property(ref first, "blackboardContracts", () => WriteScopeContracts(document));
             if (document.Blackboard.Count > 0)
                 Property(ref first, "blackboard", () => WriteBlackboard(document.Blackboard));
             Property(ref first, "nodes", () => WriteNodes(document.Nodes));
@@ -61,10 +66,16 @@ namespace AIBT.Authoring
             BeginObject();
             var first = true;
             Property(ref first, "type", () => String(key.Type.CanonicalTypeId));
+            if (_formatVersion == TreeDocument.LatestFormatVersion
+                && key.Scope != BlackboardScope.Tree && key.Type.RuntimeDescriptor.Version != 0
+                && key.Type.IsValid)
+                Property(ref first, "typeVersion", () => Integer(key.Type.RuntimeDescriptor.Version));
             if (key.Type.ValueType == BlackboardValueType.Enum32)
                 Property(ref first, "enumContract", () => String(key.Type.EnumContract));
             if (key.Scope != BlackboardScope.Tree)
                 Property(ref first, "scope", () => String(ScopeText(key.Scope)));
+            if (key.Reduction != BlackboardReductionKind.None)
+                Property(ref first, "reduction", () => WriteReduction(key.Reduction));
             if (!_semanticOnly && key.Description != null)
                 Property(ref first, "description", () => String(key.Description));
             if (key.HasDefault)
@@ -95,6 +106,8 @@ namespace AIBT.Authoring
                 Property(ref first, "description", () => String(node.Description));
             if (node.Parameters.Properties.Count > 0)
                 Property(ref first, "parameters", () => WriteSemanticObject(node.Parameters));
+            if (node.Bindings != null)
+                Property(ref first, "bindings", () => WriteBindings(node.Bindings));
             if (node.Observer != null)
                 Property(ref first, "observer", () => WriteObserver(node.Observer));
             if (node.Children.Count > 0)
@@ -113,8 +126,55 @@ namespace AIBT.Authoring
             EndObject(first);
         }
 
+        private void WriteScopeContracts(TreeDocument document)
+        {
+            BeginObject();
+            var first = true;
+            if (document.AgentContract != null)
+                Property(ref first, "agent", () => WriteScopeContract(document.AgentContract));
+            if (document.SharedContract != null)
+                Property(ref first, "shared", () => WriteScopeContract(document.SharedContract));
+            EndObject(first);
+        }
+
+        private void WriteScopeContract(BlackboardScopeContract contract)
+        {
+            BeginObject();
+            var first = true;
+            Property(ref first, "contractId", () => String(contract.ContractId));
+            Property(ref first, "contractVersion", () => Integer(contract.ContractVersion));
+            EndObject(first);
+        }
+
+        private void WriteBindings(NodeBindingMap bindings)
+        {
+            var ordered = new List<KeyValuePair<string, string>>(bindings.Values);
+            ordered.Sort((left, right) => Utf8OrdinalComparer.Instance.Compare(left.Key, right.Key));
+            BeginObject();
+            var first = true;
+            for (var index = 0; index < ordered.Count; index++)
+            {
+                var pair = ordered[index];
+                Property(ref first, pair.Key, () => String(pair.Value));
+            }
+            EndObject(first);
+        }
+
+        private void WriteReduction(BlackboardReductionKind reduction)
+        {
+            BeginObject();
+            var first = true;
+            Property(ref first, "kind", () => String(ReductionText(reduction)));
+            EndObject(first);
+        }
+
         private void WriteDefault(BlackboardDefaultValue value)
         {
+            if (value.ValueType == BlackboardValueType.Registered && value.TryGetRegisteredValue(out var registered))
+            {
+                WriteSemanticObject(registered);
+                return;
+            }
             if (!value.TryGetRuntimeValue(out var runtime))
                 throw new InvalidOperationException("A default value is not representable by the built-in canonical writer.");
 
@@ -348,6 +408,21 @@ namespace AIBT.Authoring
                 case BlackboardScope.Agent: return "agent";
                 case BlackboardScope.Shared: return "shared";
                 default: throw new InvalidOperationException("Node-local and unknown scopes are not persisted at tree level.");
+            }
+        }
+
+        private static string ReductionText(BlackboardReductionKind reduction)
+        {
+            switch (reduction)
+            {
+                case BlackboardReductionKind.Min: return "min";
+                case BlackboardReductionKind.Max: return "max";
+                case BlackboardReductionKind.Sum: return "sum";
+                case BlackboardReductionKind.Any: return "any";
+                case BlackboardReductionKind.All: return "all";
+                case BlackboardReductionKind.First: return "first";
+                case BlackboardReductionKind.Last: return "last";
+                default: throw new InvalidOperationException("Unknown Shared reduction kind.");
             }
         }
     }

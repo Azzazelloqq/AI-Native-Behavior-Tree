@@ -23,7 +23,12 @@ Implicit type conversion is forbidden. Conversion requires an explicit node.
 - `Agent`: shared by all tree instances explicitly bound to the same agent context.
 - `Shared`: shared by multiple agents through a declared deterministic access policy.
 
-Phase 1 implements `NodeLocal` and `Tree`. `Agent` and `Shared` remain validation-recognized but execution-unsupported until their dedicated work items are complete; attempting to compile them produces a capability diagnostic.
+Phase 1 implements `NodeLocal` and `Tree`. The persisted, binding, and reduction
+contracts for `Agent` and `Shared` are defined by
+`agent-shared-blackboard-v1.md`; native storage and reduction are separate
+implementation work items. A compiler that does not implement those
+capabilities continues to reject the corresponding scope through its recorded
+compilation policy.
 
 ## Keys
 
@@ -41,13 +46,19 @@ Built-in equality is exact value equality. Integers, IDs, enums, and fixed strin
 
 ## Shared writes
 
-Shared scope is read-only during the execute phase unless a key declares one of:
+Shared scope is read-only during the execute phase. A declared Shared write
+appends a contribution and never mutates the Shared slot directly. The key must
+declare one of:
 
 - deterministic `Min`, `Max`, `Sum`, `Any`, or `All` reduction for a compatible built-in type;
-- `FirstByInstanceId` or `LastByInstanceId`;
-- a generated unmanaged reducer with stable ID and associativity/determinism declaration.
+- deterministic `First` or `Last` selection by the stable contribution key.
 
-Unconfigured shared writes are compilation errors. Shared reductions occur in the update phase defined by `update-phases-v1.md`.
+Unconfigured Shared writes are compilation errors. Custom reducers are not a
+persisted v1 capability; a future custom reducer contract must reuse the
+accepted public unmanaged Burst ABI rules and introduce an explicit format
+version. Shared contribution ordering, numeric behavior, atomicity, and
+visibility are defined by `agent-shared-blackboard-v1.md`. Shared reductions
+occur in the update phase defined by `update-phases-v1.md`.
 
 ## Initialization and reset
 

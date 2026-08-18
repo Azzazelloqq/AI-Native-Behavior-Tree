@@ -1,0 +1,57 @@
+{
+  "task": "P2-003",
+  "status": "accepted",
+  "currentVerdict": "accept",
+  "environment": {
+    "date": "2026-08-14",
+    "node": "v24.16.0",
+    "schemaValidator": "ajv-cli 5 (draft 2020, strict mode)",
+    "independentHashVerifier": ".NET SHA256 through Windows PowerShell"
+  },
+  "commands": [
+    {
+      "command": "powershell -ExecutionPolicy Bypass -File Spikes~/BlackboardScopes/Verify.ps1",
+      "exitCode": 0,
+      "result": "PASS: 346 model assertions, 10 independent hash pins, and 11 independent Float32 oracle vectors"
+    },
+    {
+      "command": "npx.cmd --yes ajv-cli@5 validate --spec=draft2020 --strict=true -s Spikes~/BlackboardScopes/tree-v2.schema.json -d <valid, reordered, and tree-only fixtures>",
+      "exitCode": 0,
+      "result": "PASS: all three fixtures valid"
+    },
+    {
+      "command": "npx.cmd --yes ajv-cli@5 validate --spec=draft2020 --strict=true -s Spikes~/BlackboardScopes/tree-v2.schema.json -d <invalid custom and invalid Agent-required fixtures>",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "result": "PASS: both invalid fixtures rejected at their exact reduction/required-field paths"
+    },
+    {
+      "command": "powershell -ExecutionPolicy Bypass -File Tools~/Verification/Verify-Static.ps1",
+      "exitCode": 0,
+      "result": "PASS: 50 work items"
+    },
+    {
+      "command": "powershell -ExecutionPolicy Bypass -File Tools~/Verification/Verify-Schemas.ps1",
+      "exitCode": 0,
+      "result": "PASS: 6 production schemas"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "result": "PASS"
+    }
+  ],
+  "hashes": {
+    "agentSchema": "5a1e99053b79dd8c5d56bfa12c8f1d20af20010c03a656fe99e999c95a35b9f8",
+    "sharedSchema": "aebae0b083761e9cae3fbd17e4dce452eb982166bccf0f8c04043ab6b32ff53d",
+    "agentLayout": "92ddfc8bdf3a3b2014cdcb39298d6b2718f52a6b08293100d4dfb28040f15bf3",
+    "sharedLayout": "87c027eefd4a4a0ace701e767b46b7edd3d3d0310a57d9790fabf9f3c6d67821",
+    "compiledContent": "48eb58bf6aea2b60fb974c604de4799640589056b993f5ebdfdadd80f48cd70c",
+    "compiledAgentOnly": "0e828802b48b2be5a683122d0607fd66d7350fcfb46e21a313bdbfa4102a2b84",
+    "compiledSharedOnly": "b358653eb7e1cad9e793b70234fca4f9ff02c56e8a772a77b40afee138c37af3",
+    "losslessInt64AgentSchema": "1e75c80ab1e01ed3148ae3e49b1b3a1428eb55f3ad81c301591e0f9d4f6086a9",
+    "losslessInt64Compiled": "9af7d9e333d279ceec0b28c87303eb3f092ddf168266104f9ee70e7b848a6c81",
+    "typedDefaultsCompiled": "7d328fae6054c7c98d367eff89f79639d6755b1ae702025eb68529076f6cb002"
+  },
+  "independentReview": "rounds 1 through 3 changes required; round 4 accepted"
+}

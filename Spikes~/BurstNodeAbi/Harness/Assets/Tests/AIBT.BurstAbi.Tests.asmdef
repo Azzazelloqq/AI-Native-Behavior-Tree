@@ -1,0 +1,10 @@
+{
+  "name": "AIBT.BurstAbi.Tests",
+  "rootNamespace": "AIBT.BurstAbi.Tests",
+  "references": ["AIBT.Runtime", "AIBT.BurstAbi.Contracts", "AIBT.BurstAbi.NodesA", "AIBT.BurstAbi.NodesB", "AIBT.BurstAbi.Catalog", "Unity.Burst", "Unity.Collections"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

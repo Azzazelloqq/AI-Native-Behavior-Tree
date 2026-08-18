@@ -1,0 +1,21 @@
+{
+  "name": "AIBT.GeneratedDispatchPlayerAot.Nodes",
+  "rootNamespace": "AIBT.Tests.CodeGen.Generation",
+  "references": [
+    "AIBT.Runtime",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "analyzers": [
+    "GUID:31a3f09584684895a0a72916d3ad4de0"
+  ]
+}

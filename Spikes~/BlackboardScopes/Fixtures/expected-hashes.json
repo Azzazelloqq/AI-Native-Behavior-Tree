@@ -1,0 +1,12 @@
+{
+  "agentSchema": "5a1e99053b79dd8c5d56bfa12c8f1d20af20010c03a656fe99e999c95a35b9f8",
+  "sharedSchema": "aebae0b083761e9cae3fbd17e4dce452eb982166bccf0f8c04043ab6b32ff53d",
+  "agentLayout": "92ddfc8bdf3a3b2014cdcb39298d6b2718f52a6b08293100d4dfb28040f15bf3",
+  "sharedLayout": "87c027eefd4a4a0ace701e767b46b7edd3d3d0310a57d9790fabf9f3c6d67821",
+  "compiledContent": "45a23f80f2aa45ada0cac44e07b3fc2fa6f41b4a5a85d0c059fa106a5977fa1d",
+  "compiledAgentOnly": "973f193317a428e15ae8ad459a7f23688685aa4f456ab040f5c9d9d65a7b2ff2",
+  "compiledSharedOnly": "ae03bd0bde4144b4336d79884c20791424e62607bf7e57a5375739ad2c4e17ff",
+  "losslessInt64AgentSchema": "1e75c80ab1e01ed3148ae3e49b1b3a1428eb55f3ad81c301591e0f9d4f6086a9",
+  "losslessInt64Compiled": "daeb87225104dc0c77713c36586ec471ae29f39fee1b9405593baeaf15b775c1",
+  "typedDefaultsCompiled": "b6a33358c5ee6c7ee7bcb3638fc46944de8c783ea711fa55dbf0f43cc1ebbce4"
+}

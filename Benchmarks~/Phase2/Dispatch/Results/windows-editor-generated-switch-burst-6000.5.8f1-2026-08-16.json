@@ -1,0 +1,592 @@
+{
+    "schema": "aibt-p2-012-generated-dispatch-benchmark-v2",
+    "capturedAtUtc": "2026-08-16T10:00:09.7561327Z",
+    "scenarioRevision": "p2-012-generated-closed-switch-enter-v2",
+    "scope": "Burst-compiled generated closed-switch ABI v2 dispatch microcase",
+    "environment": {
+        "unityVersion": "6000.5.8f1",
+        "burstPackageVersion": "1.8.30",
+        "collectionsPackageVersion": "6.5.0",
+        "burstEnabled": true,
+        "editorBatchMode": true,
+        "activeBuildTarget": "StandaloneWindows64",
+        "applicationPlatform": "WindowsEditor",
+        "operatingSystem": "Windows 11  (10.0.26200)",
+        "osArchitecture": "X64",
+        "processArchitecture": "X64",
+        "processorType": "Intel(R) Core(TM) Ultra 9 275HX",
+        "processorCount": 24,
+        "processorFrequencyMHz": 3072,
+        "jobWorkerCount": 23,
+        "systemMemoryMB": 32189,
+        "graphicsDevice": "Null Device",
+        "managedRuntime": "Mono 6.13.0 (Visual Studio built mono)",
+        "stopwatchHighResolution": true,
+        "commandLine": [
+            "C:\\Program Files\\Unity\\Hub\\Editor\\6000.5.8f1\\Editor\\Unity.exe",
+            "-batchmode",
+            "-nographics",
+            "-burst-enable-compilation",
+            "-projectPath",
+            "C:\\Users\\User\\AppData\\Local\\Temp\\aibt-p2-012-dispatch-benchmark-99061a38e92d415386dabfd4e05c5ef8",
+            "-executeMethod",
+            "AIBT.Benchmarks.Phase2.Dispatch.DispatchBenchmarkRunner.Run",
+            "-aibtBenchmarkOutput",
+            "C:\\UnityProjects\\Modules\\Assets\\AIBT\\Benchmarks~\\Phase2\\Dispatch\\Results\\windows-editor-generated-switch-burst-6000.5.8f1-2026-08-16.json",
+            "-aibtWarmupSamples",
+            "5",
+            "-aibtMeasuredSamples",
+            "15",
+            "-aibtDispatchesPerSample",
+            "16384",
+            "-logFile",
+            "C:\\UnityProjects\\Modules\\Assets\\AIBT\\Benchmarks~\\Phase2\\Dispatch\\Results\\windows-editor-generated-switch-burst-6000.5.8f1-2026-08-16.log",
+            "-quit"
+        ],
+        "thermalAndPowerConditions": "Not controlled or recorded"
+    },
+    "configuration": {
+        "typeCounts": [
+            1,
+            16,
+            128
+        ],
+        "warmupSamplesPerTypeCount": 5,
+        "measuredSamplesPerTypeCount": 15,
+        "dispatchesPerSample": 16384,
+        "stopwatchFrequency": 10000000,
+        "sampleOrder": "Warm every case, then measured round-robin 1/16/128",
+        "timedRegion": "One matching Burst function-pointer invocation with an exact-width generated switch",
+        "dispatchSelection": "Separate 1-, 16-, and 128-case switches; matching function selected before timing",
+        "excludedFromTimedRegion": "Owner/input allocation, native copies, disposal, validation, GC, and JSON serialization"
+    },
+    "allocationProbe": {
+        "api": "Profiler.GetMonoUsedSizeLong",
+        "positiveCanaryPayloadBytes": 1048576,
+        "positiveCanaryObservedBytes": 1052672,
+        "sampleObservation": "Each raw sample records process-wide Mono used-size change only during the compiled dispatch invocation."
+    },
+    "cases": [
+        {
+            "typeCount": 1,
+            "generatedSwitchWidth": 1,
+            "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+            "samples": [
+                {
+                    "sequence": 0,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 346650,
+                    "elapsedNanoseconds": 34665000.0,
+                    "nanosecondsPerDispatch": 2115.78369140625,
+                    "dispatchesPerSecond": 472638.10760132697,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 3,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 339663,
+                    "elapsedNanoseconds": 33966300.0,
+                    "nanosecondsPerDispatch": 2073.138427734375,
+                    "dispatchesPerSecond": 482360.4572767714,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 6,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 337769,
+                    "elapsedNanoseconds": 33776900.0,
+                    "nanosecondsPerDispatch": 2061.578369140625,
+                    "dispatchesPerSecond": 485065.2368926693,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 9,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 346950,
+                    "elapsedNanoseconds": 34695000.0,
+                    "nanosecondsPerDispatch": 2117.61474609375,
+                    "dispatchesPerSecond": 472229.42787145127,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 12,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 387623,
+                    "elapsedNanoseconds": 38762300.0,
+                    "nanosecondsPerDispatch": 2365.863037109375,
+                    "dispatchesPerSecond": 422678.736813863,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 15,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 352338,
+                    "elapsedNanoseconds": 35233800.0,
+                    "nanosecondsPerDispatch": 2150.50048828125,
+                    "dispatchesPerSecond": 465008.03206012406,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 18,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 350106,
+                    "elapsedNanoseconds": 35010600.0,
+                    "nanosecondsPerDispatch": 2136.87744140625,
+                    "dispatchesPerSecond": 467972.5568827726,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 21,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 347997,
+                    "elapsedNanoseconds": 34799700.0,
+                    "nanosecondsPerDispatch": 2124.005126953125,
+                    "dispatchesPerSecond": 470808.65639646319,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 24,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 374913,
+                    "elapsedNanoseconds": 37491300.0,
+                    "nanosecondsPerDispatch": 2288.287353515625,
+                    "dispatchesPerSecond": 437008.0525348548,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 27,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 344002,
+                    "elapsedNanoseconds": 34400200.0,
+                    "nanosecondsPerDispatch": 2099.62158203125,
+                    "dispatchesPerSecond": 476276.3007191819,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 30,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 338185,
+                    "elapsedNanoseconds": 33818500.0,
+                    "nanosecondsPerDispatch": 2064.117431640625,
+                    "dispatchesPerSecond": 484468.56010763338,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 33,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 361278,
+                    "elapsedNanoseconds": 36127800.0,
+                    "nanosecondsPerDispatch": 2205.06591796875,
+                    "dispatchesPerSecond": 453501.1819153117,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 36,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 349576,
+                    "elapsedNanoseconds": 34957600.0,
+                    "nanosecondsPerDispatch": 2133.642578125,
+                    "dispatchesPerSecond": 468682.0605533561,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 39,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 345282,
+                    "elapsedNanoseconds": 34528200.0,
+                    "nanosecondsPerDispatch": 2107.43408203125,
+                    "dispatchesPerSecond": 474510.68981296449,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 42,
+                    "generatedSwitchWidth": 1,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch1",
+                    "elapsedTicks": 346033,
+                    "elapsedNanoseconds": 34603300.0,
+                    "nanosecondsPerDispatch": 2112.017822265625,
+                    "dispatchesPerSecond": 473480.8529822301,
+                    "managedAllocatedBytes": 0
+                }
+            ],
+            "summary": {
+                "sampleCount": 15,
+                "dispatchesMeasured": 245760,
+                "minimumNanosecondsPerDispatch": 2061.578369140625,
+                "medianNanosecondsPerDispatch": 2117.61474609375,
+                "p95NanosecondsPerDispatch": 2311.56005859375,
+                "maximumNanosecondsPerDispatch": 2365.863037109375,
+                "minimumManagedAllocatedBytes": 0,
+                "maximumManagedAllocatedBytes": 0,
+                "allSamplesObservedZeroManagedAllocation": true
+            }
+        },
+        {
+            "typeCount": 16,
+            "generatedSwitchWidth": 16,
+            "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+            "samples": [
+                {
+                    "sequence": 1,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 340632,
+                    "elapsedNanoseconds": 34063200.0,
+                    "nanosecondsPerDispatch": 2079.052734375,
+                    "dispatchesPerSecond": 480988.28060781137,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 4,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 344536,
+                    "elapsedNanoseconds": 34453600.0,
+                    "nanosecondsPerDispatch": 2102.880859375,
+                    "dispatchesPerSecond": 475538.1150300694,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 7,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 341156,
+                    "elapsedNanoseconds": 34115600.0,
+                    "nanosecondsPerDispatch": 2082.2509765625,
+                    "dispatchesPerSecond": 480249.5046254499,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 10,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 338050,
+                    "elapsedNanoseconds": 33805000.0,
+                    "nanosecondsPerDispatch": 2063.29345703125,
+                    "dispatchesPerSecond": 484662.0322437509,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 13,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 357186,
+                    "elapsedNanoseconds": 35718600.0,
+                    "nanosecondsPerDispatch": 2180.09033203125,
+                    "dispatchesPerSecond": 458696.58945199419,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 16,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 363695,
+                    "elapsedNanoseconds": 36369500.0,
+                    "nanosecondsPerDispatch": 2219.818115234375,
+                    "dispatchesPerSecond": 450487.35891337526,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 19,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 347173,
+                    "elapsedNanoseconds": 34717300.0,
+                    "nanosecondsPerDispatch": 2118.975830078125,
+                    "dispatchesPerSecond": 471926.1002439706,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 22,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 347632,
+                    "elapsedNanoseconds": 34763200.0,
+                    "nanosecondsPerDispatch": 2121.77734375,
+                    "dispatchesPerSecond": 471302.98706678327,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 25,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 348079,
+                    "elapsedNanoseconds": 34807900.0,
+                    "nanosecondsPerDispatch": 2124.505615234375,
+                    "dispatchesPerSecond": 470697.7439029645,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 28,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 342642,
+                    "elapsedNanoseconds": 34264200.0,
+                    "nanosecondsPerDispatch": 2091.32080078125,
+                    "dispatchesPerSecond": 478166.71628113309,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 31,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 344929,
+                    "elapsedNanoseconds": 34492900.0,
+                    "nanosecondsPerDispatch": 2105.279541015625,
+                    "dispatchesPerSecond": 474996.303587115,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 34,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 341476,
+                    "elapsedNanoseconds": 34147600.0,
+                    "nanosecondsPerDispatch": 2084.2041015625,
+                    "dispatchesPerSecond": 479799.45881994636,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 37,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 341424,
+                    "elapsedNanoseconds": 34142400.0,
+                    "nanosecondsPerDispatch": 2083.88671875,
+                    "dispatchesPerSecond": 479872.5338581939,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 40,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 340823,
+                    "elapsedNanoseconds": 34082300.0,
+                    "nanosecondsPerDispatch": 2080.218505859375,
+                    "dispatchesPerSecond": 480718.7308368273,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 43,
+                    "generatedSwitchWidth": 16,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch16",
+                    "elapsedTicks": 344460,
+                    "elapsedNanoseconds": 34446000.0,
+                    "nanosecondsPerDispatch": 2102.4169921875,
+                    "dispatchesPerSecond": 475643.0354758173,
+                    "managedAllocatedBytes": 0
+                }
+            ],
+            "summary": {
+                "sampleCount": 15,
+                "dispatchesMeasured": 245760,
+                "minimumNanosecondsPerDispatch": 2063.29345703125,
+                "medianNanosecondsPerDispatch": 2102.4169921875,
+                "p95NanosecondsPerDispatch": 2192.0086669921875,
+                "maximumNanosecondsPerDispatch": 2219.818115234375,
+                "minimumManagedAllocatedBytes": 0,
+                "maximumManagedAllocatedBytes": 0,
+                "allSamplesObservedZeroManagedAllocation": true
+            }
+        },
+        {
+            "typeCount": 128,
+            "generatedSwitchWidth": 128,
+            "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+            "samples": [
+                {
+                    "sequence": 2,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 346077,
+                    "elapsedNanoseconds": 34607700.0,
+                    "nanosecondsPerDispatch": 2112.286376953125,
+                    "dispatchesPerSecond": 473420.6549409525,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 5,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 339151,
+                    "elapsedNanoseconds": 33915100.0,
+                    "nanosecondsPerDispatch": 2070.013427734375,
+                    "dispatchesPerSecond": 483088.6537265112,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 8,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 338090,
+                    "elapsedNanoseconds": 33809000.0,
+                    "nanosecondsPerDispatch": 2063.53759765625,
+                    "dispatchesPerSecond": 484604.69105859388,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 11,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 359001,
+                    "elapsedNanoseconds": 35900100.0,
+                    "nanosecondsPerDispatch": 2191.168212890625,
+                    "dispatchesPerSecond": 456377.5588368835,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 14,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 346214,
+                    "elapsedNanoseconds": 34621400.0,
+                    "nanosecondsPerDispatch": 2113.12255859375,
+                    "dispatchesPerSecond": 473233.3181211621,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 17,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 339558,
+                    "elapsedNanoseconds": 33955800.0,
+                    "nanosecondsPerDispatch": 2072.49755859375,
+                    "dispatchesPerSecond": 482509.6154412501,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 20,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 355780,
+                    "elapsedNanoseconds": 35578000.0,
+                    "nanosecondsPerDispatch": 2171.5087890625,
+                    "dispatchesPerSecond": 460509.30350216428,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 23,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 354622,
+                    "elapsedNanoseconds": 35462200.0,
+                    "nanosecondsPerDispatch": 2164.44091796875,
+                    "dispatchesPerSecond": 462013.0730749925,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 26,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 347442,
+                    "elapsedNanoseconds": 34744200.0,
+                    "nanosecondsPerDispatch": 2120.61767578125,
+                    "dispatchesPerSecond": 471560.7209260826,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 29,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 339809,
+                    "elapsedNanoseconds": 33980900.0,
+                    "nanosecondsPerDispatch": 2074.029541015625,
+                    "dispatchesPerSecond": 482153.20959715606,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 32,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 348668,
+                    "elapsedNanoseconds": 34866800.0,
+                    "nanosecondsPerDispatch": 2128.1005859375,
+                    "dispatchesPerSecond": 469902.6007548728,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 35,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 341752,
+                    "elapsedNanoseconds": 34175200.0,
+                    "nanosecondsPerDispatch": 2085.888671875,
+                    "dispatchesPerSecond": 479411.9712540087,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 38,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 341806,
+                    "elapsedNanoseconds": 34180600.0,
+                    "nanosecondsPerDispatch": 2086.21826171875,
+                    "dispatchesPerSecond": 479336.2316635753,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 41,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 367752,
+                    "elapsedNanoseconds": 36775200.0,
+                    "nanosecondsPerDispatch": 2244.580078125,
+                    "dispatchesPerSecond": 445517.63144727968,
+                    "managedAllocatedBytes": 0
+                },
+                {
+                    "sequence": 44,
+                    "generatedSwitchWidth": 128,
+                    "compiledEntryPoint": "ExecuteGeneratedDispatchSwitch128",
+                    "elapsedTicks": 351485,
+                    "elapsedNanoseconds": 35148500.0,
+                    "nanosecondsPerDispatch": 2145.294189453125,
+                    "dispatchesPerSecond": 466136.53498726835,
+                    "managedAllocatedBytes": 0
+                }
+            ],
+            "summary": {
+                "sampleCount": 15,
+                "dispatchesMeasured": 245760,
+                "minimumNanosecondsPerDispatch": 2063.53759765625,
+                "medianNanosecondsPerDispatch": 2113.12255859375,
+                "p95NanosecondsPerDispatch": 2207.1917724609375,
+                "maximumNanosecondsPerDispatch": 2244.580078125,
+                "minimumManagedAllocatedBytes": 0,
+                "maximumManagedAllocatedBytes": 0,
+                "allSamplesObservedZeroManagedAllocation": true
+            }
+        }
+    ],
+    "evidence": {
+        "burstEnabled": true,
+        "compiledEntryPoints": [
+            "ExecuteGeneratedDispatchSwitch1",
+            "ExecuteGeneratedDispatchSwitch16",
+            "ExecuteGeneratedDispatchSwitch128"
+        ],
+        "managedFallbackAllowed": false,
+        "burstDiscardSentinelPassed": true,
+        "allWarmupsAndSamplesCompleted": true
+    },
+    "limitations": [
+        "This isolated Windows Editor batchmode run is a focused microbenchmark, not a Player platform baseline.",
+        "The compiled function pointer proves Burst-native execution in Editor; it does not replace Player AOT artifact or Burst Inspector evidence.",
+        "Thermal state and power policy are not controlled by the runner.",
+        "No performance pass/fail threshold is inferred from this workstation."
+    ]
+}

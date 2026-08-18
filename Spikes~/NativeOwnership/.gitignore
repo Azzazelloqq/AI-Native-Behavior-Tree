@@ -1,0 +1,6 @@
+artifacts/
+Harness/Library/
+Harness/Logs/
+Harness/Temp/
+Harness/UserSettings/
+Harness/obj/

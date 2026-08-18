@@ -1,0 +1,25 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "invalid.agent.required",
+  "name": "Invalid Agent requirements",
+  "root": "root",
+  "blackboardContracts": {
+    "agent": {
+      "contractId": "aibt.agent.invalid",
+      "contractVersion": 1
+    }
+  },
+  "blackboard": {
+    "agent_value": {
+      "type": "Int32",
+      "scope": "agent"
+    }
+  },
+  "nodes": {
+    "root": {
+      "type": "aibt.test.leaf",
+      "typeVersion": 1
+    }
+  }
+}

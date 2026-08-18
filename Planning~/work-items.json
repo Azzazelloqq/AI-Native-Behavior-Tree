@@ -252,6 +252,448 @@
       "card": "Planning~/Tasks/P1/P1-019-phase1-integration-gate.md",
       "dependsOn": ["P1-018", "P0-006"],
       "owns": ["Planning~/Evidence/P1-GATE/"]
+    },
+    {
+      "id": "P2-001",
+      "phase": 2,
+      "title": "Public Burst node ABI and Roslyn feasibility",
+      "status": "done",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P2/P2-001-burst-node-abi.md",
+      "dependsOn": [
+        "P1-018"
+      ],
+      "owns": [
+        "Documentation~/specifications/burst-node-abi-v1.md",
+        "Documentation~/specifications/time-and-random-v1.md",
+        "Documentation~/specifications/diagnostics-v1.md",
+        "Spikes~/BurstNodeAbi/",
+        "Planning~/Evidence/P2-001/"
+      ]
+    },
+    {
+      "id": "P2-002",
+      "phase": 2,
+      "title": "Native ownership and bounded-capacity contracts",
+      "status": "done",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P2/P2-002-native-runtime-contracts.md",
+      "dependsOn": [
+        "P2-001"
+      ],
+      "owns": [
+        "Documentation~/specifications/native-runtime-v1.md",
+        "Spikes~/NativeOwnership/",
+        "Planning~/Evidence/P2-002/"
+      ]
+    },
+    {
+      "id": "P2-003",
+      "phase": 2,
+      "title": "Agent and Shared blackboard contract",
+      "status": "done",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P2/P2-003-agent-shared-contract.md",
+      "dependsOn": [
+        "P2-001"
+      ],
+      "owns": [
+        "Documentation~/specifications/blackboard-v1.md",
+        "Documentation~/specifications/agent-shared-blackboard-v1.md",
+        "Spikes~/BlackboardScopes/",
+        "Planning~/Evidence/P2-003/"
+      ]
+    },
+    {
+      "id": "P2-004",
+      "phase": 2,
+      "title": "Production analyzer and generator packaging",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-004-codegen-packaging.md",
+      "dependsOn": [
+        "P2-001"
+      ],
+      "owns": [
+        "Runtime/Nodes/Contracts/",
+        "CodeGen~/",
+        "Tests/Editor/CodeGen/Contracts/",
+        "Tools~/Verification/P2/CodeGen/"
+      ]
+    },
+    {
+      "id": "P2-005",
+      "phase": 2,
+      "title": "Deterministic node generation and scope compilation",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-005-node-generation.md",
+      "dependsOn": [
+        "P2-003",
+        "P2-004"
+      ],
+      "owns": [
+        "CodeGen~/",
+        "Authoring/Model/Blackboard/",
+        "Authoring/Compilation/",
+        "Authoring/Registry/Generated/",
+        "Authoring/Compilation/Generated/",
+        "Schemas~/",
+        "Tests/Editor/CodeGen/Generation/",
+        "Tests/Editor/BlackboardScopes/",
+        "Tests/Fixtures/P2/CodeGen/"
+      ]
+    },
+    {
+      "id": "P2-006",
+      "phase": 2,
+      "title": "Native program image and packed instance arenas",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-006-native-program-and-state.md",
+      "dependsOn": [
+        "P2-002"
+      ],
+      "owns": [
+        "Runtime/Compiled/Native/",
+        "Runtime/State/Native/",
+        "Tests/Runtime/NativeExecution/ProgramAndState/"
+      ]
+    },
+    {
+      "id": "P2-007",
+      "phase": 2,
+      "title": "Native Tree and Agent blackboard storage",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-007-native-tree-agent-blackboard.md",
+      "dependsOn": [
+        "P2-003",
+        "P2-005",
+        "P2-006"
+      ],
+      "owns": [
+        "Runtime/Blackboard/Native/Tree/",
+        "Runtime/Blackboard/Native/Agent/",
+        "Tests/Runtime/NativeExecution/Blackboard/TreeAndAgent/"
+      ]
+    },
+    {
+      "id": "P2-008",
+      "phase": 2,
+      "title": "Native Shared contributions and deterministic reducers",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-008-shared-reductions.md",
+      "dependsOn": [
+        "P2-003",
+        "P2-007"
+      ],
+      "owns": [
+        "Runtime/Blackboard/Native/Shared/",
+        "Tests/Runtime/NativeExecution/Blackboard/Shared/"
+      ]
+    },
+    {
+      "id": "P2-009",
+      "phase": 2,
+      "title": "Immutable native world snapshots",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-009-native-snapshots.md",
+      "dependsOn": [
+        "P2-001",
+        "P2-002"
+      ],
+      "owns": [
+        "Runtime/Integration/Snapshots/",
+        "Tests/Runtime/NativeExecution/Snapshots/"
+      ]
+    },
+    {
+      "id": "P2-010",
+      "phase": 2,
+      "title": "Native operations, completions, and command streams",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-010-native-commands-and-completions.md",
+      "dependsOn": [
+        "P2-002",
+        "P2-006",
+        "P2-009"
+      ],
+      "owns": [
+        "Runtime/Commands/Native/",
+        "Tests/Runtime/NativeExecution/CommandsAndAsync/"
+      ]
+    },
+    {
+      "id": "P2-011",
+      "phase": 2,
+      "title": "Bounded native diagnostics and trace channels",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-011-native-diagnostics-trace.md",
+      "dependsOn": [
+        "P2-002",
+        "P2-006"
+      ],
+      "owns": [
+        "Runtime/Diagnostics/Native/",
+        "Runtime/Trace/Native/",
+        "Tests/Runtime/NativeExecution/DiagnosticsAndTrace/"
+      ]
+    },
+    {
+      "id": "P2-012",
+      "phase": 2,
+      "title": "Generated closed Burst dispatch",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-012-generated-burst-dispatch.md",
+      "dependsOn": [
+        "P2-005",
+        "P2-006",
+        "P2-007",
+        "P2-008",
+        "P2-009",
+        "P2-010",
+        "P2-011"
+      ],
+      "owns": [
+        "CodeGen~/",
+        "Runtime/Execution/Burst/Dispatch/",
+        "Tests/Runtime/NativeExecution/Dispatch/",
+        "Benchmarks~/Phase2/Dispatch/"
+      ]
+    },
+    {
+      "id": "P2-013",
+      "phase": 2,
+      "title": "Native lifecycle core and memory composites",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-013-native-lifecycle-memory.md",
+      "dependsOn": [
+        "P2-012"
+      ],
+      "owns": [
+        "Runtime/Execution/Native/Core/",
+        "Runtime/Execution/Native/Composites/Memory/",
+        "Tests/Runtime/NativeExecution/LifecycleAndMemory/"
+      ]
+    },
+    {
+      "id": "P2-014",
+      "phase": 2,
+      "title": "Native reactive composites",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-014-native-reactive.md",
+      "dependsOn": [
+        "P2-013"
+      ],
+      "owns": [
+        "Runtime/Execution/Native/Composites/Reactive/",
+        "Tests/Runtime/NativeExecution/Reactive/"
+      ]
+    },
+    {
+      "id": "P2-015",
+      "phase": 2,
+      "title": "Native Parallel and core decorators",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-015-native-parallel-decorators.md",
+      "dependsOn": [
+        "P2-013"
+      ],
+      "owns": [
+        "Runtime/Execution/Native/Composites/Parallel/",
+        "Runtime/Execution/Native/Decorators/",
+        "Tests/Runtime/NativeExecution/ParallelAndDecorators/"
+      ]
+    },
+    {
+      "id": "P2-016",
+      "phase": 2,
+      "title": "Native observer queue and reactive aborts",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-016-native-observers.md",
+      "dependsOn": [
+        "P2-007",
+        "P2-008",
+        "P2-014"
+      ],
+      "owns": [
+        "Runtime/Execution/Native/Observers/",
+        "Tests/Runtime/NativeExecution/Observers/"
+      ]
+    },
+    {
+      "id": "P2-017",
+      "phase": 2,
+      "title": "Native async node lifecycle",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-017-native-async-lifecycle.md",
+      "dependsOn": [
+        "P2-010",
+        "P2-012",
+        "P2-013"
+      ],
+      "owns": [
+        "Runtime/Execution/Native/Async/",
+        "Tests/Runtime/NativeExecution/Async/"
+      ]
+    },
+    {
+      "id": "P2-018",
+      "phase": 2,
+      "title": "Native deterministic step budgeting and resume",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-018-native-budgeting.md",
+      "dependsOn": [
+        "P2-014",
+        "P2-015",
+        "P2-016",
+        "P2-017"
+      ],
+      "owns": [
+        "Runtime/Execution/Native/Budgeting/",
+        "Tests/Runtime/NativeExecution/Budgeting/"
+      ]
+    },
+    {
+      "id": "P2-019",
+      "phase": 2,
+      "title": "Batched same-frame Jobs executor",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P2/P2-019-batched-jobs.md",
+      "dependsOn": [
+        "P2-008",
+        "P2-009",
+        "P2-010",
+        "P2-011",
+        "P2-018"
+      ],
+      "owns": [
+        "Runtime/Scheduling/Native/",
+        "Tests/Runtime/NativeExecution/Scheduling/"
+      ]
+    },
+    {
+      "id": "P2-020",
+      "phase": 2,
+      "title": "Native behavior-case equivalence and public custom-node golden",
+      "status": "done",
+      "kind": "integration",
+      "card": "Planning~/Tasks/P2/P2-020-native-equivalence-golden.md",
+      "dependsOn": [
+        "P2-019"
+      ],
+      "owns": [
+        "Tests/BehaviorCases/Adapters/Native/",
+        "Tests/Integration/NativeRuntime/",
+        "Tests/Integration/BurstNodes/",
+        "Tests/Fixtures/P2/BurstNodes/",
+        "Samples~/BurstNodes/",
+        "Documentation~/burst-node-authoring.md",
+        "Planning~/Evidence/P2-020/"
+      ]
+    },
+    {
+      "id": "P2-021",
+      "phase": 2,
+      "title": "Initialized Burst allocation and native lifetime gate",
+      "status": "done",
+      "kind": "review",
+      "card": "Planning~/Tasks/P2/P2-021-allocation-lifetime-gate.md",
+      "dependsOn": [
+        "P2-020"
+      ],
+      "owns": [
+        "Tests/Runtime/NativeExecution/Allocation/",
+        "Tools~/Verification/P2/Allocation/",
+        "Planning~/Evidence/P2-021/"
+      ]
+    },
+    {
+      "id": "P2-022",
+      "phase": 2,
+      "title": "Windows Player conformance and Phase 2 baseline",
+      "status": "blocked",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P2/P2-022-windows-baseline.md",
+      "dependsOn": [
+        "P2-019",
+        "P2-020",
+        "P2-021"
+      ],
+      "owns": [
+        "Benchmarks~/Phase2/Windows/",
+        "Tools~/Verification/P2/Windows/",
+        "Planning~/Evidence/P2-WINDOWS/"
+      ]
+    },
+    {
+      "id": "P2-023",
+      "phase": 2,
+      "title": "Android ARM64 native AOT build conformance",
+      "status": "done",
+      "kind": "infrastructure",
+      "card": "Planning~/Tasks/P2/P2-023-android-aot-build.md",
+      "dependsOn": [
+        "P2-012",
+        "P2-018",
+        "P2-019",
+        "P2-020"
+      ],
+      "owns": [
+        "Tools~/Verification/P2/Android/",
+        "Planning~/Evidence/P2-ANDROID/"
+      ]
+    },
+    {
+      "id": "P2-024",
+      "phase": 2,
+      "title": "Web unmanaged backend re-spike and conformance",
+      "status": "done",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P2/P2-024-web-native-respike.md",
+      "dependsOn": [
+        "P2-012",
+        "P2-018",
+        "P2-020",
+        "P2-021"
+      ],
+      "owns": [
+        "Spikes~/WebBackend/P2/",
+        "Benchmarks~/Platform/Web/P2/",
+        "Tools~/Verification/P2/Web/",
+        "Planning~/Evidence/P2-WEB/"
+      ]
+    },
+    {
+      "id": "P2-025",
+      "phase": 2,
+      "title": "Phase 2 independent integration gate",
+      "status": "blocked",
+      "kind": "review",
+      "card": "Planning~/Tasks/P2/P2-025-phase2-integration-gate.md",
+      "dependsOn": [
+        "P2-020",
+        "P2-021",
+        "P2-022",
+        "P2-023",
+        "P2-024"
+      ],
+      "owns": [
+        "Planning~/Evidence/P2-GATE/"
+      ]
     }
   ]
 }

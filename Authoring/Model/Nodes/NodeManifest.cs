@@ -318,7 +318,10 @@ namespace AIBT.Authoring
             IReadOnlyList<NodeParameterContract> parameters,
             NodeConfigurationDescriptor configuration)
         {
-            if (parameters.Count != configuration.Fields.Count)
+            var scalarFieldCount = 0;
+            for (var fieldIndex = 0; fieldIndex < configuration.Fields.Count; fieldIndex++)
+                if (!configuration.Fields[fieldIndex].IsGeneratedHandle) scalarFieldCount++;
+            if (parameters.Count != scalarFieldCount)
             {
                 throw new ArgumentException("Every parameter must have exactly one configuration packing field.", nameof(configuration));
             }
@@ -345,6 +348,12 @@ namespace AIBT.Authoring
             for (var fieldIndex = 0; fieldIndex < configuration.Fields.Count; fieldIndex++)
             {
                 var field = configuration.Fields[fieldIndex];
+                if (field.IsGeneratedHandle)
+                {
+                    if (field.Size != 4 || field.Alignment != 4)
+                        throw new ArgumentException("Generated handle packing must use the fixed 4-byte layout.", nameof(configuration));
+                    continue;
+                }
                 for (var parameterIndex = 0; parameterIndex < parameters.Count; parameterIndex++)
                 {
                     if (parameters[parameterIndex].Name != field.ParameterName)

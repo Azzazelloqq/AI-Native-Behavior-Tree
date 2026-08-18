@@ -1,0 +1,19 @@
+{
+  "name": "AIBT.NativeSharedBlackboard.Tests",
+  "rootNamespace": "AIBT.Tests.Runtime.NativeExecution.Blackboard.Shared",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.NativeTreeAgentBlackboard.Tests",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

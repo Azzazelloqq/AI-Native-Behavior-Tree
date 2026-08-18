@@ -1,0 +1,19 @@
+{
+  "name": "AIBT.CodeGen.GenerationTests",
+  "rootNamespace": "AIBT.Tests.CodeGen.Generation",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "analyzers": [
+    "GUID:31a3f09584684895a0a72916d3ad4de0"
+  ]
+}

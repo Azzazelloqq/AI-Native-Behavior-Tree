@@ -1,0 +1,7 @@
+*.log
+*.raw.json
+windows-player-generated-dispatch-aot-*.json
+*.xml
+*.exe
+*.dll
+*_BurstDebugInformation_DoNotShip/

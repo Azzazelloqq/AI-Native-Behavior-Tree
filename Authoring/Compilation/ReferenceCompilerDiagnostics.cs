@@ -12,6 +12,13 @@ namespace AIBT.Authoring
         public static readonly DiagnosticCode ConfigurationPacking = new DiagnosticCode("AIBT3015");
         public static readonly DiagnosticCode DefaultValuePacking = new DiagnosticCode("AIBT3016");
         public static readonly DiagnosticCode InvalidCompiledStructure = new DiagnosticCode("AIBT3017");
+        public static readonly DiagnosticCode InvalidGeneratedBinding = new DiagnosticCode("AIBT3018");
+        public static readonly DiagnosticCode GeneratedLayoutMismatch = new DiagnosticCode("AIBT3019");
+        public static readonly DiagnosticCode MissingScopeContract = new DiagnosticCode("AIBT2042");
+        public static readonly DiagnosticCode ScopeContractMismatch = new DiagnosticCode("AIBT2043");
+        public static readonly DiagnosticCode SharedReductionMissing = new DiagnosticCode("AIBT2044");
+        public static readonly DiagnosticCode InvalidReduction = new DiagnosticCode("AIBT2045");
+        public static readonly DiagnosticCode UnsupportedReduction = new DiagnosticCode("AIBT2046");
     }
 
     internal static class ReferenceCompilerDiagnostics
@@ -32,6 +39,13 @@ namespace AIBT.Authoring
             Descriptor(ReferenceCompilerDiagnosticCodes.ConfigurationPacking),
             Descriptor(ReferenceCompilerDiagnosticCodes.DefaultValuePacking),
             Descriptor(ReferenceCompilerDiagnosticCodes.InvalidCompiledStructure),
+            Descriptor(ReferenceCompilerDiagnosticCodes.InvalidGeneratedBinding),
+            Descriptor(ReferenceCompilerDiagnosticCodes.GeneratedLayoutMismatch),
+            Descriptor(ReferenceCompilerDiagnosticCodes.MissingScopeContract),
+            Descriptor(ReferenceCompilerDiagnosticCodes.ScopeContractMismatch),
+            Descriptor(ReferenceCompilerDiagnosticCodes.SharedReductionMissing),
+            Descriptor(ReferenceCompilerDiagnosticCodes.InvalidReduction),
+            Descriptor(ReferenceCompilerDiagnosticCodes.UnsupportedReduction),
         });
 
         internal static Diagnostic Create(
@@ -54,7 +68,7 @@ namespace AIBT.Authoring
         {
             return new DiagnosticDescriptor(
                 code,
-                DiagnosticSubsystem.RegistryAndCompiler,
+                code.Value[4] == '2' ? DiagnosticSubsystem.SemanticValidation : DiagnosticSubsystem.RegistryAndCompiler,
                 DiagnosticSeverity.Error,
                 optionalFields: LocationFields);
         }

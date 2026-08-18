@@ -110,6 +110,11 @@ namespace AIBT.Authoring
     public sealed class NodeConfigurationField
     {
         public NodeConfigurationField(string parameterName, uint offset, uint size, byte alignment)
+            : this(parameterName, offset, size, alignment, false)
+        {
+        }
+
+        public NodeConfigurationField(string parameterName, uint offset, uint size, byte alignment, bool isGeneratedHandle)
         {
             if (string.IsNullOrWhiteSpace(parameterName))
             {
@@ -135,6 +140,7 @@ namespace AIBT.Authoring
             Offset = offset;
             Size = size;
             Alignment = alignment;
+            IsGeneratedHandle = isGeneratedHandle;
         }
 
         public string ParameterName { get; }
@@ -144,6 +150,8 @@ namespace AIBT.Authoring
         public uint Size { get; }
 
         public byte Alignment { get; }
+
+        public bool IsGeneratedHandle { get; }
     }
 
     public sealed class NodeConfigurationDescriptor

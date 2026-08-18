@@ -15,3 +15,10 @@ All notable changes to this project will be documented here. The project follows
 - Explicit-stack reference executor with lifecycle safety, memory/reactive/parallel composites, decorators, blackboard observers, commands, async completions, and deterministic step budgeting.
 - Backend-neutral behavior-case runner and an end-to-end golden semantic slice covering canonical parse, validate, compile, and execute.
 - Repeatable static, Unity compile, EditMode, Android ARM64 IL2CPP, and Unity Web verification entrypoints with sanitized evidence.
+- Generated ABI v2 Burst node dispatch, public analyzers, deterministic catalog
+  prebinding, and a public Condition/Action package sample.
+- Fixed-capacity native program/state owners, Tree/Agent/Shared blackboards,
+  snapshots, commands/completions, diagnostics/trace, lifecycle/composites,
+  observers, async actions, budgeting, and same-frame batched Jobs scheduling.
+- Native/reference golden equivalence, initialized zero-GC/lifetime gates,
+  Android ARM64 IL2CPP/Burst AOT evidence, and Chrome/Firefox Web conformance.

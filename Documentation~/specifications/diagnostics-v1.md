@@ -28,6 +28,7 @@ Codes use `AIBT` plus four decimal digits. Phase 1 reserves:
 - `AIBT2000`-`2999`: semantic validation and policy;
 - `AIBT3000`-`3999`: node registry and compiler;
 - `AIBT4000`-`4999`: execution, blackboard, command, and async runtime;
+- `AIBT5000`-`5999`: public node ABI, analyzers, generated catalogs, and binding/layout handshakes;
 - `AIBT9000`-`9999`: tooling and test-case input.
 
 Adding a code requires one catalog entry with default severity and field contract. Consumers must not infer subsystem from message text.

@@ -1,0 +1,22 @@
+{
+  "format": "aibt.generated-layout-fixture",
+  "formatVersion": 1,
+  "configuration": {
+    "size": 16,
+    "alignment": 8,
+    "fields": [
+      { "id": "enabled", "offset": 0, "size": 1, "alignment": 1 },
+      { "id": "target", "offset": 4, "size": 4, "alignment": 4 },
+      { "id": "value", "offset": 8, "size": 8, "alignment": 8 }
+    ],
+    "packedHex": "01000000070000000807060504030201"
+  },
+  "binding": {
+    "id": "agent-target",
+    "scope": "agent",
+    "access": "read",
+    "type": "Int32",
+    "typeVersion": 1,
+    "ordinal": 0
+  }
+}

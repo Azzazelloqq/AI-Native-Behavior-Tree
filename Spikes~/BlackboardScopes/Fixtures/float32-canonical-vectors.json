@@ -1,0 +1,16 @@
+{
+  "oracle": ".NET Single round-trip search with independent plain/exponent minimization",
+  "vectors": [
+    { "bitsHex": "00000000", "expected": "0", "case": "positive zero" },
+    { "bitsHex": "80000000", "expected": "0", "case": "negative zero canonicalizes" },
+    { "bitsHex": "358637bd", "expected": "1e-6", "case": "exponent is shorter than plain" },
+    { "bitsHex": "b58637bd", "expected": "-1e-6", "case": "negative exponent" },
+    { "bitsHex": "41480000", "expected": "12.5", "case": "plain is shorter" },
+    { "bitsHex": "47c35000", "expected": "1e5", "case": "positive exponent omits plus" },
+    { "bitsHex": "3400d959", "expected": "1.2e-7", "case": "short significant exponent" },
+    { "bitsHex": "3a831c05", "expected": "0.0010002857", "case": "equal-length tie uses ordinal text" },
+    { "bitsHex": "ba831c05", "expected": "-0.0010002857", "case": "signed equal-length tie" },
+    { "bitsHex": "3f9e064b", "expected": "1.234567", "case": "nearest shortest plain" },
+    { "bitsHex": "4b800000", "expected": "16777216", "case": "exact integer" }
+  ]
+}

@@ -1,6 +1,6 @@
 # Work packages
 
-Only Phase 0 and Phase 1 are decomposed into assignable atomic cards. Later packages remain non-assignable until their entry gate is complete and a dedicated decomposition task is approved.
+Phases 0, 1, and 2 are decomposed into atomic cards. Later packages remain non-assignable until their entry gate is complete and a dedicated decomposition task is approved.
 
 ## P0 — toolchain and evidence
 
@@ -22,7 +22,9 @@ Exit: all Phase 1 criteria in `MASTER_PLAN.md` pass and independent integration 
 
 ## P2 — data-oriented Burst runtime
 
-Entry: P1 is done and its behavior cases are immutable regression inputs.
+Entry: the P1 semantic implementation and golden slice are accepted, and its behavior cases are immutable regression inputs. On 2026-08-14 the owner explicitly authorized P2 decomposition and the P2-001 contract task without waiting for the external self-hosted Unity runner; this waiver does not convert `P0-005`, `P0-006`, or `P1-019` to Done.
+
+Atomic cards: `P2-001` through `P2-025`.
 
 Planned outputs:
 
@@ -33,9 +35,11 @@ Planned outputs:
 - parallel native executor and allocation tests;
 - Phase 2 benchmark baselines.
 
-Before assignment, a coordinator MUST create atomic cards from measured P1 layouts and the accepted Web spike. Agents may not implement P2 directly from this summary.
+The atomic dependency graph is recorded in `work-items.json`; agents may not implement P2 directly from this summary.
 
-The first P2 card MUST be a normative public node-ABI contract and analyzer feasibility task. No custom user-node API may be implemented before that contract is accepted.
+`P2-001` is the mandatory normative public node-ABI contract and analyzer feasibility task. No production custom user-node API or native dispatch may be implemented before that contract is independently accepted.
+
+Exit: representative public custom nodes execute through generated dispatch in fixed native Immediate, deterministic Budgeted, and BatchedJobsSameFrame paths; every applicable P1 behavior case remains equivalent; the measured initialized Burst path has zero managed allocations; Windows Player, Android ARM64 AOT build, and accepted desktop Web policies have bounded evidence; `P2-025` independently accepts the slice.
 
 ## P3 — editor and layout
 

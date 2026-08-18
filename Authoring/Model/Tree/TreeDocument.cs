@@ -8,6 +8,7 @@ namespace AIBT.Authoring
     {
         public const string CurrentFormat = "aibt.tree";
         public const int CurrentFormatVersion = 1;
+        public const int LatestFormatVersion = 2;
 
         private List<BlackboardKeyDefinition> _blackboard;
         private ReadOnlyCollection<BlackboardKeyDefinition> _blackboardView;
@@ -26,6 +27,24 @@ namespace AIBT.Authoring
             TagSet tags = null,
             SemanticObject metadata = null,
             Revision revision = default)
+            : this(format, formatVersion, treeId, name, root, nodes, blackboard, description, tags, metadata, revision, null, null)
+        {
+        }
+
+        public TreeDocument(
+            string format,
+            int formatVersion,
+            TreeId treeId,
+            string name,
+            NodeId root,
+            IEnumerable<NodeDocument> nodes,
+            IEnumerable<BlackboardKeyDefinition> blackboard,
+            string description,
+            TagSet tags,
+            SemanticObject metadata,
+            Revision revision,
+            BlackboardScopeContract agentContract,
+            BlackboardScopeContract sharedContract)
         {
             if (nodes == null)
             {
@@ -40,11 +59,29 @@ namespace AIBT.Authoring
             Description = description;
             Tags = tags;
             Metadata = metadata;
+            AgentContract = agentContract;
+            SharedContract = sharedContract;
             _nodes = new List<NodeDocument>(nodes);
             _nodesView = _nodes.AsReadOnly();
             _blackboard = new List<BlackboardKeyDefinition>(blackboard ?? Array.Empty<BlackboardKeyDefinition>());
             _blackboardView = _blackboard.AsReadOnly();
             Revision = revision.IsValid ? revision : new Revision(1);
+        }
+
+        public static TreeDocument CreateVersion2(
+            TreeId treeId,
+            string name,
+            NodeId root,
+            IEnumerable<NodeDocument> nodes,
+            BlackboardScopeContract agentContract,
+            BlackboardScopeContract sharedContract,
+            IEnumerable<BlackboardKeyDefinition> blackboard = null,
+            string description = null,
+            TagSet tags = null,
+            SemanticObject metadata = null,
+            Revision revision = default)
+        {
+            return new TreeDocument(CurrentFormat, LatestFormatVersion, treeId, name, root, nodes, blackboard, description, tags, metadata, revision, agentContract, sharedContract);
         }
 
         public string Format { get; private set; }
@@ -66,6 +103,10 @@ namespace AIBT.Authoring
         public TagSet Tags { get; private set; }
 
         public SemanticObject Metadata { get; private set; }
+
+        public BlackboardScopeContract AgentContract { get; private set; }
+
+        public BlackboardScopeContract SharedContract { get; private set; }
 
         public Revision Revision { get; private set; }
 
@@ -260,6 +301,7 @@ namespace AIBT.Authoring
                 && string.Equals(left.Name, right.Name, StringComparison.Ordinal)
                 && left.Type == right.Type
                 && left.Scope == right.Scope
+                && left.Reduction == right.Reduction
                 && string.Equals(left.Description, right.Description, StringComparison.Ordinal)
                 && BlackboardDefaultEquals(left.DefaultValue, right.DefaultValue);
         }

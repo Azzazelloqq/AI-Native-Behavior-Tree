@@ -1,0 +1,17 @@
+{
+  "name": "AIBT.CodeGen.GenerationConsumerTests",
+  "rootNamespace": "AIBT.Tests.CodeGen.GenerationConsumer",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring",
+    "AIBT.CodeGen.GenerationTests"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

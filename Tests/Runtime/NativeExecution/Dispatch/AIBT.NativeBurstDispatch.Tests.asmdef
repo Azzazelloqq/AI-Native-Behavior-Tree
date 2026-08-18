@@ -1,0 +1,22 @@
+{
+  "name": "AIBT.NativeBurstDispatch.Tests",
+  "rootNamespace": "AIBT.Tests.Runtime.NativeExecution.Dispatch",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.CodeGen.GenerationTests",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "analyzers": [
+    "GUID:31a3f09584684895a0a72916d3ad4de0"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

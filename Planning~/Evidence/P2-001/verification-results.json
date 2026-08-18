@@ -1,0 +1,86 @@
+{
+  "status": "accepted",
+  "recordedRunAcceptanceStatus": "accepted-round5",
+  "unityVersion": "6000.5.8f1",
+  "roslynTargetVersion": "4.3.1",
+  "unityRoslynHostVersion": "4.10.0.0",
+  "burstResolvedVersion": "1.8.29",
+  "generatedFacadeSha256": "798a7771313c34b2c32db57e2d9a62684802b6fdbfe029a0f6d326d8a536eb6f",
+  "generatedFacadeUtf8Bytes": 32899,
+  "independentCatalogStreamSha256": "609b7f68f97b7d03940773a1cd5699129439e0fb4be655fda0bc88724ba0be22",
+  "independentP1RegistrySha256": "7ee137f15483dc75bd251c6469f3f0f189519dfac622a1f8e7498f3f249381a6",
+  "cleanOutputRuns": 2,
+  "cleanOutputsByteIdentical": true,
+  "runnerAssertionsPerCleanRun": 293,
+  "timingObservationMilliseconds": 2679,
+  "unityScriptCompilationObservationSeconds": 1.168751,
+  "generatorWarnings": 0,
+  "generatorErrors": 0,
+  "runnerWarnings": 0,
+  "runnerErrors": 0,
+  "unityTests": {
+    "total": 26,
+    "passed": 26,
+    "failed": 0,
+    "skipped": 0
+  },
+  "burstFailureOrFallbackMarkers": 0,
+  "unityAnalyzerFailureMarkers": 0,
+  "unityAnalyzerLoadStatus": "clean",
+  "invalidUnityProbeExpectedDiagnostic": "AIBT5001",
+  "invalidUnityProbeStatus": "pass",
+  "generatedPostAcquireDirectFailureReturns": 0,
+  "generatedTryFailDispatchRoutes": 53,
+  "repositoryStaticVerification": "pass",
+  "repositorySchemaVerification": "pass",
+  "resultPhysicalContract": {
+    "codeStorage": "u16-low-byte-enum-high-byte-zero",
+    "validationOffsets": [0, 2],
+    "executionOffsets": [0, 2, 4, 8],
+    "undefinedEnumSuccess": false,
+    "bridgeInvalidValueResult": "InvalidStatus-no-mutation",
+    "managedAndBurstCanaries": "pass"
+  },
+  "explicitPublicAbiManifest": {
+    "records": 352,
+    "utf8Bytes": 47288,
+    "comparison": "line-for-line",
+    "secondarySha256": "f7f5b62fb2c26194011a2654fb50d78ba1991268022291612f9ae5a616711348",
+    "facadeMembers": [
+      "IsUsable",
+      "Fingerprint",
+      "Validate",
+      "ExecuteImmediate",
+      "Schedule"
+    ]
+  },
+  "remediationCandidate": {
+    "acceptanceStatus": "accepted",
+    "b1ExactPublicAbi": "candidate-proof-pass-explicit-352-record-manifest",
+    "b2FacadeHandshakeAndSchedule": "accepted-round4-all-host-and-job-copy-ownership",
+    "b3AnalyzerImport": "candidate-proof-pass",
+    "b4RandomLifecycle": "candidate-proof-pass-actual-context-burst-jobs",
+    "b5EnforcementAndDiagnostics": "candidate-proof-pass-wrong-mode-async-and-external-selected-shard"
+  },
+  "independentReview": {
+    "priorVerdict": "reject",
+    "priorBlockerCount": 5,
+    "currentVerdict": "accept",
+    "round5Verdict": "accept",
+    "acceptedOn": "2026-08-14",
+    "acceptedBy": "independent-round5-review",
+    "round4Verdict": "reject",
+    "round3Verdict": "reject",
+    "round2Verdict": "reject",
+    "round2BlockerCount": 5,
+    "acceptedSubproofsRetained": [
+      "cross-assembly-bridge",
+      "phase-contexts-and-memoryless-observer",
+      "fieldwise-codec-canary",
+      "collision-seam",
+      "post-acquire-cleanup-routing",
+      "actual-burst-1.8.29",
+      "b2-all-host-and-job-copy-ownership"
+    ]
+  }
+}

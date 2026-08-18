@@ -1,0 +1,46 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "tests.generated.v2",
+  "name": "Generated v2",
+  "root": "root",
+  "blackboardContracts": {
+    "agent": {
+      "contractId": "tests.agent.vitals",
+      "contractVersion": 1
+    }
+  },
+  "blackboard": {
+    "score": {
+      "type": "Int32",
+      "typeVersion": 1,
+      "scope": "agent",
+      "default": 0
+    }
+  },
+  "nodes": {
+    "leaf": {
+      "type": "aibt.tests.generated-node",
+      "typeVersion": 1,
+      "parameters": {
+        "enabled": true
+      },
+      "bindings": {
+        "agent-target": "score"
+      },
+      "observer": {
+        "mode": "self",
+        "watchedKeys": [
+          "score"
+        ]
+      }
+    },
+    "root": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "children": [
+        "leaf"
+      ]
+    }
+  }
+}

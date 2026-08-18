@@ -1,0 +1,35 @@
+{
+  "nodes": {
+    "root": {
+      "tags": ["fixture", "shared"],
+      "observer": { "watchedKeys": ["shared_read_only"], "mode": "self" },
+      "parameters": {},
+      "typeVersion": 1,
+      "type": "aibt.test.shared-writer"
+    }
+  },
+  "blackboard": {
+    "tree_counter": { "description": "Different non-semantic wording.", "type": "Int32" },
+    "shared_sum_score": { "default": 0, "reduction": { "kind": "sum" }, "scope": "shared", "typeVersion": 1, "type": "Int64" },
+    "shared_read_only": { "default": 0, "scope": "shared", "typeVersion": 1, "type": "Int32" },
+    "shared_min_distance": { "default": 0, "reduction": { "kind": "min" }, "scope": "shared", "typeVersion": 1, "type": "Float64" },
+    "shared_max_threat": { "default": 0, "reduction": { "kind": "max" }, "scope": "shared", "typeVersion": 1, "type": "Float32" },
+    "shared_last_target": { "default": { "weight": 0, "entity": 0 }, "reduction": { "kind": "last" }, "scope": "shared", "typeVersion": 2, "type": "example.Target" },
+    "shared_first_label": { "default": "none", "reduction": { "kind": "first" }, "scope": "shared", "typeVersion": 1, "type": "FixedString32" },
+    "shared_any_alert": { "default": false, "reduction": { "kind": "any" }, "scope": "shared", "typeVersion": 1, "type": "Bool" },
+    "shared_all_ready": { "default": false, "reduction": { "kind": "all" }, "scope": "shared", "typeVersion": 1, "type": "Bool" },
+    "agent_ready": { "default": false, "scope": "agent", "typeVersion": 1, "type": "Bool" },
+    "agent_health": { "default": 100, "description": "Changed non-semantic wording.", "scope": "agent", "typeVersion": 1, "type": "Int32" }
+  },
+  "blackboardContracts": {
+    "shared": { "contractVersion": 2, "contractId": "aibt.shared.squad" },
+    "agent": { "contractVersion": 3, "contractId": "aibt.agent.vitals" }
+  },
+  "root": "root",
+  "name": "Different display name",
+  "treeId": "squad.behavior",
+  "formatVersion": 2,
+  "format": "aibt.tree",
+  "tags": ["contract", "fixture"],
+  "metadata": { "owner": "changed non-semantic metadata" }
+}

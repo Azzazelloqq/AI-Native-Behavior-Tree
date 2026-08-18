@@ -4,9 +4,9 @@
 
 The project targets a future Burst-compatible, zero-GC-per-tick production path; a readable visual editor; machine-readable contracts; reproducible performance research; and an optional MCP integration. DOTS Entities is not required.
 
-Phase 1 validates the managed reference backend in Unity Editor on Windows x64, an Android ARM64 IL2CPP + Burst build smoke, and single-thread Unity Web execution in Chrome and Firefox. These results do not claim a production Burst/jobs executor, device performance, or zero-allocation execution.
+Phase 2 adds the generated Burst dispatch and fixed-capacity native executor while preserving the Phase 1 semantic oracle. The initialized native paths have focused zero-GC evidence, Android ARM64 has an actual IL2CPP/Burst AOT build, and the single-thread Web backend passes Chrome and Firefox conformance. Device performance, Safari/mobile Web, automatic policy selection, and a Windows Player baseline are not claimed.
 
-> Status: Phase 1 semantic vertical slice implemented. Canonical authoring, validation, compilation, immutable runtime programs, the deterministic reference executor, blackboard/observers, async commands, step budgeting, and backend-neutral behavior cases are covered by golden integration tests. The visual editor, MCP integration, native jobs executor, hot reload, and production performance work remain later phases.
+> Status: P2-001 through P2-021, Android P2-023, and Web P2-024 are implemented and verified. The Windows x64 IL2CPP/Burst baseline is blocked on the host MSVC/Windows SDK installation, so the final clean committed P2 integration gate remains open. The visual editor, MCP integration, hot reload, and calibrated Auto/pipelined scheduling remain later phases.
 
 ## Design goals
 
@@ -24,7 +24,7 @@ Phase 1 validates the managed reference backend in Unity Editor on Windows x64, 
 | `Runtime/` | Compiled tree representation, execution state, scheduler, blackboard, commands |
 | `Authoring/` | Semantic authoring model, validation, compilation contracts |
 | `Editor/` | Planned visual editor, debugging, profiling, and layout authoring |
-| `CodeGen~/` | Planned generated dispatch, analyzers, and templates |
+| `CodeGen~/` | Generated Burst dispatch, analyzers, and templates |
 | `Tools~/McpServer/` | Planned optional MCP server and AI-agent integration |
 | `Schemas~/` | Draft schemas for canonical files and tool contracts |
 | `Tests/` | Runtime and editor behavior tests |
@@ -42,9 +42,9 @@ Visual Editor       MCP / AI tools       Text authoring
                          |
                 Immutable Runtime Program
                          |
-           Reference Immediate / Step-Budgeted
+       Reference oracle / Native generated executor
                          |
-              World Snapshot -> Command Buffer
+       Snapshot -> Execute -> Reduce -> Publish
 ```
 
 The runtime does not depend on the editor, MCP, an LLM provider, or DOTS Entities. See [Architecture](Documentation~/architecture.md) and [Scope](Documentation~/scope.md).

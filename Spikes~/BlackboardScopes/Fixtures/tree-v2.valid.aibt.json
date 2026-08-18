@@ -1,0 +1,106 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "squad.behavior",
+  "name": "Squad behavior",
+  "root": "root",
+  "blackboardContracts": {
+    "agent": {
+      "contractId": "aibt.agent.vitals",
+      "contractVersion": 3
+    },
+    "shared": {
+      "contractId": "aibt.shared.squad",
+      "contractVersion": 2
+    }
+  },
+  "blackboard": {
+    "agent_health": {
+      "type": "Int32",
+      "typeVersion": 1,
+      "scope": "agent",
+      "description": "Current health.",
+      "default": 100
+    },
+    "agent_ready": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "agent",
+      "default": false
+    },
+    "shared_all_ready": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "shared",
+      "reduction": { "kind": "all" },
+      "default": false
+    },
+    "shared_any_alert": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "shared",
+      "reduction": { "kind": "any" },
+      "default": false
+    },
+    "shared_first_label": {
+      "type": "FixedString32",
+      "typeVersion": 1,
+      "scope": "shared",
+      "reduction": { "kind": "first" },
+      "default": "none"
+    },
+    "shared_last_target": {
+      "type": "example.Target",
+      "typeVersion": 2,
+      "scope": "shared",
+      "reduction": { "kind": "last" },
+      "default": { "entity": 0, "weight": 0 }
+    },
+    "shared_max_threat": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "shared",
+      "reduction": { "kind": "max" },
+      "default": 0
+    },
+    "shared_min_distance": {
+      "type": "Float64",
+      "typeVersion": 1,
+      "scope": "shared",
+      "reduction": { "kind": "min" },
+      "default": 0
+    },
+    "shared_read_only": {
+      "type": "Int32",
+      "typeVersion": 1,
+      "scope": "shared",
+      "default": 0
+    },
+    "shared_sum_score": {
+      "type": "Int64",
+      "typeVersion": 1,
+      "scope": "shared",
+      "reduction": { "kind": "sum" },
+      "default": 0
+    },
+    "tree_counter": {
+      "type": "Int32",
+      "description": "Retains the v1 Tree-scope shape."
+    }
+  },
+  "nodes": {
+    "root": {
+      "type": "aibt.test.shared-writer",
+      "typeVersion": 1,
+      "parameters": {},
+      "bindings": { "shared-reader": "shared_read_only" },
+      "observer": {
+        "mode": "self",
+        "watchedKeys": ["shared_read_only"]
+      },
+      "tags": ["fixture", "shared"]
+    }
+  },
+  "tags": ["contract", "fixture"],
+  "metadata": { "owner": "P2-003" }
+}

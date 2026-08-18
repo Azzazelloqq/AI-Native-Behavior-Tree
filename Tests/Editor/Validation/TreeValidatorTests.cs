@@ -224,6 +224,45 @@ namespace AIBT.Tests.Editor.Validation
             AssertCode(invalid, TreeValidationDiagnosticCodes.InvalidObserverContext);
         }
 
+        [TestCase(BlackboardScope.Agent)]
+        [TestCase(BlackboardScope.Shared)]
+        public void Validate_Version2ObserverAcceptsContractedPersistedScopesWhileVersion1RejectsThem(BlackboardScope scope)
+        {
+            var key = new BlackboardKeyDefinition(
+                "ready", "ready", BlackboardTypeReference.BuiltIn(BlackboardValueType.Bool), scope,
+                BlackboardDefaultValue.Bool(false), null,
+                scope == BlackboardScope.Shared ? BlackboardReductionKind.Any : BlackboardReductionKind.None);
+            var conditionManifest = Manifest(
+                "game.ready-condition", NodeExecutionDomain.Burst, true,
+                Array.Empty<string>(), Array.Empty<string>(), NodeBehaviorKind.Condition);
+            var condition = new NodeDocument(
+                Id("condition"), conditionManifest.TypeId, 1,
+                observer: new NodeObserver("self", new[] { "ready" }));
+            var root = Node("root", BuiltInNodeManifests.ReactiveSequenceTypeId,
+                children: new[] { Id("condition") });
+            var registry = NodeRegistryBuilder.CreateWithBuiltIns()
+                .AddUserExtension(conditionManifest).Build().Registry;
+            var agentContract = scope == BlackboardScope.Agent
+                ? new BlackboardScopeContract("example.agent", 1)
+                : null;
+            var sharedContract = scope == BlackboardScope.Shared
+                ? new BlackboardScopeContract("example.shared", 1)
+                : null;
+            var version2 = TreeDocument.CreateVersion2(
+                new TreeId("tree"), "Tree", root.Id, new[] { root, condition },
+                agentContract, sharedContract, new[] { key });
+            var version1 = new TreeDocument(
+                TreeDocument.CurrentFormat, TreeDocument.CurrentFormatVersion,
+                new TreeId("tree"), "Tree", root.Id, new[] { root, condition }, new[] { key });
+            var options = new ValidationOptions(supportsAgentScope: true, supportsSharedScope: true);
+
+            var accepted = TreeValidator.Validate(version2, registry, options);
+            var rejected = TreeValidator.Validate(version1, registry, options);
+
+            Assert.That(accepted.Any(item => item.Code == TreeValidationDiagnosticCodes.InvalidWatchedKey), Is.False);
+            AssertCode(rejected, TreeValidationDiagnosticCodes.InvalidWatchedKey);
+        }
+
         [Test]
         public void Validate_UnknownObserverStillReportsStructuralDiagnostics()
         {

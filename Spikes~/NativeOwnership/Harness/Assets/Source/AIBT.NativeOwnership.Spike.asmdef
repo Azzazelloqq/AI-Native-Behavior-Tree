@@ -1,0 +1,8 @@
+{
+  "name": "AIBT.NativeOwnership.Spike",
+  "rootNamespace": "AIBT.NativeOwnership.Spike",
+  "references": ["Unity.Burst", "Unity.Collections"],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}
