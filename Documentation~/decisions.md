@@ -15,7 +15,7 @@ This file records accepted direction. Detailed ADR files may be introduced when 
 | AIBT-009 | Make MCP optional, model-neutral, transactional, and schema-driven. | Accepted |
 | AIBT-010 | Treat graph readability, layout, comments, groups, and reroutes as product features. | Accepted |
 | AIBT-011 | Base initial development on Unity 6; add compatibility claims only after verification. | Accepted |
-| AIBT-012 | Select the graph UI framework only after an editor technology spike. | Pending spike |
+| AIBT-012 | Use [`UnityEditor.Experimental.GraphView`](decisions/ADR-P3-014-editor-graph-framework.md) as the editor graph framework; Unity Graph Toolkit was rejected ([ADR P3-001](decisions/ADR-P3-001-editor-graph-framework.md)). | Accepted |
 | AIBT-013 | Add runtime autotuning only when benchmarks show value over calibrated heuristics. | Pending research |
 | AIBT-014 | Fix public statuses to Success, Failure, and Running; lifecycle and composite behavior follow Execution Semantics v1. | Accepted |
 | AIBT-015 | Execute one tree instance sequentially; `Parallel` is semantic, while CPU parallelism is across instances and batches. | Accepted |

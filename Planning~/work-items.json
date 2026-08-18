@@ -714,7 +714,7 @@
       "id": "P3-002",
       "phase": 3,
       "title": "Layout model v1 contract",
-      "status": "draft",
+      "status": "ready",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-002-layout-model-v1-contract.md",
       "dependsOn": [
