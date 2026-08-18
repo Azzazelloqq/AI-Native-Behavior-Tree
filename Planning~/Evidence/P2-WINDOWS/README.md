@@ -73,12 +73,15 @@ public contract changed.
 
 ## Passing run
 
-Full harness run `20260818-072054` (isolated project
-`aibt-p2-012-player-aot-5e01e01c6f5249f8b2f2381829219615`):
+Full harness run `20260818-133534` (isolated project
+`aibt-p2-012-player-aot-51860d5dcefb42588173d9626a9ea7f4`), rerun after the
+P2-025 gate's CodeGen reproducibility fix regenerated `Analyzers/AIBT.CodeGen.dll`
+(see `Planning~/Evidence/P2-GATE/`); the earlier `20260818-072054` run above
+used the prior analyzer bytes and is superseded:
 
 ```text
 AIBT P2-012 Windows Player/AOT acceptance passed. Evidence:
-Benchmarks~/Phase2/Dispatch/Results/windows-player-generated-dispatch-aot-20260818-072054.json
+Benchmarks~/Phase2/Dispatch/Results/windows-player-generated-dispatch-aot-20260818-133534.json
 ```
 
 Build: Unity `6000.5.8f1`, `StandaloneWindows64` x86_64, IL2CPP, Burst
@@ -102,19 +105,19 @@ single-workstation result; Phase 4 owns that.
 Both `Verify-WindowsBaselineEvidence.ps1 -EvidencePath <raw>` and
 `-EvidencePath <acceptance>` pass against this run's artifacts.
 
-### Artifact digests (SHA-256), run `20260818-072054`
+### Artifact digests (SHA-256), run `20260818-133534`
 
-- acceptance evidence: `40f12d938179dee317fe63b6e5cd3f77a319fc58e738c9430d2f14571b295746`
-  (`Benchmarks~/Phase2/Dispatch/Results/windows-player-generated-dispatch-aot-20260818-072054.json`)
-- build log: `9e687e4db62f5c89a4ee7a9c2b967cbb2a8e9a03c2b207e3e6ba8f24e1fa17d1`
-- build raw evidence: `ac35e74d06f6990c166dcd4af476420c99479e94647ee215c58f7d99ae355469`
-- player log: `72082302c8b2de6c2e516854401a8fdf52a951b542d8d1532cc9100adfa32943`
-- player raw evidence: `e580448f3daa35a49c36dacda5787d53eae66268d80e0c8272c87bbd3a259089`
-- windows-baseline raw evidence: `631b926c835e8a254ab0a8c8f2318954acab20e7e95d4da57dab82065779e49c`
+- acceptance evidence: `dfedf118ebb5052e9c3df81bff8b8e3dfa6a1a9ff28d24637a598c74cb1daac6`
+  (`Benchmarks~/Phase2/Dispatch/Results/windows-player-generated-dispatch-aot-20260818-133534.json`)
+- build log: `5a27f9f4d6074232000cebf3ddf6e5d88f228051ae975663cac293f19073f92e`
+- build raw evidence: `be426dc2bb6be8884ea92eba7052b0b154b994ab3890ec38f8158da92753a766`
+- player log: `e0058613a4a25d8c4813229ee34fd4f90ca1a834e611d40f837ffc5f2fa257e5`
+- player raw evidence: `d5fb1cce57a8bcafff560914f6a0d96a88f110ddcaf22a034713537152815540`
+- windows-baseline raw evidence: `42f74433d1d692fd08f3a3745625e2e83ec4d90a02655f5c1f1b5eb099f9cd7b`
 - Player executable: `922bca676cca2fb4fd06b9e5938dee6f665a1d9f8ba73491fb7b476fbee0260e`
-- GameAssembly.dll: `49e270faa891ec77ea774b5374f60bc1c051876a62aef386f17e0d460d04ab77`
-- global-metadata.dat: `915017778f3369416b55474ab95595dfadaf27376f3158563a60ad0fa2dce376`
-- lib_burst_generated.dll (331264 bytes): `9673a9925355d6f686c4228bcd925b1548a33f745d61878de3de8492cd8b7bc3`
+- GameAssembly.dll: `c027c28969cead97d51ea8e4a44eb7002a5109d64515e0e815cf6b9b3a00b170`
+- global-metadata.dat: `19631384105e3925273b5623724c2443ce1a2670da48ad2f2b93f0fa816ad788`
+- lib_burst_generated.dll (331264 bytes): `6958e54b75a313b9c21418df67072a815ffe9dae95434d57ec3ca2b754999ed5`
 - checked source generator (`Analyzers/AIBT.CodeGen.dll`): `4ac885faf44806162dc0d5f71d46ee4a30bba8b2beb92783398c9ef48ce9dea5`
 - environment snapshot: `f82d9bf6c91a67c9a1f909ebaee4015b7cbbc83415ff76cc42fa3d499a9b9825`
 
