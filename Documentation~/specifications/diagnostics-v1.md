@@ -24,7 +24,7 @@ Unknown optional values are absent, never synthesized. A diagnostic record is im
 Codes use `AIBT` plus four decimal digits. Phase 1 reserves:
 
 - `AIBT0001`-`0999`: core/runtime and identity;
-- `AIBT1000`-`1999`: syntax, schema, and canonical serialization;
+- `AIBT1000`-`1999`: syntax, schema, and canonical serialization (`1000`-`1099`: `.aibt.json`; `1100`-`1199`: `*.aibt.layout.json`, see `editor-layout-v1.md`);
 - `AIBT2000`-`2999`: semantic validation and policy;
 - `AIBT3000`-`3999`: node registry and compiler;
 - `AIBT4000`-`4999`: execution, blackboard, command, and async runtime;

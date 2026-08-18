@@ -714,7 +714,7 @@
       "id": "P3-002",
       "phase": 3,
       "title": "Layout model v1 contract",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-002-layout-model-v1-contract.md",
       "dependsOn": [
@@ -730,7 +730,7 @@
       "id": "P3-003",
       "phase": 3,
       "title": "Graph adapter foundation (read-only)",
-      "status": "draft",
+      "status": "ready",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-003-graph-adapter-foundation.md",
       "dependsOn": [

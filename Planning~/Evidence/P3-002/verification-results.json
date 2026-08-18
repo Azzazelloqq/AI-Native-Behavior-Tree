@@ -1,0 +1,13 @@
+{
+  "schema": "aibt-p3-002-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Tools~/Verification/Verify-Schemas.ps1|PASSED|AIBT JSON Schema verification passed. Schemas: 6.",
+    "DELIVERABLE|Documentation~/specifications/editor-layout-v1.md|created",
+    "DELIVERABLE|Documentation~/specifications/diagnostics-v1.md|AIBT1100-1199 range annotated for editor-layout-v1",
+    "WORK_ITEM_STATUS|P3-002|draft->done",
+    "WORK_ITEM_STATUS|P3-003|draft->ready",
+    "NO_CODE_CHANGED|true"
+  ]
+}

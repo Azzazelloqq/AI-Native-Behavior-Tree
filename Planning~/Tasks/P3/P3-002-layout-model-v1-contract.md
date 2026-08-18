@@ -1,6 +1,6 @@
 # P3-002 — Layout model v1 contract
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -52,3 +52,24 @@ Verify-Schemas.ps1
 ## Handoff notes
 
 - `P3-003` cannot start until this spec is accepted; it is the shape `P3-003`'s adapter renders against.
+
+## Outcome
+
+- `Documentation~/specifications/editor-layout-v1.md` defines `*.aibt.layout.json`
+  v1: header (`format`/`formatVersion`/`treeId`/`direction`), `nodes`
+  (position/pinned), `groups` (title/description/color/locked/memberNodeIds),
+  `notes` (free-floating sticky comments), `reroutes` (keyed by
+  `fromNodeId|toNodeId`, ordered waypoints), the canonical-encoding rules
+  mirrored from `canonical-json-v1.md`, `GroupId`/`NoteId` identity reusing
+  `identity-and-hashing-v1.md`'s existing authoring-identity pattern, the
+  explicit local-view-state exclusion list, a deterministic auto-layout
+  contract stated as a pure function with a testable-without-the-Editor
+  determinism requirement, and the formal `P3-007` isolation invariant.
+- `Documentation~/specifications/diagnostics-v1.md`'s `AIBT1000`-`1999` band
+  is now annotated as split `1000`-`1099` (`.aibt.json`) / `1100`-`1199`
+  (`*.aibt.layout.json`); the new spec allocates `AIBT1101`-`1111`.
+- Explicitly states (required acceptance criterion) that `GraphView`
+  (`ADR-P3-014`) serializes nothing natively — every field in the schema is
+  AIBT-owned, so `P3-003` has no ambiguity.
+- No code changed; documentation-only, per this card's `Forbidden changes`.
+- Full evidence: `Planning~/Evidence/P3-002/README.md`, `verification-results.json`.
