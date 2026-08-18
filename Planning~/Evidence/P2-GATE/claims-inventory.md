@@ -1,10 +1,15 @@
 # Phase 2 claims inventory
 
-Prepared 2026-08-18 for the `P2-025` review. Every supported claim below already
-has committed evidence. The gate itself is not accepted.
+Prepared 2026-08-18 for the `P2-025` review, updated the same day once `P2-022`
+landed. Every supported claim below already has committed evidence. The gate
+itself is not accepted.
 
 ## Supported claims
 
+- Non-Development Windows x64 IL2CPP with Burst enabled executes generated
+  dispatch and the representative behavior matrix without managed fallback
+  (`Evidence/P2-WINDOWS/`); no Windows performance default or threshold is
+  claimed.
 - The native executor reproduces all five Phase 1 golden behavior cases under
   Immediate, one-step Budgeted, and BatchedJobsSameFrame, observing native
   lifecycle, blackboard versions, observer replacement, async operations and
@@ -31,10 +36,6 @@ has committed evidence. The gate itself is not accepted.
 
 ## Claims intentionally not made
 
-- Windows Player conformance or any Windows performance baseline as a
-  *committed* claim. `P2-022` has a passing result (`Evidence/P2-WINDOWS/`),
-  but it is not yet committed, and this file only counts committed evidence
-  as supported.
 - Any performance default, scheduling threshold, batch size, or crossover point.
   Phase 4 owns calibrated policies.
 - Device performance on Android, or any battery, thermal, or store claim. Android

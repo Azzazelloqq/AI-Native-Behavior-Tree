@@ -4,9 +4,9 @@
 
 The project targets a future Burst-compatible, zero-GC-per-tick production path; a readable visual editor; machine-readable contracts; reproducible performance research; and an optional MCP integration. DOTS Entities is not required.
 
-Phase 2 adds the generated Burst dispatch and fixed-capacity native executor while preserving the Phase 1 semantic oracle. The initialized native paths have focused zero-GC evidence, Android ARM64 has an actual IL2CPP/Burst AOT build, and the single-thread Web backend passes Chrome and Firefox conformance. Device performance, Safari/mobile Web, automatic policy selection, and a Windows Player baseline are not claimed.
+Phase 2 adds the generated Burst dispatch and fixed-capacity native executor while preserving the Phase 1 semantic oracle. The initialized native paths have focused zero-GC evidence, Windows x64 and Android ARM64 each have an actual non-Development IL2CPP/Burst build, and the single-thread Web backend passes Chrome and Firefox conformance. Device performance, Safari/mobile Web, automatic policy selection, and any performance default or threshold are not claimed.
 
-> Status: P2-001 through P2-021, Android P2-023, and Web P2-024 are implemented and verified. The Windows x64 IL2CPP/Burst baseline is blocked on the host MSVC/Windows SDK installation, so the final clean committed P2 integration gate remains open. The visual editor, MCP integration, hot reload, and calibrated Auto/pipelined scheduling remain later phases.
+> Status: P2-001 through P2-024, including the Windows x64 IL2CPP/Burst baseline (P2-022), are implemented and verified. The final `P2-025` integration gate is in progress. The visual editor, MCP integration, hot reload, and calibrated Auto/pipelined scheduling remain later phases.
 
 ## Design goals
 

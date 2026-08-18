@@ -21,4 +21,5 @@ All notable changes to this project will be documented here. The project follows
   snapshots, commands/completions, diagnostics/trace, lifecycle/composites,
   observers, async actions, budgeting, and same-frame batched Jobs scheduling.
 - Native/reference golden equivalence, initialized zero-GC/lifetime gates,
-  Android ARM64 IL2CPP/Burst AOT evidence, and Chrome/Firefox Web conformance.
+  non-Development Windows x64 IL2CPP/Burst Player evidence, Android ARM64
+  IL2CPP/Burst AOT evidence, and Chrome/Firefox Web conformance.
