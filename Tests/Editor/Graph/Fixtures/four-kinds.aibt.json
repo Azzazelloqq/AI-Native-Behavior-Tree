@@ -1,0 +1,32 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.test.graph-adapter-four-kinds",
+  "name": "Graph Adapter Four Kinds",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "guard",
+        "action"
+      ]
+    },
+    "guard": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "children": [
+        "condition"
+      ]
+    },
+    "condition": {
+      "type": "sample.graph-condition",
+      "typeVersion": 1
+    },
+    "action": {
+      "type": "sample.graph-action",
+      "typeVersion": 1
+    }
+  }
+}

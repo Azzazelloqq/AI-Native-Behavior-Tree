@@ -1,0 +1,21 @@
+{
+  "schema": "aibt-p3-003-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Run-UnityCompile.ps1 (Unity 6000.5.8f1, C:/UnityProjects/Modules)|FAILED_THEN_PASSED|first attempt: CS0118 'NodeRegistry' is a namespace but is used like a type (sibling namespace AIBT.Tests.Editor.NodeRegistry shadowed AIBT.Authoring.NodeRegistry); fixed by fully qualifying AIBT.Authoring.NodeRegistry in the test file",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Graph.BehaviorTreeGraphAdapterTests|FAILED_THEN_PASSED|first attempt: NodeRegistryBuilder.AddUserExtension rejected type IDs under the reserved aibt.test. namespace; fixed by renaming the two test-only node types to sample.graph-condition / sample.graph-action",
+    "TEST_RESULT|EveryNodeKindRendersWithCorrectConnections|Passed",
+    "TEST_RESULT|OpeningADocumentNeverMutatesItOnDiskOrInMemory|Passed",
+    "TEST_RESULT|UnresolvedNodeTypesRenderWithoutThrowing|Passed",
+    "TEST_TOTAL|3|PASSED|3",
+    "DELIVERABLE|Editor/Graph/BehaviorTreeNode.cs|created",
+    "DELIVERABLE|Editor/Graph/BehaviorTreeGraphView.cs|created",
+    "DELIVERABLE|Editor/Graph/BehaviorTreeGraphWindow.cs|created",
+    "DELIVERABLE|Tests/Editor/Graph/BehaviorTreeGraphAdapterTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Graph/Fixtures/four-kinds.aibt.json|created",
+    "WORK_ITEM_STATUS|P3-003|draft->done",
+    "WORK_ITEM_STATUS|P3-004|draft->ready",
+    "WORK_ITEM_STATUS|P3-006|draft->ready"
+  ]
+}

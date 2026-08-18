@@ -1,6 +1,6 @@
 # P3-003 — Graph adapter foundation (read-only)
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -52,3 +52,22 @@ Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter <graph adapter fixt
 ## Handoff notes
 
 - `P3-004`, `P3-005`, and `P3-006` all build on this adapter's rendering surface; keep its public shape (how a document maps to graph elements) stable once accepted, since three downstream cards depend on it directly.
+
+## Outcome
+
+- `Editor/Graph/BehaviorTreeNode.cs`, `BehaviorTreeGraphView.cs`,
+  `BehaviorTreeGraphWindow.cs`: read-only `GraphView` adapter over
+  `AIBT.Authoring.TreeDocument`, node visuals driven by `NodeRegistry`
+  lookups (`NodeManifest.Kind`/`ChildPolicy`), never a per-type switch.
+- Positions are a transient depth/breadth default, not `P3-002`'s
+  deterministic auto-layout contract — no `*.aibt.layout.json` reader
+  exists yet (`P3-005`'s scope).
+- `Tests/Editor/Graph/BehaviorTreeGraphAdapterTests.cs` (3/3 passing) proves
+  all four `NodeBehaviorKind`s render with correct port/edge topology, that
+  opening a document never mutates it on disk or in memory, and that
+  unresolved node types render without throwing.
+- Two real failures were hit and fixed before green: a `NodeRegistry`
+  unqualified-name ambiguity against a sibling test namespace (CS0118), and
+  using the reserved `aibt.test.` prefix with `AddUserExtension` instead of
+  `AddTestFixtures`. Both are recorded in `Planning~/Evidence/P3-003/verification-results.json`.
+- Full evidence: `Planning~/Evidence/P3-003/README.md`, `verification-results.json`.
