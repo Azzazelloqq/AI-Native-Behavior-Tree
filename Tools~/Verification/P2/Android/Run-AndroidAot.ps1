@@ -34,7 +34,12 @@ $ndkVersion = ([regex]::Match($ndkProperties, '(?m)^Pkg\.Revision\s*=\s*(.+)$'))
 $buildToolsDirectory = Get-ChildItem -LiteralPath (Join-Path $sdkRoot 'build-tools') -Directory |
     Sort-Object { try { [version]$_.Name } catch { [version]'0.0' } } -Descending | Select-Object -First 1
 if (!$buildToolsDirectory -or [string]::IsNullOrWhiteSpace($ndkVersion)) { throw 'Android SDK/NDK version metadata is missing.' }
-$javaVersionText = (& (Join-Path $jdkRoot 'bin\java.exe') -version 2>&1) -join "`n"
+$javaExe = Join-Path $jdkRoot 'bin\java.exe'
+# java -version writes to stderr by design. In Windows PowerShell 5.1, `2>&1`
+# on a native command wraps each stderr line in a NativeCommandError and
+# fails under $ErrorActionPreference = 'Stop' even though the command
+# succeeded. Merge the streams at the OS level via cmd.exe instead.
+$javaVersionText = (& cmd.exe /c "`"$javaExe`" -version 2>&1") -join "`n"
 if ($LASTEXITCODE -ne 0 -or $javaVersionText -notmatch 'version\s+"([^"]+)"') { throw 'OpenJDK version detection failed.' }
 $jdkVersion = $Matches[1]
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -83,7 +88,14 @@ if(!(Test-Path -LiteralPath $apk) -or !(Test-Path -LiteralPath $raw)){throw 'And
 $logText = Get-Content -Raw -LiteralPath $log
 foreach($pattern in @('\berror CS\d{4}\b','\bBC\d{4}\b','managed fallback','A Native Collection has not been disposed')){if($logText -match $pattern){throw "Android log failed scan: $pattern"}}
 if($logText -notmatch 'AIBT_P2_023_ANDROID_AOT_BUILD_OK\|'){throw 'Android success marker is missing.'}
-$entries = @(& tar -tf $apk); if($LASTEXITCODE -ne 0){throw 'APK inspection failed.'}
+
+# An APK is a zip archive. `tar -tf <windows-path>` misparses the drive-letter
+# colon in paths like C:\... as a remote-host spec (tar tries to rsh/ssh to a
+# host named "C") and fails. Read it as a zip archive directly instead.
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::OpenRead($apk)
+try { $entries = @($zip.Entries | ForEach-Object { $_.FullName }) }
+finally { $zip.Dispose() }
 $native = @($entries | Where-Object {$_ -like 'lib/*'})
 if($native -notcontains 'lib/arm64-v8a/libil2cpp.so' -or $native -notcontains 'lib/arm64-v8a/lib_burst_generated.so'){throw 'APK lacks ARM64 IL2CPP/Burst libraries.'}
 if($native | Where-Object {$_ -notlike 'lib/arm64-v8a/*'}){throw 'APK contains another native ABI.'}
