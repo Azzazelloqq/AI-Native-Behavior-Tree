@@ -82,6 +82,5 @@ Additional platforms and Unity versions are supported only after validation by t
 - [Normative specifications](Documentation~/specifications/conventions.md)
 - [Agent master plan](Planning~/MASTER_PLAN.md)
 - [Machine-readable work items](Planning~/work-items.json)
-- [Safe parallelization waves](Planning~/PARALLELIZATION.md)
 - [User and infrastructure actions](Planning~/USER_ACTIONS.md)
 - [Contributing](CONTRIBUTING.md)

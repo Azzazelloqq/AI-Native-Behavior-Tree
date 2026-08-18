@@ -99,9 +99,9 @@ to other platforms.
 ## Recorded evidence
 
 The canonical 2026-08-16 isolated run is preserved as
-[raw JSON](Results/windows-editor-generated-switch-burst-6000.5.8f1-2026-08-16.json)
-with its adjacent
-[Unity log](Results/windows-editor-generated-switch-burst-6000.5.8f1-2026-08-16.log).
+[raw JSON](Results/windows-editor-generated-switch-burst-6000.5.8f1-2026-08-16.json).
+The adjacent Unity log from that run is not committed, per repository policy
+against committing raw Unity logs.
 It used Unity 6000.5.8f1, Burst 1.8.30, Collections 6.5.0, five warmups,
 fifteen raw samples per switch width, and 16,384 dispatches per sample.
 
