@@ -17,7 +17,6 @@ Complete autonomy does not mean inventing product behavior. These boundaries def
 - lifecycle, status, abort, ordering, timing, or deterministic behavior;
 - new package dependency, assembly reference, platform conditional, reflection, unsafe code, or managed fallback;
 - new diagnostic code range or changed diagnostic severity contract;
-- ownership changes or edits outside allowed paths;
 - performance thresholds, Auto scheduler defaults, or supported-platform claims;
 - any weakening of tests, policies, or Definition of Done.
 

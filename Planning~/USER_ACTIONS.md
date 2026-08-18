@@ -20,12 +20,34 @@ These actions require owner credentials, hardware, or product decisions and are 
 
 ## Required to close Phase 2 on the current Windows host
 
-- Install Visual Studio Build Tools 2022 with
-  `Microsoft.VisualStudio.Component.VC.Tools.x86.x64` and a Windows 10/11 SDK
-  version >= `10.0.19041`, then rerun the P2-022 Windows x64 IL2CPP/Burst Player
-  baseline. The current host has neither `cl.exe` nor a Windows SDK.
-- Explicitly authorize a local integration commit after reviewing the dirty P2
-  scope; P2-025 must run from a clean committed snapshot.
-- Explicitly authorize an independent review task for the final P2-025 gate.
+### 1. Install the MSVC and Windows SDK toolchain
+
+The host has neither `cl.exe` nor a Windows SDK, so Unity cannot complete the
+P2-022 Windows x64 IL2CPP/Burst Player build. Confirm the gap, review the plan,
+and apply it from an elevated shell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File './Tools~/Verification/P2/Windows/Assert-WindowsToolchain.ps1'
+powershell -NoProfile -ExecutionPolicy Bypass -File './Tools~/Verification/P2/Windows/Install-WindowsToolchain.ps1'
+powershell -NoProfile -ExecutionPolicy Bypass -File './Tools~/Verification/P2/Windows/Install-WindowsToolchain.ps1' -Apply
+```
+
+The plan installs `Microsoft.VisualStudio.Component.VC.Tools.x86.x64` and a
+Windows SDK at or above `10.0.19041`. The second command is a dry run and changes
+nothing. `Tools~/Verification/P2/Windows/README.md` holds the full runbook,
+including the harness rerun and evidence verification that actually close P2-022.
+
+### 2. Authorize the Phase 2 integration commit
+
+Explicitly authorize a local integration commit after reviewing the dirty P2
+scope; P2-025 must run from a clean committed snapshot. The scope, ordering, and
+hygiene checks are prepared in
+`Planning~/Evidence/P2-GATE/commit-package.md`.
+
+### 3. Run the P2-025 gate verification
+
+Run the P2-025 gate's full verification pass yourself using the ordered
+commands and artifact map prepared in
+`Planning~/Evidence/P2-GATE/gate-runbook.md`.
 
 Agents must report missing access as a blocker. They must not weaken a platform matrix or fabricate results.

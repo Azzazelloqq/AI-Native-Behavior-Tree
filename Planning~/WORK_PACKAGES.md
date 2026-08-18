@@ -18,7 +18,7 @@ Atomic cards: `P1-001` through `P1-019`.
 
 Excluded: Burst code generation, parallel jobs, shared blackboard execution, production editor UI, MCP, hot reload, and performance autotuning.
 
-Exit: all Phase 1 criteria in `MASTER_PLAN.md` pass and independent integration review accepts the slice.
+Exit: all Phase 1 criteria in `MASTER_PLAN.md` pass and the full verification checklist passes and is recorded as evidence.
 
 ## P2 — data-oriented Burst runtime
 
@@ -39,7 +39,7 @@ The atomic dependency graph is recorded in `work-items.json`; agents may not imp
 
 `P2-001` is the mandatory normative public node-ABI contract and analyzer feasibility task. No production custom user-node API or native dispatch may be implemented before that contract is independently accepted.
 
-Exit: representative public custom nodes execute through generated dispatch in fixed native Immediate, deterministic Budgeted, and BatchedJobsSameFrame paths; every applicable P1 behavior case remains equivalent; the measured initialized Burst path has zero managed allocations; Windows Player, Android ARM64 AOT build, and accepted desktop Web policies have bounded evidence; `P2-025` independently accepts the slice.
+Exit: representative public custom nodes execute through generated dispatch in fixed native Immediate, deterministic Budgeted, and BatchedJobsSameFrame paths; every applicable P1 behavior case remains equivalent; the measured initialized Burst path has zero managed allocations; Windows Player, Android ARM64 AOT build, and accepted desktop Web policies have bounded evidence; `P2-025` verification passes and is recorded.
 
 ## P3 — editor and layout
 

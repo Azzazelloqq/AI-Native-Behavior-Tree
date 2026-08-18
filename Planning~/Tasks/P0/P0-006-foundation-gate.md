@@ -17,7 +17,7 @@ Independently verify Phase 0 evidence and declare Phase 1 implementation ready o
 ## Allowed changes
 
 - `Planning~/Evidence/P0-GATE/`
-- Coordinator-owned status updates after review.
+- Status updates in `Planning~/work-items.json` after review.
 
 ## Forbidden changes
 

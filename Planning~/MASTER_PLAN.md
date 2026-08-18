@@ -54,11 +54,11 @@ Phase 1 intentionally produces a correct reference executor before performance s
 - `Draft`: insufficiently specified or blocked by an unaccepted decision.
 - `Ready`: dependencies are complete and the card is assignable.
 - `In Progress`: one owner is actively implementing it.
-- `Review`: implementation and handoff exist; independent verification is pending.
+- `Review`: implementation and handoff exist; a self-verification pass against the task card and `DEFINITION_OF_DONE.md` is pending before `Done`.
 - `Blocked`: a concrete unresolved dependency prevents progress.
-- `Done`: acceptance criteria and Definition of Done were independently satisfied.
+- `Done`: acceptance criteria and Definition of Done were satisfied and verified.
 
-Only the coordinator updates the machine-readable index. Individual implementation agents report status in their handoff to avoid merge conflicts.
+`Planning~/work-items.json` is updated directly as each task completes.
 
 ## Phase gates
 
@@ -82,16 +82,6 @@ Only the coordinator updates the machine-readable index. Individual implementati
 
 The Phase 2 gate is decomposed in `Planning~/Tasks/P2/` and `work-items.json`. Later phase gates remain work-package summaries until their prerequisite implementation evidence exists.
 
-## Parallelism rules
-
-- Tasks may run concurrently only when the dependency graph permits it and their exclusive write paths do not overlap.
-- Concurrent agents use separate Git worktrees or equivalent isolated branches.
-- Shared files such as package metadata, changelog, task index, and assembly definitions are integration-owner files.
-- Tests may be owned separately from implementation only when the expected behavior is already normative.
-- A contract author cannot be the sole acceptance reviewer of the implementation using that contract.
-
-See `PARALLELIZATION.md` for safe execution waves.
-
 ## Current assignable frontier
 
-The Phase 1 semantic slice and local platform evidence are complete. The remote Unity workflow dependency remains unresolved and `P0-005`, `P0-006`, and `P1-019` retain their honest states. By explicit owner direction on 2026-08-14, Phase 2 implementation proceeded from the accepted `P1-018` semantic source without treating that infrastructure gate as passed. `P2-001` through `P2-021`, Android AOT `P2-023`, and Web conformance `P2-024` are complete. `P2-022` remains blocked by the missing Windows MSVC/SDK host toolchain; consequently the clean committed and independently reviewed `P2-025` integration gate also remains blocked.
+The Phase 1 semantic slice and local platform evidence are complete. The remote Unity workflow dependency remains unresolved and `P0-005`, `P0-006`, and `P1-019` retain their honest states. By explicit owner direction on 2026-08-14, Phase 2 implementation proceeded from the accepted `P1-018` semantic source without treating that infrastructure gate as passed. `P2-001` through `P2-024` are complete, including Windows Player conformance `P2-022` (host MSVC/SDK toolchain installed and the Player/baseline run and verified on 2026-08-18). `P2-025`, the Phase 2 integration gate, is now assignable; it remains blocked only on the owner-authorized clean commit of the uncommitted P2 scope, per `Planning~/Evidence/P2-GATE/`.

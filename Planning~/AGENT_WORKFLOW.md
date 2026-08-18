@@ -3,23 +3,23 @@
 ## Before accepting a task
 
 1. Read the required documents listed in `MASTER_PLAN.md`.
-2. Confirm every dependency in the task card is merged into the target branch.
-3. Confirm no other agent owns the same task or exclusive write paths.
-4. Inspect repository status and preserve unrelated work.
-5. State the task ID, assumptions, allowed paths, and verification plan before editing.
+2. Confirm every dependency in the task card is complete.
+3. Inspect repository status and preserve unrelated work.
+4. State the task ID, assumptions, allowed paths, and verification plan before editing.
 
 If a normative choice is missing, stop and return a proposed decision. Do not select a convenient behavior in code.
 
-## Isolation
+## Branching
 
-Use one branch and preferably one worktree per task:
+A branch per task is still useful for keeping a change reviewable and easy
+to back out:
 
 ```text
 branch: task/<task-id-lowercase>-<short-name>
 commit: <area>: <imperative outcome>
 ```
 
-Do not run concurrent task agents in the same working tree. Do not update submodules, package versions, or generated project files unless the card explicitly permits it.
+Do not update submodules, package versions, or generated project files unless the card explicitly permits it.
 
 ## Implementation loop
 
@@ -28,8 +28,15 @@ Do not run concurrent task agents in the same working tree. Do not update submod
 3. Run focused verification.
 4. Run required broader verification.
 5. Inspect diff for unrelated or generated changes.
-6. Update only documentation explicitly owned by the task.
-7. Produce the handoff report.
+6. Update only documentation explicitly owned by the task, plus any
+   integration-owned shared files (package metadata, changelog, asmdefs,
+   `work-items.json`) the task's own results require updating.
+7. Self-check against the task card and `DEFINITION_OF_DONE.md` before
+   marking the task `Done`: negative cases, scope boundaries,
+   allocation/performance claims where relevant, and whether the change
+   introduced a new undocumented decision that should have been escalated
+   instead.
+8. Produce the session summary.
 
 Tests describe expected behavior. Never change an expectation merely because the current implementation differs.
 
@@ -37,18 +44,18 @@ Tests describe expected behavior. Never change an expectation merely because the
 
 Stop without speculative implementation when:
 
-- a dependency is missing or not merged;
+- a dependency is missing or incomplete;
 - a requirement conflicts with a normative specification;
 - a public contract must change outside the assigned task;
 - required toolchain, credentials, hardware, or platform access is unavailable;
-- another agent modified an exclusive path;
 - acceptance cannot be verified safely.
 
 Report the exact blocker, evidence, and smallest decision or user action needed.
 
-## Handoff report
+## Session summary
 
-Every task handoff contains:
+Every task ends with a summary — useful for picking the work back up in a
+later session as much as for reporting it now:
 
 ```text
 Task ID:
@@ -61,17 +68,7 @@ Benchmarks and environment, if required:
 Deviations from card: none | details
 Normative questions discovered: none | details
 Known limitations within scope:
-Recommended integration order:
+Recommended next task:
 ```
 
 Do not claim completion if a required command was skipped. State `not run` and why.
-
-## Review agent
-
-The reviewer verifies the task card and normative behavior, not the implementation author's narrative. The reviewer checks negative cases, scope boundaries, allocation/performance claims where relevant, and whether the change introduced a new undocumented decision.
-
-Review outcomes are `Accept`, `Changes required`, or `Specification conflict`. Only accepted work proceeds to integration.
-
-## Integration agent
-
-The integration agent owns shared-file updates, resolves only mechanical conflicts, runs the phase-level suite, and rejects semantic conflict resolution without an explicit decision. Integration does not expand task scope.

@@ -14,9 +14,9 @@ One observable outcome.
 
 - Exact normative and architectural documents.
 
-## Allowed changes
+## Scope
 
-- Exclusive file paths and integration-owned exceptions.
+- The file paths this task is expected to touch.
 
 ## Forbidden changes
 

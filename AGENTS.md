@@ -11,7 +11,7 @@ These rules apply to the entire repository.
 5. Test expected behavior. Never reshape tests to preserve an incorrect implementation.
 6. Keep changes scoped. Do not silently add adjacent features.
 7. Before finishing, verify that every requested item is complete and that no unrequested behavior was introduced.
-8. Read `Planning~/AGENT_WORKFLOW.md` and the assigned work-item card before implementation. Work only on a task whose dependencies are merged.
+8. Read `Planning~/AGENT_WORKFLOW.md` and the assigned work-item card before implementation. Work only on a task whose dependencies are complete.
 9. Normative specifications in `Documentation~/specifications/` cannot be changed as an incidental part of an implementation task.
 10. Canonical code, API names, diagnostics, schemas, and documentation are written in English. Translations are supplemental and cannot define behavior.
 
