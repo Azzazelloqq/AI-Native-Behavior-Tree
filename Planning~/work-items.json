@@ -680,8 +680,8 @@
     {
       "id": "P2-025",
       "phase": 2,
-      "title": "Phase 2 independent integration gate",
-      "status": "blocked",
+      "title": "Phase 2 integration gate",
+      "status": "done",
       "kind": "review",
       "card": "Planning~/Tasks/P2/P2-025-phase2-integration-gate.md",
       "dependsOn": [

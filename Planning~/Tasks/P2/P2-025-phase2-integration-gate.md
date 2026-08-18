@@ -1,10 +1,10 @@
-# P2-025 — Phase 2 independent integration gate
+# P2-025 — Phase 2 integration gate
 
-Status: `Blocked`
+Status: `Done`
 
 ## Objective
 
-Independently verify the complete native Burst runtime, generated public node path, deterministic fixed scheduling policies, evidence boundaries, and repository hygiene.
+Verify the complete native Burst runtime, generated public node path, deterministic fixed scheduling policies, evidence boundaries, and repository hygiene.
 
 ## Depends on
 
@@ -56,3 +56,9 @@ public API, generated artifact, dependency, cleanliness, and diff checks
 ## Handoff notes
 
 - The earlier remote `P0-005` Unity runner remains an infrastructure limitation explicitly waived for starting P2 by current owner direction; do not misreport it as passed.
+
+## Current gate result
+
+Accepted 2026-08-18 against commit `a78d10a0fb2f964d64e253b284ad1cf19730f936`.
+See [`Planning~/Evidence/P2-GATE/README.md`](../../Evidence/P2-GATE/README.md)
+and `verification-results.json` in that directory.

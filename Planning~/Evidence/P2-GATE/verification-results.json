@@ -1,0 +1,22 @@
+{
+  "format": "aibt.phase2-gate",
+  "formatVersion": 1,
+  "observedOn": "2026-08-18",
+  "sourceCommit": "a78d10a0fb2f964d64e253b284ad1cf19730f936",
+  "unityVersion": "6000.5.8f1",
+  "static": { "schemas": 6, "workItems": 50, "result": "pass" },
+  "compile": { "installation": "UPM package in detached clean harness", "result": "pass" },
+  "editMode": { "total": 902, "passed": 902, "failed": 0, "skipped": 0 },
+  "codeGenGate": { "assertions": 1411, "unityContractTests": "77/77", "publicSampleGoldens": "3/3", "result": "pass" },
+  "allocationGate": { "windows": 12, "gcAllocEvents": 0, "canaryEvents": 1, "result": "pass" },
+  "publicApiSha256": "7843daa7bb8a7702e43fc4bc11a4210b8bf3a78d22be7007be3fb845889a9f8b",
+  "analyzerSha256": "4ac885faf44806162dc0d5f71d46ee4a30bba8b2beb92783398c9ef48ce9dea5",
+  "platformEvidence": {
+    "windows": "Planning~/Evidence/P2-WINDOWS/",
+    "android": "Planning~/Evidence/P2-ANDROID/",
+    "web": "Planning~/Evidence/P2-WEB/"
+  },
+  "verifiedBy": "Claude Sonnet 5 (agent session, 2026-08-18)",
+  "implementationVerdict": "Accept",
+  "formalGateVerdict": "Accept"
+}
