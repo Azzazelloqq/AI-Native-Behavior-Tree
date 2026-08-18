@@ -115,7 +115,7 @@ Both `Verify-WindowsBaselineEvidence.ps1 -EvidencePath <raw>` and
 - GameAssembly.dll: `49e270faa891ec77ea774b5374f60bc1c051876a62aef386f17e0d460d04ab77`
 - global-metadata.dat: `915017778f3369416b55474ab95595dfadaf27376f3158563a60ad0fa2dce376`
 - lib_burst_generated.dll (331264 bytes): `9673a9925355d6f686c4228bcd925b1548a33f745d61878de3de8492cd8b7bc3`
-- checked source generator (`Analyzers/AIBT.CodeGen.dll`): `a7e6765b530b112591d0a2302271b13bd2675f4f1246d07a3cf7730d72c96dbc`
+- checked source generator (`Analyzers/AIBT.CodeGen.dll`): `4ac885faf44806162dc0d5f71d46ee4a30bba8b2beb92783398c9ef48ce9dea5`
 - environment snapshot: `f82d9bf6c91a67c9a1f909ebaee4015b7cbbc83415ff76cc42fa3d499a9b9825`
 
 Full digest set (including Runtime/harness file-set fingerprints, per-scenario

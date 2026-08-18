@@ -3,7 +3,7 @@
 Accepted candidate observed 2026-08-17 with Unity 6000.5.8f1.
 
 - Deterministic analyzer rebuild: SHA-256
-  `a7e6765b530b112591d0a2302271b13bd2675f4f1246d07a3cf7730d72c96dbc`.
+  `4ac885faf44806162dc0d5f71d46ee4a30bba8b2beb92783398c9ef48ce9dea5`.
 - Roslyn analyzer/generator matrix: 1411 assertions, AIBT5001–AIBT5012.
 - Clean Unity CodeGen/Dispatch gate: 77/77, including generated immediate and
   scheduled Burst entry points plus the imported public package sample.

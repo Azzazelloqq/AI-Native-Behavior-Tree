@@ -1,5 +1,5 @@
 {
-  "name": "AIBT.NativeBurstDispatch.Tests",
+  "name": "AIBT.Samples.BurstNodes.Tests",
   "rootNamespace": "AIBT.Samples.BurstNodes.Tests",
   "references": [
     "AIBT.Runtime",

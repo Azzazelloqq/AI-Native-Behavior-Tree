@@ -13,7 +13,7 @@ directory's `README.md`.
 | Gate | Evidence |
 | --- | --- |
 | Public Burst node ABI v2 is closed, unmanaged, and reflection-free | `Evidence/P2-001/`, `Evidence/P2-012/`, ADR-P2-001, ADR-P2-012 |
-| Generated dispatch is deterministic and prebound from the frozen analyzer | clean CodeGen/Dispatch consumer gate 77/77; analyzer/generator 1411 assertions; analyzer SHA-256 `a7e6765b530b112591d0a2302271b13bd2675f4f1246d07a3cf7730d72c96dbc` |
+| Generated dispatch is deterministic and prebound from the frozen analyzer | clean CodeGen/Dispatch consumer gate 77/77; analyzer/generator 1411 assertions; analyzer SHA-256 `4ac885faf44806162dc0d5f71d46ee4a30bba8b2beb92783398c9ef48ce9dea5` |
 | Native ownership, fixed capacity, and rejection on overflow | `Evidence/P2-002/`, ADR-P2-002; capacity rejection case in `Evidence/P2-021/` |
 | Tree, Agent, and Shared blackboard storage with deterministic reduction | `Evidence/P2-003/`; Shared/Snapshot/Tree-Agent suite 76/76 |
 | Immutable native snapshots and append-only command streams | Shared/Snapshot/Tree-Agent suite 76/76; Commands/Async suite 20/20 |

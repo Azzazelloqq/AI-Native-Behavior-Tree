@@ -164,7 +164,7 @@ $analyzerPath = Join-Path $aibtRoot 'Analyzers\AIBT.CodeGen.dll'
 $analyzerMetaPath = $analyzerPath + '.meta'
 $playerAsmdefPath = Join-Path $unityHarnessSource 'Runtime\AIBT.NativeBurstDispatch.Tests.asmdef'
 $nodeAsmdefPath = Join-Path $unityHarnessSource 'Runtime\Nodes\AIBT.GeneratedDispatchPlayerAot.Nodes.asmdef'
-$expectedAnalyzerSha256 = 'a7e6765b530b112591d0a2302271b13bd2675f4f1246d07a3cf7730d72c96dbc'
+$expectedAnalyzerSha256 = '4ac885faf44806162dc0d5f71d46ee4a30bba8b2beb92783398c9ef48ce9dea5'
 
 if ($ControlledInvalid) {
     $invalidEvidence = Join-Path ([IO.Path]::GetTempPath()) ('aibt-p2-022-controlled-invalid-' + [Guid]::NewGuid().ToString('N') + '.json')

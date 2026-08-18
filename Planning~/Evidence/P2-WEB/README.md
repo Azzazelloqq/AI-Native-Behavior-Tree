@@ -23,7 +23,7 @@ Observed 2026-08-17 using the repository-owned
   as a zero-allocation proof; the initialized zero-GC claim remains P2-021's
   Unity recorder result.
 - Analyzer SHA-256:
-  `a7e6765b530b112591d0a2302271b13bd2675f4f1246d07a3cf7730d72c96dbc`.
+  `4ac885faf44806162dc0d5f71d46ee4a30bba8b2beb92783398c9ef48ce9dea5`.
 - Runtime file-set SHA-256:
   `ebb7383d0671c3b505acc0eec02d73e42bd8293e1a7825d06d38e7589189965d`.
 

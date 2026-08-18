@@ -28,20 +28,36 @@ Require (Test-Path -LiteralPath $analyzerHashFile) 'Checked-in analyzer hash is 
 
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 try {
-    $buildA = Join-Path $tempRoot 'build-a'
-    $buildB = Join-Path $tempRoot 'build-b'
-    $objA = Join-Path $tempRoot 'obj-a'
-    $objB = Join-Path $tempRoot 'obj-b'
+    # The csproj's <PathMap> only normalizes $(MSBuildProjectDirectory) itself;
+    # it does not make the compiler's deterministic hash insensitive to the
+    # *relative* BaseOutputPath/BaseIntermediateOutputPath structure beneath
+    # it (generated files such as the GeneratedMSBuildEditorConfig carry that
+    # relative suffix into the hash). Building to a system-Temp path outside
+    # the project directory — or to two differently-named subfolders — was
+    # observed to produce a DLL that differs from a same-recipe checked-in
+    # build in exactly the PE TimeDateStamp and MVID bytes, even though the
+    # source and IL are identical. Building twice, sequentially, into the
+    # exact same in-project relative subdirectory keeps every build under
+    # this project's PathMap-covered prefix with an identical relative
+    # suffix, which is what makes the result match the checked-in artifact.
+    $buildDir = Join-Path $packageRoot 'CodeGen~\AIBT.CodeGen\bin\.p2-codegen-gate'
+    $objDir = Join-Path $packageRoot 'CodeGen~\AIBT.CodeGen\obj\.p2-codegen-gate'
+    $dllPath = Join-Path $buildDir 'Release\netstandard2.0\AIBT.CodeGen.dll'
 
-    & $unityDotnet build $project -c Release --nologo -t:Rebuild "-p:BaseOutputPath=$buildA\" "-p:BaseIntermediateOutputPath=$objA\"
+    if (Test-Path -LiteralPath $buildDir) { Remove-Item -LiteralPath $buildDir -Recurse -Force }
+    if (Test-Path -LiteralPath $objDir) { Remove-Item -LiteralPath $objDir -Recurse -Force }
+    & $unityDotnet build $project -c Release --nologo -t:Rebuild "-p:BaseOutputPath=$buildDir\" "-p:BaseIntermediateOutputPath=$objDir\"
     Require ($LASTEXITCODE -eq 0) 'Analyzer build A failed.'
-    & $unityDotnet build $project -c Release --nologo -t:Rebuild "-p:BaseOutputPath=$buildB\" "-p:BaseIntermediateOutputPath=$objB\"
-    Require ($LASTEXITCODE -eq 0) 'Analyzer build B failed.'
+    $bytesA = [IO.File]::ReadAllBytes($dllPath)
 
-    $dllA = Join-Path $buildA 'Release\netstandard2.0\AIBT.CodeGen.dll'
-    $dllB = Join-Path $buildB 'Release\netstandard2.0\AIBT.CodeGen.dll'
-    $bytesA = [IO.File]::ReadAllBytes($dllA)
-    $bytesB = [IO.File]::ReadAllBytes($dllB)
+    Remove-Item -LiteralPath $buildDir -Recurse -Force
+    Remove-Item -LiteralPath $objDir -Recurse -Force
+    & $unityDotnet build $project -c Release --nologo -t:Rebuild "-p:BaseOutputPath=$buildDir\" "-p:BaseIntermediateOutputPath=$objDir\"
+    Require ($LASTEXITCODE -eq 0) 'Analyzer build B failed.'
+    $bytesB = [IO.File]::ReadAllBytes($dllPath)
+
+    $dllA = Join-Path $tempRoot 'build-a-AIBT.CodeGen.dll'
+    [IO.File]::WriteAllBytes($dllA, $bytesA)
     Require ([Convert]::ToBase64String($bytesA) -ceq [Convert]::ToBase64String($bytesB)) 'Independent analyzer builds are not byte-identical.'
     Require ([Convert]::ToBase64String($bytesA) -ceq [Convert]::ToBase64String([IO.File]::ReadAllBytes($checkedAnalyzer))) 'Checked-in analyzer differs from reproducible build.'
 
@@ -200,11 +216,23 @@ namespace AIBT.CodeGen.InvalidAnalyzerProbe
     Require (Test-Path -LiteralPath $sampleSource) 'Public Burst-node sample is missing.'
     Copy-Item -LiteralPath $sampleSource -Destination $sampleTarget -Recurse
 
+    # The friend test assembly is not part of the shipped Samples~/BurstNodes
+    # content (it exercises internal batch-owner APIs users never see), so it
+    # lives here as .txt fixtures and is assembled into the sample project.
+    $sampleGoldenSource = Join-Path $PSScriptRoot 'SampleGolden'
+    $sampleGoldenTarget = Join-Path $sampleTarget 'Tests'
+    New-Item -ItemType Directory -Path $sampleGoldenTarget -Force | Out-Null
+    foreach ($fixture in @('AIBT.Samples.BurstNodes.Tests.asmdef', 'PublicBurstNodeSampleGoldenTests.cs')) {
+        $fixtureSource = Join-Path $sampleGoldenSource ($fixture + '.txt')
+        Require (Test-Path -LiteralPath $fixtureSource) "Sample golden fixture is missing: $fixture"
+        Copy-Item -LiteralPath $fixtureSource -Destination (Join-Path $sampleGoldenTarget $fixture)
+    }
+
     $sampleTestXml = Join-Path $tempRoot 'unity-sample-editmode.xml'
     $sampleUnityLog = Join-Path $tempRoot 'unity-sample.log'
     $sampleArguments = @(
         '-batchmode', '-nographics', '-projectPath', $sampleProject,
-        '-runTests', '-testPlatform', 'EditMode', '-assemblyNames', 'AIBT.NativeBurstDispatch.Tests',
+        '-runTests', '-testPlatform', 'EditMode', '-assemblyNames', 'AIBT.Samples.BurstNodes.Tests',
         '-testResults', $sampleTestXml, '-logFile', $sampleUnityLog
     )
     $sampleProcess = Start-Process -FilePath $UnityEditor -ArgumentList $sampleArguments -Wait -PassThru -WindowStyle Hidden
@@ -227,7 +255,7 @@ namespace AIBT.CodeGen.InvalidAnalyzerProbe
     Require ($sampleLog -notmatch $failurePattern) 'Unity sample log contains analyzer/generator/compiler failure markers.'
     $nodesAssembly = Join-Path $sampleProject 'Library\ScriptAssemblies\AIBT.BurstNodes.Sample.dll'
     $catalogAssembly = Join-Path $sampleProject 'Library\ScriptAssemblies\AIBT.BurstNodes.Sample.Catalog.dll'
-    $sampleTestAssembly = Join-Path $sampleProject 'Library\ScriptAssemblies\AIBT.NativeBurstDispatch.Tests.dll'
+    $sampleTestAssembly = Join-Path $sampleProject 'Library\ScriptAssemblies\AIBT.Samples.BurstNodes.Tests.dll'
     Require (Test-Path -LiteralPath $nodesAssembly) 'Public sample node assembly was not compiled.'
     Require (Test-Path -LiteralPath $catalogAssembly) 'Public sample catalog assembly was not compiled.'
     Require (Test-Path -LiteralPath $sampleTestAssembly) 'Public sample golden test assembly was not compiled.'
@@ -240,10 +268,30 @@ namespace AIBT.CodeGen.InvalidAnalyzerProbe
     Write-Host "Artifacts: $tempRoot"
 }
 finally {
+    if (-not $KeepArtifacts) {
+        $buildDir = Join-Path $packageRoot 'CodeGen~\AIBT.CodeGen\bin\.p2-codegen-gate'
+        $objDir = Join-Path $packageRoot 'CodeGen~\AIBT.CodeGen\obj\.p2-codegen-gate'
+        if (Test-Path -LiteralPath $buildDir) { Remove-Item -LiteralPath $buildDir -Recurse -Force }
+        if (Test-Path -LiteralPath $objDir) { Remove-Item -LiteralPath $objDir -Recurse -Force }
+    }
     if (-not $KeepArtifacts -and (Test-Path -LiteralPath $tempRoot)) {
         $resolvedTemp = [IO.Path]::GetFullPath($tempRoot)
         $tempParent = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
         Require ($resolvedTemp.StartsWith($tempParent, [StringComparison]::OrdinalIgnoreCase)) 'Refusing to remove a path outside the system temp directory.'
-        Remove-Item -LiteralPath $resolvedTemp -Recurse -Force
+        # Imported Unity package cache content (e.g. com.unity.ai.navigation
+        # samples) can nest deep enough to exceed Windows' classic MAX_PATH,
+        # which makes plain Remove-Item fail mid-recursion. robocopy's mirror
+        # of an empty directory is the standard reliable way to clear a tree
+        # like that; fall back to Remove-Item for anything it leaves behind.
+        try {
+            Remove-Item -LiteralPath $resolvedTemp -Recurse -Force -ErrorAction Stop
+        }
+        catch {
+            $emptyDir = Join-Path ([IO.Path]::GetTempPath()) ('AIBT-P2-012-empty-' + [Guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path $emptyDir | Out-Null
+            & robocopy $emptyDir $resolvedTemp /MIR /NFL /NDL /NJH /NJS | Out-Null
+            Remove-Item -LiteralPath $emptyDir -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $resolvedTemp -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
