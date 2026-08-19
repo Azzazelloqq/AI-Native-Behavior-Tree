@@ -1,0 +1,44 @@
+{
+  "format": "aibt.assembly-dependencies",
+  "formatVersion": 1,
+  "sourceCommit": "4700b22e4a17de5d8c118c5d22dfb271a04177fc",
+  "assemblies": [
+    {
+      "name": "AIBT.Runtime",
+      "asmdef": "Runtime/AIBT.Runtime.asmdef",
+      "references": ["Unity.Burst", "Unity.Collections"],
+      "forbiddenReferencesFound": []
+    },
+    {
+      "name": "AIBT.Authoring",
+      "asmdef": "Authoring/AIBT.Authoring.asmdef",
+      "references": ["AIBT.Runtime", "Newtonsoft.Json"],
+      "forbiddenReferencesFound": []
+    },
+    {
+      "name": "AIBT.Editor",
+      "asmdef": "Editor/AIBT.Editor.asmdef",
+      "references": ["AIBT.Runtime", "AIBT.Authoring", "Newtonsoft.Json", "Unity.Collections"],
+      "includePlatforms": ["Editor"],
+      "forbiddenReferencesFound": []
+    }
+  ],
+  "reverseDependencyCheck": {
+    "claim": "AIBT.Runtime and AIBT.Authoring never reference AIBT.Editor",
+    "result": "confirmed -- neither asmdef's references array contains \"AIBT.Editor\"; the detached-harness compile (this gate's step 3) independently proves this, since AIBT.Editor is Editor-platform-only and any accidental reverse reference from Runtime/Authoring would have failed to compile in a project where Editor-only code is unavailable outside the Editor platform context."
+  },
+  "forbiddenCategories": ["UnityEditor", "MCP", "LLM provider", "Unity.Entities (DOTS)"],
+  "method": "Enumerated every .asmdef under Runtime/, Authoring/, and Editor/ (3 total; P1/P2-GATE covered only the first two since Editor/ barely existed before Phase 3), confirmed their references contain none of the forbidden categories beyond what AIBT.Editor's own asmdef already declares (includePlatforms: [\"Editor\"] is the only Editor-specific surface, and it references no MCP or LLM-provider assembly), and confirmed no source file under Runtime/ or Authoring/ imports UnityEditor, Unity.Entities, or an MCP/LLM-provider namespace (grep for 'using UnityEditor', 'Unity.Entities', 'UnityMCP', 'OpenAI', 'Anthropic' across Runtime/ and Authoring/ returned no matches). The detached-harness compile independently proves the reference direction: since the harness project resolves AIBT.Runtime/AIBT.Authoring exactly as declared, any undeclared or reversed reference would have failed to compile rather than merely being unobserved.",
+  "newAssemblyReferencesAddedDuringPhase3": [
+    {
+      "change": "Editor/AIBT.Editor.asmdef gained Newtonsoft.Json",
+      "task": "P3-005",
+      "decision": "escalated via AskUserQuestion before implementation; accepted -- reuses the same package/pattern AIBT.Authoring.CanonicalTreeJson already establishes for *.aibt.json, applied to *.aibt.layout.json"
+    },
+    {
+      "change": "Editor/AIBT.Editor.asmdef gained Unity.Collections",
+      "task": "P3-010",
+      "decision": "not escalated as a new architectural boundary -- Unity.Collections is a data-only dependency (NativeArray<T>.ReadOnly) needed to read P3-010's already-public native trace-channel types; no InternalsVisibleTo or forbidden-category dependency was introduced"
+    }
+  ]
+}

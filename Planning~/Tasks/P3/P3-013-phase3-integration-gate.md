@@ -1,6 +1,6 @@
 # P3-013 — Phase 3 integration gate
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -61,3 +61,30 @@ public API, generated artifact, dependency, cleanliness, and diff checks
 ## Handoff notes
 
 - Follows the same self-verification shape as `P2-025` (no separate reviewer requirement); see `Planning~/AGENT_WORKFLOW.md`.
+
+## Outcome
+
+- **Accepted 2026-08-19 against commit `4700b22e4a17de5d8c118c5d22dfb271a04177fc`.**
+  A fresh, otherwise-empty Unity project referencing `com.azzazello.aibt` as a
+  local `file:` UPM package (plus its own declared dependencies) compiled
+  cleanly and passed the full detached EditMode regression: **953/953**, 0
+  failed, 0 skipped -- with none of the 3 failures repeatedly seen inside the
+  host `Modules` project across `P3-009` through `P3-012`'s own evidence
+  (confirming they were host-project noise, not AIBT defects).
+- `P3-007`'s layout/semantic isolation proof re-ran and passed individually
+  against this exact snapshot, not merely cited.
+- Public API surface recorded across all three production assemblies for
+  the first time (`AIBT.Runtime` + `AIBT.Authoring` + `AIBT.Editor`, since
+  `Editor/` barely existed at `P2-GATE`): 382 types, 1994 members.
+- Assembly dependency audit confirmed `Runtime`/`Authoring` reference no
+  `UnityEditor`/MCP/LLM/`Unity.Entities`, and `Editor` depends on
+  `Authoring`/`Runtime` only, never the reverse.
+- `P3-012`'s large-graph numbers reconfirmed as measurements only, no
+  performance default or supported-size claim introduced.
+- No defect was found while running this gate; every contract held on first
+  measurement in the clean harness.
+- `phase4-inputs.md` and `phase5-inputs.md` were produced, extending
+  `P2-GATE`'s own Phase 4 handoff and giving Phase 5 (hot reload) the
+  editor/compiler revision-stability guarantees (`P3-007`'s isolation proof)
+  its design depends on.
+- Full evidence: `Planning~/Evidence/P3-GATE/`.

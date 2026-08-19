@@ -885,7 +885,7 @@
       "id": "P3-013",
       "phase": 3,
       "title": "Phase 3 integration gate",
-      "status": "ready",
+      "status": "done",
       "kind": "review",
       "card": "Planning~/Tasks/P3/P3-013-phase3-integration-gate.md",
       "dependsOn": [
