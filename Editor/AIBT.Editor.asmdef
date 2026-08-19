@@ -4,7 +4,8 @@
   "references": [
     "AIBT.Runtime",
     "AIBT.Authoring",
-    "Newtonsoft.Json"
+    "Newtonsoft.Json",
+    "Unity.Collections"
   ],
   "includePlatforms": [
     "Editor"

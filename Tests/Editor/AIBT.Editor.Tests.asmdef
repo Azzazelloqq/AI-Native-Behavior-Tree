@@ -4,7 +4,9 @@
   "references": [
     "AIBT.Runtime",
     "AIBT.Authoring",
-    "AIBT.Editor"
+    "AIBT.Editor",
+    "Unity.Burst",
+    "Unity.Collections"
   ],
   "includePlatforms": [
     "Editor"

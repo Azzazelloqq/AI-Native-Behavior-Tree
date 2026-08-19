@@ -1,0 +1,22 @@
+{
+  "schema": "aibt-p3-010-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Unity MCP: refresh_unity + read_console (types=error) after each edit|PASSED|no compile errors on final state",
+    "COMMAND|Unity MCP: run_tests (EditMode, assembly_names=AIBT.Editor.Tests)|PASSED|191/191",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite, interactive Editor session, Unity 6000.5.8f1)|PASSED_WITH_PREEXISTING_FAILURES|1304 tests, 1301 passed; 3 failures pre-existing and unrelated to this card (same as recorded in Planning~/Evidence/P3-009/verification-results.json: AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests x2, LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk)",
+    "TEST_RESULT|AIBT.Tests.Editor.Debugger.NativeExecutionDebuggerSessionTests.AttachReadsStepHistoryAndDiagnosticsFromTheBoundedChannel|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Debugger.NativeExecutionDebuggerSessionTests.ANodeEnteredWithoutAMatchingExitIsReportedActive|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Debugger.NativeExecutionDebuggerSessionTests.TryReadTraceFailsCleanlyWhenNotAttached|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Debugger.NativeExecutionDebuggerSessionTests.AttachingAndReadingBetweenPassesAddsNoManagedAllocationToNativeExecution|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Debugger.NativeExecutionDebuggerSessionTests.DetachingMidRunLeavesNativeOutputIdenticalToRunningWithoutADebugger|Passed",
+    "COMMAND|Unity MCP: execute_code, live interactive session against the open 6000.5.8f1 Editor|PASSED|created a real NativeTraceChannelOwnerV1, wrote one record through a real writer lease, attached NativeExecutionDebuggerSession, read it back: attached=True; readOk=True; stepHistory=1; active=[3]; no console errors",
+    "NOT_RUN|Run-UnityTests.ps1 / Run-UnityCompile.ps1 (headless batchmode)|skipped by design: the interactive Editor was open for the Unity MCP bridge session this card required; batchmode fails silently while Temp/UnityLockfile is held (same operating constraint recorded for P3-009). Unity MCP's own run_tests/read_console/execute_code tools were used against the live interactive Editor instead.",
+    "DELIVERABLE|Editor/Debugger/NativeExecutionDebuggerSession.cs|created",
+    "DELIVERABLE|Tests/Editor/Debugger/NativeExecutionDebuggerSessionTests.cs|created",
+    "DELIVERABLE|Editor/AIBT.Editor.asmdef|modified (added Unity.Collections reference)",
+    "DELIVERABLE|Tests/Editor/AIBT.Editor.Tests.asmdef|modified (added Unity.Burst, Unity.Collections references)",
+    "WORK_ITEM_STATUS|P3-010|ready->done"
+  ]
+}
