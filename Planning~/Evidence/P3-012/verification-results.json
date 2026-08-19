@@ -1,0 +1,24 @@
+{
+  "schema": "aibt-p3-012-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Unity MCP: refresh_unity + read_console (types=error) after each edit|PASSED|no compile errors on final state",
+    "COMMAND|Unity MCP: run_tests (EditMode, test_names=AIBT.Tests.Editor.Performance.LargeGraphPerformanceTests...)|PASSED|1/1, all four scales (240/500/1000/2000) succeeded",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite, interactive Editor session, Unity 6000.5.8f1)|PASSED_WITH_PREEXISTING_FAILURES|1305 tests, 1302 passed; 3 failures pre-existing and unrelated to this card (same as recorded in Planning~/Evidence/P3-009/ and P3-010/: AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests x2, LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk)",
+    "TEST_RESULT|AIBT.Tests.Editor.Performance.LargeGraphPerformanceTests.EveryScaleCompilesRendersAndSupportsEditOrganizeOperationsWithRecordedLatency|Passed",
+    "MEASUREMENT|headless EditMode, scale=240|renderMs=136.184 autoLayoutMs=7.112 repositionMs=1.448 addNodeMs=53.662 reRenderAfterEditMs=138.689 panZoomMs=1.281 managedHeapDeltaBytes=4272128",
+    "MEASUREMENT|headless EditMode, scale=500|renderMs=203.247 autoLayoutMs=0.694 repositionMs=0.792 addNodeMs=17.383 reRenderAfterEditMs=246.592 panZoomMs=0.011 managedHeapDeltaBytes=14090240",
+    "MEASUREMENT|headless EditMode, scale=1000|renderMs=427.286 autoLayoutMs=1.166 repositionMs=1.198 addNodeMs=31.180 reRenderAfterEditMs=441.353 panZoomMs=0.010 managedHeapDeltaBytes=32960512",
+    "MEASUREMENT|headless EditMode, scale=2000|renderMs=755.565 autoLayoutMs=2.278 repositionMs=2.568 addNodeMs=66.996 reRenderAfterEditMs=1276.944 panZoomMs=0.011 managedHeapDeltaBytes=82489344",
+    "MEASUREMENT|live interactive Editor (unityMCP.execute_code, real BehaviorTreePreviewWindow), scale=2000|jsonBuildMs=1.67 parseMs=34.56 loadDocumentMs=2020.39 totalScriptMs=2060.61",
+    "USABILITY_READ|per-operation costs (autoLayout/reposition/addNode/panZoom)|PASS at every scale up to 2000 nodes (all under 70ms)",
+    "USABILITY_READ|full-view render/re-render/load|PASS at 240 and 500 nodes; DEGRADED (explicitly reported, not silently passed) at 1000 and 2000 nodes -- see Planning~/Evidence/P3-012/README.md",
+    "NOT_RUN|Run-UnityTests.ps1 / Run-UnityCompile.ps1 (headless batchmode)|skipped by design: the interactive Editor was open for the Unity MCP bridge session this card required (live-interaction measurement); batchmode fails silently while Temp/UnityLockfile is held (same operating constraint recorded for P3-009/P3-010). Unity MCP's own run_tests/read_console/execute_code tools were used against the live interactive Editor instead.",
+    "DELIVERABLE|Tests/Editor/Performance/LargeGraphFixtures.cs|created",
+    "DELIVERABLE|Tests/Editor/Performance/LargeGraphPerformanceTests.cs|created",
+    "DELIVERABLE|Benchmarks~/Platform/Editor/README.md|created",
+    "DELIVERABLE|Benchmarks~/Platform/Editor/pilot-results.json|created",
+    "WORK_ITEM_STATUS|P3-012|ready->done"
+  ]
+}

@@ -853,7 +853,7 @@
       "id": "P3-011",
       "phase": 3,
       "title": "Trace views",
-      "status": "draft",
+      "status": "ready",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-011-trace-views.md",
       "dependsOn": [
@@ -868,7 +868,7 @@
       "id": "P3-012",
       "phase": 3,
       "title": "Large-graph interaction and performance tests",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-012-large-graph-interaction-tests.md",
       "dependsOn": [

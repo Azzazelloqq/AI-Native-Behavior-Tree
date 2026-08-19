@@ -1,0 +1,43 @@
+{
+  "format": "aibt.editor-large-graph-pilot",
+  "formatVersion": 1,
+  "observedDate": "2026-08-19",
+  "unityVersion": "6000.5.8f1",
+  "machine": {
+    "os": "Windows 11 (10.0.26200)",
+    "cpu": "Intel(R) Core(TM) Ultra 9 275HX",
+    "logicalCores": 24,
+    "systemMemoryMB": 32189
+  },
+  "fixture": {
+    "generator": "Tests/Editor/Performance/LargeGraphFixtures.cs",
+    "shape": "roughly balanced tree of aibt.core.memory-sequence internal nodes over aibt.test.success leaves, branching factor 8",
+    "note": "A tree has exactly nodeCount - 1 edges by construction; this is not a general graph."
+  },
+  "headlessEditMode": {
+    "description": "Tests/Editor/Performance/LargeGraphPerformanceTests.cs, one EditMode process, no visible window; render/reRender use BehaviorTreeGraphView.Populate in-process.",
+    "sampleRunsPerScale": 1,
+    "results": [
+      { "nodeCount": 240, "branchingFactor": 8, "depth": 3, "edgeCount": 239, "leafCount": 210, "renderMs": 136.184, "autoLayoutMs": 7.112, "repositionMs": 1.448, "addNodeMs": 53.662, "reRenderAfterEditMs": 138.689, "panZoomMs": 1.281, "managedHeapDeltaBytes": 4272128 },
+      { "nodeCount": 500, "branchingFactor": 8, "depth": 3, "edgeCount": 499, "leafCount": 437, "renderMs": 203.247, "autoLayoutMs": 0.694, "repositionMs": 0.792, "addNodeMs": 17.383, "reRenderAfterEditMs": 246.592, "panZoomMs": 0.011, "managedHeapDeltaBytes": 14090240 },
+      { "nodeCount": 1000, "branchingFactor": 8, "depth": 4, "edgeCount": 999, "leafCount": 875, "renderMs": 427.286, "autoLayoutMs": 1.166, "repositionMs": 1.198, "addNodeMs": 31.180, "reRenderAfterEditMs": 441.353, "panZoomMs": 0.010, "managedHeapDeltaBytes": 32960512 },
+      { "nodeCount": 2000, "branchingFactor": 8, "depth": 4, "edgeCount": 1999, "leafCount": 1750, "renderMs": 755.565, "autoLayoutMs": 2.278, "repositionMs": 2.568, "addNodeMs": 66.996, "reRenderAfterEditMs": 1276.944, "panZoomMs": 0.011, "managedHeapDeltaBytes": 82489344 }
+    ]
+  },
+  "liveInteractiveEditor": {
+    "description": "Unity MCP execute_code against the running, focused-capable 6000.5.8f1 Editor: BehaviorTreePreviewWindow.ShowWindow() + LoadDocument() on the 2000-node fixture, a real window/UI Toolkit panel (not headless).",
+    "sampleRuns": 1,
+    "results": [
+      { "nodeCount": 2000, "jsonBuildMs": 1.67, "parseMs": 34.56, "loadDocumentMs": 2020.39, "totalScriptMs": 2060.61 }
+    ],
+    "note": "loadDocumentMs covers ReferencePreviewDriver.TryCreate (compile) plus BehaviorTreePreviewWindow.Refresh (Populate + per-node breakpoint-menu manipulator attachment + status/blackboard refresh) inside a real visible window -- roughly 2.7x the headless renderMs alone (755.6ms) at the same 2000-node scale, showing real window/UI Toolkit cost the headless test cannot capture."
+  },
+  "limitations": [
+    "One measured run per scale/mode on one machine; values are not stable baselines.",
+    "GC.GetTotalMemory delta is coarse and does not prove zero allocation or locate allocations.",
+    "The live interactive number is a single warm run in one session; JIT/Roslyn warm-up in that same session was excluded by discarding the first (23.8s, dominated by ad hoc script compilation) attempt.",
+    "reRenderAfterEditMs at 2000 nodes (1276.9ms) exceeds renderMs at the same scale (755.6ms); BehaviorTreeGraphView.Populate tears down the existing view (DeleteElements) before rebuilding, so a re-render after an edit is not simply 'render again' at scale -- teardown cost is included and not separated here.",
+    "No result is generalized beyond this workstation, this Unity version, and this synthetic fixture shape.",
+    "This pilot records measurements only; it defines no performance default, threshold, or supported-graph-size claim -- see Planning~/Evidence/P3-012/README.md for this card's own usability read of these numbers, and Documentation~/benchmarks.md for why regression thresholds are Phase 4's ownership."
+  ]
+}
