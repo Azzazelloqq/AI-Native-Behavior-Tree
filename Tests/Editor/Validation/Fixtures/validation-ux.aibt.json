@@ -1,0 +1,35 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.test.validation-ux",
+  "name": "Validation UX",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "guard",
+        "leaf2"
+      ]
+    },
+    "guard": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "children": [
+        "leaf1"
+      ]
+    },
+    "leaf1": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "leaf2": {
+      "type": "aibt.core.test-validation-leaf",
+      "typeVersion": 1,
+      "parameters": {
+        "enabled": true
+      }
+    }
+  }
+}

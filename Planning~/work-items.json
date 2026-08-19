@@ -807,7 +807,7 @@
       "id": "P3-008",
       "phase": 3,
       "title": "Validation UX",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-008-validation-ux.md",
       "dependsOn": [

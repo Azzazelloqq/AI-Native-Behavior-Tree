@@ -1,0 +1,17 @@
+{
+  "schema": "aibt-p3-008-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Run-UnityCompile.ps1 (Unity 6000.5.8f1, C:/UnityProjects/Modules)|PASSED|first attempt and one earlier retry failed silently (exit 1) due to a concurrently open interactive Editor holding Temp/UnityLockfile for a Unity MCP bridge session; passed once closed",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Validation.DiagnosticGraphPresentationTests|FAILED_THEN_PASSED|first attempt: test scenario used Disconnect, which leaves an unreachable node producing an unrelated extra diagnostic; fixed by using RemoveNode instead for a clean single ChildPolicy violation",
+    "TEST_RESULT|ChildPolicyAndParameterTypeDiagnosticsResolveToStableNodeAndFieldLocations|Passed",
+    "TEST_RESULT|ATreeWithZeroDiagnosticsShowsNoMarkers|Passed",
+    "TEST_RESULT|FixingTheUnderlyingIssueClearsTheMarkerWithoutAnyManualRefreshStep|Passed",
+    "DELIVERABLE|Editor/Validation/DiagnosticGraphLocation.cs|created",
+    "DELIVERABLE|Editor/Validation/DiagnosticGraphSummary.cs|created",
+    "DELIVERABLE|Tests/Editor/Validation/DiagnosticGraphPresentationTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Validation/Fixtures/validation-ux.aibt.json|created",
+    "WORK_ITEM_STATUS|P3-008|draft->done"
+  ]
+}

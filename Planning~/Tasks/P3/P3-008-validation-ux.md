@@ -1,6 +1,6 @@
 # P3-008 — Validation UX
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -45,3 +45,15 @@ Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter <validation UX fixt
 ## Handoff notes
 
 - None beyond the dependency on `P3-006`'s edit path already surfacing diagnostics consistently.
+
+## Outcome
+
+- `Editor/Validation/DiagnosticGraphLocation.cs` classifies any `Diagnostic` into
+  Document/Node/Field purely from its own `Location` (no tree parsing needed);
+  `DiagnosticGraphSummary.cs` builds per-severity counts + markers + a jump-to-node list, always
+  fresh from the diagnostics passed in.
+- 3/3 tests passing, including a `Field`-level `ParameterType` resolution and proof that fixing an
+  issue clears its marker with no manual refresh (there is no cache to invalidate).
+- **No `Editor/Graph/` UI wiring** — outside this card's `Allowed changes`, same pattern as
+  `P3-004` through `P3-007`.
+- Full evidence: `Planning~/Evidence/P3-008/README.md`, `verification-results.json`.
