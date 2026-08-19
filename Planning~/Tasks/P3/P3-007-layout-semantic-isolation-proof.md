@@ -1,6 +1,6 @@
 # P3-007 — Layout/semantic isolation proof
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -47,3 +47,12 @@ Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter <isolation proof fi
 ## Handoff notes
 
 - This card is a hard gate on `P3-013`: the Phase 3 integration gate must re-run this exact test, not merely confirm it exists.
+
+## Outcome
+
+- `Tests/Editor/Layout/LayoutSemanticIsolationTests.cs` (2/2 passing): the positive case exercises
+  pin, group, comment/sticky-note, reroute, and auto-layout, recompiles the same `TreeDocument`,
+  and asserts `Program.Header.CompiledContentHash` is unchanged; the negative case proves the
+  comparison can detect a real semantic difference. No production-code changes were needed — the
+  invariant held on first measurement.
+- Full evidence: `Planning~/Evidence/P3-007/README.md`, `verification-results.json`.

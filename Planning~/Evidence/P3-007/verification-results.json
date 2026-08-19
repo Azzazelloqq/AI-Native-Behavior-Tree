@@ -1,0 +1,14 @@
+{
+  "schema": "aibt-p3-007-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Run-UnityCompile.ps1 (Unity 6000.5.8f1, C:/UnityProjects/Modules)|PASSED|first two attempts failed silently (exit 1, no compiler error) due to a concurrently open interactive Editor holding Temp/UnityLockfile for a Unity MCP bridge session; passed once that Editor was closed",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Layout.LayoutSemanticIsolationTests|PASSED|2/2",
+    "TEST_RESULT|EveryManualOrganizationActionAndAutoLayoutLeaveTheCompiledProgramByteIdentical|Passed",
+    "TEST_RESULT|AGenuineSemanticEditDoesChangeTheCompiledProgram|Passed",
+    "DELIVERABLE|Tests/Editor/Layout/LayoutSemanticIsolationTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Layout/Fixtures/isolation-proof.aibt.json|created",
+    "WORK_ITEM_STATUS|P3-007|draft->done"
+  ]
+}

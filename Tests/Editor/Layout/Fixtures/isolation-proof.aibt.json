@@ -1,0 +1,32 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.test.layout-isolation-proof",
+  "name": "Layout Isolation Proof",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "guard",
+        "leaf2"
+      ]
+    },
+    "guard": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "children": [
+        "leaf1"
+      ]
+    },
+    "leaf1": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "leaf2": {
+      "type": "aibt.test.failure",
+      "typeVersion": 1
+    }
+  }
+}

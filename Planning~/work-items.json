@@ -792,7 +792,7 @@
       "id": "P3-007",
       "phase": 3,
       "title": "Layout/semantic isolation proof",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-007-layout-semantic-isolation-proof.md",
       "dependsOn": [
