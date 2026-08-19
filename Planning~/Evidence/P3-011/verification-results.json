@@ -1,0 +1,22 @@
+{
+  "schema": "aibt-p3-011-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Unity MCP: refresh_unity + read_console (types=error) after each edit|PASSED|no compile errors on final state",
+    "COMMAND|Unity MCP: run_tests (EditMode, assembly_names=AIBT.Editor.Tests)|PASSED|197/197",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite, interactive Editor session, Unity 6000.5.8f1)|PASSED_WITH_PREEXISTING_FAILURES|1310 tests, 1307 passed; 3 failures pre-existing and unrelated to this card (same as recorded in Planning~/Evidence/P3-009/, P3-010/, P3-012/: AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests x2, LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk)",
+    "TEST_RESULT|AIBT.Tests.Editor.Trace.TraceTimelineModelTests.ScrubbingEveryStepReproducesTheActiveSetTheRawChannelRecordsActuallyProduced|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Trace.TraceTimelineModelTests.DiagnosticEventsAreCorrelatedToTheStepAndActiveNodesThatProducedThem|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Trace.TraceTimelineModelTests.OverflowingTheBoundedChannelIsReportedAsDroppedRatherThanATruncatedCompleteTrace|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Trace.TraceTimelineModelTests.EmptyModelHasNoStepsAndNoDroppedEvents|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Trace.TraceTimelineWindowTests.AttachingASessionAndScrubbingHighlightsTheCorrespondingCompiledNodesWithoutThrowing|Passed",
+    "COMMAND|Unity MCP: execute_code, live interactive session against the open 6000.5.8f1 Editor|PASSED|compiled success-then-running.aibt.json, wrote two real trace records through a real writer lease, opened TraceTimelineWindow, attached session, loaded graph context: steps=2; scrubIndex=1; dropped=False; no console errors",
+    "NOT_RUN|Run-UnityTests.ps1 / Run-UnityCompile.ps1 (headless batchmode)|skipped by design: the interactive Editor was open for the Unity MCP bridge session; batchmode fails silently while Temp/UnityLockfile is held (same operating constraint recorded for P3-009/P3-010/P3-012). Unity MCP's own run_tests/read_console/execute_code tools were used against the live interactive Editor instead.",
+    "DELIVERABLE|Editor/Trace/TraceTimelineModel.cs|created",
+    "DELIVERABLE|Editor/Trace/TraceTimelineWindow.cs|created",
+    "DELIVERABLE|Tests/Editor/Trace/TraceTimelineModelTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Trace/TraceTimelineWindowTests.cs|created",
+    "WORK_ITEM_STATUS|P3-011|ready->done"
+  ]
+}
