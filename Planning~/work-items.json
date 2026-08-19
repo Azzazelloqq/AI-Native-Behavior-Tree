@@ -920,6 +920,151 @@
         "Spikes~/EditorGraphFramework/Run-GraphViewEditorFrameworkSpike.ps1",
         "Planning~/Evidence/P3-014/"
       ]
+    },
+    {
+      "id": "P4-001",
+      "phase": 4,
+      "title": "Benchmark scenario catalog and harness",
+      "status": "ready",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P4/P4-001-benchmark-scenario-catalog-and-harness.md",
+      "dependsOn": [
+        "P2-025"
+      ],
+      "owns": [
+        "Benchmarks~/Phase4/",
+        "Tools~/Verification/P4/",
+        "Tests/Runtime/Benchmarking/"
+      ]
+    },
+    {
+      "id": "P4-002",
+      "phase": 4,
+      "title": "Fixed-policy scheduling overhead and cost curves",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P4/P4-002-fixed-policy-cost-curves.md",
+      "dependsOn": [
+        "P4-001"
+      ],
+      "owns": [
+        "Benchmarks~/Phase4/CostCurves/",
+        "Planning~/Evidence/P4-002/"
+      ]
+    },
+    {
+      "id": "P4-003",
+      "phase": 4,
+      "title": "PipelinedJobs executor",
+      "status": "ready",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P4/P4-003-pipelined-jobs-executor.md",
+      "dependsOn": [
+        "P2-019",
+        "P2-020"
+      ],
+      "owns": [
+        "Runtime/Scheduling/Native/",
+        "Tests/Runtime/NativeExecution/Scheduling/"
+      ]
+    },
+    {
+      "id": "P4-004",
+      "phase": 4,
+      "title": "Work-estimation and batching calibration model",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P4/P4-004-work-estimation-and-batching-calibration.md",
+      "dependsOn": [
+        "P4-002"
+      ],
+      "owns": [
+        "Runtime/Scheduling/Native/Estimation/",
+        "Tests/Runtime/NativeExecution/Scheduling/Estimation/"
+      ]
+    },
+    {
+      "id": "P4-005",
+      "phase": 4,
+      "title": "Auto policy: deterministic explainable heuristic selection",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P4/P4-005-auto-policy-heuristic-selection.md",
+      "dependsOn": [
+        "P4-003",
+        "P4-004"
+      ],
+      "owns": [
+        "Runtime/Scheduling/Native/Auto/",
+        "Tests/Runtime/NativeExecution/Scheduling/Auto/"
+      ]
+    },
+    {
+      "id": "P4-006",
+      "phase": 4,
+      "title": "Auto vs. fixed-policy comparison across the scenario matrix",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P4/P4-006-auto-vs-fixed-policy-comparison.md",
+      "dependsOn": [
+        "P4-001",
+        "P4-005"
+      ],
+      "owns": [
+        "Benchmarks~/Phase4/AutoComparison/",
+        "Planning~/Evidence/P4-006/"
+      ]
+    },
+    {
+      "id": "P4-007",
+      "phase": 4,
+      "title": "OQ-006 resolution: runtime autotuning evaluation",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P4/P4-007-oq006-autotuning-resolution.md",
+      "dependsOn": [
+        "P4-006"
+      ],
+      "owns": [
+        "Planning~/Evidence/P4-007/"
+      ]
+    },
+    {
+      "id": "P4-008",
+      "phase": 4,
+      "title": "Platform benchmark evidence",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P4/P4-008-platform-benchmark-evidence.md",
+      "dependsOn": [
+        "P4-005",
+        "P4-007"
+      ],
+      "owns": [
+        "Benchmarks~/Phase4/Platform/",
+        "Planning~/Evidence/P4-008/"
+      ]
+    },
+    {
+      "id": "P4-009",
+      "phase": 4,
+      "title": "Phase 4 integration gate",
+      "status": "draft",
+      "kind": "review",
+      "card": "Planning~/Tasks/P4/P4-009-phase4-integration-gate.md",
+      "dependsOn": [
+        "P4-001",
+        "P4-002",
+        "P4-003",
+        "P4-004",
+        "P4-005",
+        "P4-006",
+        "P4-007",
+        "P4-008"
+      ],
+      "owns": [
+        "Planning~/Evidence/P4-GATE/"
+      ]
     }
   ]
 }
