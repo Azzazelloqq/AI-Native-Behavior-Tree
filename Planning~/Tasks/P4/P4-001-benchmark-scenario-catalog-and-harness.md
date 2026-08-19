@@ -67,5 +67,10 @@ agent-count points (16, 128) without error, with raw samples and environment met
 separately from summaries. The remaining eight scenarios and the `PipelinedJobs`/`Auto` policies
 are documented placeholders in the result JSON (name + what each will isolate/measure), never
 silently substituted or faked. `Tools~/Verification/P4/` was not created — nothing in this card's
-scope needed it. Full detail, recorded numbers, and the three bugs found and fixed while
-proving the isolated harness end-to-end are in `Planning~/Evidence/P4-001/README.md`.
+scope needed it. `BatchedJobsSameFrame` is additionally swept across batch size and
+`JobsUtility.JobWorkerCount` (the only one of the three policies where either parameter applies,
+since it is the only one that schedules Unity Jobs) — this sweep was missing from the first `Done`
+pass despite being explicit in this card's own Deliverables text; the user caught the gap directly,
+and it produced a real reproduced finding (fewer worker threads beat more at these small agent
+counts). Full detail, recorded numbers, and every bug found and fixed while proving the isolated
+harness end-to-end are in `Planning~/Evidence/P4-001/README.md`.

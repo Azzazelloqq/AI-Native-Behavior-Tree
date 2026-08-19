@@ -34,7 +34,14 @@ and `Auto` policies themselves, both later P4 cards.
 
 Every implemented scenario runs against all three accepted fixed policies
 (`Immediate`, `Budgeted`, `BatchedJobsSameFrame`) at two agent-count points
-(16 and 128 by default).
+(16 and 128 by default). `BatchedJobsSameFrame` is additionally swept across
+batch size and `JobsUtility.JobWorkerCount` (three batch sizes x two worker
+counts by default) -- `Documentation~/benchmarks.md`'s own deliverable text
+calls for sweeping "batch parameters, and worker-thread counts where
+controllable," and `JobsUtility.JobWorkerCount` has a public setter, so it is
+controllable. `Immediate` and `Budgeted` are plain managed loops with no Jobs
+involved, so neither parameter applies to them (`batchSize`/`workerThreadCount`
+are recorded as `-1` on their cases).
 
 ## Measured work
 
@@ -75,9 +82,15 @@ An explicit reproducible invocation is:
   -MeasuredSamples 15 `
   -AgentCounts '16,128' `
   -BudgetStepLimit 4 `
-  -BatchSize 32 `
+  -BatchSizes '8,32,128' `
+  -WorkerThreadCounts '1,23' `
   -OutputPath '.\Results\my-run.json'
 ```
+
+`WorkerThreadCounts` entries must fall within `[1, JobsUtility.JobWorkerMaximumCount]`
+on the machine that runs the benchmark; the runner throws before doing any
+work if one does not. The original `JobsUtility.JobWorkerCount` is restored
+(including on failure) once the sweep finishes.
 
 The script creates a fresh isolated Unity project under the system temporary
 directory, copies `Runtime/`, `Authoring/`, `Tests/Runtime/Benchmarking/SchedulingPolicyDriver.cs`,
@@ -105,8 +118,21 @@ than `Immediate`/`Budgeted` at these small agent counts (16/128) and small
 tree sizes -- this is a descriptive observation about fixed per-batch
 scheduling overhead at this scale, not a claim that the policy is worse in
 general; larger populations are exactly what a follow-up P4 card (batch-size
-calibration) needs to characterize. No threshold or policy recommendation is
-drawn here.
+calibration) needs to characterize.
+
+Within `BatchedJobsSameFrame` itself, `workerThreadCount=1` measures **lower**
+median ns/agent than `workerThreadCount=23` (this machine's
+`JobsUtility.JobWorkerMaximumCount`) in every implemented scenario at 16
+agents, and the gap narrows -- sometimes to a near-tie -- at 128 agents. This
+reproduced across independent runs and is a genuine, non-obvious observation:
+at these small populations the fixed cost of waking/coordinating more worker
+threads outweighs the parallelism gained, so "more worker threads" is not
+free. `batchSize` (8/32/128) has a visibly smaller effect than
+`workerThreadCount` throughout. None of this is a recommended worker-thread
+setting -- it is exactly the kind of curve `Documentation~/execution-and-scheduling.md`'s
+batch-size/worker-count calibration work (a later P4 card, at full population
+scale) needs as raw input. No threshold or policy recommendation is drawn
+here.
 
 This Editor batchmode run measures one workstation; it is not a
 cross-hardware-class result. `Planning~/USER_ACTIONS.md` requires owner
@@ -116,21 +142,48 @@ before any such threshold is adopted.
 ## Recorded evidence
 
 The canonical 2026-08-19 isolated run is preserved as
-[raw JSON](Results/scheduling-windows-editor-20260819-162029.json). The
+[raw JSON](Results/scheduling-windows-editor-20260819-165205.json). The
 adjacent Unity log from that run is not committed, per repository policy
 against committing raw Unity logs. It used Unity 6000.5.8f1, Collections
 6.5.0, five warmups, fifteen measured samples per case, agent counts 16 and
-128, budget step limit 4, and batch size 32.
+128, budget step limit 4, batch sizes 8/32/128, and worker-thread counts
+1/23 (this machine's `JobsUtility.JobWorkerMaximumCount`).
 
-| Scenario | Nodes | Immediate median ns/agent (16 / 128) | BatchedJobsSameFrame median ns/agent (16 / 128) |
+Immediate/Budgeted median ns/agent (batch size and worker-thread count are
+not applicable to either policy):
+
+| Scenario | Nodes | Immediate (16 / 128) | Budgeted (16 / 128) |
 | --- | ---: | ---: | ---: |
-| `scheduling-baseline-empty-job` | 1 | 3,231.25 / 3,135.16 | 17,862.50 / 18,093.75 |
-| `shallow-tree-cheap-conditions` | 5 | 15,012.50 / 15,173.44 | 118,906.25 / 70,286.72 |
-| `deep-sequence-selector-traversal` | 63 | 175,368.75 / 176,136.72 | 1,196,581.25 / 741,054.69 |
-| `wide-branching-frequent-failures` | 17 | 5,187.50 / 5,184.38 | 35,425.00 / 27,702.34 |
-| `predominantly-running-actions` | 5 | 3,381.25 / 3,346.88 | 21,156.25 / 19,851.56 |
-| `many-programs-small-populations` | 1 | 2,856.25 / 2,797.66 | 19,150.00 / 19,245.31 |
+| `scheduling-baseline-empty-job` | 1 | 2,862.50 / 2,846.09 | 3,000.00 / 2,989.06 |
+| `shallow-tree-cheap-conditions` | 5 | 15,193.75 / 15,262.50 | 16,381.25 / 17,183.59 |
+| `deep-sequence-selector-traversal` | 63 | 176,437.50 / 182,066.41 | 182,300.00 / 186,853.13 |
+| `wide-branching-frequent-failures` | 17 | 5,075.00 / 5,189.84 | 5,300.00 / 5,568.75 |
+| `predominantly-running-actions` | 5 | 3,500.00 / 3,328.13 | 3,575.00 / 3,491.41 |
+| `many-programs-small-populations` | 1 | 2,862.50 / 2,887.50 | 2,993.75 / 2,979.69 |
 
-These are descriptive observations only. The JSON is authoritative for all
-raw samples, `Budgeted` figures, environment metadata, and min/p95/max
-summaries; the table does not define a threshold.
+`BatchedJobsSameFrame` median ns/agent by worker-thread count, batch size 32
+(the middle of the swept range -- batch size moves these numbers far less
+than worker-thread count does; see the JSON for all three batch sizes):
+
+| Scenario | workerThreadCount=1 (16 / 128 agents) | workerThreadCount=23 (16 / 128 agents) |
+| --- | ---: | ---: |
+| `scheduling-baseline-empty-job` | 16,743.75 / 17,663.28 | 23,025.00 / 20,094.53 |
+| `shallow-tree-cheap-conditions` | 73,662.50 / 64,017.97 | 127,075.00 / 71,092.19 |
+| `deep-sequence-selector-traversal` | 791,487.50 / 542,257.81 | 1,118,168.75 / 648,411.72 |
+| `wide-branching-frequent-failures` | 20,006.25 / 24,746.88 | 36,200.00 / 28,322.66 |
+| `predominantly-running-actions` | 14,093.75 / 17,468.75 | 24,750.00 / 22,132.03 |
+| `many-programs-small-populations` | 12,181.25 / 17,282.03 | 19,850.00 / 20,118.75 |
+
+`workerThreadCount=1` beats `workerThreadCount=23` in every one of these
+rows at 16 agents, sometimes by more than 2x; the gap shrinks and in a few
+cases nearly closes at 128 agents. This reproduced across independent runs.
+It is a genuine, non-obvious observation, not a recommendation: at these
+small populations, the fixed cost of waking and coordinating more worker
+threads outweighs the parallelism gained.
+
+These are descriptive observations only, condensed for readability -- not
+every scenario/agent-count/batch-size/worker-thread-count combination is
+reproduced in these tables. The JSON is authoritative for all raw samples
+(6 scenarios x 2 agent counts x [2 non-batched policies + 3 batch sizes x 2
+worker-thread counts for `BatchedJobsSameFrame`] = 96 cases), environment
+metadata, and min/p95/max summaries; the tables do not define a threshold.

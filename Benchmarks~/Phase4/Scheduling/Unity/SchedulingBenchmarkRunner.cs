@@ -31,8 +31,9 @@ namespace AIBT.Benchmarks.Phase4.Scheduling
         private const int DefaultWarmupSamples = 5;
         private const int DefaultMeasuredSamples = 15;
         private const uint DefaultBudgetStepLimit = 4;
-        private const uint DefaultBatchSize = 32;
+        private const int NotApplicable = -1;
         private static readonly int[] DefaultAgentCounts = { 16, 128 };
+        private static readonly int[] DefaultBatchSizes = { 8, 32, 128 };
         private static readonly string[] Policies = { "Immediate", "Budgeted", "BatchedJobsSameFrame" };
         private static AllocationCounterKind s_allocationCounter;
 
@@ -43,59 +44,75 @@ namespace AIBT.Benchmarks.Phase4.Scheduling
             var warmupSamples = IntegerArgument(arguments, "-aibtWarmupSamples", DefaultWarmupSamples, 1);
             var measuredSamples = IntegerArgument(arguments, "-aibtMeasuredSamples", DefaultMeasuredSamples, 1);
             var budgetStepLimit = (uint)IntegerArgument(arguments, "-aibtBudgetStepLimit", (int)DefaultBudgetStepLimit, 1);
-            var batchSize = (uint)IntegerArgument(arguments, "-aibtBatchSize", (int)DefaultBatchSize, 1);
             var agentCounts = ListArgument(arguments, "-aibtAgentCounts", DefaultAgentCounts);
+            var batchSizes = ListArgument(arguments, "-aibtBatchSizes", DefaultBatchSizes);
+            var maxWorkerThreadCount = JobsUtility.JobWorkerMaximumCount;
+            var defaultWorkerThreadCounts = new[] { 1, JobsUtility.JobWorkerCount };
+            var workerThreadCounts = ListArgument(arguments, "-aibtWorkerThreadCounts", defaultWorkerThreadCounts);
+            foreach (var count in workerThreadCounts)
+            {
+                if (count < 1 || count > maxWorkerThreadCount)
+                {
+                    throw new ArgumentException("-aibtWorkerThreadCounts entry " + count + " is outside [1, " + maxWorkerThreadCount + "] (JobsUtility.JobWorkerMaximumCount on this machine).");
+                }
+            }
 
+            var originalWorkerThreadCount = JobsUtility.JobWorkerCount;
             var allocationProbe = ProbeManagedAllocationCounter();
             var scenarioReports = new List<ScenarioReport>();
             var notYetImplemented = new List<PlaceholderScenario>();
 
-            foreach (var definition in SchedulingScenarios.Catalog)
+            try
             {
-                if (!definition.Implemented)
+                foreach (var definition in SchedulingScenarios.Catalog)
                 {
-                    notYetImplemented.Add(new PlaceholderScenario { name = definition.Name, isolates = definition.Isolates });
-                    continue;
-                }
-
-                var compiled = definition.Build();
-                var cases = new List<ScenarioCase>();
-                foreach (var agentCount in agentCounts)
-                {
-                    foreach (var policy in Policies)
+                    if (!definition.Implemented)
                     {
-                        for (var warmupIndex = 0; warmupIndex < warmupSamples; warmupIndex++)
-                        {
-                            RunOneSample(compiled, policy, agentCount, budgetStepLimit, batchSize, warmupIndex, false);
-                        }
-
-                        GC.Collect();
-                        GC.WaitForPendingFinalizers();
-                        GC.Collect();
-
-                        var samples = new ScenarioSample[measuredSamples];
-                        for (var sampleIndex = 0; sampleIndex < measuredSamples; sampleIndex++)
-                        {
-                            samples[sampleIndex] = RunOneSample(compiled, policy, agentCount, budgetStepLimit, batchSize, sampleIndex, true);
-                        }
-
-                        cases.Add(new ScenarioCase
-                        {
-                            policy = policy,
-                            agentCount = agentCount,
-                            samples = samples,
-                            summary = Summarize(samples)
-                        });
+                        notYetImplemented.Add(new PlaceholderScenario { name = definition.Name, isolates = definition.Isolates });
+                        continue;
                     }
-                }
 
-                scenarioReports.Add(new ScenarioReport
-                {
-                    name = definition.Name,
-                    isolates = definition.Isolates,
-                    nodeCount = compiled.Program.Nodes.Count,
-                    cases = cases.ToArray()
-                });
+                    var compiled = definition.Build();
+                    var cases = new List<ScenarioCase>();
+                    foreach (var agentCount in agentCounts)
+                    {
+                        foreach (var policy in Policies)
+                        {
+                            if (policy == "BatchedJobsSameFrame")
+                            {
+                                // batchSize and worker-thread count only affect the one policy that
+                                // actually schedules Unity Jobs -- Immediate/Budgeted are plain
+                                // managed loops with nothing for either parameter to change.
+                                foreach (var batchSize in batchSizes)
+                                {
+                                    foreach (var workerThreadCount in workerThreadCounts)
+                                    {
+                                        JobsUtility.JobWorkerCount = workerThreadCount;
+                                        cases.Add(RunCase(compiled, policy, agentCount, budgetStepLimit, batchSize, workerThreadCount, warmupSamples, measuredSamples));
+                                    }
+                                }
+
+                                JobsUtility.JobWorkerCount = originalWorkerThreadCount;
+                            }
+                            else
+                            {
+                                cases.Add(RunCase(compiled, policy, agentCount, budgetStepLimit, NotApplicable, NotApplicable, warmupSamples, measuredSamples));
+                            }
+                        }
+                    }
+
+                    scenarioReports.Add(new ScenarioReport
+                    {
+                        name = definition.Name,
+                        isolates = definition.Isolates,
+                        nodeCount = compiled.Program.Nodes.Count,
+                        cases = cases.ToArray()
+                    });
+                }
+            }
+            finally
+            {
+                JobsUtility.JobWorkerCount = originalWorkerThreadCount;
             }
 
             var report = new SchedulingBenchmarkReport
@@ -110,10 +127,13 @@ namespace AIBT.Benchmarks.Phase4.Scheduling
                     warmupSamplesPerCase = warmupSamples,
                     measuredSamplesPerCase = measuredSamples,
                     budgetStepLimit = budgetStepLimit,
-                    batchSize = batchSize,
+                    batchSizes = batchSizes,
+                    workerThreadCounts = workerThreadCounts,
+                    maxWorkerThreadCount = maxWorkerThreadCount,
                     policies = (string[])Policies.Clone(),
                     timedRegion = "One TryRunImmediate/TryRunBudgeted/TryRunBatchedJobsSameFrame call (one tick) over a freshly created agent set",
-                    excludedFromTimedRegion = "Agent construction/disposal, JSON serialization, GC.Collect calls between cases"
+                    excludedFromTimedRegion = "Agent construction/disposal, JSON serialization, GC.Collect calls between cases",
+                    batchSizeAndWorkerThreadSweepScope = "batchSizes and workerThreadCounts are swept only for BatchedJobsSameFrame -- Immediate and Budgeted are plain managed loops with no Jobs/batching involved, so both fields are -1 (not applicable) on their cases."
                 },
                 allocationProbe = allocationProbe,
                 scenarios = scenarioReports.ToArray(),
@@ -137,6 +157,43 @@ namespace AIBT.Benchmarks.Phase4.Scheduling
             if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
             File.WriteAllText(outputPath, JsonUtility.ToJson(report, true), new UTF8Encoding(false));
             UnityEngine.Debug.Log("AIBT P4-001 scheduling benchmark completed: " + outputPath);
+        }
+
+        private static ScenarioCase RunCase(
+            SchedulingScenarios.CompiledScenario compiled,
+            string policy,
+            int agentCount,
+            uint budgetStepLimit,
+            int batchSize,
+            int workerThreadCount,
+            int warmupSamples,
+            int measuredSamples)
+        {
+            var effectiveBatchSize = batchSize > 0 ? (uint)batchSize : 0u;
+            for (var warmupIndex = 0; warmupIndex < warmupSamples; warmupIndex++)
+            {
+                RunOneSample(compiled, policy, agentCount, budgetStepLimit, effectiveBatchSize, warmupIndex, false);
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            var samples = new ScenarioSample[measuredSamples];
+            for (var sampleIndex = 0; sampleIndex < measuredSamples; sampleIndex++)
+            {
+                samples[sampleIndex] = RunOneSample(compiled, policy, agentCount, budgetStepLimit, effectiveBatchSize, sampleIndex, true);
+            }
+
+            return new ScenarioCase
+            {
+                policy = policy,
+                agentCount = agentCount,
+                batchSize = batchSize,
+                workerThreadCount = workerThreadCount,
+                samples = samples,
+                summary = Summarize(samples)
+            };
         }
 
         private static ScenarioSample RunOneSample(
@@ -411,10 +468,13 @@ namespace AIBT.Benchmarks.Phase4.Scheduling
             public int warmupSamplesPerCase;
             public int measuredSamplesPerCase;
             public uint budgetStepLimit;
-            public uint batchSize;
+            public int[] batchSizes;
+            public int[] workerThreadCounts;
+            public int maxWorkerThreadCount;
             public string[] policies;
             public string timedRegion;
             public string excludedFromTimedRegion;
+            public string batchSizeAndWorkerThreadSweepScope;
         }
 
         [Serializable]
@@ -439,6 +499,8 @@ namespace AIBT.Benchmarks.Phase4.Scheduling
         {
             public string policy;
             public int agentCount;
+            public int batchSize;
+            public int workerThreadCount;
             public ScenarioSample[] samples;
             public ScenarioSummary summary;
         }

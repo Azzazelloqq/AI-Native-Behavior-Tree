@@ -35,12 +35,17 @@
   similar tree that would not actually isolate what it claims to.
 - `Benchmarks~/Phase4/Scheduling/Unity/SchedulingBenchmarkRunner.cs` (new, isolated-project-only):
   the `-executeMethod` entry point. Sweeps every implemented scenario against all three policies
-  at two agent-count points (16, 128 by default), records raw per-sample timing/allocation data
-  separately from descriptive min/median/p95/max summaries, and captures full environment
-  metadata (Unity/package/OS/CPU/build config), mirroring `DispatchBenchmarkRunner`'s pattern.
-  `PipelinedJobs` and `Auto` are explicit documented policy placeholders
-  (`documentedNotYetImplementedPolicies`) -- neither is implemented, and no case ever substitutes
-  one of the three accepted fixed policies for either, per this card's forbidden-changes clause.
+  at two agent-count points (16, 128 by default); `BatchedJobsSameFrame` is additionally swept
+  across batch size (8/32/128 by default) and `JobsUtility.JobWorkerCount` (1 and the machine's
+  `JobWorkerMaximumCount` by default, validated against that maximum before any work starts, and
+  restored via `finally` even on failure) -- `Immediate`/`Budgeted` are plain managed loops with
+  neither Jobs nor batching, so both fields record `-1` (not applicable) on their cases. Records
+  raw per-sample timing/allocation data separately from descriptive min/median/p95/max summaries,
+  and captures full environment metadata (Unity/package/OS/CPU/build config), mirroring
+  `DispatchBenchmarkRunner`'s pattern. `PipelinedJobs` and `Auto` are explicit documented policy
+  placeholders (`documentedNotYetImplementedPolicies`) -- neither is implemented, and no case ever
+  substitutes one of the three accepted fixed policies for either, per this card's
+  forbidden-changes clause.
 - `Benchmarks~/Phase4/Scheduling/Unity/AIBT.Runtime.Tests.asmdef` (new, isolated-project-only):
   deliberately reuses the existing friend assembly name `AIBT.Runtime.Tests` (`Runtime/AssemblyInfo.cs`'s
   `InternalsVisibleTo` target), the same technique `Benchmarks~/Phase2/Dispatch/` already uses with
@@ -61,6 +66,40 @@
   `git status` inside the `AIBT` submodule that this session touched only
   `Tests/Runtime/Benchmarking/` and `Benchmarks~/Phase4/` -- nothing in `CodeGen` or
   `LocalSaveSystem`.
+
+## Correction: parameter-matrix sweep was initially incomplete
+
+The card's own Deliverables text calls for "a parameter-matrix runner sweeping logarithmic agent
+counts, tree shape, batch parameters, and worker-thread counts where controllable." The first
+version of this card marked `Done` only swept agent count and scenario (tree shape); `batchSize`
+was a single fixed CLI value and `JobsUtility.JobWorkerCount` was recorded as environment metadata
+only, never varied. The user caught this gap directly by asking whether the benchmark was
+actually built to inform thread-count/batch-size configuration. It was not, yet -- this was a real
+scope miss against the card's own stated deliverable, not a matter of interpretation.
+
+Fixed by extending `SchedulingBenchmarkRunner` to sweep `batchSize` (8/32/128) and
+`JobsUtility.JobWorkerCount` (1 and this machine's `JobWorkerMaximumCount`, 23) for
+`BatchedJobsSameFrame` specifically -- the only one of the three policies that actually schedules
+Unity Jobs (`NativeBatchedLifecycleOwnerV1.TrySchedule`); `Immediate` and `Budgeted` are plain
+managed loops with nothing for either parameter to affect, so sweeping them there would have been
+wasted work, not thoroughness. `JobsUtility.JobWorkerCount` was confirmed settable (with a real
+`get`/`set`/restore round trip) via `execute_code` against the live Unity MCP session before
+building on that assumption.
+
+This produced a real, reproducible finding: at 16 agents, `workerThreadCount=1` measures lower
+median ns/agent than `workerThreadCount=23` in every implemented scenario -- sometimes by more
+than 2x -- because the fixed cost of waking/coordinating more worker threads outweighs the
+parallelism gained at this population size; the gap narrows at 128 agents. See
+`Benchmarks~/Phase4/Scheduling/README.md`'s tables. This is exactly the kind of input
+`Documentation~/execution-and-scheduling.md`'s batch-size/worker-count calibration work needs, not
+a recommendation in itself.
+
+`Run-SchedulingBenchmark.ps1` also still passed the old singular `-aibtBatchSize` CLI flag after
+the C# side was renamed to `-aibtBatchSizes` -- a second, related gap that would have silently
+fallen back to the runner's own default sweep instead of honoring `-BatchSizes` from the caller.
+Fixed alongside the sweep extension; verified with an explicit non-default
+`-BatchSizes '4,16' -WorkerThreadCounts '1,4'` invocation before regenerating the canonical run
+with defaults.
 
 ## Debugging note (kept, not silently smoothed over)
 
@@ -90,10 +129,11 @@ than stopping at "it compiled."
 
 ## Recorded numbers
 
-See `Benchmarks~/Phase4/Scheduling/Results/scheduling-windows-editor-20260819-162029.json` for
-every raw sample and `Benchmarks~/Phase4/Scheduling/README.md` for the summarized table (median
-ns/agent per scenario, per policy, per agent count). Not reproduced again here to avoid a second
-copy drifting from the authoritative JSON.
+See `Benchmarks~/Phase4/Scheduling/Results/scheduling-windows-editor-20260819-165205.json` for
+every raw sample and `Benchmarks~/Phase4/Scheduling/README.md` for the summarized tables (median
+ns/agent per scenario, per policy, per agent count, and -- for `BatchedJobsSameFrame` -- per batch
+size and worker-thread count). Not reproduced again here to avoid a second copy drifting from the
+authoritative JSON.
 
 ## Decision
 
@@ -124,7 +164,11 @@ copy drifting from the authoritative JSON.
   at this scale, not a general claim; P4-002 (full-scale sweep) and later batch-size-calibration
   work are exactly where this gets characterized properly.
 - No performance threshold, regression bound, or scheduling recommendation is drawn from these
-  numbers, per this card's own forbidden-changes clause.
+  numbers, per this card's own forbidden-changes clause -- including the batch-size/worker-thread
+  finding above: it is a real, reproduced observation, not a recommended worker-thread setting.
+- The batch-size/worker-thread sweep only covers `BatchedJobsSameFrame`, only two agent-count
+  points, and only this one workstation's thread topology; it is evidence for later calibration
+  work, not a calibrated result itself.
 - Eight of fourteen catalog scenarios and both `PipelinedJobs`/`Auto` policies remain documented
   placeholders; this card produces the *ability* to measure, not the full catalog's results.
 - Raw results here are an input to Phase 4's broader benchmark research (P4-002 runs this harness

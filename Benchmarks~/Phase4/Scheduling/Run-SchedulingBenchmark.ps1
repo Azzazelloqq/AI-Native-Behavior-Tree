@@ -5,7 +5,8 @@ param(
     [int]$MeasuredSamples = 15,
     [string]$AgentCounts = '16,128',
     [int]$BudgetStepLimit = 4,
-    [int]$BatchSize = 32,
+    [string]$BatchSizes = '8,32,128',
+    [string]$WorkerThreadCounts,
     [string]$OutputPath,
     [string]$IsolatedProjectPath
 )
@@ -19,7 +20,6 @@ if (-not (Test-Path -LiteralPath $UnityPath -PathType Leaf)) {
 if ($WarmupSamples -lt 1) { throw 'WarmupSamples must be at least 1.' }
 if ($MeasuredSamples -lt 1) { throw 'MeasuredSamples must be at least 1.' }
 if ($BudgetStepLimit -lt 1) { throw 'BudgetStepLimit must be at least 1.' }
-if ($BatchSize -lt 1) { throw 'BatchSize must be at least 1.' }
 
 $aibtRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
 $projectRoot = Split-Path -Parent (Split-Path -Parent $aibtRoot)
@@ -93,7 +93,8 @@ $manifest = @'
     $manifest,
     [Text.UTF8Encoding]::new($false))
 
-$unityArguments = @(
+$unityArguments = [Collections.Generic.List[string]]::new()
+$unityArguments.AddRange([string[]]@(
     '-batchmode',
     '-nographics',
     '-burst-enable-compilation',
@@ -104,10 +105,12 @@ $unityArguments = @(
     '-aibtMeasuredSamples', $MeasuredSamples.ToString([Globalization.CultureInfo]::InvariantCulture),
     '-aibtAgentCounts', $AgentCounts,
     '-aibtBudgetStepLimit', $BudgetStepLimit.ToString([Globalization.CultureInfo]::InvariantCulture),
-    '-aibtBatchSize', $BatchSize.ToString([Globalization.CultureInfo]::InvariantCulture),
-    '-logFile', $logPath,
-    '-quit'
-)
+    '-aibtBatchSizes', $BatchSizes
+))
+if (-not [string]::IsNullOrWhiteSpace($WorkerThreadCounts)) {
+    $unityArguments.AddRange([string[]]@('-aibtWorkerThreadCounts', $WorkerThreadCounts))
+}
+$unityArguments.AddRange([string[]]@('-logFile', $logPath, '-quit'))
 
 Write-Host "Isolated project: $IsolatedProjectPath"
 Write-Host "Result: $OutputPath"
