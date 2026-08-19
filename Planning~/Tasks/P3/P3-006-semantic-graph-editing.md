@@ -1,6 +1,6 @@
 # P3-006 — Semantic graph editing
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -50,3 +50,24 @@ canonical round-trip comparison against hand-authored fixtures
 
 - `P3-007`, `P3-008`, `P3-009`, `P3-010`, and `P3-012` all build on this card's editing surface — keep the edit-to-compile path's shape stable once accepted.
 - `P3-007`'s isolation proof depends on this card producing a *minimal* diff per edit (only the touched node/field changes) so the "layout-only edit changes nothing here" comparison is meaningful.
+
+## Outcome
+
+- `Editor/Editing/`: `SemanticEditOperations` (pure add/remove/connect/
+  disconnect/set-parameter over `TreeDocument`, with cascade cleanup on
+  removal that the raw `TreeDocument` mutators don't provide),
+  `SemanticEditTransaction` (gates every edit through the real
+  `ReferenceCompiler.Compile`/`TreeValidator.Validate` pipeline — accept iff
+  compile succeeds, otherwise the pre-edit document is returned unchanged
+  with the real diagnostics), `SemanticEditHistory` (undo/redo snapshot
+  stack).
+- 7/7 tests passing, including a byte-identical-to-hand-authoring proof and
+  an out-of-band-diagnostic-equivalence proof for a rejected edit.
+- Two real findings along the way (both fixed in test code): canonical
+  serialization requires non-null `SemanticObject`/`TagSet` everywhere, and
+  Phase 1's compiler can only execute `BuiltIn`/`TestFixture`-sourced node
+  types (no working custom-node ABI yet) — see
+  `Planning~/Evidence/P3-006/README.md`'s Decision section.
+- **No `Editor/Graph/` UI wiring** — outside this card's `Allowed changes`,
+  same pattern as `P3-004`/`P3-005`.
+- Full evidence: `Planning~/Evidence/P3-006/README.md`, `verification-results.json`.

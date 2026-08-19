@@ -1,0 +1,30 @@
+{
+  "schema": "aibt-p3-006-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Run-UnityCompile.ps1 (Unity 6000.5.8f1, C:/UnityProjects/Modules)|PASSED",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Editing.SemanticEditOperationsTests|PASSED|4/4",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Editing.SemanticEditTransactionTests|PASSED|3/3",
+    "FINDING|CanonicalTreeJson.ValidateRepresentable requires non-null Parameters/Tags/Metadata on every node/document|fixed in test fixtures via explicit SemanticObject.Empty/TagSet.Empty",
+    "FINDING|Phase 1 ReferenceCompiler cannot compile UserExtension-sourced node types (AIBT3012, no reference-handler binding)|fixed by using AddBuiltInForTest + NodeHandlerBindingContract, matching Tests/Editor/Compilation/ReferenceCompilerTests.cs's own precedent",
+    "TEST_RESULT|AddNodeAppendsToParentChildrenAndLeavesOriginalUnchanged|Passed",
+    "TEST_RESULT|RemoveNodeDropsSubtreeAndCleansUpParentReference|Passed",
+    "TEST_RESULT|ConnectAndDisconnectRoundTrip|Passed",
+    "TEST_RESULT|SetParameterReplacesExistingValueAndAddsNewOne|Passed",
+    "TEST_RESULT|SequenceOfEditsProducesCanonicalBytesIdenticalToHandAuthoring|Passed",
+    "TEST_RESULT|InvalidEditIsRejectedWithTheSameDiagnosticAnOutOfBandValidationPassWouldProduce|Passed",
+    "TEST_RESULT|UndoRedoCoversSemanticEdits|Passed",
+    "DELIVERABLE|Editor/Editing/SemanticEditOperations.cs|created",
+    "DELIVERABLE|Editor/Editing/SemanticEditTransaction.cs|created",
+    "DELIVERABLE|Editor/Editing/SemanticEditHistory.cs|created",
+    "DELIVERABLE|Tests/Editor/Editing/SemanticEditOperationsTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Editing/SemanticEditTransactionTests.cs|created",
+    "WORK_ITEM_STATUS|P3-006|draft->done",
+    "WORK_ITEM_STATUS|P3-007|draft->ready",
+    "WORK_ITEM_STATUS|P3-008|draft->ready",
+    "WORK_ITEM_STATUS|P3-009|draft->ready",
+    "WORK_ITEM_STATUS|P3-010|draft->ready",
+    "WORK_ITEM_STATUS|P3-012|draft->ready"
+  ]
+}
