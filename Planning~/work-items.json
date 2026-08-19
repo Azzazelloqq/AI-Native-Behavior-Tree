@@ -925,7 +925,7 @@
       "id": "P4-001",
       "phase": 4,
       "title": "Benchmark scenario catalog and harness",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P4/P4-001-benchmark-scenario-catalog-and-harness.md",
       "dependsOn": [

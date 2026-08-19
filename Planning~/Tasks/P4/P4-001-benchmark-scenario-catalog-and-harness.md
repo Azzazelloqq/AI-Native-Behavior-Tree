@@ -1,6 +1,6 @@
 # P4-001 — Benchmark scenario catalog and harness
 
-Status: `Ready`
+Status: `Done`
 
 ## Objective
 
@@ -54,3 +54,18 @@ one full parameter-matrix run against the three existing fixed policies, raw sam
 
 - `P4-002` runs this harness at full scale to produce the actual fixed-policy cost curves; this card only proves the harness itself is correct.
 - `P4-003` (`PipelinedJobs`) and `P4-005`/`P4-007` (`Auto`, autotuning) will extend this catalog's placeholder entries once those policies exist — extending, not replacing, this card's scenarios.
+
+## Outcome
+
+Implemented `SchedulingPolicyDriver` (Runtime-only, shared unchanged between the in-project
+EditMode correctness suite and the isolated Player-benchmark project) and six of the fourteen
+catalog scenarios — the ones needing only built-in composites and constant-status leaves
+(scheduling-baseline-empty-job, shallow-tree-cheap-conditions, deep-sequence-selector-traversal,
+wide-branching-frequent-failures, predominantly-running-actions, many-programs-small-populations).
+Every implemented scenario ran end-to-end against all three accepted fixed policies at two
+agent-count points (16, 128) without error, with raw samples and environment metadata recorded
+separately from summaries. The remaining eight scenarios and the `PipelinedJobs`/`Auto` policies
+are documented placeholders in the result JSON (name + what each will isolate/measure), never
+silently substituted or faked. `Tools~/Verification/P4/` was not created — nothing in this card's
+scope needed it. Full detail, recorded numbers, and the three bugs found and fixed while
+proving the isolated harness end-to-end are in `Planning~/Evidence/P4-001/README.md`.
