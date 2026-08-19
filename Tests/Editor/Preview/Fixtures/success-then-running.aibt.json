@@ -1,0 +1,25 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.test.preview-success-then-running",
+  "name": "Preview Success Then Running",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "a",
+        "b"
+      ]
+    },
+    "a": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "b": {
+      "type": "aibt.test.running",
+      "typeVersion": 1
+    }
+  }
+}

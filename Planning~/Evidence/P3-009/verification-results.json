@@ -1,0 +1,22 @@
+{
+  "schema": "aibt-p3-009-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Unity MCP: refresh_unity + read_console (types=error) after each edit|PASSED|no compile errors on final state",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite, interactive Editor session, Unity 6000.5.8f1)|PASSED_WITH_PREEXISTING_FAILURES|1299 tests, 1296 passed; 3 failures pre-existing and unrelated to this card (AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests x2, LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk)",
+    "TEST_RESULT|AIBT.Tests.Editor.Preview.ReferencePreviewParityTests.PreviewAndHeadlessOracleProduceIdenticalStepSequenceAcrossTicks|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Preview.ReferencePreviewParityTests.EditViaSemanticEditOperationsIsReflectedInNextPreviewRunWithoutEditorRestart|Passed",
+    "TEST_RESULT|AIBT.Tests.Editor.Preview.BehaviorTreePreviewWindowTests.LoadingAndSwitchingDocumentsNeverMutatesTheSourceFileOrCreatesALayoutFile|Passed",
+    "COMMAND|Unity MCP: execute_code, live interactive session against the open 6000.5.8f1 Editor|PASSED|opened BehaviorTreePreviewWindow, loaded success-then-running.aibt.json (3 nodes rendered), Step opened+advanced a tick (active=[root]), Run Tick reached the tick boundary (active=[root,b], HasOpenTick=False, matching ReferenceExecutionMachine.Tick's Running branch), a second Run Tick reproduced the same active set (memory-sequence resumed at node b without re-entering a); no console errors",
+    "NOT_RUN|Run-UnityTests.ps1 / Run-UnityCompile.ps1 (headless batchmode)|skipped by design: the interactive Editor was open for the Unity MCP bridge session this card required (per this session's operating constraint, batchmode fails silently -- exit 1, no compile error -- while Temp/UnityLockfile is held); Unity MCP's own run_tests/read_console/execute_code tools were used instead against the live interactive Editor, which is a strictly stronger verification for this card's live-preview requirement",
+    "DELIVERABLE|Authoring/Execution/ReferencePreviewContracts.cs|created",
+    "DELIVERABLE|Authoring/Execution/ReferencePreviewDriver.cs|created",
+    "DELIVERABLE|Authoring/Execution/ReferencePreviewFixtureEnvironment.cs|created",
+    "DELIVERABLE|Editor/Preview/BehaviorTreePreviewWindow.cs|created",
+    "DELIVERABLE|Tests/Editor/Preview/ReferencePreviewParityTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Preview/BehaviorTreePreviewWindowTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Preview/Fixtures/success-then-running.aibt.json|created",
+    "WORK_ITEM_STATUS|P3-009|ready->done"
+  ]
+}

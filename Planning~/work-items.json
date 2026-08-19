@@ -822,7 +822,7 @@
       "id": "P3-009",
       "phase": 3,
       "title": "Editor preview via reference oracle",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-009-editor-preview-reference-oracle.md",
       "dependsOn": [
@@ -830,6 +830,7 @@
       ],
       "owns": [
         "Editor/Preview/",
+        "Authoring/Execution/",
         "Planning~/Evidence/P3-009/"
       ]
     },
