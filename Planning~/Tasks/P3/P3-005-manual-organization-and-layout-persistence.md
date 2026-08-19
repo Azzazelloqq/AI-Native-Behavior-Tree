@@ -1,6 +1,6 @@
 # P3-005 — Manual organization and layout persistence
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -51,3 +51,24 @@ Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter <layout persistence
 
 - `P3-007`'s isolation proof exercises this card's persistence path as the "layout-only edit" side of the test; keep the persisted diff surface (what changes in `.aibt.layout.json` per action) inspectable for that test to assert against.
 - `P3-012`'s large-graph tests exercise this card's UI directly; avoid designs that only perform acceptably on the small fixtures used here.
+
+## Outcome
+
+- `LayoutDocument` extended with `Groups`/`Notes`/`Reroutes`; `CanonicalLayoutJson.cs`
+  (new strict reader, `Newtonsoft.Json`-based) and `CanonicalLayoutJsonWriter.cs`
+  (extended) round-trip all four presentation concepts byte-for-byte.
+- `Editor/Organization/`: `LayoutOrganizationOperations` (pin/group/note/reroute,
+  pure functions), `LayoutHistory` (undo/redo snapshot stack),
+  `LayoutPersistenceController` (`Load`/`Save`, auto-layout fallback for a
+  missing file — resolves `P3-004`'s previously-flagged integration gap at
+  the persistence layer).
+- One escalated decision: added `Newtonsoft.Json` to `AIBT.Editor.asmdef`
+  (owner accepted, reusing `AIBT.Authoring`'s existing pattern) rather than
+  hand-rolling a second JSON tokenizer.
+- 14/14 new tests passing (7 reader/writer, 4 organization ops, 3
+  persistence controller), plus `P3-004`'s 8 tests re-verified with no
+  regression.
+- **No `Editor/Graph/` UI wiring** — outside this card's `Allowed changes`,
+  same as `P3-004`. Flagged as a disclosed follow-up, not silently done or
+  silently skipped.
+- Full evidence: `Planning~/Evidence/P3-005/README.md`, `verification-results.json`.

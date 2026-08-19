@@ -761,7 +761,7 @@
       "id": "P3-005",
       "phase": 3,
       "title": "Manual organization and layout persistence",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P3/P3-005-manual-organization-and-layout-persistence.md",
       "dependsOn": [

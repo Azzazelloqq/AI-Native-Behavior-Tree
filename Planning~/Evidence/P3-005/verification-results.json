@@ -1,0 +1,25 @@
+{
+  "schema": "aibt-p3-005-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 64.",
+    "COMMAND|Run-UnityCompile.ps1 (Unity 6000.5.8f1, C:/UnityProjects/Modules)|PASSED",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Layout.CanonicalLayoutJsonTests|PASSED|7/7",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Organization.LayoutOrganizationOperationsTests|PASSED|4/4",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Organization.LayoutPersistenceControllerTests|PASSED|3/3",
+    "COMMAND|Run-UnityTests.ps1 -Mode EditMode -Scope Focused -TestFilter AIBT.Tests.Editor.Layout.DeterministicAutoLayoutServiceTests (regression check)|PASSED|8/8",
+    "DECISION|Add Newtonsoft.Json reference to AIBT.Editor.asmdef|escalated to owner via AskUserQuestion, accepted",
+    "DELIVERABLE|Editor/Layout/LayoutDocument.cs|extended (Groups/Notes/Reroutes)",
+    "DELIVERABLE|Editor/Layout/LayoutJsonDiagnostics.cs|created",
+    "DELIVERABLE|Editor/Layout/LayoutJsonResult.cs|created",
+    "DELIVERABLE|Editor/Layout/CanonicalLayoutJson.cs|created",
+    "DELIVERABLE|Editor/Layout/CanonicalLayoutJsonWriter.cs|extended (groups/notes/reroutes)",
+    "DELIVERABLE|Editor/Organization/LayoutOrganizationOperations.cs|created",
+    "DELIVERABLE|Editor/Organization/LayoutHistory.cs|created",
+    "DELIVERABLE|Editor/Organization/LayoutPersistenceController.cs|created",
+    "DELIVERABLE|Tests/Editor/Layout/CanonicalLayoutJsonTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Organization/LayoutOrganizationOperationsTests.cs|created",
+    "DELIVERABLE|Tests/Editor/Organization/LayoutPersistenceControllerTests.cs|created",
+    "WORK_ITEM_STATUS|P3-005|draft->done"
+  ]
+}

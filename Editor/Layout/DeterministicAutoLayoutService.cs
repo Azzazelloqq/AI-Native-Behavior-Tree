@@ -68,7 +68,16 @@ namespace AIBT.Editor.Layout
             }
 
             var direction = existingLayout?.Direction ?? LayoutDirection.TopToBottom;
-            return new LayoutDocument(document.TreeId, direction, placements);
+
+            // Auto-layout only ever (re)computes node positions; groups, notes, and reroutes
+            // are user-authored (P3-005) and must pass through unchanged.
+            return new LayoutDocument(
+                document.TreeId,
+                direction,
+                placements,
+                existingLayout?.Groups,
+                existingLayout?.Notes,
+                existingLayout?.Reroutes);
         }
 
         public static byte[] LayoutToBytes(TreeDocument document, LayoutDocument existingLayout = null)

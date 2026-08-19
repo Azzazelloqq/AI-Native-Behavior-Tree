@@ -47,6 +47,21 @@ namespace AIBT.Editor.Layout
                 Property(ref first, "treeId", () => String(document.TreeId.Value));
                 Property(ref first, "direction", () => String(DirectionText(document.Direction)));
                 Property(ref first, "nodes", () => WriteNodes(document.Nodes));
+                if (document.Groups.Count > 0)
+                {
+                    Property(ref first, "groups", () => WriteGroups(document.Groups));
+                }
+
+                if (document.Notes.Count > 0)
+                {
+                    Property(ref first, "notes", () => WriteNotes(document.Notes));
+                }
+
+                if (document.Reroutes.Count > 0)
+                {
+                    Property(ref first, "reroutes", () => WriteReroutes(document.Reroutes));
+                }
+
                 EndObject(first);
             }
 
@@ -89,6 +104,153 @@ namespace AIBT.Editor.Layout
                 Property(ref first, "x", () => Number(point.X));
                 Property(ref first, "y", () => Number(point.Y));
                 EndObject(first);
+            }
+
+            private void WriteGroups(IReadOnlyDictionary<string, LayoutGroup> groups)
+            {
+                var keys = new List<string>(groups.Keys);
+                keys.Sort(string.CompareOrdinal);
+
+                BeginObject();
+                var first = true;
+                foreach (var key in keys)
+                {
+                    var group = groups[key];
+                    Property(ref first, key, () => WriteGroup(group));
+                }
+
+                EndObject(first);
+            }
+
+            private void WriteGroup(LayoutGroup group)
+            {
+                BeginObject();
+                var first = true;
+                Property(ref first, "title", () => String(group.Title));
+                if (group.Description != null)
+                {
+                    Property(ref first, "description", () => String(group.Description));
+                }
+
+                if (group.Color != null)
+                {
+                    Property(ref first, "color", () => String(group.Color));
+                }
+
+                if (group.Locked)
+                {
+                    Property(ref first, "locked", () => Boolean(true));
+                }
+
+                Property(ref first, "memberNodeIds", () => WriteNodeIdArray(group.MemberNodeIds));
+                EndObject(first);
+            }
+
+            private void WriteNodeIdArray(IReadOnlyList<NodeId> ids)
+            {
+                _builder.Append('[');
+                _depth++;
+                for (var index = 0; index < ids.Count; index++)
+                {
+                    if (index > 0)
+                    {
+                        _builder.Append(',');
+                    }
+
+                    _builder.Append('\n');
+                    Indent();
+                    String(ids[index].Value);
+                }
+
+                _depth--;
+                if (ids.Count > 0)
+                {
+                    _builder.Append('\n');
+                    Indent();
+                }
+
+                _builder.Append(']');
+            }
+
+            private void WriteNotes(IReadOnlyDictionary<string, LayoutNote> notes)
+            {
+                var keys = new List<string>(notes.Keys);
+                keys.Sort(string.CompareOrdinal);
+
+                BeginObject();
+                var first = true;
+                foreach (var key in keys)
+                {
+                    var note = notes[key];
+                    Property(ref first, key, () => WriteNote(note));
+                }
+
+                EndObject(first);
+            }
+
+            private void WriteNote(LayoutNote note)
+            {
+                BeginObject();
+                var first = true;
+                Property(ref first, "text", () => String(note.Text));
+                Property(ref first, "position", () => WritePoint(note.Position));
+                Property(ref first, "size", () => WritePoint(note.Size));
+                if (note.Color != null)
+                {
+                    Property(ref first, "color", () => String(note.Color));
+                }
+
+                EndObject(first);
+            }
+
+            private void WriteReroutes(IReadOnlyDictionary<LayoutEdgeKey, LayoutReroute> reroutes)
+            {
+                var keys = new List<LayoutEdgeKey>(reroutes.Keys);
+                keys.Sort((left, right) => string.CompareOrdinal(left.ToKeyString(), right.ToKeyString()));
+
+                BeginObject();
+                var first = true;
+                foreach (var key in keys)
+                {
+                    var reroute = reroutes[key];
+                    Property(ref first, key.ToKeyString(), () => WriteReroute(reroute));
+                }
+
+                EndObject(first);
+            }
+
+            private void WriteReroute(LayoutReroute reroute)
+            {
+                BeginObject();
+                var first = true;
+                Property(ref first, "waypoints", () => WritePointArray(reroute.Waypoints));
+                EndObject(first);
+            }
+
+            private void WritePointArray(IReadOnlyList<LayoutPoint> points)
+            {
+                _builder.Append('[');
+                _depth++;
+                for (var index = 0; index < points.Count; index++)
+                {
+                    if (index > 0)
+                    {
+                        _builder.Append(',');
+                    }
+
+                    _builder.Append('\n');
+                    Indent();
+                    WritePoint(points[index]);
+                }
+
+                _depth--;
+                if (points.Count > 0)
+                {
+                    _builder.Append('\n');
+                    Indent();
+                }
+
+                _builder.Append(']');
             }
 
             private static string DirectionText(LayoutDirection direction)

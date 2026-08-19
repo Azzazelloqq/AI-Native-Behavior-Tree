@@ -3,7 +3,8 @@
   "rootNamespace": "AIBT.Editor",
   "references": [
     "AIBT.Runtime",
-    "AIBT.Authoring"
+    "AIBT.Authoring",
+    "Newtonsoft.Json"
   ],
   "includePlatforms": [
     "Editor"
