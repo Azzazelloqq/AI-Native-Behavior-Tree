@@ -1,0 +1,21 @@
+{
+  "schema": "aibt-p4-002-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 73.",
+    "COMMAND|Benchmarks~/Phase4/Scheduling/Run-SchedulingBenchmark.ps1 -AgentCounts '16,64,256,1024' -WorkerThreadCounts '1,23' (harness unmodified from P4-001)|PASSED|isolated project built, Unity headless run exited 0, result JSON written; 6/6 implemented scenarios measured at 4 agent-count points against Immediate/Budgeted and BatchedJobsSameFrame x 3 batch sizes x 2 worker-thread counts (192 total measured cases) without error",
+    "REVIEW|Card promotion Draft->Ready|NO_GAP_FOUND|unlike P4-001/P4-003, this card's Allowed changes (Benchmarks~/Phase4/CostCurves/, Planning~/Evidence/P4-002/) already matched its acceptance criteria; promoted directly, no AskUserQuestion needed",
+    "MEASUREMENT|see Benchmarks~/Phase4/CostCurves/Results/cost-curves-windows-editor-20260820.json for all raw samples and Benchmarks~/Phase4/CostCurves/README.md for the cost-curve tables and analysis",
+    "FINDING|Immediate and Budgeted per-agent cost is flat (population-independent) across 16-1024 agents in every scenario|reproduced across all 6 scenarios",
+    "FINDING|BatchedJobsSameFrame at a fixed batch size (32) is not flat -- per-agent cost roughly 2x-4x from 16 to 1024 agents, traced to the number of Job-scheduling chunks growing with population at fixed batch size|reproduced across all 6 scenarios; this is the evidence P4-004's batching calibration needs, not a calibrated answer",
+    "FINDING|workerThreadCount=23 costs more than workerThreadCount=1 in every measured cell, narrowing but never reversing at higher agent counts|consistent with P4-001's smaller-scale finding",
+    "FINDING|deep-sequence-selector-traversal's curve is non-monotonic (16 agents costs more than 64) -- traced to batch-size/population divisibility, not noise|observed once, plausible mechanistic explanation given, not independently re-verified at a second sample count",
+    "ACCEPTANCE|Every scenario in P4-001's catalog that applies to a fixed policy is measured across at least three points on its relevant parameter axis|MET|4 agent-count points (16, 64, 256, 1024) per scenario per policy, exceeding the 3-point minimum",
+    "ACCEPTANCE|Results record environment per benchmarks.md's platform-process discipline; no result is generalized beyond what was measured|MET|environment block unchanged from P4-001's runner (Unity/Collections version, OS, CPU, jobWorkerCount, etc); README explicitly disclaims cross-hardware generalization",
+    "ACCEPTANCE|No default, threshold, or recommended policy choice is derived here|MET|every finding in the README and this file is framed as a descriptive observation feeding a later calibration card, never a threshold or recommendation",
+    "DELIVERABLE|Benchmarks~/Phase4/CostCurves/README.md|created",
+    "DELIVERABLE|Benchmarks~/Phase4/CostCurves/Results/cost-curves-windows-editor-20260820.json|created",
+    "DELIVERABLE|Benchmarks~/Phase4/README.md|modified (added CostCurves link)",
+    "WORK_ITEM_STATUS|P4-002|draft->ready->done"
+  ]
+}

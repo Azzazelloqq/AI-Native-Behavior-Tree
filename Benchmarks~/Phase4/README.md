@@ -8,3 +8,5 @@ package itself.
 
 - [`Scheduling/`](Scheduling/README.md) -- P4-001: fixed-policy scheduling
   overhead across the scenario catalog from `Documentation~/benchmarks.md`.
+- [`CostCurves/`](CostCurves/README.md) -- P4-002: the same harness run at a
+  wider agent-count range to produce actual per-policy cost curves.

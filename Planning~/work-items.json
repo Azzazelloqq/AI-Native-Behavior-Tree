@@ -941,7 +941,7 @@
       "id": "P4-002",
       "phase": 4,
       "title": "Fixed-policy scheduling overhead and cost curves",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P4/P4-002-fixed-policy-cost-curves.md",
       "dependsOn": [
