@@ -63,6 +63,14 @@ namespace AIBT
         PipelinedPreferredForThroughput = 3,
         BatchedForSameFrameThroughput = 4,
         FallbackToOnlyAvailablePolicy = 5,
+
+        /// <summary>
+        /// `P4-007`'s lightweight-adaptation experiment: chosen because its
+        /// <see cref="NativeAutoPolicyCostTrackerV1"/> reported the lowest smoothed recent cost
+        /// among candidates with an established estimate -- never used until at least two
+        /// candidates have real observations (see <see cref="NativeAutoSelectionV1.TrySelectAdaptive"/>).
+        /// </summary>
+        AdaptiveLowestTrackedCost = 6,
     }
 
     /// <summary>

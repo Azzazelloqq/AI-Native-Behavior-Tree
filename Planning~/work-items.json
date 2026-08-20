@@ -1020,14 +1020,17 @@
       "id": "P4-007",
       "phase": 4,
       "title": "OQ-006 resolution: runtime autotuning evaluation",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P4/P4-007-oq006-autotuning-resolution.md",
       "dependsOn": [
         "P4-006"
       ],
       "owns": [
-        "Planning~/Evidence/P4-007/"
+        "Planning~/Evidence/P4-007/",
+        "Runtime/Scheduling/Native/Auto/",
+        "Tests/Runtime/NativeExecution/Scheduling/Auto/",
+        "Documentation~/decisions/ADR-P4-007-runtime-autotuning-resolution.md"
       ]
     },
     {

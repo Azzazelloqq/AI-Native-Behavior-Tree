@@ -1,6 +1,6 @@
 # P4-007 — `OQ-006` resolution: runtime autotuning evaluation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -53,3 +53,24 @@ if adaptation is built: the same equivalence/allocation/lifetime verification P4
 ## Handoff notes
 
 - This closes the last item `Planning~/OPEN_QUESTIONS.md` blocks on "Auto scheduler finalization" -- `P4-008`/`P4-009` should not proceed with platform evidence or the Phase 4 gate while `OQ-006` remains open.
+
+## Outcome
+
+**`OQ-006` resolved: runtime autotuning rejected** (`AIBT-013`, `Documentation~/decisions/ADR-P4-007-runtime-autotuning-resolution.md`).
+`P4-006`'s gap cleared the step-5 gate to test lightweight adaptation, so a prototype was built:
+`NativeAutoPolicyCostTrackerV1` (per-policy bounded-EWMA cost tracking, reusing `P4-004`'s proven
+smoothing mechanism) plus `NativeAutoSelectionV1.TrySelectAdaptive`. Tested against a **realistic
+single-observer feedback model** (a caller only learns the cost of the policy it actually ran)
+using real `P4-002` numbers from one of `P4-006`'s worst-gap cases: across 50 simulated rounds, the
+tracker for the never-chosen policy never receives an observation, so the adaptive comparison
+(which needs at least two tracked candidates) never activates — the prototype stays stuck on its
+cold-start mistake indefinitely. A control test confirmed the comparison logic itself is correct
+once both policies' costs are externally known, isolating the flaw to the missing exploration
+mechanism. Adding real exploration would introduce exactly the overhead/instability/unpredictability
+step 6 disqualifies. Verdict: fixed heuristics remain the right tool; `P4-006`'s gap is a specific,
+nameable defect in `P4-005`'s own decision rule (no real cost comparison before preferring
+`BatchedJobsSameFrame`), fixable by deterministic recalibration — legitimate follow-up work, not
+built by this card. `TrySelect` (P4-005's shipped entry point) is unchanged in behavior (its 24
+tests re-run and pass after a non-behavioral refactor); `TrySelectAdaptive` is retained as the
+tested, disclosed experiment, called from nowhere production-facing. Full reasoning in
+`Planning~/Evidence/P4-007/README.md` and the ADR.

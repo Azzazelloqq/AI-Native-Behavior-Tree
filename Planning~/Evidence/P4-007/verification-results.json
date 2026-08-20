@@ -1,0 +1,30 @@
+{
+  "schema": "aibt-p4-007-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 73.",
+    "COMMAND|Unity MCP: refresh_unity + read_console (types=error) after each edit|PASSED|no compile errors on final state",
+    "COMMAND|Unity MCP: run_tests (EditMode, TrySelect's 24 pre-existing P4-005 tests, re-run after refactoring shared explanation-building logic out into BuildExplanation)|PASSED|24/24, confirming the refactor did not change TrySelect's behavior",
+    "COMMAND|Unity MCP: run_tests (EditMode, NativeAutoPolicyCostTrackerTests + NativeAutoAdaptiveSelectionTests + NativeAutoAdaptiveRealisticFeedbackTests)|PASSED|13/13 across all three new test files",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite, interactive Editor session, Unity 6000.5.8f1)|PASSED_WITH_PREEXISTING_FAILURES|1399 tests (1386 + 13 new), 1395 passed; 4 pre-existing failures unrelated to this card -- the usual 3 (AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests x2, LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk) plus a 4th appearing for the first time, LocalSaveSystem.Tests.SaveTaggedFormatTests.ValidateFieldIds_LogsDuplicates, re-confirmed failing in isolation (not test-order pollution) and confirmed via git status to be entirely outside AIBT's touched files this session",
+    "EXPERIMENT|Realistic single-observer feedback simulation using real P4-002 numbers (wide-branching-frequent-failures/1024 agents: Immediate 5157.421875 vs BatchedJobsSameFrame 74158.7890625 ns/agent), 50 simulated rounds|The reactive adaptive tracker never escapes its cold-start mistake -- Immediate's tracker never receives an observation since it is never chosen, so the adaptive comparison (requires >=2 tracked candidates) never activates across all 50 rounds",
+    "EXPERIMENT|Control case: both trackers seeded externally with real data|The adaptive comparison correctly picks Immediate (AdaptiveLowestTrackedCost), confirming the flaw is specifically the missing exploration mechanism, not a bug in the comparison logic",
+    "DECISION|OQ-006 resolved: runtime autotuning rejected|Documented in Documentation~/decisions/ADR-P4-007-runtime-autotuning-resolution.md (AIBT-013, Accepted); Planning~/OPEN_QUESTIONS.md's OQ-006 row updated to Resolved, Blocking column cleared to None",
+    "TEST_RESULT|NativeAutoPolicyCostTrackerTests (4 tests)|All Passed",
+    "TEST_RESULT|NativeAutoAdaptiveSelectionTests (7 tests)|All Passed",
+    "TEST_RESULT|NativeAutoAdaptiveRealisticFeedbackTests (2 tests)|All Passed",
+    "ACCEPTANCE|The decision cites specific P4-006 numbers, not a general impression|MET|ADR cites the exact wide-branching-frequent-failures/1024-agent numbers (5157.42 vs 74158.79 ns/agent) as the decisive test case",
+    "ACCEPTANCE|If adaptation was rejected, the rejection reason is stated with the measurement that supports it|MET|rejection reason is the realistic-feedback experiment's own result (tracker never escapes cold start across 50 rounds), not overhead/instability of a shipped prototype nor a claimed absence of gap -- a third, evidence-based reason: the natural lightweight design cannot even engage without an exploration mechanism that itself would fail step 6's bar",
+    "ACCEPTANCE|OQ-006 is not left open after this card completes|MET|Planning~/OPEN_QUESTIONS.md's OQ-006 row now reads Resolved with Blocking=None, referencing the accepted ADR",
+    "DELIVERABLE|Runtime/Scheduling/Native/Auto/NativeAutoPolicyCostTrackerV1.cs|created",
+    "DELIVERABLE|Runtime/Scheduling/Native/Auto/NativeAutoSelectionV1.cs|modified (TrySelect refactored to extract BuildExplanation; new TrySelectAdaptive added)",
+    "DELIVERABLE|Runtime/Scheduling/Native/Auto/NativeAutoContracts.cs|modified (added NativeAutoSelectionReasonV1.AdaptiveLowestTrackedCost)",
+    "DELIVERABLE|Tests/Runtime/NativeExecution/Scheduling/Auto/NativeAutoPolicyCostTrackerTests.cs|created",
+    "DELIVERABLE|Tests/Runtime/NativeExecution/Scheduling/Auto/NativeAutoAdaptiveSelectionTests.cs|created",
+    "DELIVERABLE|Tests/Runtime/NativeExecution/Scheduling/Auto/NativeAutoAdaptiveRealisticFeedbackTests.cs|created",
+    "DELIVERABLE|Documentation~/decisions/ADR-P4-007-runtime-autotuning-resolution.md|created",
+    "DELIVERABLE|Documentation~/decisions.md|modified (AIBT-013: Pending research -> Accepted, linked to the new ADR)",
+    "DELIVERABLE|Planning~/OPEN_QUESTIONS.md|modified (OQ-006: Resolved, Blocking cleared to None)",
+    "WORK_ITEM_STATUS|P4-007|draft->ready->done"
+  ]
+}

@@ -117,6 +117,174 @@ namespace AIBT
                 }
             }
 
+            return BuildExplanation(configuration, workload, runnableAgents, chosen, reason, out explanation, out failure);
+        }
+
+        /// <summary>
+        /// `P4-007`'s lightweight-adaptation experiment (`OQ-006`). Identical to
+        /// <see cref="TrySelect"/> for a forced policy, and identical for the
+        /// below-minimum-workload and explicit-budget priors (a caller's explicit signals are not
+        /// second-guessed by tracked cost data). The one difference: at the exact decision point
+        /// that <c>Planning~/Evidence/P4-006/</c> found costly (choosing among
+        /// `BatchedJobsSameFrame`/`PipelinedJobs`/`Immediate`/`Budgeted` for a same-frame- or
+        /// pipeline-eligible large workload), this method compares each viable candidate's own
+        /// <see cref="NativeAutoPolicyCostTrackerV1"/> -- its smoothed, bounded recent real cost --
+        /// and picks whichever is currently cheapest, but only once at least two candidates have
+        /// an established estimate; with fewer than two, it falls back to exactly
+        /// <see cref="TrySelect"/>'s deterministic rule (a cold start has no real data to compare).
+        /// </summary>
+        internal static bool TrySelectAdaptive(
+            in NativeAutoConfigurationV1 configuration,
+            in NativeAutoWorkloadV1 workload,
+            uint runnableAgents,
+            in NativeAutoPolicyCostTrackerV1 immediateTracker,
+            in NativeAutoPolicyCostTrackerV1 budgetedTracker,
+            in NativeAutoPolicyCostTrackerV1 batchedTracker,
+            in NativeAutoPolicyCostTrackerV1 pipelinedTracker,
+            out NativeAutoExplanationV1 explanation,
+            out NativeRuntimeFailureV1 failure)
+        {
+            explanation = default;
+            if (configuration.ForcedPolicy.HasValue)
+            {
+                return TrySelect(configuration, workload, runnableAgents, out explanation, out failure);
+            }
+
+            if (runnableAgents == 0 || workload.EstimatedWorkPerAgentNanoseconds <= 0
+                || configuration.SupportedPolicies == NativeAutoSupportedPoliciesV1.None)
+            {
+                failure = new NativeRuntimeFailureV1(
+                    NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid,
+                    NativeResourceKindV1.InstanceBudgetState);
+                return false;
+            }
+
+            var candidates = configuration.SupportedPolicies
+                & (configuration.LatencyMode == NativeAutoLatencyModeV1.PipelinedAllowed
+                    ? NativeAutoSupportedPoliciesV1.All
+                    : NativeAutoSupportedPoliciesV1.All & ~NativeAutoSupportedPoliciesV1.PipelinedJobs);
+            if (candidates == NativeAutoSupportedPoliciesV1.None)
+            {
+                failure = new NativeRuntimeFailureV1(
+                    NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid,
+                    NativeResourceKindV1.InstanceBudgetState);
+                return false;
+            }
+
+            NativeAutoPolicyV1 chosen;
+            NativeAutoSelectionReasonV1 reason;
+            var estimatedTotal = workload.EstimatedWorkPerAgentNanoseconds * runnableAgents;
+
+            if (estimatedTotal < configuration.MinimumJobWorkloadNanoseconds
+                && IsSupported(candidates, NativeAutoPolicyV1.Immediate))
+            {
+                chosen = NativeAutoPolicyV1.Immediate;
+                reason = NativeAutoSelectionReasonV1.BelowMinimumJobWorkload;
+            }
+            else if (configuration.UpdateBudgetSteps.HasValue && IsSupported(candidates, NativeAutoPolicyV1.Budgeted))
+            {
+                chosen = NativeAutoPolicyV1.Budgeted;
+                reason = NativeAutoSelectionReasonV1.BudgetConfigured;
+            }
+            else if (TryPickLowestTrackedCost(candidates, immediateTracker, budgetedTracker, batchedTracker, pipelinedTracker, out var tracked))
+            {
+                chosen = tracked;
+                reason = NativeAutoSelectionReasonV1.AdaptiveLowestTrackedCost;
+            }
+            else if (configuration.LatencyMode == NativeAutoLatencyModeV1.PipelinedAllowed
+                && IsSupported(candidates, NativeAutoPolicyV1.PipelinedJobs))
+            {
+                chosen = NativeAutoPolicyV1.PipelinedJobs;
+                reason = NativeAutoSelectionReasonV1.PipelinedPreferredForThroughput;
+            }
+            else if (IsSupported(candidates, NativeAutoPolicyV1.BatchedJobsSameFrame))
+            {
+                chosen = NativeAutoPolicyV1.BatchedJobsSameFrame;
+                reason = NativeAutoSelectionReasonV1.BatchedForSameFrameThroughput;
+            }
+            else if (IsSupported(candidates, NativeAutoPolicyV1.Immediate))
+            {
+                chosen = NativeAutoPolicyV1.Immediate;
+                reason = NativeAutoSelectionReasonV1.FallbackToOnlyAvailablePolicy;
+            }
+            else if (IsSupported(candidates, NativeAutoPolicyV1.Budgeted))
+            {
+                chosen = NativeAutoPolicyV1.Budgeted;
+                reason = NativeAutoSelectionReasonV1.FallbackToOnlyAvailablePolicy;
+            }
+            else
+            {
+                failure = new NativeRuntimeFailureV1(
+                    NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid,
+                    NativeResourceKindV1.InstanceBudgetState);
+                return false;
+            }
+
+            return BuildExplanation(configuration, workload, runnableAgents, chosen, reason, out explanation, out failure);
+        }
+
+        private static bool TryPickLowestTrackedCost(
+            NativeAutoSupportedPoliciesV1 candidates,
+            in NativeAutoPolicyCostTrackerV1 immediateTracker,
+            in NativeAutoPolicyCostTrackerV1 budgetedTracker,
+            in NativeAutoPolicyCostTrackerV1 batchedTracker,
+            in NativeAutoPolicyCostTrackerV1 pipelinedTracker,
+            out NativeAutoPolicyV1 chosen)
+        {
+            chosen = default;
+            var trackedCount = 0;
+            var bestCost = double.PositiveInfinity;
+
+            if (IsSupported(candidates, NativeAutoPolicyV1.Immediate) && immediateTracker.HasEstimate)
+            {
+                trackedCount++;
+                if (immediateTracker.SmoothedNanosecondsPerAgent < bestCost)
+                {
+                    bestCost = immediateTracker.SmoothedNanosecondsPerAgent;
+                    chosen = NativeAutoPolicyV1.Immediate;
+                }
+            }
+            if (IsSupported(candidates, NativeAutoPolicyV1.Budgeted) && budgetedTracker.HasEstimate)
+            {
+                trackedCount++;
+                if (budgetedTracker.SmoothedNanosecondsPerAgent < bestCost)
+                {
+                    bestCost = budgetedTracker.SmoothedNanosecondsPerAgent;
+                    chosen = NativeAutoPolicyV1.Budgeted;
+                }
+            }
+            if (IsSupported(candidates, NativeAutoPolicyV1.BatchedJobsSameFrame) && batchedTracker.HasEstimate)
+            {
+                trackedCount++;
+                if (batchedTracker.SmoothedNanosecondsPerAgent < bestCost)
+                {
+                    bestCost = batchedTracker.SmoothedNanosecondsPerAgent;
+                    chosen = NativeAutoPolicyV1.BatchedJobsSameFrame;
+                }
+            }
+            if (IsSupported(candidates, NativeAutoPolicyV1.PipelinedJobs) && pipelinedTracker.HasEstimate)
+            {
+                trackedCount++;
+                if (pipelinedTracker.SmoothedNanosecondsPerAgent < bestCost)
+                {
+                    bestCost = pipelinedTracker.SmoothedNanosecondsPerAgent;
+                    chosen = NativeAutoPolicyV1.PipelinedJobs;
+                }
+            }
+
+            return trackedCount >= 2;
+        }
+
+        private static bool BuildExplanation(
+            in NativeAutoConfigurationV1 configuration,
+            in NativeAutoWorkloadV1 workload,
+            uint runnableAgents,
+            NativeAutoPolicyV1 chosen,
+            NativeAutoSelectionReasonV1 reason,
+            out NativeAutoExplanationV1 explanation,
+            out NativeRuntimeFailureV1 failure)
+        {
+            explanation = default;
             var estimatedTotalWork = workload.EstimatedWorkPerAgentNanoseconds * runnableAgents;
             var batches = chosen == NativeAutoPolicyV1.BatchedJobsSameFrame || chosen == NativeAutoPolicyV1.PipelinedJobs;
             uint batchSize = 0;

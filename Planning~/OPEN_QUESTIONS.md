@@ -9,7 +9,7 @@ These are the only known unresolved items relevant to the current frontier. They
 | OQ-003 | Select the Unity Web execution entry point from the required WASM spike. | Accepted ADR after P0-003 | P0-006 |
 | OQ-004 | Obtain macOS/Safari verification access and define supported browser versions. | User + platform review | Public Web support matrix |
 | OQ-005 | Select editor graph framework from a dedicated spike. | Accepted ADR in P3 | Editor implementation |
-| OQ-006 | Decide whether runtime autotuning beats calibrated fixed heuristics. | Benchmark evidence in P4 | Auto scheduler finalization |
+| OQ-006 | Decide whether runtime autotuning beats calibrated fixed heuristics. | Resolved: rejected, see [ADR P4-007](../Documentation~/decisions/ADR-P4-007-runtime-autotuning-resolution.md) | None |
 
 The following are closed and MUST NOT be reopened incidentally:
 
