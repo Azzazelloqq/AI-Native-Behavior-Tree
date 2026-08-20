@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.Runtime.Tests",
+  "rootNamespace": "AIBT.Benchmarks.Phase4.Platform.Windows",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

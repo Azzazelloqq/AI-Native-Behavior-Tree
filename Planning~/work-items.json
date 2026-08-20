@@ -1037,7 +1037,7 @@
       "id": "P4-008",
       "phase": 4,
       "title": "Platform benchmark evidence",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P4/P4-008-platform-benchmark-evidence.md",
       "dependsOn": [

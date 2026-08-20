@@ -1,0 +1,14 @@
+{
+    "schema": "aibt-p4-008-windows-build-v1",
+    "unityVersion": "6000.5.8f1",
+    "target": "StandaloneWindows64",
+    "architecture": "x86_64",
+    "result": "Succeeded",
+    "totalErrors": 0,
+    "totalWarnings": 0,
+    "outputBytes": 743892581,
+    "scriptingBackend": "IL2CPP",
+    "burstEnabled": true,
+    "developmentBuild": false,
+    "output": "C:\\Users\\User\\AppData\\Local\\Temp\\aibt-p4-008-windows-player-aeddbdade5f445da8961b4e554033515\\Build\\Windows-x64\\AIBTP4008PlatformBenchmark.exe"
+}

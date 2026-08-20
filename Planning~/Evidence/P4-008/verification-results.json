@@ -1,0 +1,27 @@
+{
+  "schema": "aibt-p4-008-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 73.",
+    "COMMAND|Benchmarks~/Phase4/Platform/Windows/Run-WindowsPlatformBenchmark.ps1 (default parameters: 5 warmup, 15 measured, agent counts 16/64/256/1024)|PASSED|isolated project built, real StandaloneWindows64 IL2CPP Burst-enabled non-development Player built (0 errors, 0 warnings), Player executed and produced valid benchmark JSON, success marker present in log, no failure marker present",
+    "SCOPE_DECISION|No Android ARM64 device/emulator or WebGL-capable browser access was available in this session|RESOLVED_BY_USER|escalated via AskUserQuestion before implementation; user confirmed only Windows x64 is available; Android/Web disclosed as not-measured gaps rather than silently omitted",
+    "BUILD_EVIDENCE|target=StandaloneWindows64, architecture=x86_64, scriptingBackend=IL2CPP, burstEnabled=true, developmentBuild=false, result=Succeeded, totalErrors=0, totalWarnings=0|verified programmatically by the PS1 driver before accepting the run (Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821-build.raw.json)",
+    "MEASUREMENT|see Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821.json for all raw samples and Benchmarks~/Phase4/Platform/Windows/README.md for the summarized comparison table",
+    "FINDING|The release Windows x64 IL2CPP/Burst Player is ~13-14x faster than the same P4-001 scenarios measured in Editor batchmode, consistently across all 6 scenarios and both agent-count extremes (16 and 1024)|real, disclosed, actionable finding -- not turned into a threshold or default",
+    "FINDING|BatchedJobsSameFrame's fixed-batch-size scheduling overhead reproduces in the Player (e.g. deep-sequence-selector-traversal/1024 agents: 11.95x costlier than Immediate), confirming P4-002/P4-006's traced mechanism is not an Editor-only artifact|consistent with prior Editor-measured findings",
+    "ACCEPTANCE|Every platform's results record Unity/package/OS/CPU architecture, logical and worker counts, build configuration, and scenario revision|MET|environment block captures Unity version, applicationPlatform, OS, CPU architecture, processor count, jobWorkerCount, Burst-enabled flag, 64-bit-process flag, pinned package versions, and full command line",
+    "ACCEPTANCE|Results from one browser/device are never presented as establishing support for another|MET|README and evidence explicitly disclaim generalizing Windows results to Android/Web, and disclose both as unmeasured rather than silently omitted",
+    "ACCEPTANCE|No regression threshold or supported performance claim is introduced by this card|MET|every finding (including the striking Editor-vs-Player ratio) is framed as a descriptive, disclosed observation, never a threshold or default",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Unity/Runtime/WindowsPlatformSchedulingProbe.cs|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Unity/Runtime/AIBT.Runtime.Tests.asmdef|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Unity/Editor/WindowsPlatformBenchmarkBuild.cs|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Unity/Editor/AIBT.Platform.WindowsBuild.asmdef|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Run-WindowsPlatformBenchmark.ps1|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/README.md|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821.json|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821-build.raw.json|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/README.md|created",
+    "DELIVERABLE|Benchmarks~/Phase4/README.md|modified (added Platform link)",
+    "WORK_ITEM_STATUS|P4-008|draft->ready->done"
+  ]
+}

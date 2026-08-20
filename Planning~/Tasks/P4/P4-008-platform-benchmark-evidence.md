@@ -1,6 +1,6 @@
 # P4-008 — Platform benchmark evidence
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -50,3 +50,18 @@ full P4-001 harness run on Windows x64, Android ARM64, and single-thread Unity W
 
 - Mandatory pre-1.0 targets only (Windows x64, Android ARM64, single-thread Unity Web), per `OPEN_QUESTIONS.md`'s closed items. Safari/mobile Web and console targets remain out of scope pending `OQ-004` and `USER_ACTIONS.md`'s console-access item.
 - `P4-009` (the Phase 4 gate) is the point where the owner is asked to approve hardware classes and thresholds from this evidence, per `USER_ACTIONS.md` -- this card does not request that approval itself.
+
+## Outcome
+
+Built and ran a real, non-development, IL2CPP, Burst-enabled Windows x64 Standalone Player
+containing `P4-001`'s exact scenario/policy sweep. **Android ARM64 and Unity Web were not
+measured** — no device/emulator or WebGL browser access existed in this session, confirmed and
+scoped by explicit user decision before implementation; a disclosed gap, not a silent omission.
+**Major finding**: the release Player runs the same scenarios ~13-14x faster than Editor
+batchmode, consistently across every scenario and agent count — meaning every Editor-measured
+number in `P4-001`/`P4-002`/`P4-005`/`P4-006`/`P4-007`'s evidence understates real release
+performance by roughly an order of magnitude on this workstation. `BatchedJobsSameFrame`'s
+fixed-batch-size overhead (traced by `P4-002`/`P4-006`) reproduces in the Player too, confirming
+it is a genuine scheduling-code property, not an Editor artifact. No threshold or default is
+introduced — see `Planning~/Evidence/P4-008/` and `Benchmarks~/Phase4/Platform/Windows/README.md`
+for the full comparison table and build proof.

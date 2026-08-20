@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.Platform.WindowsBuild",
+  "rootNamespace": "AIBT.Benchmarks.Phase4.Platform.Windows.Editor",
+  "references": [
+    "Unity.Burst"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}
