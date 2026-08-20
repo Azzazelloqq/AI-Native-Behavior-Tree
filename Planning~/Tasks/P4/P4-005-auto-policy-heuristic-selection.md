@@ -1,6 +1,6 @@
 # P4-005 — Auto policy: deterministic explainable heuristic selection
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -54,3 +54,22 @@ determinism-on-rerun test
 
 - `P4-006` runs this policy across the full benchmark matrix to compare it against the best fixed policy per scenario.
 - `P4-007` is the separate, conditional card for runtime autotuning (`OQ-006`); this card's heuristic is the fixed baseline that comparison is measured against.
+
+## Outcome
+
+Implemented `NativeAutoSelectionV1.TrySelect`: a deterministic decision tree among `Immediate`,
+`Budgeted`, `BatchedJobsSameFrame`, and `PipelinedJobs`, driven by `P4-004`'s work estimate, a
+caller-supplied policy-capability set (no Web backend exists anywhere in this package to detect
+real platform capability from), and the override surface (forced policy, minimum job workload,
+target batch work, batch/memory bounds, worker count, update budget, latency mode, update
+cadence). A forced policy always wins if supported and latency-consistent; automatic selection
+picks `Immediate` below a minimum-workload threshold, `Budgeted` when a budget is configured,
+`PipelinedJobs` when large and pipelining is explicitly permitted, `BatchedJobsSameFrame` when
+large and same-frame latency is required, with a final fallback to whatever single policy remains
+available. Before implementation, the explainability surface was escalated and narrowed to fields
+with a genuine, verifiable data source (`Documentation~/execution-and-scheduling.md`'s full list
+includes commands/wakeups/deferred-agents and a real per-batch scheduling cost, none of which any
+existing type in `Runtime/Scheduling/Native/` tracks) — a documented gap, not a faked field, per
+`Planning~/Evidence/P4-005/README.md`'s Decision section. 24 tests cover every branch, both
+forced-policy rejection paths (unsupported backend and a latency-mode contradiction), and
+determinism against all 6 real `P4-001` catalog scenarios.

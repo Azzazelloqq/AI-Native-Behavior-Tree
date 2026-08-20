@@ -988,7 +988,7 @@
       "id": "P4-005",
       "phase": 4,
       "title": "Auto policy: deterministic explainable heuristic selection",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P4/P4-005-auto-policy-heuristic-selection.md",
       "dependsOn": [
