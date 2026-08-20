@@ -1,6 +1,6 @@
 # P4-004 — Work-estimation and batching calibration model
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -52,3 +52,19 @@ smoothing/bounding negative tests (synthetic spike)
 
 - `P4-005` (`Auto`) is the direct consumer of this model.
 - Recalibrating this model against a new platform's `P4-002`-equivalent curves is expected future work, not something this card needs to generalize for up front.
+
+## Outcome
+
+Implemented `NativeWorkEstimatorV1` (smoothed/bounded work estimation, seeded and updated from
+real `(agentCount, totalSteps)` observations, clamped so a single spike moves the estimate by at
+most 12.5%) and `NativeBatchSizeCalibrationV1` (target/estimate batch-size formula, clamped by
+policy and memory limits with memory always winning conflicts, plus a load-balancing floor).
+`CalibratedNanosecondsPerNodeStep = 678.75` is the pooled median ns/atomic-step from `P4-002`'s
+360 Immediate-policy samples; validated directly against all 24 real (scenario, agent count)
+points from that same data, with every point's estimate landing within `CalibrationTolerance =
+0.10` of the actually-measured cost (worst case 8.71%, `deep-sequence-selector-traversal` at 256
+agents) — the tolerance was set from this real result, not assumed. One global coefficient was
+used rather than per-node-cost-category ones, since `P4-002`'s data only supports scenario-level
+measurement, not a genuine node-type cost breakdown; documented as a self-directed engineering
+choice, not an architectural escalation. Full derivation and decision reasoning in
+`Planning~/Evidence/P4-004/README.md`.

@@ -973,7 +973,7 @@
       "id": "P4-004",
       "phase": 4,
       "title": "Work-estimation and batching calibration model",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P4/P4-004-work-estimation-and-batching-calibration.md",
       "dependsOn": [
