@@ -1,0 +1,22 @@
+{
+  "schema": "aibt-p4-006-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 73.",
+    "COMMAND|Benchmarks~/Phase4/AutoComparison/Run-AutoComparisonBenchmark.ps1 (default parameters: 5 warmup, 15 measured, agent counts 16/64/256/1024)|PASSED|isolated project built (reusing unmodified SchedulingPolicyDriver.cs and SchedulingScenarios.cs from P4-001), Unity headless run exited 0, result JSON written; all 6 implemented scenarios x 4 agent counts measured against all 3 same-frame-capable fixed policies plus Auto selection, without error (24 total comparison cases)",
+    "SCOPE_DECISION|P4-001's benchmark harness was never wired to measure PipelinedJobs (built separately in P4-003)|RESOLVED_BY_USER|escalated via AskUserQuestion before implementation; user chose to scope this comparison to LatencyMode=SameFrame only, so Auto never selects an unmeasurable policy here",
+    "MEASUREMENT|see Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json for all raw samples and full Auto explanations, and Benchmarks~/Phase4/AutoComparison/README.md for the summarized 24-row comparison table",
+    "FINDING|Auto underperforms the best fixed policy in 23 of 24 measured cases, gaps ranging +188% to +1,774% in ns/agent; root cause traced to Auto's decision tree unconditionally preferring BatchedJobsSameFrame for same-frame-required large workloads without accounting for P4-002's own finding that fixed-batch-size BatchedJobsSameFrame does not amortize at these agent-count scales on this workstation|reported honestly per this card's own forbidden-changes clause against tuning Auto's selection logic to fix this",
+    "FINDING|Every case reports Confidence=Low because this benchmark seeds a fresh single-observation estimator per case (cold-start), never reaching Medium/High -- a benchmark-design limitation, not a live-behavior finding|disclosed in Benchmarks~/Phase4/AutoComparison/README.md",
+    "ACCEPTANCE|Every scenario in P4-001's catalog that applies to at least two comparable policies is included|MET|all 6 implemented scenarios x 4 agent counts = 24 cases, each comparing Auto against 3 fixed policies",
+    "ACCEPTANCE|Every recorded Auto decision includes its full explainability output, not just the resulting number|MET|every case's JSON record includes reason, confidence, expectedNodeStepsPerAgent, estimatedWorkPerAgentNanoseconds, estimatedTotalWorkNanoseconds, batchSize, batchCount, workerUtilizationProxy, hasConfiguredBudget, exceedsConfiguredBudget",
+    "ACCEPTANCE|Results record environment per benchmarks.md's platform-process discipline; no result is generalized beyond what was measured|MET|environment block captures Unity version, OS, CPU, jobWorkerCount, command line; README explicitly disclaims cross-hardware generalization",
+    "DELIVERABLE|Benchmarks~/Phase4/AutoComparison/Unity/AutoComparisonRunner.cs|created",
+    "DELIVERABLE|Benchmarks~/Phase4/AutoComparison/Unity/AIBT.Runtime.Tests.asmdef|created",
+    "DELIVERABLE|Benchmarks~/Phase4/AutoComparison/Run-AutoComparisonBenchmark.ps1|created",
+    "DELIVERABLE|Benchmarks~/Phase4/AutoComparison/README.md|created",
+    "DELIVERABLE|Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json|created",
+    "DELIVERABLE|Benchmarks~/Phase4/README.md|modified (added AutoComparison link)",
+    "WORK_ITEM_STATUS|P4-006|draft->ready->done"
+  ]
+}

@@ -1,6 +1,6 @@
 # P4-006 — Auto vs. fixed-policy comparison across the scenario matrix
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -48,3 +48,18 @@ full P4-001 harness run comparing Auto against the best fixed policy per scenari
 ## Handoff notes
 
 - `P4-007` (`OQ-006`) is the direct consumer: it only pursues runtime autotuning if this card's results show fixed heuristics leave meaningful performance on the table, per `benchmarks.md`'s own conditional step 5.
+
+## Outcome
+
+Measured `Auto` against the three same-frame-capable fixed policies across all 6 implemented
+`P4-001` scenarios at 4 agent-count points (24 cases), scoped to `LatencyMode=SameFrame` since
+`P4-001`'s harness was never wired to measure `PipelinedJobs` (an infrastructure gap escalated and
+resolved by explicit user decision before implementation). **Result: `Auto` underperforms the best
+fixed policy in 23 of 24 cases**, by +188% to +1,774% in ns/agent — reported honestly, not tuned
+away (forbidden by this card). Root cause traced concretely: `Auto`'s decision tree unconditionally
+prefers `BatchedJobsSameFrame` for same-frame-required large workloads, without accounting for
+`P4-002`'s own finding that fixed-batch-size `BatchedJobsSameFrame` does not amortize at these
+scales on this workstation. This is real evidence for `P4-007`'s `OQ-006` judgment, though not by
+itself proof that runtime autotuning (rather than recalibrating `P4-005`'s own fixed thresholds)
+is the right fix — see `Planning~/Evidence/P4-006/README.md`'s full analysis and the 24-row
+comparison table in `Benchmarks~/Phase4/AutoComparison/README.md`.

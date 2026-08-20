@@ -10,3 +10,5 @@ package itself.
   overhead across the scenario catalog from `Documentation~/benchmarks.md`.
 - [`CostCurves/`](CostCurves/README.md) -- P4-002: the same harness run at a
   wider agent-count range to produce actual per-policy cost curves.
+- [`AutoComparison/`](AutoComparison/README.md) -- P4-006: `Auto` (P4-005)
+  measured against the best fixed policy per scenario.
