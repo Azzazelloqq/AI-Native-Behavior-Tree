@@ -1,6 +1,6 @@
 # P4-003 — PipelinedJobs executor
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -22,6 +22,12 @@ Implement the `PipelinedJobs` execution policy (next-frame or explicit pipeline-
 
 - `Runtime/Scheduling/Native/` (extends `P2-019`'s area).
 - `Tests/Runtime/NativeExecution/Scheduling/`.
+- `Tests/Integration/NativeRuntime/` — added by explicit user decision before implementation
+  started (research found this card's own acceptance criteria and Required verification cannot be
+  met without it: the golden-case/native behavior-case equivalence matrix this card requires is
+  `P2-020`'s existing harness — `NativeGoldenExecutionPolicyV1`, `NativeBehaviorCaseExecutor`,
+  `NativeExecutionEquivalenceTests` — which lives here, not under `Tests/Runtime/NativeExecution/Scheduling/`).
+  `work-items.json`'s `P4-003.owns` reflects this.
 
 ## Forbidden changes
 
@@ -56,3 +62,23 @@ allocation/lifetime checks
 
 - `P4-005` (`Auto`) selects among `PipelinedJobs` and the other fixed policies once this card and `P4-004` exist; it must not invent its own pipelining semantics.
 - `P4-001`'s benchmark catalog has a placeholder entry for pipelined execution this card should fill in, not replace.
+
+## Outcome
+
+Implemented `NativePipelinedPhaseControllerV1` (`Runtime/Scheduling/Native/`): the same
+Snapshot/Execute/Reduce/Publish phase-authority shape as P2-019's
+`NativeSameFramePhaseControllerV1`, wrapping the same unmodified `NativeBatchedLifecycleOwnerV1`
+(ownership guard inherited, not rebuilt), differing only in that `TryCompleteExecuteRound` is
+structurally refused unless at least one `TryAdvanceStage` call happened since the matching
+schedule — never a silent same-frame collapse. `NativePipelineMetricsV1.StagesElapsed` makes the
+delay explicit and caller-queryable. Two boundary/interpretation questions were escalated via
+`AskUserQuestion` before writing code (this card's Allowed changes omitted
+`Tests/Integration/NativeRuntime/`, which the acceptance criteria's golden-case matrix actually
+needs; and what "equivalence" means for a single-tree-instance adapter under a population-level
+latency policy) — both resolved by explicit user decision, recorded in
+`Planning~/Evidence/P4-003/README.md`'s Decision section along with the reasoning. Golden-case
+equivalence (5 cases x 4 policies) passes; `NativeExecutionEquivalenceTests.RunPipelined`
+additionally proves a byte-identical atomic-step trace under real inserted cross-stage latency.
+9 new controller-level tests cover phase order, the same-stage refusal, multi-round
+`StagesElapsed` accumulation, the ownership guard, batch-partition invariance, and zero managed
+allocation. Full detail in `Planning~/Evidence/P4-003/`.

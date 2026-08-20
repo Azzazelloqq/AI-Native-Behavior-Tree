@@ -61,18 +61,23 @@ namespace AIBT.Tests.Integration.NativeRuntime
             using var immediate = new Scenario();
             using var budgeted = new Scenario();
             using var batched = new Scenario();
+            using var pipelined = new Scenario();
             var expected = RunImmediate(immediate);
             var budgetTrace = RunBudgeted(budgeted);
             var batchTrace = RunBatched(batched);
+            var pipelinedTrace = RunPipelined(pipelined);
 
             Assert.That(budgetTrace, Is.EqualTo(expected));
             Assert.That(batchTrace, Is.EqualTo(expected));
+            Assert.That(pipelinedTrace, Is.EqualTo(expected));
             Assert.That(immediate.Control[0].RootStatus, Is.EqualTo(NodeStatus.Failure));
             Assert.That(budgeted.Control[0].RootStatus, Is.EqualTo(NodeStatus.Failure));
             Assert.That(batched.Control[0].RootStatus, Is.EqualTo(NodeStatus.Failure));
+            Assert.That(pipelined.Control[0].RootStatus, Is.EqualTo(NodeStatus.Failure));
             Assert.That(immediate.Generations.ToArray(), Is.EqualTo(new uint[] { 1, 1, 1 }));
             Assert.That(budgeted.Generations.ToArray(), Is.EqualTo(immediate.Generations.ToArray()));
             Assert.That(batched.Generations.ToArray(), Is.EqualTo(immediate.Generations.ToArray()));
+            Assert.That(pipelined.Generations.ToArray(), Is.EqualTo(immediate.Generations.ToArray()));
         }
 
         [Test]
@@ -81,12 +86,15 @@ namespace AIBT.Tests.Integration.NativeRuntime
             using var immediate = new Scenario(parallel: true);
             using var budgeted = new Scenario(parallel: true);
             using var batched = new Scenario(parallel: true);
+            using var pipelined = new Scenario(parallel: true);
             var expected = RunImmediate(immediate);
             Assert.That(RunBudgeted(budgeted), Is.EqualTo(expected));
             Assert.That(RunBatched(batched), Is.EqualTo(expected));
+            Assert.That(RunPipelined(pipelined), Is.EqualTo(expected));
             Assert.That(immediate.Control[0].RootStatus, Is.EqualTo(NodeStatus.Success));
             Assert.That(budgeted.Generations.ToArray(), Is.EqualTo(immediate.Generations.ToArray()));
             Assert.That(batched.Generations.ToArray(), Is.EqualTo(immediate.Generations.ToArray()));
+            Assert.That(pipelined.Generations.ToArray(), Is.EqualTo(immediate.Generations.ToArray()));
         }
 
         private static List<TraceEntry> RunImmediate(Scenario scenario)
@@ -142,6 +150,68 @@ namespace AIBT.Tests.Integration.NativeRuntime
             finally
             {
                 Assert.That(owner.TryDispose(out failure), Is.True, failure.Code.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Drives the scenario through <see cref="NativePipelinedPhaseControllerV1"/> with a real,
+        /// enforced stage boundary between every round's schedule and completion -- not the same
+        /// call, not a bypass -- proving the resulting atomic-step trace is byte-identical to
+        /// Immediate's even with genuine cross-call latency inserted on every single step. The
+        /// per-step stage advance here is a test-mechanism choice (proving the controller's
+        /// scheduling mechanism preserves correctness at the smallest possible granularity, the
+        /// hardest case to get right); it is not a claim that production code must advance a
+        /// stage every atomic step -- a real caller advances one stage per real frame, which may
+        /// span many atomic steps.
+        /// </summary>
+        private static List<TraceEntry> RunPipelined(Scenario scenario)
+        {
+            var trace = new List<TraceEntry>();
+            Assert.That(NativePipelinedPhaseControllerV1.TryCreate(
+                new[] { scenario.Machine }, Allocator.Persistent, out var controller, out var failure), Is.True, failure.Code.ToString());
+            using var results = new NativeArray<NativeLifecycleStepResultV1>(1, Allocator.Persistent);
+            using var failures = new NativeArray<NativeRuntimeFailureV1>(1, Allocator.Persistent);
+            try
+            {
+                ulong updateId = 1;
+                ulong revision = 1;
+                Assert.That(controller.TryBeginSnapshot(updateId, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryCompleteSnapshot(revision, out failure), Is.True, failure.Code.ToString());
+                while (true)
+                {
+                    Assert.That(controller.TryScheduleExecuteRound(1, default, out var dependency, out failure), Is.True, failure.Code.ToString());
+                    Assert.That(controller.TryCompleteExecuteRound(results, failures, out failure), Is.False,
+                        "A round must never complete within the same stage it was scheduled in.");
+                    Assert.That(controller.TryAdvanceStage(out failure), Is.True, failure.Code.ToString());
+                    dependency.Complete();
+                    Assert.That(controller.TryCompleteExecuteRound(results, failures, out failure), Is.True, failure.Code.ToString());
+                    var step = results[0];
+                    trace.Add(new TraceEntry(step));
+                    if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired) CompleteDispatch(scenario, step);
+                    if (step.Kind == NativeLifecycleStepKindV1.Waiting)
+                    {
+                        Assert.That(controller.TrySealExecute(out failure), Is.True, failure.Code.ToString());
+                        Assert.That(controller.TryCompleteReduce(out failure), Is.True, failure.Code.ToString());
+                        Assert.That(controller.TryCompletePublish(out _, out failure), Is.True, failure.Code.ToString());
+                        scenario.BeginNextUpdate();
+                        updateId++;
+                        revision++;
+                        Assert.That(controller.TryBeginSnapshot(updateId, out failure), Is.True, failure.Code.ToString());
+                        Assert.That(controller.TryCompleteSnapshot(revision, out failure), Is.True, failure.Code.ToString());
+                    }
+                    if (step.Kind == NativeLifecycleStepKindV1.Completed)
+                    {
+                        Assert.That(controller.TrySealExecute(out failure), Is.True, failure.Code.ToString());
+                        Assert.That(controller.TryCompleteReduce(out failure), Is.True, failure.Code.ToString());
+                        Assert.That(controller.TryCompletePublish(out var metrics, out failure), Is.True, failure.Code.ToString());
+                        Assert.That(metrics.StagesElapsed, Is.GreaterThan(0UL));
+                        return trace;
+                    }
+                }
+            }
+            finally
+            {
+                Assert.That(controller.TryDispose(out failure), Is.True, failure.Code.ToString());
             }
         }
 

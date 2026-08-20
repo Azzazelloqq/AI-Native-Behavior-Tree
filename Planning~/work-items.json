@@ -956,7 +956,7 @@
       "id": "P4-003",
       "phase": 4,
       "title": "PipelinedJobs executor",
-      "status": "ready",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P4/P4-003-pipelined-jobs-executor.md",
       "dependsOn": [
@@ -965,7 +965,8 @@
       ],
       "owns": [
         "Runtime/Scheduling/Native/",
-        "Tests/Runtime/NativeExecution/Scheduling/"
+        "Tests/Runtime/NativeExecution/Scheduling/",
+        "Tests/Integration/NativeRuntime/"
       ]
     },
     {

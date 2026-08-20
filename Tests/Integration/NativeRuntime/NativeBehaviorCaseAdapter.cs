@@ -16,6 +16,19 @@ namespace AIBT.Tests.Integration.NativeRuntime
         Immediate = 0,
         Budgeted = 1,
         BatchedJobsSameFrame = 2,
+
+        /// <summary>
+        /// This adapter drives exactly one tree instance at a time. Pipelining (P4-003) is a
+        /// property of when a *population's* batch work is submitted versus when results are
+        /// consumed -- one instance's own atomic steps remain strictly sequential regardless of
+        /// policy (step N+1 cannot even be determined until step N's dispatch completes). So for
+        /// this single-instance adapter, "same observable results, latency only differs" reduces
+        /// to identical per-instance behavior to <see cref="Immediate"/>; genuine cross-stage
+        /// latency insertion is proven separately, on a real multi-round pipeline, by
+        /// <c>NativeExecutionEquivalenceTests.RunPipelined</c> and by
+        /// <c>Tests/Runtime/NativeExecution/Scheduling/NativePipelinedPhaseControllerTests.cs</c>.
+        /// </summary>
+        PipelinedJobs = 3,
     }
 
     internal sealed class NativeBehaviorCaseExecutorFactory : IBehaviorCaseExecutorFactory
@@ -176,7 +189,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             out NativeLifecycleStepResultV1 step,
             out NativeRuntimeFailureV1 failure)
         {
-            if (_policy == NativeGoldenExecutionPolicyV1.Immediate)
+            if (_policy == NativeGoldenExecutionPolicyV1.Immediate
+                || _policy == NativeGoldenExecutionPolicyV1.PipelinedJobs)
                 return _machine.TryAdvance(out step, out failure);
             if (_policy == NativeGoldenExecutionPolicyV1.Budgeted)
             {
