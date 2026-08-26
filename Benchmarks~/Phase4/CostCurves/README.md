@@ -99,6 +99,46 @@ hardware classes before any threshold is adopted). Full environment metadata, ev
 and min/p95/max summaries are in the JSON; this README's tables are medians only, condensed for
 readability.
 
+## Addendum (2026-08-26): is the per-step calibration constant Editor-only, device-specific, both, or neither?
+
+`NativeWorkEstimatorV1.CalibratedNanosecondsPerNodeStep` (678.75 ns/step, `P4-004`) is derived
+entirely from this card's Editor batchmode data. `P4-008` separately found the release Player runs
+~13-14x faster than Editor *overall* (ns/agent) on this same workstation -- raising the question of
+whether the *per-step* figure specifically follows that same predictable multiplier, or whether it
+is chaotic/device-specific in a way that would make any single shipped constant unreliable across
+hardware.
+
+To check without guessing: `P4-008`'s Windows and Android platform probes were extended to also
+record `totalSteps` per `Immediate`-policy sample (the policy this constant is derived from, since
+it has no batching overhead to contaminate the figure) and compute real per-step nanosecond cost
+the same way this card does -- pooled median of `elapsedNanoseconds / totalSteps` across every
+`Immediate` (scenario, agentCount) case, on a real, non-development, Burst-enabled Player, not
+Editor batchmode.
+
+| Source | Median ns/step | vs. Editor (678.75) |
+| --- | ---: | ---: |
+| Editor (this workstation, this card) | 678.75 | -- |
+| Windows x64 Player (same workstation) | 61.82 | 10.98x faster |
+| Android ARM64 Player (Google Pixel 10 Pro) | 58.75 | 11.55x faster |
+
+**Finding: the deviation is one consistent, predictable Editor-vs-Player multiplier (~11-12x), not
+per-device chaos.** Windows x64 desktop and Android ARM64 mobile -- architecturally very different
+CPUs -- land within **~5% of each other** (58.75 vs. 61.82 ns/step) on real per-step cost, despite
+the Windows workstation being a high-end desktop chip and the Android device a phone. This is a
+genuinely reassuring result for `NativeWorkEstimatorV1`'s design: it suggests a single recalibrated
+constant (derived from real Player data instead of Editor data) would likely generalize reasonably
+across at least these two platforms, rather than requiring per-device runtime calibration to be
+usable at all -- though this is one device per platform, not a generalization claim
+(`Planning~/USER_ACTIONS.md` still requires owner approval across hardware classes before any
+threshold or constant is adopted).
+
+This addendum does not change `CalibratedNanosecondsPerNodeStep` or introduce any new default --
+recalibrating that constant from real Player data (rather than Editor data) is a separate, explicit
+decision for the owner, not a byproduct of this measurement. Raw per-step data is recorded in
+[`Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-calibration-20260826.json`](../Platform/Windows/Results/windows-player-scheduling-calibration-20260826.json)
+and
+[`Benchmarks~/Phase4/Platform/Android/Results/android-player-scheduling-calibration-20260826.json`](../Platform/Android/Results/android-player-scheduling-calibration-20260826.json).
+
 ## Recorded evidence
 
 The canonical 2026-08-20 isolated run is preserved as

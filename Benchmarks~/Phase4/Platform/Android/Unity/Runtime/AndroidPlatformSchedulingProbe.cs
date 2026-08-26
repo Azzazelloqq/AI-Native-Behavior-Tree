@@ -69,15 +69,22 @@ namespace AIBT.Benchmarks.Phase4.Platform.Android
                     foreach (var policy in Policies)
                     {
                         for (var warmupIndex = 0; warmupIndex < WarmupSamples; warmupIndex++)
-                            RunOneSample(compiled, policy, agentCount, false);
+                            RunOneSample(compiled, policy, agentCount, false, out _);
 
                         GC.Collect();
                         GC.WaitForPendingFinalizers();
                         GC.Collect();
 
                         var samples = new double[MeasuredSamples];
+                        var stepSamples = policy == "Immediate" ? new double[MeasuredSamples] : null;
+                        var totalSteps = 0L;
                         for (var sampleIndex = 0; sampleIndex < MeasuredSamples; sampleIndex++)
-                            samples[sampleIndex] = RunOneSample(compiled, policy, agentCount, true);
+                        {
+                            samples[sampleIndex] = RunOneSample(compiled, policy, agentCount, true, out var stepsThisRun);
+                            if (stepSamples == null) continue;
+                            totalSteps = (long)stepsThisRun;
+                            stepSamples[sampleIndex] = samples[sampleIndex] * agentCount / stepsThisRun;
+                        }
 
                         Array.Sort(samples);
                         var median = samples.Length % 2 == 1
@@ -87,7 +94,20 @@ namespace AIBT.Benchmarks.Phase4.Platform.Android
                         if (!first) builder.Append(',');
                         first = false;
                         builder.Append("{\"policy\":\"").Append(policy).Append("\",\"agentCount\":").Append(agentCount)
-                            .Append(",\"medianNsPerAgent\":").Append(median.ToString("F3", CultureInfo.InvariantCulture)).Append('}');
+                            .Append(",\"medianNsPerAgent\":").Append(median.ToString("F3", CultureInfo.InvariantCulture));
+                        // Only Immediate carries totalSteps/medianNsPerStep -- it is the only policy P4-004's
+                        // calibration constant is derived from (no batching overhead to contaminate the per-step
+                        // figure), and every field added here eats into logcat's per-entry truncation limit.
+                        if (stepSamples != null)
+                        {
+                            Array.Sort(stepSamples);
+                            var medianPerStep = stepSamples.Length % 2 == 1
+                                ? stepSamples[stepSamples.Length / 2]
+                                : (stepSamples[stepSamples.Length / 2 - 1] + stepSamples[stepSamples.Length / 2]) / 2.0;
+                            builder.Append(",\"totalSteps\":").Append(totalSteps)
+                                .Append(",\"medianNsPerStep\":").Append(medianPerStep.ToString("F3", CultureInfo.InvariantCulture));
+                        }
+                        builder.Append('}');
                     }
                 }
 
@@ -98,7 +118,7 @@ namespace AIBT.Benchmarks.Phase4.Platform.Android
             UnityEngine.Debug.Log(SuccessMarker + "DONE");
         }
 
-        private static double RunOneSample(SchedulingScenarios.CompiledScenario compiled, string policy, int agentCount, bool measure)
+        private static double RunOneSample(SchedulingScenarios.CompiledScenario compiled, string policy, int agentCount, bool measure, out ulong stepsThisRun)
         {
             if (!SchedulingPolicyDriver.TryCreateAgents(compiled.Program, compiled.NodeKinds, agentCount, Allocator.Persistent, out var agents, out var createFailure))
                 throw new InvalidOperationException("Agent creation failed: " + createFailure.Code);
@@ -129,6 +149,7 @@ namespace AIBT.Benchmarks.Phase4.Platform.Android
 
                 long stopped = measure ? Stopwatch.GetTimestamp() : 0;
                 if (!ran) throw new InvalidOperationException("Policy " + policy + " failed: " + runFailure.Code);
+                stepsThisRun = totalSteps;
                 if (!measure) return 0;
 
                 var elapsedTicks = stopped - started;

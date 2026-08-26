@@ -1,0 +1,15 @@
+{
+    "schema": "aibt-p4-008-android-build-v1",
+    "unityVersion": "6000.5.8f1",
+    "target": "Android",
+    "architecture": "ARM64",
+    "result": "Succeeded",
+    "totalErrors": 0,
+    "totalWarnings": 0,
+    "outputBytes": 403956829,
+    "scriptingBackend": "IL2CPP",
+    "burstEnabled": true,
+    "developmentBuild": false,
+    "applicationIdentifier": "com.aibt.p4008platformbenchmark",
+    "output": "C:\\UnityProjects\\Modules\\Assets\\AIBT\\Benchmarks~\\Phase4\\Platform\\Android\\Results\\android-build-calibration-v2-20260826.apk"
+}

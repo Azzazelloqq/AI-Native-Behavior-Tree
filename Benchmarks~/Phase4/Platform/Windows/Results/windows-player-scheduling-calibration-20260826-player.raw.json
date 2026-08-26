@@ -1,0 +1,745 @@
+{
+    "schema": "aibt-p4-008-windows-player-scheduling-v1",
+    "capturedAtUtc": "2026-08-26T14:05:59.8941022Z",
+    "scope": "P4-001's fixed-policy scheduling scenarios, run inside a real Windows x64 Standalone Player",
+    "environment": {
+        "unityVersion": "6000.5.8f1",
+        "applicationPlatform": "WindowsPlayer",
+        "isEditor": false,
+        "operatingSystem": "Windows 11  (10.0.26200)",
+        "osArchitecture": "X64",
+        "processArchitecture": "X64",
+        "processorType": "Intel(R) Core(TM) Ultra 9 275HX",
+        "processorCount": 24,
+        "jobWorkerCount": 23,
+        "systemMemoryMB": 32189,
+        "burstEnabled": true,
+        "is64BitProcess": true,
+        "pinnedBurstVersion": "1.8.30",
+        "pinnedCollectionsVersion": "6.5.0",
+        "commandLine": [
+            "C:\\Users\\User\\AppData\\Local\\Temp\\aibt-p4-008-windows-player-460454170101461d984d4b88990f0690\\Build\\Windows-x64\\AIBTP4008PlatformBenchmark.exe",
+            "-batchmode",
+            "-nographics",
+            "-logFile",
+            "C:\\UnityProjects\\Modules\\Assets\\AIBT\\Benchmarks~\\Phase4\\Platform\\Windows\\Results\\windows-player-scheduling-calibration-20260826-player.log",
+            "-aibtBenchmarkOutput",
+            "C:\\UnityProjects\\Modules\\Assets\\AIBT\\Benchmarks~\\Phase4\\Platform\\Windows\\Results\\windows-player-scheduling-calibration-20260826-player.raw.json",
+            "-aibtWarmupSamples",
+            "5",
+            "-aibtMeasuredSamples",
+            "15",
+            "-aibtAgentCounts",
+            "16,64,256,1024"
+        ],
+        "thermalAndPowerConditions": "Not controlled or recorded"
+    },
+    "configuration": {
+        "agentCounts": [
+            16,
+            64,
+            256,
+            1024
+        ],
+        "warmupSamples": 5,
+        "measuredSamples": 15
+    },
+    "scenarios": [
+        {
+            "name": "scheduling-baseline-empty-job",
+            "isolates": "The fixed per-tick overhead of beginning and completing an update on the smallest possible tree (one leaf), isolated from any node-execution cost.",
+            "nodeCount": 1,
+            "cases": [
+                {
+                    "policy": "Immediate",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 262.5,
+                    "minimumNanosecondsPerAgent": 256.25,
+                    "maximumNanosecondsPerAgent": 456.25,
+                    "totalSteps": 64,
+                    "medianNanosecondsPerStep": 65.625
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 250.0,
+                    "minimumNanosecondsPerAgent": 243.75,
+                    "maximumNanosecondsPerAgent": 343.75,
+                    "totalSteps": 64,
+                    "medianNanosecondsPerStep": 62.5
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 5825.0,
+                    "minimumNanosecondsPerAgent": 4943.75,
+                    "maximumNanosecondsPerAgent": 8312.5,
+                    "totalSteps": 64,
+                    "medianNanosecondsPerStep": 1456.25
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 257.8125,
+                    "minimumNanosecondsPerAgent": 237.5,
+                    "maximumNanosecondsPerAgent": 273.4375,
+                    "totalSteps": 256,
+                    "medianNanosecondsPerStep": 64.453125
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 246.875,
+                    "minimumNanosecondsPerAgent": 243.75,
+                    "maximumNanosecondsPerAgent": 4257.8125,
+                    "totalSteps": 256,
+                    "medianNanosecondsPerStep": 61.71875
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 4706.25,
+                    "minimumNanosecondsPerAgent": 4031.25,
+                    "maximumNanosecondsPerAgent": 9089.0625,
+                    "totalSteps": 256,
+                    "medianNanosecondsPerStep": 1176.5625
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 239.453125,
+                    "minimumNanosecondsPerAgent": 237.109375,
+                    "maximumNanosecondsPerAgent": 282.8125,
+                    "totalSteps": 1024,
+                    "medianNanosecondsPerStep": 59.86328125
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 275.78125,
+                    "minimumNanosecondsPerAgent": 243.75,
+                    "maximumNanosecondsPerAgent": 1621.484375,
+                    "totalSteps": 1024,
+                    "medianNanosecondsPerStep": 68.9453125
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 4334.765625,
+                    "minimumNanosecondsPerAgent": 3328.90625,
+                    "maximumNanosecondsPerAgent": 5277.734375,
+                    "totalSteps": 1024,
+                    "medianNanosecondsPerStep": 1083.69140625
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 254.8828125,
+                    "minimumNanosecondsPerAgent": 209.1796875,
+                    "maximumNanosecondsPerAgent": 269.43359375,
+                    "totalSteps": 4096,
+                    "medianNanosecondsPerStep": 63.720703125
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 729.1015625,
+                    "minimumNanosecondsPerAgent": 526.46484375,
+                    "maximumNanosecondsPerAgent": 954.39453125,
+                    "totalSteps": 4096,
+                    "medianNanosecondsPerStep": 182.275390625
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 4771.58203125,
+                    "minimumNanosecondsPerAgent": 4324.31640625,
+                    "maximumNanosecondsPerAgent": 5285.44921875,
+                    "totalSteps": 4096,
+                    "medianNanosecondsPerStep": 1192.8955078125
+                }
+            ]
+        },
+        {
+            "name": "shallow-tree-cheap-conditions",
+            "isolates": "A small, flat sequence of cheap leaves -- the common case for simple agent behavior.",
+            "nodeCount": 5,
+            "cases": [
+                {
+                    "policy": "Immediate",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 1418.75,
+                    "minimumNanosecondsPerAgent": 1412.5,
+                    "maximumNanosecondsPerAgent": 1693.75,
+                    "totalSteps": 368,
+                    "medianNanosecondsPerStep": 61.68478260869565
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 1656.25,
+                    "minimumNanosecondsPerAgent": 1475.0,
+                    "maximumNanosecondsPerAgent": 1825.0,
+                    "totalSteps": 368,
+                    "medianNanosecondsPerStep": 72.01086956521739
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 39562.5,
+                    "minimumNanosecondsPerAgent": 28893.75,
+                    "maximumNanosecondsPerAgent": 53243.75,
+                    "totalSteps": 368,
+                    "medianNanosecondsPerStep": 1720.108695652174
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 1425.0,
+                    "minimumNanosecondsPerAgent": 1420.3125,
+                    "maximumNanosecondsPerAgent": 1673.4375,
+                    "totalSteps": 1472,
+                    "medianNanosecondsPerStep": 61.95652173913044
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 1484.375,
+                    "minimumNanosecondsPerAgent": 1478.125,
+                    "maximumNanosecondsPerAgent": 5953.125,
+                    "totalSteps": 1472,
+                    "medianNanosecondsPerStep": 64.53804347826088
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 27681.25,
+                    "minimumNanosecondsPerAgent": 25050.0,
+                    "maximumNanosecondsPerAgent": 33782.8125,
+                    "totalSteps": 1472,
+                    "medianNanosecondsPerStep": 1203.5326086956522
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 1385.15625,
+                    "minimumNanosecondsPerAgent": 1377.734375,
+                    "maximumNanosecondsPerAgent": 1473.046875,
+                    "totalSteps": 5888,
+                    "medianNanosecondsPerStep": 60.224184782608698
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 1496.875,
+                    "minimumNanosecondsPerAgent": 1435.9375,
+                    "maximumNanosecondsPerAgent": 3519.921875,
+                    "totalSteps": 5888,
+                    "medianNanosecondsPerStep": 65.08152173913044
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 19114.453125,
+                    "minimumNanosecondsPerAgent": 17700.390625,
+                    "maximumNanosecondsPerAgent": 20276.953125,
+                    "totalSteps": 5888,
+                    "medianNanosecondsPerStep": 831.0631793478261
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 1317.578125,
+                    "minimumNanosecondsPerAgent": 1288.96484375,
+                    "maximumNanosecondsPerAgent": 1443.5546875,
+                    "totalSteps": 23552,
+                    "medianNanosecondsPerStep": 57.28600543478261
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 1720.60546875,
+                    "minimumNanosecondsPerAgent": 1594.3359375,
+                    "maximumNanosecondsPerAgent": 1926.5625,
+                    "totalSteps": 23552,
+                    "medianNanosecondsPerStep": 74.80893342391305
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 14091.89453125,
+                    "minimumNanosecondsPerAgent": 13303.515625,
+                    "maximumNanosecondsPerAgent": 14909.765625,
+                    "totalSteps": 23552,
+                    "medianNanosecondsPerStep": 612.691066576087
+                }
+            ]
+        },
+        {
+            "name": "deep-sequence-selector-traversal",
+            "isolates": "Traversal cost through many nested composite levels before reaching a leaf.",
+            "nodeCount": 63,
+            "cases": [
+                {
+                    "policy": "Immediate",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 14100.0,
+                    "minimumNanosecondsPerAgent": 14006.25,
+                    "maximumNanosecondsPerAgent": 19606.25,
+                    "totalSteps": 4528,
+                    "medianNanosecondsPerStep": 49.82332155477032
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 14756.25,
+                    "minimumNanosecondsPerAgent": 14675.0,
+                    "maximumNanosecondsPerAgent": 16756.25,
+                    "totalSteps": 4528,
+                    "medianNanosecondsPerStep": 52.1422261484099
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 430525.0,
+                    "minimumNanosecondsPerAgent": 363731.25,
+                    "maximumNanosecondsPerAgent": 462812.5,
+                    "totalSteps": 4528,
+                    "medianNanosecondsPerStep": 1521.2897526501768
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 14862.5,
+                    "minimumNanosecondsPerAgent": 14715.625,
+                    "maximumNanosecondsPerAgent": 15387.5,
+                    "totalSteps": 18112,
+                    "medianNanosecondsPerStep": 52.51766784452297
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 15828.125,
+                    "minimumNanosecondsPerAgent": 15565.625,
+                    "maximumNanosecondsPerAgent": 25453.125,
+                    "totalSteps": 18112,
+                    "medianNanosecondsPerStep": 55.9297703180212
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 343240.625,
+                    "minimumNanosecondsPerAgent": 310823.4375,
+                    "maximumNanosecondsPerAgent": 388451.5625,
+                    "totalSteps": 18112,
+                    "medianNanosecondsPerStep": 1212.8643992932862
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 15224.21875,
+                    "minimumNanosecondsPerAgent": 14830.46875,
+                    "maximumNanosecondsPerAgent": 15936.71875,
+                    "totalSteps": 72448,
+                    "medianNanosecondsPerStep": 53.795825971731449
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 16209.765625,
+                    "minimumNanosecondsPerAgent": 14995.3125,
+                    "maximumNanosecondsPerAgent": 17872.265625,
+                    "totalSteps": 72448,
+                    "medianNanosecondsPerStep": 57.27832376325088
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 196842.96875,
+                    "minimumNanosecondsPerAgent": 194113.671875,
+                    "maximumNanosecondsPerAgent": 212495.703125,
+                    "totalSteps": 72448,
+                    "medianNanosecondsPerStep": 695.5581934628975
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 14613.96484375,
+                    "minimumNanosecondsPerAgent": 14109.47265625,
+                    "maximumNanosecondsPerAgent": 15754.296875,
+                    "totalSteps": 289792,
+                    "medianNanosecondsPerStep": 51.63945174469965
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 15274.8046875,
+                    "minimumNanosecondsPerAgent": 14308.3984375,
+                    "maximumNanosecondsPerAgent": 16347.94921875,
+                    "totalSteps": 289792,
+                    "medianNanosecondsPerStep": 53.974574867491167
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 161604.78515625,
+                    "minimumNanosecondsPerAgent": 153983.88671875,
+                    "maximumNanosecondsPerAgent": 178165.52734375,
+                    "totalSteps": 289792,
+                    "medianNanosecondsPerStep": 571.0416436616608
+                }
+            ]
+        },
+        {
+            "name": "wide-branching-frequent-failures",
+            "isolates": "A wide composite where most children fail, isolating early-exit/failure-path cost.",
+            "nodeCount": 17,
+            "cases": [
+                {
+                    "policy": "Immediate",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 462.5,
+                    "minimumNanosecondsPerAgent": 456.25,
+                    "maximumNanosecondsPerAgent": 593.75,
+                    "totalSteps": 128,
+                    "medianNanosecondsPerStep": 57.8125
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 506.25,
+                    "minimumNanosecondsPerAgent": 481.25,
+                    "maximumNanosecondsPerAgent": 750.0,
+                    "totalSteps": 128,
+                    "medianNanosecondsPerStep": 63.28125
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 11243.75,
+                    "minimumNanosecondsPerAgent": 9925.0,
+                    "maximumNanosecondsPerAgent": 13925.0,
+                    "totalSteps": 128,
+                    "medianNanosecondsPerStep": 1405.46875
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 462.5,
+                    "minimumNanosecondsPerAgent": 457.8125,
+                    "maximumNanosecondsPerAgent": 515.625,
+                    "totalSteps": 512,
+                    "medianNanosecondsPerStep": 57.8125
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 482.8125,
+                    "minimumNanosecondsPerAgent": 476.5625,
+                    "maximumNanosecondsPerAgent": 5842.1875,
+                    "totalSteps": 512,
+                    "medianNanosecondsPerStep": 60.3515625
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 10248.4375,
+                    "minimumNanosecondsPerAgent": 8795.3125,
+                    "maximumNanosecondsPerAgent": 17134.375,
+                    "totalSteps": 512,
+                    "medianNanosecondsPerStep": 1281.0546875
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 473.828125,
+                    "minimumNanosecondsPerAgent": 457.421875,
+                    "maximumNanosecondsPerAgent": 802.734375,
+                    "totalSteps": 2048,
+                    "medianNanosecondsPerStep": 59.228515625
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 526.171875,
+                    "minimumNanosecondsPerAgent": 472.265625,
+                    "maximumNanosecondsPerAgent": 2332.421875,
+                    "totalSteps": 2048,
+                    "medianNanosecondsPerStep": 65.771484375
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 7708.984375,
+                    "minimumNanosecondsPerAgent": 6012.109375,
+                    "maximumNanosecondsPerAgent": 9245.703125,
+                    "totalSteps": 2048,
+                    "medianNanosecondsPerStep": 963.623046875
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 488.671875,
+                    "minimumNanosecondsPerAgent": 473.53515625,
+                    "maximumNanosecondsPerAgent": 722.75390625,
+                    "totalSteps": 8192,
+                    "medianNanosecondsPerStep": 61.083984375
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 1056.73828125,
+                    "minimumNanosecondsPerAgent": 840.0390625,
+                    "maximumNanosecondsPerAgent": 1415.72265625,
+                    "totalSteps": 8192,
+                    "medianNanosecondsPerStep": 132.09228515625
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 6941.30859375,
+                    "minimumNanosecondsPerAgent": 6521.77734375,
+                    "maximumNanosecondsPerAgent": 8374.8046875,
+                    "totalSteps": 8192,
+                    "medianNanosecondsPerStep": 867.66357421875
+                }
+            ]
+        },
+        {
+            "name": "predominantly-running-actions",
+            "isolates": "Leaves that stay Running every tick, isolating the cost of resuming an already-entered tree without re-traversal.",
+            "nodeCount": 5,
+            "cases": [
+                {
+                    "policy": "Immediate",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 350.0,
+                    "minimumNanosecondsPerAgent": 337.5,
+                    "maximumNanosecondsPerAgent": 356.25,
+                    "totalSteps": 80,
+                    "medianNanosecondsPerStep": 70.0
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 331.25,
+                    "minimumNanosecondsPerAgent": 325.0,
+                    "maximumNanosecondsPerAgent": 1293.75,
+                    "totalSteps": 80,
+                    "medianNanosecondsPerStep": 66.25
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 8268.75,
+                    "minimumNanosecondsPerAgent": 6306.25,
+                    "maximumNanosecondsPerAgent": 10818.75,
+                    "totalSteps": 80,
+                    "medianNanosecondsPerStep": 1653.75
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 315.625,
+                    "minimumNanosecondsPerAgent": 312.5,
+                    "maximumNanosecondsPerAgent": 328.125,
+                    "totalSteps": 320,
+                    "medianNanosecondsPerStep": 63.125
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 331.25,
+                    "minimumNanosecondsPerAgent": 326.5625,
+                    "maximumNanosecondsPerAgent": 4960.9375,
+                    "totalSteps": 320,
+                    "medianNanosecondsPerStep": 66.25
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 7657.8125,
+                    "minimumNanosecondsPerAgent": 6032.8125,
+                    "maximumNanosecondsPerAgent": 17439.0625,
+                    "totalSteps": 320,
+                    "medianNanosecondsPerStep": 1531.5625
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 323.828125,
+                    "minimumNanosecondsPerAgent": 312.890625,
+                    "maximumNanosecondsPerAgent": 1409.375,
+                    "totalSteps": 1280,
+                    "medianNanosecondsPerStep": 64.765625
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 427.34375,
+                    "minimumNanosecondsPerAgent": 333.203125,
+                    "maximumNanosecondsPerAgent": 2849.609375,
+                    "totalSteps": 1280,
+                    "medianNanosecondsPerStep": 85.46875
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 5230.078125,
+                    "minimumNanosecondsPerAgent": 4123.4375,
+                    "maximumNanosecondsPerAgent": 5974.609375,
+                    "totalSteps": 1280,
+                    "medianNanosecondsPerStep": 1046.015625
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 324.90234375,
+                    "minimumNanosecondsPerAgent": 316.50390625,
+                    "maximumNanosecondsPerAgent": 402.9296875,
+                    "totalSteps": 5120,
+                    "medianNanosecondsPerStep": 64.98046875
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 780.859375,
+                    "minimumNanosecondsPerAgent": 620.703125,
+                    "maximumNanosecondsPerAgent": 983.59375,
+                    "totalSteps": 5120,
+                    "medianNanosecondsPerStep": 156.171875
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 4994.7265625,
+                    "minimumNanosecondsPerAgent": 4746.6796875,
+                    "maximumNanosecondsPerAgent": 5642.96875,
+                    "totalSteps": 5120,
+                    "medianNanosecondsPerStep": 998.9453125
+                }
+            ]
+        },
+        {
+            "name": "many-programs-small-populations",
+            "isolates": "Many distinct small compiled programs with few agents each, isolating per-program (not per-agent) scheduling overhead.",
+            "nodeCount": 1,
+            "cases": [
+                {
+                    "policy": "Immediate",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 300.0,
+                    "minimumNanosecondsPerAgent": 275.0,
+                    "maximumNanosecondsPerAgent": 318.75,
+                    "totalSteps": 64,
+                    "medianNanosecondsPerStep": 75.0
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 275.0,
+                    "minimumNanosecondsPerAgent": 275.0,
+                    "maximumNanosecondsPerAgent": 356.25,
+                    "totalSteps": 64,
+                    "medianNanosecondsPerStep": 68.75
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 16,
+                    "medianNanosecondsPerAgent": 6656.25,
+                    "minimumNanosecondsPerAgent": 5143.75,
+                    "maximumNanosecondsPerAgent": 10362.5,
+                    "totalSteps": 64,
+                    "medianNanosecondsPerStep": 1664.0625
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 267.1875,
+                    "minimumNanosecondsPerAgent": 265.625,
+                    "maximumNanosecondsPerAgent": 298.4375,
+                    "totalSteps": 256,
+                    "medianNanosecondsPerStep": 66.796875
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 278.125,
+                    "minimumNanosecondsPerAgent": 273.4375,
+                    "maximumNanosecondsPerAgent": 4268.75,
+                    "totalSteps": 256,
+                    "medianNanosecondsPerStep": 69.53125
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 64,
+                    "medianNanosecondsPerAgent": 5198.4375,
+                    "minimumNanosecondsPerAgent": 4292.1875,
+                    "maximumNanosecondsPerAgent": 9642.1875,
+                    "totalSteps": 256,
+                    "medianNanosecondsPerStep": 1299.609375
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 267.96875,
+                    "minimumNanosecondsPerAgent": 266.796875,
+                    "maximumNanosecondsPerAgent": 305.078125,
+                    "totalSteps": 1024,
+                    "medianNanosecondsPerStep": 66.9921875
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 349.609375,
+                    "minimumNanosecondsPerAgent": 275.78125,
+                    "maximumNanosecondsPerAgent": 1928.125,
+                    "totalSteps": 1024,
+                    "medianNanosecondsPerStep": 87.40234375
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 256,
+                    "medianNanosecondsPerAgent": 4383.59375,
+                    "minimumNanosecondsPerAgent": 3312.109375,
+                    "maximumNanosecondsPerAgent": 4927.734375,
+                    "totalSteps": 1024,
+                    "medianNanosecondsPerStep": 1095.8984375
+                },
+                {
+                    "policy": "Immediate",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 266.2109375,
+                    "minimumNanosecondsPerAgent": 261.42578125,
+                    "maximumNanosecondsPerAgent": 403.125,
+                    "totalSteps": 4096,
+                    "medianNanosecondsPerStep": 66.552734375
+                },
+                {
+                    "policy": "Budgeted",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 608.7890625,
+                    "minimumNanosecondsPerAgent": 494.04296875,
+                    "maximumNanosecondsPerAgent": 767.28515625,
+                    "totalSteps": 4096,
+                    "medianNanosecondsPerStep": 152.197265625
+                },
+                {
+                    "policy": "BatchedJobsSameFrame",
+                    "agentCount": 1024,
+                    "medianNanosecondsPerAgent": 4258.69140625,
+                    "minimumNanosecondsPerAgent": 4153.515625,
+                    "maximumNanosecondsPerAgent": 5137.5,
+                    "totalSteps": 4096,
+                    "medianNanosecondsPerStep": 1064.6728515625
+                }
+            ]
+        }
+    ],
+    "limitations": [
+        "This is the same scenario/policy sweep P4-001/P4-002 already ran in the Editor; it does not add new scenarios or policies.",
+        "One run on one Windows x64 workstation; not generalized to other hardware.",
+        "No regression threshold or 'supported' performance claim is drawn from these numbers, per this card's own forbidden-changes clause.",
+        "totalSteps/medianNanosecondsPerStep were added after the initial P4-008 pass, to compare this Player's real per-step calibration cost against P4-004's Editor-derived CalibratedNanosecondsPerNodeStep constant; see Planning~/Evidence/P4-008/README.md."
+    ]
+}

@@ -16,24 +16,31 @@ namespace AIBT
         /// <summary>
         /// Calibrated node-cost coefficient: nanoseconds of native lifecycle work per atomic
         /// semantic step (a `CompositeEntered`/`CompositeExited`/`DispatchRequired`/etc. step from
-        /// <see cref="NativeLifecycleStepResultV1"/>). Derived as the pooled median of
-        /// <c>elapsedNanoseconds / totalSteps</c> across all 360 Immediate-policy samples (6
-        /// scenarios x 4 agent counts x 15 measured samples) in
-        /// <c>Benchmarks~/Phase4/CostCurves/Results/cost-curves-windows-editor-20260820.json</c>
-        /// -- this workstation, Unity 6000.5.8f1, 2026-08-20. See
-        /// <c>Planning~/Evidence/P4-004/README.md</c> for the full derivation and per-scenario
-        /// breakdown. Immediate is used for calibration specifically because it has no batching
+        /// <see cref="NativeLifecycleStepResultV1"/>). Originally derived from Editor batchmode
+        /// data (678.75 ns/step) in <c>P4-004</c>; <c>P4-008</c>'s 2026-08-26 addendum found the
+        /// real, non-development Player runs ~11-12x faster per step than Editor on this same
+        /// workstation, and re-measured the figure directly on two real Players instead: a
+        /// Windows x64 IL2CPP/Burst Standalone Player (median 61.82 ns/step, 24 Immediate-policy
+        /// cases) and an Android ARM64 IL2CPP/Burst Player on a physical Google Pixel 10 Pro
+        /// (median 58.75 ns/step, 18 Immediate-policy cases) -- within ~5% of each other despite
+        /// being architecturally very different CPUs. This constant is the pooled median of all
+        /// 42 of those real Player Immediate-policy samples combined. See
+        /// <c>Benchmarks~/Phase4/CostCurves/README.md</c>'s "Addendum (2026-08-26)" section and
+        /// <c>Planning~/Evidence/P4-004/README.md</c> for the original Editor-only derivation this
+        /// supersedes. Immediate is used for calibration specifically because it has no batching
         /// overhead to contaminate the per-step figure (P4-002 already showed Immediate's
         /// per-agent cost is population-independent).
         /// </summary>
-        internal const double CalibratedNanosecondsPerNodeStep = 678.75;
+        internal const double CalibratedNanosecondsPerNodeStep = 60.275;
 
         /// <summary>
-        /// Evidence-based tolerance: re-deriving each of the 24 (scenario, agent count) points
-        /// behind <see cref="CalibratedNanosecondsPerNodeStep"/> and comparing this model's
-        /// estimate against the actually-measured median cost for that same point, the largest
-        /// observed deviation was 8.7% (this is not an assumed threshold; it is what the
-        /// calibration data itself showed -- see <c>Planning~/Evidence/P4-004/README.md</c>).
+        /// Evidence-based tolerance from the original Editor-only calibration: re-deriving each of
+        /// the 24 (scenario, agent count) points behind the prior 678.75 ns/step figure and
+        /// comparing the model's estimate against the actually-measured median cost for that same
+        /// point, the largest observed deviation was 8.7% (see
+        /// <c>Planning~/Evidence/P4-004/README.md</c>). Not re-derived against the real-Player
+        /// samples behind the current <see cref="CalibratedNanosecondsPerNodeStep"/> value --
+        /// kept as the existing evidence-based figure pending a dedicated re-check.
         /// </summary>
         internal const double CalibrationTolerance = 0.10;
 

@@ -73,27 +73,39 @@ namespace AIBT.Benchmarks.Phase4.Platform.Windows
                     foreach (var policy in Policies)
                     {
                         for (var warmupIndex = 0; warmupIndex < warmupSamples; warmupIndex++)
-                            RunOneSample(compiled, policy, agentCount, warmupIndex, false);
+                            RunOneSample(compiled, policy, agentCount, warmupIndex, false, out _);
 
                         GC.Collect();
                         GC.WaitForPendingFinalizers();
                         GC.Collect();
 
                         var samples = new double[measuredSamples];
+                        var stepSamples = new double[measuredSamples];
+                        var totalSteps = 0L;
                         for (var sampleIndex = 0; sampleIndex < measuredSamples; sampleIndex++)
-                            samples[sampleIndex] = RunOneSample(compiled, policy, agentCount, sampleIndex, true);
+                        {
+                            samples[sampleIndex] = RunOneSample(compiled, policy, agentCount, sampleIndex, true, out var stepsThisRun);
+                            totalSteps = (long)stepsThisRun;
+                            stepSamples[sampleIndex] = samples[sampleIndex] * agentCount / stepsThisRun;
+                        }
 
                         Array.Sort(samples);
                         var median = samples.Length % 2 == 1
                             ? samples[samples.Length / 2]
                             : (samples[samples.Length / 2 - 1] + samples[samples.Length / 2]) / 2.0;
+                        Array.Sort(stepSamples);
+                        var medianPerStep = stepSamples.Length % 2 == 1
+                            ? stepSamples[stepSamples.Length / 2]
+                            : (stepSamples[stepSamples.Length / 2 - 1] + stepSamples[stepSamples.Length / 2]) / 2.0;
                         cases.Add(new ScenarioCase
                         {
                             policy = policy,
                             agentCount = agentCount,
                             medianNanosecondsPerAgent = median,
                             minimumNanosecondsPerAgent = samples[0],
-                            maximumNanosecondsPerAgent = samples[samples.Length - 1]
+                            maximumNanosecondsPerAgent = samples[samples.Length - 1],
+                            totalSteps = totalSteps,
+                            medianNanosecondsPerStep = medianPerStep
                         });
                     }
                 }
@@ -125,7 +137,7 @@ namespace AIBT.Benchmarks.Phase4.Platform.Windows
                     "This is the same scenario/policy sweep P4-001/P4-002 already ran in the Editor; it does not add new scenarios or policies.",
                     "One run on one Windows x64 workstation; not generalized to other hardware.",
                     "No regression threshold or 'supported' performance claim is drawn from these numbers, per this card's own forbidden-changes clause.",
-                    "Android ARM64 and Unity Web were not measured in this pass -- no device/emulator or WebGL browser access was available in this environment; see Planning~/Evidence/P4-008/README.md."
+                    "totalSteps/medianNanosecondsPerStep were added after the initial P4-008 pass, to compare this Player's real per-step calibration cost against P4-004's Editor-derived CalibratedNanosecondsPerNodeStep constant; see Planning~/Evidence/P4-008/README.md."
                 }
             };
 
@@ -136,7 +148,7 @@ namespace AIBT.Benchmarks.Phase4.Platform.Windows
         }
 
         private static double RunOneSample(
-            SchedulingScenarios.CompiledScenario compiled, string policy, int agentCount, int sequence, bool measure)
+            SchedulingScenarios.CompiledScenario compiled, string policy, int agentCount, int sequence, bool measure, out ulong stepsThisRun)
         {
             if (!SchedulingPolicyDriver.TryCreateAgents(compiled.Program, compiled.NodeKinds, agentCount, Allocator.Persistent, out var agents, out var createFailure))
                 throw new InvalidOperationException("Agent creation failed: " + createFailure.Code);
@@ -167,6 +179,7 @@ namespace AIBT.Benchmarks.Phase4.Platform.Windows
 
                 long stopped = measure ? Stopwatch.GetTimestamp() : 0;
                 if (!ran) throw new InvalidOperationException("Policy " + policy + " failed: " + runFailure.Code);
+                stepsThisRun = totalSteps;
                 if (!measure) return 0;
 
                 var elapsedTicks = stopped - started;
@@ -289,6 +302,8 @@ namespace AIBT.Benchmarks.Phase4.Platform.Windows
             public double medianNanosecondsPerAgent;
             public double minimumNanosecondsPerAgent;
             public double maximumNanosecondsPerAgent;
+            public long totalSteps;
+            public double medianNanosecondsPerStep;
         }
     }
 }
