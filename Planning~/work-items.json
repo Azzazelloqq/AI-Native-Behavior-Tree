@@ -1069,6 +1069,185 @@
       "owns": [
         "Planning~/Evidence/P4-GATE/"
       ]
+    },
+    {
+      "id": "P5-001",
+      "phase": 5,
+      "title": "Hot-reload compatibility model decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P5/P5-001-hot-reload-compatibility-model-decision.md",
+      "dependsOn": [
+        "P4-009"
+      ],
+      "owns": [
+        "Spikes~/HotReloadCompatibilityModel/",
+        "Planning~/Evidence/P5-001/"
+      ]
+    },
+    {
+      "id": "P5-002",
+      "phase": 5,
+      "title": "Node identity, program version, and state-layout hashing",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P5/P5-002-node-identity-and-state-layout-hashing.md",
+      "dependsOn": [
+        "P5-001"
+      ],
+      "owns": [
+        "Runtime/HotReload/",
+        "Authoring/HotReload/",
+        "Tests/Runtime/HotReload/",
+        "Tests/Editor/HotReload/",
+        "Planning~/Evidence/P5-002/"
+      ]
+    },
+    {
+      "id": "P5-003",
+      "phase": 5,
+      "title": "Compatibility classifier",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P5/P5-003-compatibility-classifier.md",
+      "dependsOn": [
+        "P5-002"
+      ],
+      "owns": [
+        "Runtime/HotReload/Classification/",
+        "Tests/Runtime/HotReload/Classification/",
+        "Planning~/Evidence/P5-003/"
+      ]
+    },
+    {
+      "id": "P5-004",
+      "phase": 5,
+      "title": "Safe full restart",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P5/P5-004-safe-full-restart.md",
+      "dependsOn": [
+        "P5-001"
+      ],
+      "owns": [
+        "Runtime/HotReload/Restart/",
+        "Tests/Runtime/HotReload/Restart/",
+        "Planning~/Evidence/P5-004/"
+      ]
+    },
+    {
+      "id": "P5-005",
+      "phase": 5,
+      "title": "Affected-subtree restart",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P5/P5-005-affected-subtree-restart.md",
+      "dependsOn": [
+        "P5-003",
+        "P5-004"
+      ],
+      "owns": [
+        "Runtime/HotReload/SubtreeRestart/",
+        "Tests/Runtime/HotReload/SubtreeRestart/",
+        "Planning~/Evidence/P5-005/"
+      ]
+    },
+    {
+      "id": "P5-006",
+      "phase": 5,
+      "title": "Compatible active-state migration",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P5/P5-006-compatible-active-state-migration.md",
+      "dependsOn": [
+        "P5-002",
+        "P5-003",
+        "P5-004"
+      ],
+      "owns": [
+        "Runtime/HotReload/Migration/",
+        "Tests/Runtime/HotReload/Migration/",
+        "Planning~/Evidence/P5-006/"
+      ]
+    },
+    {
+      "id": "P5-007",
+      "phase": 5,
+      "title": "Scheduler and backend interaction",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P5/P5-007-scheduler-and-backend-interaction.md",
+      "dependsOn": [
+        "P5-004",
+        "P5-005",
+        "P5-006"
+      ],
+      "owns": [
+        "Runtime/HotReload/",
+        "Tests/Runtime/HotReload/",
+        "Tests/Runtime/NativeExecution/Scheduling/",
+        "Planning~/Evidence/P5-007/"
+      ]
+    },
+    {
+      "id": "P5-008",
+      "phase": 5,
+      "title": "Editor hot-reload workflow",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P5/P5-008-editor-hot-reload-workflow.md",
+      "dependsOn": [
+        "P5-004",
+        "P5-005",
+        "P5-006",
+        "P5-007"
+      ],
+      "owns": [
+        "Editor/HotReload/",
+        "Tests/Editor/HotReload/",
+        "Planning~/Evidence/P5-008/"
+      ]
+    },
+    {
+      "id": "P5-009",
+      "phase": 5,
+      "title": "Hot-reload benchmark evidence",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P5/P5-009-hot-reload-benchmark-evidence.md",
+      "dependsOn": [
+        "P5-004",
+        "P5-005",
+        "P5-006",
+        "P5-007"
+      ],
+      "owns": [
+        "Benchmarks~/Phase5/",
+        "Tools~/Verification/P5/",
+        "Planning~/Evidence/P5-009/"
+      ]
+    },
+    {
+      "id": "P5-010",
+      "phase": 5,
+      "title": "Phase 5 integration gate",
+      "status": "draft",
+      "kind": "review",
+      "card": "Planning~/Tasks/P5/P5-010-phase5-integration-gate.md",
+      "dependsOn": [
+        "P5-001",
+        "P5-002",
+        "P5-003",
+        "P5-004",
+        "P5-005",
+        "P5-006",
+        "P5-007",
+        "P5-008",
+        "P5-009"
+      ],
+      "owns": [
+        "Planning~/Evidence/P5-GATE/"
+      ]
     }
   ]
 }

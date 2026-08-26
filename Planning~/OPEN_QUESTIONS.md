@@ -10,6 +10,7 @@ These are the only known unresolved items relevant to the current frontier. They
 | OQ-004 | Obtain macOS/Safari verification access and define supported browser versions. | User + platform review | Public Web support matrix |
 | OQ-005 | Select editor graph framework from a dedicated spike. | Accepted ADR in P3 | Editor implementation |
 | OQ-006 | Decide whether runtime autotuning beats calibrated fixed heuristics. | Resolved: rejected, see [ADR P4-007](../Documentation~/decisions/ADR-P4-007-runtime-autotuning-resolution.md) | None |
+| OQ-007 | Define what "reload" means for a semantically changed tree with a live instance mid-execution (abort and restart? migrate in place? explicitly unsupported for a first cut?), and the compatibility-classification rule the reload strategy depends on. | Dedicated spike/decision in Phase 5 | `P5-002` onward |
 
 The following are closed and MUST NOT be reopened incidentally:
 

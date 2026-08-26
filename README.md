@@ -79,6 +79,7 @@ Additional platforms and Unity versions are supported only after validation by t
 - [Data formats](Documentation~/data-formats.md)
 - [Visual editor and layout](Documentation~/editor-and-layout.md)
 - [AI and MCP integration](Documentation~/ai-and-mcp.md)
+- [Hot reload](Documentation~/hot-reload.md)
 - [Benchmarks](Documentation~/benchmarks.md)
 - [Testing strategy](Documentation~/testing.md)
 - [Roadmap](Documentation~/roadmap.md)
