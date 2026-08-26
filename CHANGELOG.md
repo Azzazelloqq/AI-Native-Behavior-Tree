@@ -23,3 +23,19 @@ All notable changes to this project will be documented here. The project follows
 - Native/reference golden equivalence, initialized zero-GC/lifetime gates,
   non-Development Windows x64 IL2CPP/Burst Player evidence, Android ARM64
   IL2CPP/Burst AOT evidence, and Chrome/Firefox Web conformance.
+- `UnityEditor.Experimental.GraphView`-based editor components: read-only graph
+  adapter, deterministic auto-layout, manual organization and layout
+  persistence (groups/notes/reroutes), gated semantic editing, validation UX,
+  reference-oracle-backed preview, read-only native execution debugger
+  attachment, and a trace timeline view; proven layout/semantic isolation and
+  large-graph (up to 2000 node) interaction performance measurements. Not yet
+  wired into one live editor window.
+- Fixed-policy scheduling cost curves, a calibrated work-estimation/batching
+  model (recalibrated against real Windows x64 and Android ARM64 Player data,
+  not Editor batchmode), a `PipelinedJobs` executor, and an `Auto`
+  policy-selection heuristic with full explainability; `Auto` measured against
+  fixed policies with underperformance disclosed rather than tuned away.
+  Runtime autotuning evaluated and rejected (`OQ-006`) in favor of the static
+  calibrated model. Real, non-Development Player benchmark evidence on Windows
+  x64, Android ARM64 (physical device), and single-thread Web. No performance
+  default, regression threshold, or supported-hardware-class claim adopted.

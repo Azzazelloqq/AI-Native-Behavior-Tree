@@ -1,0 +1,41 @@
+{
+  "schema": "aibt-p4-gate-assembly-dependencies-v1",
+  "candidateCommit": "9b9744443d9bbcaa3d4b3341343aeda818a26770",
+  "asmdefs": {
+    "AIBT.Runtime": {
+      "path": "Runtime/AIBT.Runtime.asmdef",
+      "references": ["Unity.Burst", "Unity.Collections"],
+      "includePlatforms": []
+    },
+    "AIBT.Authoring": {
+      "path": "Authoring/AIBT.Authoring.asmdef",
+      "references": ["AIBT.Runtime", "Newtonsoft.Json"],
+      "includePlatforms": []
+    },
+    "AIBT.Editor": {
+      "path": "Editor/AIBT.Editor.asmdef",
+      "references": ["AIBT.Runtime", "AIBT.Authoring", "Newtonsoft.Json", "Unity.Collections"],
+      "includePlatforms": ["Editor"]
+    }
+  },
+  "dependencyDirectionCheck": {
+    "rule": "AIBT.Editor depends on AIBT.Authoring/AIBT.Runtime; neither depends back on AIBT.Editor",
+    "result": "PASSED",
+    "evidence": "AIBT.Runtime.asmdef references only Unity.Burst/Unity.Collections; AIBT.Authoring.asmdef references only AIBT.Runtime/Newtonsoft.Json -- neither lists AIBT.Editor"
+  },
+  "forbiddenTokenAudit": {
+    "tokens": ["using UnityEditor", "Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "scannedPaths": ["Runtime/", "Authoring/"],
+    "command": "grep -rE \"using UnityEditor|Unity\\.Entities|UnityMCP|OpenAI|Anthropic\" Runtime/ Authoring/",
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "editorScopedForbiddenTokenAudit": {
+    "tokens": ["Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "note": "using UnityEditor is expected and allowed in Editor/; only Entities/MCP/LLM tokens are forbidden there too",
+    "scannedPaths": ["Editor/"],
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "note": "Unchanged since P3-GATE's own audit -- Phase 4 added no new production assembly and touched no asmdef reference list; Runtime/Scheduling/Native/ (P4's own code) lives entirely inside the existing AIBT.Runtime assembly."
+}

@@ -1,6 +1,6 @@
 # P4-009 — Phase 4 integration gate
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -61,3 +61,23 @@ public API, generated artifact, dependency, cleanliness, and diff checks
 
 - Follows the same self-verification shape as `P2-025`/`P3-013` (no separate reviewer requirement); see `Planning~/AGENT_WORKFLOW.md`.
 - Phase 5 (hot reload) depends on this gate's confirmation that the scheduler contract is stable and that no tree-semantic change can result from a scheduling decision, per `Documentation~/execution-and-scheduling.md`'s own "Semantic guarantees."
+
+## Outcome
+
+Accepted 2026-08-27 against commit `9b9744443d9bbcaa3d4b3341343aeda818a26770`.
+A clean clone, a from-scratch detached UPM harness (`com.azzazello.aibt` as a
+local `file:` package plus its declared dependencies, nothing from the host
+`Modules` project), Unity compile (exit 0), and the full detached EditMode
+suite (**1060/1060 passed**, 0 failed, 0 skipped) all passed; the 3 failures
+seen inside the host project did not reproduce, confirming host-project
+noise. `P4-003`'s `PipelinedJobs` equivalence proof and `P4-005`'s
+determinism-on-rerun proof were both confirmed individually `Passed` within
+that same run, not merely cited. `OQ-006` confirmed `Resolved: rejected` with
+`ADR-P4-007` linked and `Accepted`. Public API surface (382 types, 1994
+members) is **byte-identical to `P3-GATE`'s own dump** -- Phase 4 added zero
+new public API surface. Assembly dependency direction and forbidden-token
+audits both clean. `README.md`/`CHANGELOG.md` were found stale (still
+describing `P2-025` as in-progress) and updated to reflect Phases 1-4
+completion, with every updated claim checked against `claims-inventory.md`
+to confirm nothing stronger than evidence was introduced. Full detail in
+`Planning~/Evidence/P4-GATE/`.

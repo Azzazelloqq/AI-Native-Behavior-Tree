@@ -6,7 +6,11 @@ The project targets a future Burst-compatible, zero-GC-per-tick production path;
 
 Phase 2 adds the generated Burst dispatch and fixed-capacity native executor while preserving the Phase 1 semantic oracle. The initialized native paths have focused zero-GC evidence, Windows x64 and Android ARM64 each have an actual non-Development IL2CPP/Burst build, and the single-thread Web backend passes Chrome and Firefox conformance. Device performance, Safari/mobile Web, automatic policy selection, and any performance default or threshold are not claimed.
 
-> Status: P2-001 through P2-024, including the Windows x64 IL2CPP/Burst baseline (P2-022), are implemented and verified. The final `P2-025` integration gate is in progress. The visual editor, MCP integration, hot reload, and calibrated Auto/pipelined scheduling remain later phases.
+Phase 3 adds editor tooling on `UnityEditor.Experimental.GraphView`: a read-only graph adapter, deterministic auto-layout, manual organization and layout persistence, gated semantic editing, validation UX, reference-oracle-backed preview, read-only native debugger attachment, and a trace timeline view. Each is implemented and tested in isolation; none are yet wired into one live `Editor/Graph/` window.
+
+Phase 4 measures scheduling and batching on real, non-Editor Players (Windows x64, Android ARM64, single-thread Web) and implements a calibrated work-estimation/batching model plus an `Auto` policy-selection heuristic. `Auto` currently underperforms the best fixed policy (`Immediate`/`Budgeted`/`BatchedJobsSameFrame`/`PipelinedJobs`) in most measured cases — reported honestly, not tuned away — and runtime autotuning was evaluated and rejected in favor of the static calibrated model. No performance default, regression threshold, or supported-hardware-class claim is adopted anywhere in the package.
+
+> Status: Phases 1 through 4 are complete (`P2-025`, `P3-013`, and `P4-009` integration gates all accepted — see `Planning~/Evidence/`). MCP integration and hot reload remain later phases.
 
 ## Design goals
 
@@ -23,7 +27,7 @@ Phase 2 adds the generated Burst dispatch and fixed-capacity native executor whi
 | --- | --- |
 | `Runtime/` | Compiled tree representation, execution state, scheduler, blackboard, commands |
 | `Authoring/` | Semantic authoring model, validation, compilation contracts |
-| `Editor/` | Planned visual editor, debugging, profiling, and layout authoring |
+| `Editor/` | Graph adapter, layout, editing, validation, preview, and debugger components (implemented; not yet wired into one live window) |
 | `CodeGen~/` | Generated Burst dispatch, analyzers, and templates |
 | `Tools~/McpServer/` | Planned optional MCP server and AI-agent integration |
 | `Schemas~/` | Draft schemas for canonical files and tool contracts |

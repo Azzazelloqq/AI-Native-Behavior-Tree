@@ -1053,7 +1053,7 @@
       "id": "P4-009",
       "phase": 4,
       "title": "Phase 4 integration gate",
-      "status": "draft",
+      "status": "done",
       "kind": "review",
       "card": "Planning~/Tasks/P4/P4-009-phase4-integration-gate.md",
       "dependsOn": [
