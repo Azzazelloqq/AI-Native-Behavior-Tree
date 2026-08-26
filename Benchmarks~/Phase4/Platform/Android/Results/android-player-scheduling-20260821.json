@@ -1,0 +1,98 @@
+{
+    "schema": "aibt-p4-008-android-player-scheduling-v1",
+    "unityVersion": "6000.5.8f1",
+    "applicationPlatform": "Android",
+    "burstEnabled": true,
+    "is64BitProcess": true,
+    "deviceModel": "Google Pixel 10 Pro",
+    "processorType": "ARM64 FP ASIMD AES",
+    "processorCount": 8,
+    "systemMemoryMB": 15575,
+    "operatingSystem": "Android OS 17 / API-37 (CP2A.260805.005/15828068)",
+    "scenarios": [
+        {
+            "name": "scheduling-baseline-empty-job",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 287.500},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 300.000},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 16, "medianNsPerAgent": 6406.250},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 287.500},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 293.750},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 64, "medianNsPerAgent": 4843.750},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 287.109},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 295.703},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 256, "medianNsPerAgent": 4879.688}
+            ]
+        },
+        {
+            "name": "shallow-tree-cheap-conditions",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 1468.750},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 1531.250},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 16, "medianNsPerAgent": 30406.250},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 1465.625},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 1525.000},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 64, "medianNsPerAgent": 20435.938},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 1323.828},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 1374.609},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 256, "medianNsPerAgent": 18677.734}
+            ]
+        },
+        {
+            "name": "deep-sequence-selector-traversal",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 15106.250},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 15937.500},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 16, "medianNsPerAgent": 352643.750},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 15135.938},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 15942.188},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 64, "medianNsPerAgent": 224189.063},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 15146.094},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 15999.219},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 256, "medianNsPerAgent": 205607.422}
+            ]
+        },
+        {
+            "name": "wide-branching-frequent-failures",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 450.000},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 475.000},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 16, "medianNsPerAgent": 9812.500},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 450.000},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 465.625},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 64, "medianNsPerAgent": 7307.813},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 451.172},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 471.875},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 256, "medianNsPerAgent": 7496.094}
+            ]
+        },
+        {
+            "name": "predominantly-running-actions",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 293.750},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 306.250},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 16, "medianNsPerAgent": 5831.250},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 295.313},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 306.250},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 64, "medianNsPerAgent": 4748.438},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 291.797},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 313.281},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 256, "medianNsPerAgent": 5181.250}
+            ]
+        },
+        {
+            "name": "many-programs-small-populations",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 262.500},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 275.000},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 16, "medianNsPerAgent": 4668.750},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 257.813},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 262.500},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 64, "medianNsPerAgent": 3943.750},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 257.031},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 267.188},
+                {"policy": "BatchedJobsSameFrame", "agentCount": 256, "medianNsPerAgent": 4553.516}
+            ]
+        }
+    ]
+}

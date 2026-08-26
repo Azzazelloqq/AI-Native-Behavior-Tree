@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.Platform.AndroidBuild",
+  "rootNamespace": "AIBT.Benchmarks.Phase4.Platform.Android.Editor",
+  "references": [
+    "Unity.Burst"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

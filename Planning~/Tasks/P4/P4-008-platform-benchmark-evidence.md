@@ -69,9 +69,19 @@ single-thread WebGL Player (`Immediate`/`Budgeted` only, per this backend's own 
 scope) ran in an actual browser, after fixing a real `Content-Encoding: gzip` hosting mismatch
 (`PlayerSettings.WebGL.decompressionFallback`) and disclosing a genuine browser-timer-resolution
 limitation (several cases below measurable resolution, reported honestly, not as zero cost).
-**Android ARM64 remains unmeasured**: only an x86_64 system image/AVD is available locally, which
-does not satisfy `USER_ACTIONS.md`'s ARM64-device-class requirement — the user offered their own
-physical phone as a path forward, not yet `adb`-connected as of this card's evidence.
 
-No threshold or default is introduced by any of this — see `Planning~/Evidence/P4-008/`,
-`Benchmarks~/Phase4/Platform/Windows/README.md`, and `Benchmarks~/Phase4/Platform/Web/README.md`.
+**Android ARM64 was measured too**, on the user's own physical Google Pixel 10 Pro: only an
+x86_64 system image/AVD was available locally, which does not satisfy `USER_ACTIONS.md`'s
+ARM64-device-class requirement, so the user connected their own phone over `adb` (confirmed
+genuine `arm64-v8a`) instead. A real, non-development, IL2CPP, Burst-enabled Android Player ran
+all three fixed policies there. Two notable findings: this Windows workstation is only
+~1.1x-1.3x faster than the phone for `Immediate` (much closer than the Editor-vs-Player gap
+suggested), and `BatchedJobsSameFrame`'s fixed-batch-size overhead reproduces at roughly the same
+~18x-23x magnitude on ARM64 mobile silicon as it does on Windows (~21x-29x) — confirming
+`P4-002`/`P4-006`'s traced mechanism is a property of the scheduling code's interaction with
+Unity's Job system, not tied to one CPU architecture or OS. The test app was uninstalled from the
+user's phone immediately after capturing results.
+
+All three mandatory pre-1.0 targets are now measured. No threshold or default is introduced by
+any of this — see `Planning~/Evidence/P4-008/`, `Benchmarks~/Phase4/Platform/Windows/README.md`,
+`Benchmarks~/Phase4/Platform/Web/README.md`, and `Benchmarks~/Phase4/Platform/Android/README.md`.

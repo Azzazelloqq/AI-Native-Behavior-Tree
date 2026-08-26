@@ -7,8 +7,10 @@ matrix on real (non-Editor) execution for that platform.
 - [`Windows/`](Windows/README.md) -- done. Real IL2CPP/Burst Windows x64 Standalone Player results.
 - [`Web/`](Web/README.md) -- done. Real single-thread WebGL Player results, run in a browser via
   the Browser pane (`Immediate`/`Budgeted` only, per this backend's own accepted policy scope).
-- `Android/` -- not measured. Only an x86_64 emulator image was available locally (no genuine
-  ARM64 device/emulator); a disclosed gap, per `Planning~/Evidence/P4-008/README.md`.
+- [`Android/`](Android/README.md) -- done. Real IL2CPP/Burst Android ARM64 Player results, run on
+  genuine ARM64 hardware (the user's own physical phone, over `adb`) after the only locally
+  available emulator image proved to be x86_64-only.
 
+All three mandatory pre-1.0 targets (`Documentation~/benchmarks.md`) are now measured.
 Results from one platform are never presented as establishing support for another, per
 `Documentation~/benchmarks.md`'s own rule.

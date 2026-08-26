@@ -23,20 +23,22 @@
   `target=StandaloneWindows64`, `architecture=x86_64`, `scriptingBackend=IL2CPP`,
   `burstEnabled=true`, `developmentBuild=false`, `result=Succeeded`, 0 build errors/warnings.
 
-## Update: Web measured too; Android remains a genuine device gap
+## Update: Web measured too, then Android measured on the user's own physical phone
 
 After the initial Windows-only pass (below), the user asked directly whether Android/Web builds
 were actually feasible rather than assumed unavailable. Checking properly found real
 infrastructure: `AndroidPlayer` and `WebGLSupport` Unity modules are both installed, and a Browser
 pane is available that can genuinely load and run a WebGL build (not just build it). **Web was
-measured** -- see `Benchmarks~/Phase4/Platform/Web/README.md`. **Android was not**: the only
-locally available system image is `x86_64` (no `arm64-v8a` image is downloaded), and the one
+measured** -- see `Benchmarks~/Phase4/Platform/Web/README.md`. **Android initially was not**: the
+only locally available system image is `x86_64` (no `arm64-v8a` image is downloaded), and the one
 pre-configured AVD (`Pixel_10_Pro`) is also `x86_64`. Building for that emulator would not satisfy
 `Planning~/USER_ACTIONS.md`'s "identify an Android ARM64 device class" -- an x86_64 emulator is
 not ARM64 evidence, and even downloading an arm64-v8a system image would only produce
 QEMU-emulated ARM64-on-x86_64, not genuine hardware performance evidence. The user offered to run
-a build on their own physical Android phone instead; that requires the phone connected and
-`adb`-visible, which had not happened as of this evidence snapshot -- tracked as the remaining gap.
+a build on their own physical Android phone instead. After walking through USB debugging setup
+(Developer Options, USB debugging, file-transfer USB mode) across a few troubleshooting rounds, the
+phone appeared in `adb devices` as genuine `arm64-v8a` hardware, and **Android was measured too** --
+see the Android result section below and `Benchmarks~/Phase4/Platform/Android/README.md`.
 
 ### Web result
 
@@ -61,12 +63,33 @@ a bug). Only scenarios with enough absolute per-sample cost register nonzero val
 agent count, a genuinely usable data point. Full detail in
 `Benchmarks~/Phase4/Platform/Web/README.md`.
 
-## Scope: Windows x64 and Web measured; Android ARM64 not measured
+### Android result
 
-This card now covers two of the three mandatory pre-1.0 targets. Android ARM64 remains a
-genuine, disclosed gap (see above) -- not silently omitted or faked. Per
-`Documentation~/benchmarks.md`'s own rule, no result here is presented as establishing support for
-the unmeasured platform.
+Ran `P4-001`'s scenario sweep (all three fixed policies -- `Immediate`/`Budgeted`/
+`BatchedJobsSameFrame` -- since Android is a full Native backend target, unlike single-thread Web)
+inside a real, non-development, IL2CPP, Burst-enabled Android ARM64 Player, installed and run on
+the user's own physical Google Pixel 10 Pro over `adb` (confirmed genuine `arm64-v8a`, not an
+emulator). Results were logged per-scenario via `Debug.Log` (Android's Scoped Storage makes
+arbitrary file writes unreliable across API levels, so this mirrors the Web probe's
+console/log-based read-out rather than a file) and read via `adb logcat`.
+
+Two genuinely notable findings, disclosed in full in `Benchmarks~/Phase4/Platform/Android/README.md`:
+
+- The Windows desktop workstation from this card's own Windows pass is only **roughly 1.1x-1.3x**
+  faster than this current-generation phone for the `Immediate` policy -- a much smaller gap than
+  the ~13-14x Editor-vs-Player gap found on the same desktop.
+- `BatchedJobsSameFrame`'s fixed-batch-size overhead reproduces on ARM64 mobile silicon at roughly
+  the same **~18x-23x** magnitude Windows itself showed (~21x-29x at the same agent count) --
+  further confirming `P4-002`/`P4-006`'s traced mechanism is a property of the scheduling code's
+  interaction with Unity's Job system, not specific to one platform or CPU architecture.
+
+The app was uninstalled from the user's phone immediately after capturing results.
+
+## Scope: all three mandatory pre-1.0 targets measured
+
+This card now covers all three mandatory pre-1.0 targets (Windows x64, single-thread Web, Android
+ARM64). Per `Documentation~/benchmarks.md`'s own rule, no result from one platform is presented as
+establishing support for another.
 
 ## Original scope note (Windows-only pass)
 
@@ -77,37 +100,44 @@ exist and was used once actually checked, rather than assumed unavailable.
 
 ## Decision
 
-- **Windows and Web scope; Android deferred to real device access**, resolved by explicit user
-  decisions before each implementation pass (see Scope/Update above) -- the only
-  architectural/feasibility decisions this card required. Android specifically was not just
-  "unavailable" -- an x86_64 emulator exists, but was correctly rejected as not satisfying
-  `USER_ACTIONS.md`'s ARM64-device-class requirement, rather than run anyway and mislabeled.
+- **All three mandatory targets measured, in stages, resolved by explicit user decisions before
+  each implementation pass** (see Scope/Update above) -- the only architectural/feasibility
+  decisions this card required. Android specifically was not just "unavailable" at first -- an
+  x86_64 emulator exists, but was correctly rejected as not satisfying `USER_ACTIONS.md`'s
+  ARM64-device-class requirement, rather than run anyway and mislabeled; the user's own physical
+  phone was used instead once connected.
 - **A dedicated build+run pipeline was written per platform rather than reusing `Benchmarks~/Phase2/Dispatch/Player/`'s
   exact apparatus.** That pipeline's SHA-256 source-fingerprinting, frozen-analyzer-hash pinning,
   and generated-dispatch-catalog proofs exist to validate a *different* claim -- that a specific
   source generator's AOT-compiled output is correct and unmodified -- which has no equivalent here
   (this card has no source generator; it reuses `P4-001`'s already-proven scenario/driver code
-  as-is). Both `Run-WindowsPlatformBenchmark.ps1` and `Build-WebPlatformBenchmark.ps1` mirror the
-  *general* pattern (isolated project, `BuildPipeline.BuildPlayer` with the right platform/Burst/
-  non-development settings, structured build evidence, a `[RuntimeInitializeOnLoadMethod]` Player
-  probe, verified success markers) without replicating checks that would not actually verify
-  anything relevant to this card's own claim.
-- **Web results are read from the browser console, not a file.** A WebGL Player has no reliable
-  arbitrary filesystem write; logging to console and reading it via the Browser pane's own tools
-  is the correct mechanism for this platform, not a shortcut.
+  as-is). `Run-WindowsPlatformBenchmark.ps1`, `Build-WebPlatformBenchmark.ps1`, and
+  `Build-AndroidPlatformBenchmark.ps1` all mirror the *general* pattern (isolated project,
+  `BuildPipeline.BuildPlayer` with the right platform/Burst/non-development settings, structured
+  build evidence, a `[RuntimeInitializeOnLoadMethod]` Player probe, verified success markers)
+  without replicating checks that would not actually verify anything relevant to this card's own
+  claim.
+- **Web and Android results are both read from logs, not a file.** A WebGL Player has no reliable
+  arbitrary filesystem write, and Android's Scoped Storage makes one unreliable across API levels
+  without extra permission ceremony; logging (browser console for Web, `adb logcat` for Android)
+  and reading it via the Browser pane's tools or `adb` respectively is the correct mechanism for
+  both platforms, not a shortcut. Android additionally logs one line per scenario rather than one
+  combined line, to stay comfortably under logcat's per-entry size limit.
 
 ## Scope and limitations
 
-- Android ARM64 is not measured -- a real, disclosed gap (see Update above), pending either a
-  genuine ARM64 device/emulator or the user's own physical phone becoming `adb`-visible.
 - Web coverage is `Immediate`/`Budgeted` only (matching this backend's own accepted policy scope),
   a reduced parameter matrix (3 agent counts, fewer samples), and does not specifically exercise
   Burst-compiled-to-WASM code (neither measured policy uses a `[BurstCompile]` job) -- see
   `Benchmarks~/Phase4/Platform/Web/README.md` for the full disclosure, including the browser
   timer-resolution limitation that produces several `0.000 ns/agent` entries.
-- One run per platform on one workstation/browser; not generalized to other hardware or browsers
-  (`Planning~/USER_ACTIONS.md` requires owner approval across multiple hardware classes, and of
-  the supported browser/version policy, before any threshold or support claim is adopted).
+- Android coverage is also a reduced parameter matrix (3 agent counts, fewer samples, matching
+  Web's reduction) -- see `Benchmarks~/Phase4/Platform/Android/README.md`.
+- One run per platform on one workstation/browser/device; not generalized to other hardware,
+  browsers, or Android devices/chipsets/OS versions (`Planning~/USER_ACTIONS.md` requires owner
+  approval across multiple hardware classes, and of the supported browser/version policy, before
+  any threshold or support claim is adopted). The Android result is one data point for one device
+  class (Google Pixel 10 Pro, Android OS 17 / API-37), not a claim about "Android" broadly.
 - No regression threshold or "supported" performance claim is drawn from any number here, per this
   card's own forbidden-changes clause -- including the striking Windows Editor-vs-Player ratio,
   which is reported as a finding, not turned into a rule.
