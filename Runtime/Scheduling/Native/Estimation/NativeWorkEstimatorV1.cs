@@ -34,15 +34,19 @@ namespace AIBT
         internal const double CalibratedNanosecondsPerNodeStep = 60.275;
 
         /// <summary>
-        /// Evidence-based tolerance from the original Editor-only calibration: re-deriving each of
-        /// the 24 (scenario, agent count) points behind the prior 678.75 ns/step figure and
-        /// comparing the model's estimate against the actually-measured median cost for that same
-        /// point, the largest observed deviation was 8.7% (see
-        /// <c>Planning~/Evidence/P4-004/README.md</c>). Not re-derived against the real-Player
-        /// samples behind the current <see cref="CalibratedNanosecondsPerNodeStep"/> value --
-        /// kept as the existing evidence-based figure pending a dedicated re-check.
+        /// Evidence-based tolerance, re-derived against the same real-Player data behind
+        /// <see cref="CalibratedNanosecondsPerNodeStep"/>: feeding each of the 42 real
+        /// (scenario, agentCount, totalSteps) points from both Player runs (24 Windows + 18
+        /// Android) into a freshly-seeded estimator and comparing against that same point's
+        /// actually-measured median cost, the largest observed deviation was 20.98%
+        /// (<c>deep-sequence-selector-traversal</c> at 16 agents on Windows: estimate
+        /// 17,057.83ns vs measured 14,100.00ns). Set to 0.25, leaving deliberate margin above the
+        /// observed worst case rather than being tuned exactly to it, matching the original
+        /// calibration's own margin philosophy. Supersedes the original Editor-only-derived 0.10
+        /// figure, which no longer applies now that the coefficient itself is Player-derived. See
+        /// <c>Planning~/Evidence/P4-004/README.md</c>'s 2026-08-26 addendum.
         /// </summary>
-        internal const double CalibrationTolerance = 0.10;
+        internal const double CalibrationTolerance = 0.25;
 
         private const double SmoothingAlpha = 0.25;
 

@@ -68,3 +68,8 @@ used rather than per-node-cost-category ones, since `P4-002`'s data only support
 measurement, not a genuine node-type cost breakdown; documented as a self-directed engineering
 choice, not an architectural escalation. Full derivation and decision reasoning in
 `Planning~/Evidence/P4-004/README.md`.
+
+**Addendum (2026-08-26):** `CalibratedNanosecondsPerNodeStep` recalibrated `678.75` → `60.275` and
+`CalibrationTolerance` re-derived `0.10` → `0.25` against real Windows/Android Player data (found
+~11x lower than Editor batchmode) instead of the original Editor-only figures — see
+`Planning~/Evidence/P4-004/README.md`'s 2026-08-26 addendum for full derivation.

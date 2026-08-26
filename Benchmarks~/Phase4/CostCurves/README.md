@@ -132,9 +132,14 @@ usable at all -- though this is one device per platform, not a generalization cl
 (`Planning~/USER_ACTIONS.md` still requires owner approval across hardware classes before any
 threshold or constant is adopted).
 
-This addendum does not change `CalibratedNanosecondsPerNodeStep` or introduce any new default --
-recalibrating that constant from real Player data (rather than Editor data) is a separate, explicit
-decision for the owner, not a byproduct of this measurement. Raw per-step data is recorded in
+**Update (2026-08-26): the owner decided to recalibrate.** `NativeWorkEstimatorV1.CalibratedNanosecondsPerNodeStep`
+was updated `678.75` → `60.275` (the pooled median of all 42 real Player Immediate-policy samples
+above) and `CalibrationTolerance` re-derived `0.10` → `0.25` from a fresh correlation check against
+those same 42 real points (worst case 20.98%, vs. the original Editor-derived 8.71%) — see
+`Planning~/Evidence/P4-004/README.md`'s own 2026-08-26 addendum for the full derivation and
+decision reasoning. This measurement card's own scope is unchanged: it still draws no threshold or
+default itself; the recalibration decision and its execution live in `P4-004`'s evidence, not here.
+Raw per-step data is recorded in
 [`Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-calibration-20260826.json`](../Platform/Windows/Results/windows-player-scheduling-calibration-20260826.json)
 and
 [`Benchmarks~/Phase4/Platform/Android/Results/android-player-scheduling-calibration-20260826.json`](../Platform/Android/Results/android-player-scheduling-calibration-20260826.json).

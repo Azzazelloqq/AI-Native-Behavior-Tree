@@ -74,39 +74,65 @@ namespace AIBT.Tests.Runtime.NativeExecution.Scheduling.Estimation
 
         /// <summary>
         /// The correlation check this card's acceptance criteria requires: given the exact
-        /// (agentCount, totalSteps) pairs P4-002 actually measured, does a freshly-seeded
-        /// estimator's per-agent estimate land within the documented
+        /// (agentCount, totalSteps) pairs actually measured on a real Player, does a
+        /// freshly-seeded estimator's per-agent estimate land within the documented
         /// <see cref="NativeWorkEstimatorV1.CalibrationTolerance"/> of the actually-measured
-        /// median cost for that same point? All 24 points are the real medians from
-        /// <c>Benchmarks~/Phase4/CostCurves/Results/cost-curves-windows-editor-20260820.json</c>
-        /// (Immediate policy) -- see <c>Planning~/Evidence/P4-004/README.md</c> for the derivation.
+        /// median cost for that same point? All 42 points (24 Windows + 18 Android) are the real
+        /// Immediate-policy medians from
+        /// <c>Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-calibration-20260826.json</c>
+        /// and
+        /// <c>Benchmarks~/Phase4/Platform/Android/Results/android-player-scheduling-calibration-20260826.json</c>
+        /// -- see <c>Planning~/Evidence/P4-004/README.md</c>'s 2026-08-26 addendum for the
+        /// derivation. Supersedes the original 24-point fixture set drawn from Editor batchmode
+        /// data (<c>cost-curves-windows-editor-20260820.json</c>), which no longer correlates now
+        /// that <see cref="NativeWorkEstimatorV1.CalibratedNanosecondsPerNodeStep"/> itself is
+        /// Player-derived (Editor runs ~11x slower per step, so the old fixture's measured values
+        /// would fail against the new coefficient by design, not by regression).
         /// </summary>
-        [TestCase("scheduling-baseline-empty-job", 16u, 64ul, 2912.5)]
-        [TestCase("scheduling-baseline-empty-job", 64u, 256ul, 2864.0625)]
-        [TestCase("scheduling-baseline-empty-job", 256u, 1024ul, 2845.3125)]
-        [TestCase("scheduling-baseline-empty-job", 1024u, 4096ul, 2909.1796875)]
-        [TestCase("shallow-tree-cheap-conditions", 16u, 368ul, 15456.25)]
-        [TestCase("shallow-tree-cheap-conditions", 64u, 1472ul, 15214.0625)]
-        [TestCase("shallow-tree-cheap-conditions", 256u, 5888ul, 15375.78125)]
-        [TestCase("shallow-tree-cheap-conditions", 1024u, 23552ul, 15485.25390625)]
-        [TestCase("deep-sequence-selector-traversal", 16u, 4528ul, 177768.75)]
-        [TestCase("deep-sequence-selector-traversal", 64u, 18112ul, 176895.3125)]
-        [TestCase("deep-sequence-selector-traversal", 256u, 72448ul, 176699.21875)]
-        [TestCase("deep-sequence-selector-traversal", 1024u, 289792ul, 178592.48046875)]
-        [TestCase("wide-branching-frequent-failures", 16u, 128ul, 5112.5)]
-        [TestCase("wide-branching-frequent-failures", 64u, 512ul, 5167.1875)]
-        [TestCase("wide-branching-frequent-failures", 256u, 2048ul, 5104.296875)]
-        [TestCase("wide-branching-frequent-failures", 1024u, 8192ul, 5157.421875)]
-        [TestCase("predominantly-running-actions", 16u, 80ul, 3437.5)]
-        [TestCase("predominantly-running-actions", 64u, 320ul, 3550.0)]
-        [TestCase("predominantly-running-actions", 256u, 1280ul, 3346.484375)]
-        [TestCase("predominantly-running-actions", 1024u, 5120ul, 3439.35546875)]
-        [TestCase("many-programs-small-populations", 16u, 64ul, 2881.25)]
-        [TestCase("many-programs-small-populations", 64u, 256ul, 2868.75)]
-        [TestCase("many-programs-small-populations", 256u, 1024ul, 2922.65625)]
-        [TestCase("many-programs-small-populations", 1024u, 4096ul, 2954.00390625)]
-        public void EstimateCorrelatesWithP4002sMeasuredCostWithinTheDocumentedTolerance(
-            string scenario, uint agentCount, ulong totalSteps, double measuredMedianNanosecondsPerAgent)
+        [TestCase("Windows", "scheduling-baseline-empty-job", 16u, 64ul, 262.5)]
+        [TestCase("Windows", "scheduling-baseline-empty-job", 64u, 256ul, 257.8125)]
+        [TestCase("Windows", "scheduling-baseline-empty-job", 256u, 1024ul, 239.453125)]
+        [TestCase("Windows", "scheduling-baseline-empty-job", 1024u, 4096ul, 254.8828125)]
+        [TestCase("Windows", "shallow-tree-cheap-conditions", 16u, 368ul, 1418.75)]
+        [TestCase("Windows", "shallow-tree-cheap-conditions", 64u, 1472ul, 1425.0)]
+        [TestCase("Windows", "shallow-tree-cheap-conditions", 256u, 5888ul, 1385.15625)]
+        [TestCase("Windows", "shallow-tree-cheap-conditions", 1024u, 23552ul, 1317.578125)]
+        [TestCase("Windows", "deep-sequence-selector-traversal", 16u, 4528ul, 14100.0)]
+        [TestCase("Windows", "deep-sequence-selector-traversal", 64u, 18112ul, 14862.5)]
+        [TestCase("Windows", "deep-sequence-selector-traversal", 256u, 72448ul, 15224.21875)]
+        [TestCase("Windows", "deep-sequence-selector-traversal", 1024u, 289792ul, 14613.96484375)]
+        [TestCase("Windows", "wide-branching-frequent-failures", 16u, 128ul, 462.5)]
+        [TestCase("Windows", "wide-branching-frequent-failures", 64u, 512ul, 462.5)]
+        [TestCase("Windows", "wide-branching-frequent-failures", 256u, 2048ul, 473.828125)]
+        [TestCase("Windows", "wide-branching-frequent-failures", 1024u, 8192ul, 488.671875)]
+        [TestCase("Windows", "predominantly-running-actions", 16u, 80ul, 350.0)]
+        [TestCase("Windows", "predominantly-running-actions", 64u, 320ul, 315.625)]
+        [TestCase("Windows", "predominantly-running-actions", 256u, 1280ul, 323.828125)]
+        [TestCase("Windows", "predominantly-running-actions", 1024u, 5120ul, 324.90234375)]
+        [TestCase("Windows", "many-programs-small-populations", 16u, 64ul, 300.0)]
+        [TestCase("Windows", "many-programs-small-populations", 64u, 256ul, 267.1875)]
+        [TestCase("Windows", "many-programs-small-populations", 256u, 1024ul, 267.96875)]
+        [TestCase("Windows", "many-programs-small-populations", 1024u, 4096ul, 266.2109375)]
+        [TestCase("Android", "scheduling-baseline-empty-job", 16u, 64ul, 293.750)]
+        [TestCase("Android", "scheduling-baseline-empty-job", 64u, 256ul, 287.500)]
+        [TestCase("Android", "scheduling-baseline-empty-job", 256u, 1024ul, 285.547)]
+        [TestCase("Android", "shallow-tree-cheap-conditions", 16u, 368ul, 1387.500)]
+        [TestCase("Android", "shallow-tree-cheap-conditions", 64u, 1472ul, 1320.313)]
+        [TestCase("Android", "shallow-tree-cheap-conditions", 256u, 5888ul, 1317.188)]
+        [TestCase("Android", "deep-sequence-selector-traversal", 16u, 4528ul, 15137.500)]
+        [TestCase("Android", "deep-sequence-selector-traversal", 64u, 18112ul, 15164.063)]
+        [TestCase("Android", "deep-sequence-selector-traversal", 256u, 72448ul, 15206.641)]
+        [TestCase("Android", "wide-branching-frequent-failures", 16u, 128ul, 450.000)]
+        [TestCase("Android", "wide-branching-frequent-failures", 64u, 512ul, 450.000)]
+        [TestCase("Android", "wide-branching-frequent-failures", 256u, 2048ul, 450.781)]
+        [TestCase("Android", "predominantly-running-actions", 16u, 80ul, 293.750)]
+        [TestCase("Android", "predominantly-running-actions", 64u, 320ul, 293.750)]
+        [TestCase("Android", "predominantly-running-actions", 256u, 1280ul, 293.750)]
+        [TestCase("Android", "many-programs-small-populations", 16u, 64ul, 262.500)]
+        [TestCase("Android", "many-programs-small-populations", 64u, 256ul, 257.813)]
+        [TestCase("Android", "many-programs-small-populations", 256u, 1024ul, 256.641)]
+        public void EstimateCorrelatesWithRealPlayerMeasuredCostWithinTheDocumentedTolerance(
+            string platform, string scenario, uint agentCount, ulong totalSteps, double measuredMedianNanosecondsPerAgent)
         {
             var estimator = new NativeWorkEstimatorV1();
             Assert.That(estimator.TryObserve(agentCount, totalSteps, out var failure), Is.True, failure.Code.ToString());
@@ -114,7 +140,7 @@ namespace AIBT.Tests.Runtime.NativeExecution.Scheduling.Estimation
 
             var relativeError = System.Math.Abs(estimated - measuredMedianNanosecondsPerAgent) / measuredMedianNanosecondsPerAgent;
             Assert.That(relativeError, Is.LessThanOrEqualTo(NativeWorkEstimatorV1.CalibrationTolerance),
-                scenario + "@" + agentCount + ": estimated=" + estimated + " measured=" + measuredMedianNanosecondsPerAgent
+                platform + "/" + scenario + "@" + agentCount + ": estimated=" + estimated + " measured=" + measuredMedianNanosecondsPerAgent
                 + " relativeError=" + relativeError);
         }
     }

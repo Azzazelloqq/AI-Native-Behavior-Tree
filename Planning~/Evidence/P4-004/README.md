@@ -108,4 +108,65 @@ leaving deliberate margin rather than being tuned exactly to the worst case.
 - No `Auto` selection logic, and no runtime/online adaptation of the coefficients, exists here --
   both forbidden by this card.
 
+## Addendum (2026-08-26): recalibrated against real Player data, not Editor batchmode
+
+`P4-008`'s platform benchmark work found the release Player runs ~13-14x faster than Editor
+batchmode *overall*, and `Benchmarks~/Phase4/CostCurves/README.md`'s own addendum (2026-08-26)
+checked whether the *per-step* figure this card's coefficient is built from follows that same
+multiplier: extending `P4-008`'s Windows and Android platform probes to also record
+`totalSteps`/`medianNanosecondsPerStep` per `Immediate`-policy sample found real per-step cost of
+61.82 ns/step (Windows x64 Player, this same workstation, 24 samples) and 58.75 ns/step (Android
+ARM64 Player, a physical Google Pixel 10 Pro, 18 samples) -- within ~5% of each other despite the
+architectures being very different, and both ~11x lower than this card's original 678.75 ns/step
+Editor-only figure.
+
+Since this is a real, direct measurement of the exact same quantity this card's coefficient
+represents (not a derived estimate), the owner decided to recalibrate rather than leave a
+knowingly-wrong constant in place pending a future card: an Editor-calibrated coefficient shipped
+into a release build would size every native batch roughly 11x too small, reproducing the very
+fixed-batch-size scheduling overhead the batching formula (`NativeBatchSizeCalibrationV1`) exists
+to prevent (the effect `P4-002`'s cost curves already demonstrated at fixed batch size 32).
+
+**What changed:**
+
+- `NativeWorkEstimatorV1.CalibratedNanosecondsPerNodeStep`: `678.75` → `60.275` (pooled median of
+  all 42 real Player Immediate-policy samples: 24 Windows + 18 Android combined).
+- `NativeWorkEstimatorV1.CalibrationTolerance`: `0.10` → `0.25`, re-derived (not carried over) by
+  re-running this card's own correlation check against the 42 real Player points instead of the
+  original 24 Editor points. Worst observed deviation: **20.98%**
+  (`deep-sequence-selector-traversal` at 16 agents, Windows: estimate 17,057.83ns vs measured
+  14,100.00ns). Second-worst: 19.63% (`many-programs-small-populations` at 16 agents, Windows).
+  Third: 17.92% (`scheduling-baseline-empty-job` at 16 agents, Android). `0.25` leaves deliberate
+  margin above the observed worst case, the same philosophy the original 8.71%→10% figure used,
+  rather than being tuned exactly to the new worst case.
+- `Tests/Runtime/NativeExecution/Scheduling/Estimation/NativeWorkEstimatorTests.cs`'s correlation
+  test (`EstimateCorrelatesWithP4002sMeasuredCostWithinTheDocumentedTolerance`, renamed
+  `EstimateCorrelatesWithRealPlayerMeasuredCostWithinTheDocumentedTolerance`): its 24 `[TestCase]`
+  fixtures were hardcoded literal values from the original Editor JSON
+  (`cost-curves-windows-editor-20260820.json`), not read live from that file -- so they did not
+  "automatically track" the new constant the way a prior session assumed. Left unchanged, this test
+  would have failed by ~92% relative error the first time it actually ran (Editor-scale measured
+  values compared against a Player-scale estimate), a real regression that a live test run would
+  have caught but that batchmode-lock prevented from running in the same session the constant
+  changed. Replaced with all 42 real Player fixtures (Windows + Android) sourced directly from
+  `Benchmarks~/Phase4/Platform/{Windows,Android}/Results/*-calibration-20260826.json`.
+
+**Why one pooled constant across two platforms, not two platform-specific ones:** the whole point
+of this check was to test whether per-step cost is one predictable Editor-vs-Player multiplier or
+device-specific chaos; finding Windows and Android within ~5% of each other on real Player
+hardware is direct evidence a single pooled figure generalizes reasonably across at least these two
+platforms, consistent with this card's own "one global coefficient, not per-category" precedent
+below. This remains one device per platform (per `Planning~/USER_ACTIONS.md`'s standing hardware
+generalization caveat), not a claim about all Windows or all Android hardware.
+
+**Not touched by this addendum:** the smoothing/bounding mechanism (`SmoothingAlpha`,
+`MaxRelativeStepDeltaPerObservation`), `NativeBatchSizeCalibrationV1`'s formula, and the
+"static, not runtime-adaptive" decision (reaffirmed, not revisited, per this card's own
+forbidden-changes clause and `P4-007`'s prior rejection of runtime autotuning for the same class of
+risk) are all unchanged. Only the two measured constants and their supporting test fixtures moved.
+
+See `Benchmarks~/Phase4/CostCurves/README.md`'s own addendum for the Editor-vs-Player comparison
+table and raw data links, and `verification-results.json` for the updated correlation-check
+findings.
+
 See `verification-results.json` for exact commands and results.
