@@ -1,0 +1,13 @@
+{
+    "schema": "aibt-p4-008-web-build-v1",
+    "unityVersion": "6000.5.8f1",
+    "target": "WebGL",
+    "result": "Succeeded",
+    "totalErrors": 0,
+    "totalWarnings": 0,
+    "outputBytes": 8593818,
+    "burstEnabled": true,
+    "developmentBuild": false,
+    "threadsSupport": false,
+    "output": "C:\\UnityProjects\\Modules\\Assets\\AIBT\\Benchmarks~\\Phase4\\Platform\\Web\\Results\\web-build-20260821"
+}

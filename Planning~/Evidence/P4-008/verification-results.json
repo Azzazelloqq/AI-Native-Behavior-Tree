@@ -4,7 +4,14 @@
   "findings": [
     "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 73.",
     "COMMAND|Benchmarks~/Phase4/Platform/Windows/Run-WindowsPlatformBenchmark.ps1 (default parameters: 5 warmup, 15 measured, agent counts 16/64/256/1024)|PASSED|isolated project built, real StandaloneWindows64 IL2CPP Burst-enabled non-development Player built (0 errors, 0 warnings), Player executed and produced valid benchmark JSON, success marker present in log, no failure marker present",
-    "SCOPE_DECISION|No Android ARM64 device/emulator or WebGL-capable browser access was available in this session|RESOLVED_BY_USER|escalated via AskUserQuestion before implementation; user confirmed only Windows x64 is available; Android/Web disclosed as not-measured gaps rather than silently omitted",
+    "SCOPE_DECISION|First pass: no Android ARM64 device/emulator or WebGL-capable browser access was assumed available|RESOLVED_BY_USER|escalated via AskUserQuestion before the first implementation pass; user confirmed only Windows x64 at that point; Android/Web disclosed as not-measured gaps rather than silently omitted",
+    "SCOPE_DECISION|User later asked directly whether Android/Web builds were actually feasible; checking properly found AndroidPlayer and WebGLSupport Unity modules installed, and a Browser pane able to genuinely run a WebGL build|RESOLVED_BY_USER|Web was built and measured; for Android, only an x86_64 system image/AVD (Pixel_10_Pro) is available locally, which does not satisfy USER_ACTIONS.md's ARM64-device-class requirement -- user offered their own physical phone instead, which was not yet adb-connected as of this evidence snapshot",
+    "COMMAND|Benchmarks~/Phase4/Platform/Web/Build-WebPlatformBenchmark.ps1|PASSED|isolated project built, real WebGL Burst-enabled non-development single-thread Player built (0 errors, 0 warnings) after fixing a real Content-Encoding/gzip serving mismatch by enabling PlayerSettings.WebGL.decompressionFallback",
+    "COMMAND|Browser pane: preview_start (npx serve on the built WebGL output) + read_console_messages|PASSED|WebGL Player loaded and executed in a real browser; AIBT_P4_008_WEB_PLAYER_OK marker with full JSON payload observed in console, no failure marker",
+    "DEBUG|npx serve does not set Content-Encoding: gzip for Unity's gzip-compressed build artifacts, so the browser could not auto-decompress them (SyntaxError: Invalid or unexpected token, confirmed via a real console error)|FIXED|enabled PlayerSettings.WebGL.decompressionFallback in WebPlatformBenchmarkBuild.cs -- Unity's own documented fix for hosts that cannot set that header",
+    "BUILD_EVIDENCE|target=WebGL, result=Succeeded, totalErrors=0, totalWarnings=0, burstEnabled=true, developmentBuild=false, threadsSupport=false|verified programmatically by the PS1 driver before accepting the run (Benchmarks~/Phase4/Platform/Web/Results/web-build-20260821-build.raw.json)",
+    "MEASUREMENT|see Benchmarks~/Phase4/Platform/Web/Results/web-player-scheduling-20260821.json (captured from the browser console) and Benchmarks~/Phase4/Platform/Web/README.md",
+    "FINDING|Several Web cases report medianNsPerAgent=0.000 -- Stopwatch's timing resolution in this browser is too coarse to register elapsed time for very fast/small samples; deep-sequence-selector-traversal (the most expensive scenario) consistently reports a nonzero ~12,109-12,500 ns/agent across every measured agent count, a genuinely usable data point|disclosed as a real measurement-resolution limitation, not hidden or silently reported as zero cost",
     "BUILD_EVIDENCE|target=StandaloneWindows64, architecture=x86_64, scriptingBackend=IL2CPP, burstEnabled=true, developmentBuild=false, result=Succeeded, totalErrors=0, totalWarnings=0|verified programmatically by the PS1 driver before accepting the run (Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821-build.raw.json)",
     "MEASUREMENT|see Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821.json for all raw samples and Benchmarks~/Phase4/Platform/Windows/README.md for the summarized comparison table",
     "FINDING|The release Windows x64 IL2CPP/Burst Player is ~13-14x faster than the same P4-001 scenarios measured in Editor batchmode, consistently across all 6 scenarios and both agent-count extremes (16 and 1024)|real, disclosed, actionable finding -- not turned into a threshold or default",
@@ -20,8 +27,18 @@
     "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/README.md|created",
     "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821.json|created",
     "DELIVERABLE|Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821-build.raw.json|created",
-    "DELIVERABLE|Benchmarks~/Phase4/Platform/README.md|created",
-    "DELIVERABLE|Benchmarks~/Phase4/README.md|modified (added Platform link)",
-    "WORK_ITEM_STATUS|P4-008|draft->ready->done"
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Web/Unity/Runtime/WebPlatformSchedulingProbe.cs|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Web/Unity/Runtime/AIBT.Runtime.Tests.asmdef|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Web/Unity/Editor/WebPlatformBenchmarkBuild.cs|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Web/Unity/Editor/AIBT.Platform.WebBuild.asmdef|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Web/Build-WebPlatformBenchmark.ps1|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Web/README.md|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Web/Results/web-player-scheduling-20260821.json|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/Web/Results/web-build-20260821-build.raw.json|created",
+    "DELIVERABLE|Benchmarks~/Phase4/Platform/README.md|modified (Web link added, Android/Windows status corrected)",
+    "DELIVERABLE|Benchmarks~/Phase4/README.md|modified (Platform link description updated for Web)",
+    "DELIVERABLE|.claude/launch.json (outer Modules repo, not AIBT)|modified (added aibt-p4008-web-benchmark static-server entry used to serve the WebGL build for browser testing)",
+    "NOT_MEASURED|Android ARM64|only an x86_64 system image/AVD available locally; does not satisfy USER_ACTIONS.md's ARM64-device-class requirement; user's own physical phone offered as a path forward, not yet adb-connected as of this evidence snapshot",
+    "WORK_ITEM_STATUS|P4-008|draft->ready->done (Windows+Web measured, Android tracked as open gap)"
   ]
 }

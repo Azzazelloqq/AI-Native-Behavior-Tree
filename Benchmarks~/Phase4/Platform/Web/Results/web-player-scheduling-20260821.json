@@ -1,0 +1,75 @@
+{
+    "schema": "aibt-p4-008-web-player-scheduling-v1",
+    "unityVersion": "6000.5.8f1",
+    "applicationPlatform": "WebGLPlayer",
+    "burstEnabled": true,
+    "is64BitProcess": false,
+    "scenarios": [
+        {
+            "name": "scheduling-baseline-empty-job",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 390.625}
+            ]
+        },
+        {
+            "name": "shallow-tree-cheap-conditions",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 1562.500},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 1562.500},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 1171.875},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 1171.875}
+            ]
+        },
+        {
+            "name": "deep-sequence-selector-traversal",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 12500.000},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 12500.000},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 12500.000},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 10937.500},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 12109.375},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 12109.375}
+            ]
+        },
+        {
+            "name": "wide-branching-frequent-failures",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 390.625},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 390.625}
+            ]
+        },
+        {
+            "name": "predominantly-running-actions",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 390.625},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 390.625}
+            ]
+        },
+        {
+            "name": "many-programs-small-populations",
+            "cases": [
+                {"policy": "Immediate", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 16, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 64, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 64, "medianNsPerAgent": 0.000},
+                {"policy": "Immediate", "agentCount": 256, "medianNsPerAgent": 0.000},
+                {"policy": "Budgeted", "agentCount": 256, "medianNsPerAgent": 390.625}
+            ]
+        }
+    ]
+}

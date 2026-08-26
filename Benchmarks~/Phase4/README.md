@@ -13,4 +13,5 @@ package itself.
 - [`AutoComparison/`](AutoComparison/README.md) -- P4-006: `Auto` (P4-005)
   measured against the best fixed policy per scenario.
 - [`Platform/`](Platform/README.md) -- P4-008: the same matrix run on real
-  (non-Editor) per-platform execution; Windows x64 only in this session.
+  (non-Editor) per-platform execution; Windows x64 and single-thread Web in
+  this session, Android ARM64 pending device access.

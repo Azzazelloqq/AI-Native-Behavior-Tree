@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.Platform.WebBuild",
+  "rootNamespace": "AIBT.Benchmarks.Phase4.Platform.Web.Editor",
+  "references": [
+    "Unity.Burst"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

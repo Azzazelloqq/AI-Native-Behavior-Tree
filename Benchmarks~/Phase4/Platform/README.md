@@ -5,10 +5,10 @@ target (Windows x64, Android ARM64, single-thread Unity Web), each running `P4-0
 matrix on real (non-Editor) execution for that platform.
 
 - [`Windows/`](Windows/README.md) -- done. Real IL2CPP/Burst Windows x64 Standalone Player results.
-- `Android/` -- not measured. No Android ARM64 device or emulator was available in this session;
-  a disclosed gap, per `Planning~/Evidence/P4-008/README.md`.
-- `Web/` -- not measured. No WebGL-capable browser access was available in this session; a
-  disclosed gap, per `Planning~/Evidence/P4-008/README.md`.
+- [`Web/`](Web/README.md) -- done. Real single-thread WebGL Player results, run in a browser via
+  the Browser pane (`Immediate`/`Budgeted` only, per this backend's own accepted policy scope).
+- `Android/` -- not measured. Only an x86_64 emulator image was available locally (no genuine
+  ARM64 device/emulator); a disclosed gap, per `Planning~/Evidence/P4-008/README.md`.
 
 Results from one platform are never presented as establishing support for another, per
 `Documentation~/benchmarks.md`'s own rule.

@@ -54,14 +54,24 @@ full P4-001 harness run on Windows x64, Android ARM64, and single-thread Unity W
 ## Outcome
 
 Built and ran a real, non-development, IL2CPP, Burst-enabled Windows x64 Standalone Player
-containing `P4-001`'s exact scenario/policy sweep. **Android ARM64 and Unity Web were not
-measured** — no device/emulator or WebGL browser access existed in this session, confirmed and
-scoped by explicit user decision before implementation; a disclosed gap, not a silent omission.
-**Major finding**: the release Player runs the same scenarios ~13-14x faster than Editor
-batchmode, consistently across every scenario and agent count — meaning every Editor-measured
-number in `P4-001`/`P4-002`/`P4-005`/`P4-006`/`P4-007`'s evidence understates real release
-performance by roughly an order of magnitude on this workstation. `BatchedJobsSameFrame`'s
-fixed-batch-size overhead (traced by `P4-002`/`P4-006`) reproduces in the Player too, confirming
-it is a genuine scheduling-code property, not an Editor artifact. No threshold or default is
-introduced — see `Planning~/Evidence/P4-008/` and `Benchmarks~/Phase4/Platform/Windows/README.md`
-for the full comparison table and build proof.
+containing `P4-001`'s exact scenario/policy sweep. **Major finding**: the release Player runs the
+same scenarios ~13-14x faster than Editor batchmode, consistently across every scenario and agent
+count — meaning every Editor-measured number in `P4-001`/`P4-002`/`P4-005`/`P4-006`/`P4-007`'s
+evidence understates real release performance by roughly an order of magnitude on this
+workstation. `BatchedJobsSameFrame`'s fixed-batch-size overhead (traced by `P4-002`/`P4-006`)
+reproduces in the Player too, confirming it is a genuine scheduling-code property, not an Editor
+artifact.
+
+After that first pass, the user asked whether Android/Web were actually feasible rather than
+assumed unavailable — checking properly found both Unity's `AndroidPlayer`/`WebGLSupport` modules
+installed and a Browser pane able to genuinely run a WebGL build. **Web was measured**: a real,
+single-thread WebGL Player (`Immediate`/`Budgeted` only, per this backend's own accepted policy
+scope) ran in an actual browser, after fixing a real `Content-Encoding: gzip` hosting mismatch
+(`PlayerSettings.WebGL.decompressionFallback`) and disclosing a genuine browser-timer-resolution
+limitation (several cases below measurable resolution, reported honestly, not as zero cost).
+**Android ARM64 remains unmeasured**: only an x86_64 system image/AVD is available locally, which
+does not satisfy `USER_ACTIONS.md`'s ARM64-device-class requirement — the user offered their own
+physical phone as a path forward, not yet `adb`-connected as of this card's evidence.
+
+No threshold or default is introduced by any of this — see `Planning~/Evidence/P4-008/`,
+`Benchmarks~/Phase4/Platform/Windows/README.md`, and `Benchmarks~/Phase4/Platform/Web/README.md`.
