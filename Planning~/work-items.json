@@ -1107,7 +1107,7 @@
       "id": "P5-003",
       "phase": 5,
       "title": "Compatibility classifier",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P5/P5-003-compatibility-classifier.md",
       "dependsOn": [

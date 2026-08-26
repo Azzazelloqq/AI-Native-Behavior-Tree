@@ -1,0 +1,31 @@
+{
+  "schema": "aibt-p5-003-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 83.",
+    "COMMAND|Unity MCP: refresh_unity + read_console (types=error)|PASSED|no compile errors",
+    "COMMAND|Unity MCP: run_tests (EditMode, test_names=HotReloadCompatibilityClassifierTests)|PASSED|8/8, 0.144s",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.Classify_RejectsNullPrograms|Passed",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.ParameterEdit_EveryNodeMigrates_NoStructuralChange_NoRestart|Passed",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.Insertion_NewNodeIsNew_ParentFlaggedStructuralChange_NoRestart|Passed",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.Removal_DroppedNodeReported_ParentFlaggedStructuralChange_NoRestart|Passed",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.Reordering_ChildrenStillMigrate_OnlyParentFlaggedStructuralChange|Passed",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.TypeChange_NodeIsIncompatible_DescendantSweptIntoRestartRegion_RootIsJustTheChangedNode|Passed",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.TypeChangeAtRoot_RequiresFullRestart|Passed",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.SharedBlackboardWriteInsideCandidateRegion_EscalatesToFullTreeRestart|Passed|against a hand-constructed CompiledProgram, since Phase 1's ReferenceCompiler rejects Shared-scope writes outright (AIBT2030/AIBT2032)",
+    "COMMAND|Unity MCP: run_tests (EditMode, test_names=HotReloadProgramIdentityMapTests) regression re-check|PASSED|6/6, unaffected by this card's changes",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite)|PASSED_WITH_PREEXISTING_FAILURES|1431 tests, 1428 passed; 3 failures pre-existing and unrelated (2x AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests, 1x LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk -- same as every prior evidence file)",
+    "FINDING|Test-writing bug found and fixed: the initial type-change test made the changed node the tree root, so RequiresFullRestart was correctly True while the test asserted False|FIXED|wrapped the decorator under a non-changing MemorySequence root so the test actually exercises localization, not root-level restart",
+    "FINDING|Phase 1's ReferenceCompiler rejects Shared-scope blackboard writes (AIBT2030/AIBT2032: 'requires a deterministic reduction policy not available in Phase 1'), regardless of BlackboardReductionKind declared|WORKED_AROUND|the classifier only reads CompiledProgram data and has no compiler-policy dependency, so the escalation test hand-constructs a fully-validated CompiledProgram directly instead of going through ReferenceCompiler -- disclosed as a real, current authoring-policy limitation, not a classifier defect",
+    "ACCEPTANCE|Every one of testing.md's five change categories has a real CompiledProgram-pair test fixture and an asserted verdict matching P5-001's ADR exactly|MET|8 tests, one or more per category, all passing",
+    "ACCEPTANCE|A change combining two categories at once classifies according to a stated combination rule|MET (partially -- structural-change and per-node verdict are independent, orthogonal signals by design, not combined into one enum value; see README's design note)",
+    "ACCEPTANCE|Every verdict carries a stated reason inspectable in tests|MET|HotReloadNodeVerdict.Reason is a human-readable string set for every classification branch",
+    "ACCEPTANCE|No classification result is ever silently defaulted to compatible when the classifier cannot determine the category with confidence|MET|an unresolvable root (ResolveRootNodeId returns null) conservatively forces RequiresFullRestart=true; a Shared-scope write anywhere in a candidate restart region forces escalation to full restart rather than guessing safety",
+    "DELIVERABLE|Runtime/HotReload/Classification/HotReloadNodeVerdictCategory.cs|created",
+    "DELIVERABLE|Runtime/HotReload/Classification/HotReloadNodeVerdict.cs|created",
+    "DELIVERABLE|Runtime/HotReload/Classification/HotReloadClassificationResult.cs|created",
+    "DELIVERABLE|Runtime/HotReload/Classification/HotReloadCompatibilityClassifier.cs|created",
+    "DELIVERABLE|Tests/Editor/HotReload/Classification/HotReloadCompatibilityClassifierTests.cs|created",
+    "WORK_ITEM_STATUS|P5-003|draft->ready->done"
+  ]
+}

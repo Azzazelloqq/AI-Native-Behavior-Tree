@@ -1,6 +1,6 @@
 # P5-003 — Compatibility classifier
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -81,3 +81,16 @@ one real CompiledProgram-pair fixture per testing.md category, plus at least one
 - `P5-008` (editor workflow) surfaces this card's "why" output to the user
   verbatim -- keep the reason text meaningful outside a test-assertion
   context, not just a debug enum name.
+
+## Outcome
+
+`HotReloadCompatibilityClassifier.Classify(oldProgram, newProgram)` implements `ADR-P5-001`'s
+per-node verdicts (`Migrate`/`New`/`Dropped`/`IncompatibleRestart`), structural direct-child-order
+detection, and subtree localization with a conservative shared-blackboard-write safety escalation
+(any Shared-scope write inside a candidate restart region forces escalation to a full-tree
+restart, rather than tracing whether it is actually observed from outside). 8 tests, all passing,
+covering every `testing.md` category plus the ancestor-sweeps-descendant and root-level-forces-
+full-restart proofs. One real platform limitation surfaced while writing tests: Phase 1's
+`ReferenceCompiler` rejects Shared-scope blackboard writes outright (`AIBT2030`/`AIBT2032`), so the
+escalation test hand-constructs a fully-validated `CompiledProgram` directly rather than going
+through the compiler. Full detail in `Planning~/Evidence/P5-003/`.
