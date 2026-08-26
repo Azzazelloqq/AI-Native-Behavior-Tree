@@ -1,6 +1,6 @@
 # P5-004 — Safe full restart
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -92,3 +92,19 @@ repeated-restart stress test with memory-stability assertion
 - `P5-007` (scheduler interaction) verifies this card's restart does not
   disturb calibration state belonging to *other* live instances sharing a
   worker pool.
+
+## Outcome
+
+`HotReloadFullRestart.Restart` implements the shared reload mechanism at its whole-tree exclusion
+set for the **reference-executor backend**: inspects the old instance's activity, aborts it via
+`NodeAbortReason.HotReload` (an abort reason already reserved in the accepted contract), and
+constructs a fresh `ReferenceExecutionMachine`. 5 tests, all passing, including a 50-cycle
+repeated-restart stress test. A real bug was found and fixed by running live rather than trusting
+the implementation: the abort's update ID cannot be hardcoded (`ReferenceExecutionMachine` requires
+strictly-increasing update IDs across the instance's lifetime), so it is now a required
+caller-supplied parameter. **Native backend explicitly deferred**: its dispose sequence is already
+proven elsewhere and its own program-generation-binding invariant already forces an unconditional
+dispose-and-recreate, but wiring fresh-instance construction (capacity-plan/lease preflight) is a
+separate subsystem this card did not have scope to research and implement correctly in the same
+pass -- disclosed as real follow-up work, not silently done or skipped. Full detail in
+`Planning~/Evidence/P5-004/`.

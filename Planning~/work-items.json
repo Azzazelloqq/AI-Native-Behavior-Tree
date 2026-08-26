@@ -1123,7 +1123,7 @@
       "id": "P5-004",
       "phase": 5,
       "title": "Safe full restart",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P5/P5-004-safe-full-restart.md",
       "dependsOn": [

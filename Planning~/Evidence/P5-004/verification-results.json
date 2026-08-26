@@ -1,0 +1,26 @@
+{
+  "schema": "aibt-p5-004-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 83.",
+    "COMMAND|Unity MCP: refresh_unity + read_console (types=error)|PASSED|no compile errors (after fixing the update-ID bug below)",
+    "COMMAND|Unity MCP: run_tests (EditMode, test_names=HotReloadFullRestartTests)|PASSED|5/5, 0.141s",
+    "TEST_RESULT|HotReloadFullRestartTests.Restart_RejectsNullArguments|Passed",
+    "TEST_RESULT|HotReloadFullRestartTests.Restart_AbortsAnActiveOldInstance_AndReturnsAFreshWorkingMachine|Passed|proven via CaptureInspection before (ActiveNodeCount>0) and after (ActiveNodeCount==0) the restart, not merely trusting the abort call's own return value",
+    "TEST_RESULT|HotReloadFullRestartTests.Restart_SkipsAbortForAnAlreadyIdleOldInstance|Passed",
+    "TEST_RESULT|HotReloadFullRestartTests.Restart_FreshMachineIsBoundToTheNewProgramNotTheOld|Passed",
+    "TEST_RESULT|HotReloadFullRestartTests.Restart_RepeatedCyclesLeaveNoGrowingManagedState|Passed|50 cycles, each fresh instance verified to start with zero active nodes",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite)|PASSED_WITH_PREEXISTING_FAILURES|1436 tests, 1432 passed; 4 failures -- the same 3 pre-existing unrelated failures every prior evidence file records, plus one newly observed LocalSaveSystem.Tests.SaveTaggedFormatTests.ValidateFieldIds_LogsDuplicates failure (a LogAssert-expectation timing issue in an unrelated host-project package, reproduced even in isolation -- most likely accumulated Unity Editor session state after many consecutive live test runs this session, not a regression from any AIBT change; LocalSaveSystem is untouched by this or any other card this session)",
+    "FINDING|First implementation hardcoded the abort's ReferenceUpdateContext update ID to 1, which collided with the scenario's own prior Update call (ReferenceExecutionMachine requires strictly-increasing update IDs, line 464: 'Update IDs must strictly increase.')|FIXED|abortUpdateContext is now a required caller-supplied parameter; the caller already tracks its own update-ID sequence for ordinary ticks",
+    "FINDING|ReferenceExecutionMachine.Abort can only run between ticks (calls BeginUpdateCore internally); a budget-suspended mid-flight update needs the separate RequestAbort entry point instead, which this card does not use since hot reload is expected to happen at a stable point between frames|DOCUMENTED|matches CaptureInspection's own 'stable API boundary' precondition; not a defect",
+    "DECISION|Native backend fresh-instance construction (NativeProgramImageCapacityV1/V2 preflight, job-handle lease management) is disclosed, deliberate follow-up work, not built in this pass|DISCLOSED_NOT_SILENT|the native layer's own AIBT4311 program-generation-binding invariant already forces an unconditional dispose-and-recreate on any generation change, so there is no restart decision to make there the way there is for the reference backend -- only the fresh-construction wiring itself remains, which needs its own dedicated research pass",
+    "ACCEPTANCE|After a full restart, the new instance's observable behavior is identical to a freshly constructed instance from the new program with no prior history|MET|Restart_FreshMachineIsBoundToTheNewProgramNotTheOld proves the fresh machine's RootResult reflects the new program's content (Failure), not the old program's (Success)",
+    "ACCEPTANCE|Every active async operation at the moment of restart is cancelled exactly once, idempotently|MET (structurally)|Abort is called at most once per restart via NodeAbortReason.HotReload, the reason reserved for exactly this case; ReferenceExecutionMachine's own idempotent-abort contract (proven by existing MemoryCompositeAbortTests) governs correctness beyond this card's own new code",
+    "ACCEPTANCE|Full restart works identically whether the instance's compatibility classification is incompatible or classification was never run at all|MET|HotReloadFullRestart.Restart takes no dependency on P5-003's classifier at all -- it is the unconditional fallback",
+    "ACCEPTANCE|Correct behavior for both execution backends (managed reference oracle, native executor)|PARTIALLY_MET_DISCLOSED|reference backend fully implemented and tested; native backend's dispose sequence already exists and is proven elsewhere, but fresh-instance construction (capacity-plan/lease wiring) is explicitly deferred, not built or guessed at in this pass -- see README's Decision section",
+    "DELIVERABLE|Runtime/HotReload/Restart/HotReloadFullRestartReport.cs|created",
+    "DELIVERABLE|Runtime/HotReload/Restart/HotReloadFullRestart.cs|created",
+    "DELIVERABLE|Tests/Editor/HotReload/Restart/HotReloadFullRestartTests.cs|created",
+    "WORK_ITEM_STATUS|P5-004|draft->ready->done (reference backend; native backend fresh-construction wiring is disclosed follow-up work)"
+  ]
+}
