@@ -1089,7 +1089,7 @@
       "id": "P5-002",
       "phase": 5,
       "title": "Node identity, program version, and state-layout hashing",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P5/P5-002-node-identity-and-state-layout-hashing.md",
       "dependsOn": [

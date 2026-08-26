@@ -1,0 +1,26 @@
+{
+  "schema": "aibt-p5-002-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 83.",
+    "COMMAND|Unity MCP: refresh_unity + read_console (types=error)|PASSED|no compile errors",
+    "COMMAND|Unity MCP: run_tests (EditMode, test_names=HotReloadProgramIdentityMapTests)|PASSED|6/6, 0.117s",
+    "TEST_RESULT|HotReloadProgramIdentityMapTests.Build_RejectsNullProgram|Passed",
+    "TEST_RESULT|HotReloadProgramIdentityMapTests.Build_MapsEveryDebugMapEntryToItsSignatureAndRuntimeIndex|Passed",
+    "TEST_RESULT|HotReloadProgramIdentityMapTests.TryGetSignatureAndRuntimeIndex_ReturnFalseForUnknownNodeId|Passed",
+    "TEST_RESULT|HotReloadProgramIdentityMapTests.HasSameTypeAndVersion_TrueOnlyWhenBothMatch|Passed",
+    "TEST_RESULT|HotReloadProgramIdentityMapTests.HasCompatibleLayout_TrueWhenInstanceMemoryShapeMatches|Passed|real aibt.core.repeater count=3 vs count=5, config bytes differ, layout compatible",
+    "TEST_RESULT|HotReloadProgramIdentityMapTests.RuntimeIndex_ShiftsAcrossRecompileEvenWhenTheNodeItselfIsUnchanged|Passed|re-proves P5-001's load-bearing fact against the real production type",
+    "SCOPE_ADAPTATION|Original card described a single program-version identifier and a state-layout hash|ADAPTED|ADR-P5-001 decided per-node classification, not a whole-program version scalar; direct field comparison on HotReloadNodeIdentitySignature replaces a hash, since every compared field is already small and present on CompiledNodeRecord -- see README.md",
+    "SCOPE_ADAPTATION|Authoring/HotReload/ was listed as a possible location in the original card|NOT_NEEDED|the scheme is computed entirely from CompiledProgram (Runtime-only), no authoring-side computation required",
+    "SCOPE_ADAPTATION|Tests placed in Tests/Editor/HotReload/Identity/ rather than Tests/Runtime/HotReload/|CHOSEN_PER_CARDS_OWN_AS-APPLICABLE_CLAUSE|CompiledProgram's constructor is heavily cross-validated; hand-constructing one in a Runtime-only test would be fragile, so tests compile real TreeDocuments through the real ReferenceCompiler instead, matching existing ReferenceCompilerTests.cs and P5-001's own spike",
+    "ACCEPTANCE|Two CompiledPrograms produced from byte-identical source always report identical program version and state-layout hash|MET (re-scoped to per-node signature)|HasSameTypeAndVersion/HasCompatibleLayout return true for two identical-shape compiles; not literally 'a hash' per the scope adaptation above",
+    "ACCEPTANCE|A change P5-001's ADR classified as always-incompatible always produces a different program version or state-layout hash|MET|HasSameTypeAndVersion_TrueOnlyWhenBothMatch proves a type change (success vs failure fixture) reports false",
+    "ACCEPTANCE|The hash/version computation introduces no managed allocation on the native-execution hot path|MET|HotReloadProgramIdentityMap.Build runs once per compiled program (at reload-decision time), never during a tree's per-frame update; not called from any Native/ execution path",
+    "ACCEPTANCE|Every constant/derivation rule is documented with its source|MET|XML doc comments on both new types cite ADR-P5-001 directly",
+    "DELIVERABLE|Runtime/HotReload/Identity/HotReloadNodeIdentitySignature.cs|created",
+    "DELIVERABLE|Runtime/HotReload/Identity/HotReloadProgramIdentityMap.cs|created",
+    "DELIVERABLE|Tests/Editor/HotReload/Identity/HotReloadProgramIdentityMapTests.cs|created",
+    "WORK_ITEM_STATUS|P5-002|draft->ready->done"
+  ]
+}

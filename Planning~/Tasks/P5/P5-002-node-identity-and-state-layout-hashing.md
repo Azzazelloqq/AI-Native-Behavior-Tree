@@ -1,6 +1,6 @@
 # P5-002 — Node identity, program version, and state-layout hashing
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -83,3 +83,16 @@ golden-pair tests for every P5-001-decided compatible/incompatible category
   `P5-006` can decide "is this migration safe" from the hash alone plus its
   own runtime checks, without re-deriving structural facts this card already
   computed.
+
+## Outcome
+
+`Runtime/HotReload/Identity/HotReloadNodeIdentitySignature.cs` (per-node type ID/version/
+instance-memory layout, with `HasSameTypeAndVersion`/`HasCompatibleLayout` as two separate checks)
+and `HotReloadProgramIdentityMap.cs` (`NodeId -> (signature, current compiled index)`, built from
+`CompiledProgram.DebugMap`+`Nodes`). Scope adapted from the original card once `ADR-P5-001` decided
+classification is per-node, not a whole-program version scalar: no hash is introduced (direct field
+comparison on the small existing `CompiledNodeRecord` fields is simpler and equally sufficient),
+and no `Authoring/HotReload/` code was needed (the scheme is computed entirely from `Runtime`-only
+`CompiledProgram` data). 6 tests, all passing, including a direct re-proof (against the real
+production type, not spike code) that compiled index shifts across a recompile even when the node
+itself is unchanged. Full detail in `Planning~/Evidence/P5-002/`.
