@@ -4,10 +4,14 @@ Status: `Draft`
 
 ## Objective
 
-Implement the narrower-blast-radius reload strategy: restart only the
-subtree(s) `P5-003`'s classifier localizes an incompatible change to,
-preserving the rest of a live instance's state. Falls back to `P5-004`'s
-full restart whenever localization is not possible.
+Extend `P5-004`'s shared construct-fresh-and-copy mechanism (`ADR-P5-001`,
+`AIBT-023`) with a **localized** exclusion set: restart only the subtree(s)
+`P5-003`'s classifier localizes an incompatible change to, copying every
+other node's live state across via the same stable-node-ID mechanism
+`P5-004` built. This card does not reimplement copying -- it computes the
+exclusion set and calls `P5-004`'s mechanism with it, falling back to the
+whole-tree exclusion set (full restart) whenever localization cannot be
+proven safe.
 
 ## Depends on
 

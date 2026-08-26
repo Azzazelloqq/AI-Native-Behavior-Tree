@@ -1074,7 +1074,7 @@
       "id": "P5-001",
       "phase": 5,
       "title": "Hot-reload compatibility model decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P5/P5-001-hot-reload-compatibility-model-decision.md",
       "dependsOn": [

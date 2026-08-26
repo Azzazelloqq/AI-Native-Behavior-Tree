@@ -4,11 +4,14 @@ Status: `Draft`
 
 ## Objective
 
-Implement the highest-complexity, highest-value reload strategy: apply a
-`P5-003`-classified-compatible change to a live instance in place, preserving
-its execution state across the reload, using `P5-002`'s state-layout hash to
-prove the migration safe before attempting it. Falls back to `P5-004`/`P5-005`
-whenever safety cannot be proven.
+Extend `P5-004`'s shared construct-fresh-and-copy mechanism (`ADR-P5-001`,
+`AIBT-023`) with an **empty** exclusion set: when `P5-003`'s classifier finds
+no node anywhere `Incompatible`, every node's own verdict
+(`Migrate`/`New`/`Dropped`) applies with nothing forced to restart, giving
+the fullest state preservation the model allows. This card does not
+reimplement copying -- it is `P5-004`'s mechanism called with the smallest
+possible exclusion set. Falls back to `P5-005`'s localized exclusion set (or
+`P5-004`'s whole-tree one) whenever any node classifies `Incompatible`.
 
 ## Depends on
 

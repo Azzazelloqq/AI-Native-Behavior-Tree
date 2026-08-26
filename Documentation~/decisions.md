@@ -26,5 +26,6 @@ This file records accepted direction. Detailed ADR files may be introduced when 
 | AIBT-020 | Use the versioned generated public Burst node ABI, per-assembly metadata shards, and explicit consumer-owned catalog-set facade defined by [ADR P2-001](decisions/ADR-P2-001-public-burst-node-abi.md). | Accepted |
 | AIBT-021 | Use explicit native owners, immutable preflight capacity plans, staged atomic publication, and dependency-complete disposal defined by [ADR P2-002](decisions/ADR-P2-002-native-ownership-and-capacity.md). | Accepted |
 | AIBT-022 | Use Burst node ABI v2 with source-stable public signatures, Runtime-private job-safe carrier backing, and an implicit metadata-only Runtime built-in authority as defined by [ADR P2-012](decisions/ADR-P2-012-burst-node-abi-v2.md). | Accepted |
+| AIBT-023 | Hot reload always constructs a fresh instance and selectively copies surviving state keyed by stable authoring node ID, never by compiled index or in-place array mutation; full restart, subtree restart, and compatible migration are the same mechanism with a different exclusion set, defined by [ADR P5-001](decisions/ADR-P5-001-hot-reload-compatibility-model.md). | Accepted |
 
 Normative details are in `Documentation~/specifications/`. An implementation may change them only through an accepted decision and corresponding specification update.

@@ -4,17 +4,23 @@ Status: `Draft`
 
 ## Objective
 
-Implement the mandatory, always-available reload strategy: tear down a live
-tree instance entirely and rebuild it from a new compiled program, with no
-state preserved. This is the fallback every later strategy (`P5-005`,
-`P5-006`) falls back to when it cannot proceed, so it must exist and be
-proven correct first.
+**Per `ADR-P5-001` (`AIBT-023`): full restart, subtree restart, and
+compatible migration are one mechanism -- construct a fresh instance and
+selectively copy surviving state keyed by stable node ID -- not three
+independent implementations, differing only in which nodes are excluded
+from the copy.** This card builds that shared mechanism, exercised through
+its simplest, always-safe case: the exclusion set is the whole tree, so
+nothing is copied and a live tree instance is torn down and rebuilt from the
+new compiled program with no state preserved. `P5-005` and `P5-006` extend
+this same mechanism with a non-trivial exclusion set (localized subtree,
+then none); they must not reimplement the copy logic this card builds.
 
 ## Depends on
 
-- `P5-001` (accepted ADR; full restart is triggered by `P3-007`'s
+- `P5-001` (accepted `ADR-P5-001`; full restart is triggered by `P3-007`'s
   content-hash change-detection signal, whether or not `P5-003`'s classifier
-  is available).
+  is available -- the whole-tree exclusion set needs no classification at
+  all).
 
 ## Required reading
 

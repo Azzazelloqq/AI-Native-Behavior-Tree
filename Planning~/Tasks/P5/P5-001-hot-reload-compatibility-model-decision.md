@@ -1,6 +1,6 @@
 # P5-001 — Hot-reload compatibility model decision
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -98,3 +98,20 @@ disposable spike harness constructing and classifying real CompiledProgram pairs
   with the real compiled-program format, iterate the model rather than
   shipping a known-broken decision -- the same discipline `P3-001`'s spike
   applied when it rejected Unity Graph Toolkit on real evidence.
+
+## Outcome
+
+Accepted 2026-08-27: `Documentation~/decisions/ADR-P5-001-hot-reload-compatibility-model.md`
+(`AIBT-023`). Real code (not just spec prose) was read first: `ReferenceCompiler.OrderNodes`/
+`IndexNodes` assign compiled node index by a fresh pre-order DFS traversal on every compile (zero
+stability across recompiles); every live-state array in both backends is flatly indexed by that
+unstable index; the native layer already hard-rejects cross-generation execution by design
+(`AIBT4311`); a Memory composite's running cursor is a positional `uint`, not a stable child ID.
+**Decision: reload is never an in-place array mutation -- it is always construct-fresh-and-
+selectively-copy, keyed by stable authoring node ID.** Full restart, subtree restart, and
+compatible migration are the same mechanism with a different exclusion set (whole tree / localized
+subtree / empty), not three independent implementations -- `P5-004`/`P5-005`/`P5-006` were
+corrected accordingly before implementation starts. The disposable spike
+(`Spikes~/HotReloadCompatibilityModel/`) proved the classifier against real `CompiledProgram`
+pairs for all five `testing.md` categories, run live via Unity MCP: 5/5 passed. Full detail in
+`Planning~/Evidence/P5-001/`.
