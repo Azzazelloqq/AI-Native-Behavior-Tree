@@ -1,0 +1,19 @@
+{
+  "schema": "aibt-p5-007-verification-v1",
+  "passed": false,
+  "status": "partially_done_blocked",
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 83.",
+    "COMMAND|Unity MCP: run_tests (EditMode, test_names=HotReloadSchedulerEstimatorResetTests)|PASSED|1/1",
+    "SCOPE_GAP|This card's scheduler/policy/batch-isolation acceptance criteria describe native-backend hot-reload, which P5-004/P5-005/P5-006 explicitly did not build (reference-executor backend only, native fresh-instance construction disclosed as deferred in Planning~/Evidence/P5-004/README.md)|BLOCKED_NOT_FAKED|golden-equivalence re-run, batch-isolation proof, and Auto post-reload determinism proof all require a native restart/migration mechanism that does not exist yet; not approximated or faked against the reference-executor mechanism instead",
+    "DECISION|NativeWorkEstimatorV1 is reset, never carried over, across any reload|MADE_AND_TESTED|the estimator has no persistence/reload-awareness of its own; a caller keyed by compiled-program identity automatically gets a fresh estimator since reload always constructs a new CompiledProgram (ADR-P5-001); reasoned against P4-006/P4-007's own finding that a wrong policy choice, once made, is never re-evaluated",
+    "TEST_RESULT|HotReloadSchedulerEstimatorResetTests.EstimatorKeyedByCompiledProgramIdentity_IsFreshAfterReload_WithNoSpecialCasing|Passed",
+    "ACCEPTANCE|Every accepted policy's golden-equivalence proof is re-run against a hot-reloaded instance and passes unchanged|BLOCKED|requires native-backend hot-reload, not built this session",
+    "ACCEPTANCE|The estimator reset-vs-carry-over decision is justified by a real test|MET|see DECISION/TEST_RESULT above",
+    "ACCEPTANCE|A batch containing one reloaded instance and several untouched instances produces bit-identical results for the untouched instances|BLOCKED|requires native-backend hot-reload, not built this session",
+    "ACCEPTANCE|No new performance default, threshold, or acceptable-reload-overhead claim is introduced|MET|none introduced",
+    "DELIVERABLE|Tests/Runtime/HotReload/HotReloadSchedulerEstimatorResetTests.cs|created",
+    "DELIVERABLE|Planning~/Evidence/P5-007/README.md|created (discloses blocked scope explicitly)",
+    "WORK_ITEM_STATUS|P5-007|draft, partially done -- estimator decision closed; scheduler/policy/batch-isolation proofs blocked on native-backend hot-reload (not built this session)"
+  ]
+}

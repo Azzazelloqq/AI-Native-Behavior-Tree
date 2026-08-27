@@ -86,3 +86,14 @@ batch-isolation proof (reloaded instance does not disturb siblings)
   it stays an internal detail.
 - `P5-009` benchmarks the actual cost of whatever this card's decisions
   imply (reset vs. carry-over has a real cost difference).
+
+## Progress notes (not `Done` -- see `Planning~/Evidence/P5-007/README.md`)
+
+The estimator reset-vs-carry-over decision is made and tested: reset, never carried over, since
+`NativeWorkEstimatorV1` has no persistence of its own and a compiled-program-identity-keyed caller
+gets a fresh one automatically after any reload (`ADR-P5-001`: reload never mutates in place).
+**Everything else this card asks for is blocked**: this card's scheduler/policy/batch-isolation
+acceptance criteria describe native-backend hot-reload, and `P5-004`/`P5-005`/`P5-006` explicitly
+built the reference-executor backend only, disclosing native fresh-instance construction as
+deferred follow-up work. That gap is a real prerequisite for closing this card, not something this
+card can substitute for or fake around.
