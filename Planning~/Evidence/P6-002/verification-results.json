@@ -1,0 +1,23 @@
+{
+  "schema": "aibt-p6-002-verification-v1",
+  "passed": true,
+  "findings": [
+    "RESEARCH|Editor/Editing/SemanticEditOperations.cs, Editor/Organization/LayoutOrganizationOperations.cs|CONFIRMED|every public method signature in both files takes/returns only TreeDocument or only LayoutDocument respectively -- type-level separation, not just convention",
+    "RESEARCH|Editor/Layout/LayoutDocument.cs, specifications/editor-layout-v1.md|CONFIRMED|no revision or content-hash field/concept exists for LayoutDocument",
+    "COMMAND|Unity MCP execute_code: NodeRegistryBuilder.CreateWithBuiltIns() + reflective AddTestFixtures() + Build()|PASSED|registryCount=14, testFixtureTypeIds=[aibt.test.failure,aibt.test.running,aibt.test.success]",
+    "COMMAND|Unity MCP execute_code: real 3-level TreeDocument (root/guard/leaf) initial ReferenceCompiler.Compile|PASSED",
+    "COMMAND|Unity MCP execute_code: SemanticEditTransaction.Apply, deliberately invalid multi-op patch (Disconnect violating ChildPolicy(1,1))|PASSED|invalidRejected=True, invalidUnchangedRef=True, invalidHasDiagnostics=True",
+    "COMMAND|Unity MCP execute_code: SemanticEditTransaction.Apply, valid two-operation composed patch (first attempt)|FAILED|validAccepted=False (AIBT2023, AIBT2024) -- own spike-construction bug: pre-populated children in a NodeDocument constructor AND connected via AddNode, causing a real duplicate-child diagnostic; not a defect in the code under test",
+    "COMMAND|Unity MCP execute_code: SemanticEditTransaction.Apply, valid two-operation composed patch (fixed)|PASSED|validAccepted=True, nodeCountBefore=3, nodeCountAfter=5, semanticDiff=[added:guard2,added:leaf2], resultRevision=3 (from beforeRevision=1)",
+    "COMMAND|Unity MCP execute_code: expected-revision precondition wrapper, mismatch and match cases|PASSED|mismatchRejectedWithoutRunningEdit=True, matchRanEdit=True",
+    "COMMAND|Unity MCP execute_code: layout content-hash revision check (StableHash.Sha256Hex over CanonicalLayoutJsonWriter.Write), before/after a real LayoutOrganizationOperations.Pin call|PASSED|hashChanged=True, sameHashOnRepeatedCompute=True, layoutMismatchRejected=True, layoutMatchAccepted=True",
+    "COMMAND|Unity MCP execute_code: purpose-built layout diff over the same Pin call|PASSED|layoutDiff=[pin-changed:guard=True]",
+    "ACCEPTANCE|The spike demonstrates atomicity with a real invalid operation inside an otherwise-valid multi-operation patch|MET|invalid-disconnect case, real ChildPolicy violation, real diagnostics attached, document reference unchanged",
+    "ACCEPTANCE|The spike demonstrates the layout/semantic diff separation against a patch that only moves/pins/groups nodes|MET|layout Pin patch produces a non-empty layout diff; confirmed by type-signature reading (not a redundant runtime test) that no code path lets it touch TreeDocument.Revision or produce a semantic diff",
+    "ACCEPTANCE|The ADR states exactly what remains unverified rather than generalizing|MET|ADR-P6-002's 'Explicitly unverified' section: concurrent callers, very large/cross-tree patches, final diagnostic codes and JSON diff schema",
+    "DELIVERABLE|Documentation~/decisions/ADR-P6-002-domain-patch-revision-and-diff-model.md|created",
+    "DELIVERABLE|Documentation~/decisions.md|modified (AIBT-025 row added)",
+    "DELIVERABLE|Documentation~/ai-and-mcp.md|modified ('Domain patches' section added)",
+    "WORK_ITEM_STATUS|P6-002|draft->ready->done"
+  ]
+}

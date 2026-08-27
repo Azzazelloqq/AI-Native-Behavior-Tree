@@ -1269,14 +1269,13 @@
       "id": "P6-002",
       "phase": 6,
       "title": "Domain-patch, revision, and diff model decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-002-domain-patch-revision-and-diff-model-decision.md",
       "dependsOn": [
         "P5-010"
       ],
       "owns": [
-        "Spikes~/DomainPatchModel/",
         "Planning~/Evidence/P6-002/"
       ]
     },

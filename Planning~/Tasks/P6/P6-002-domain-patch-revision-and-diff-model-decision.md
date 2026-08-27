@@ -1,6 +1,6 @@
 # P6-002 — Domain-patch, revision, dry-run, and diff model decision
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -143,3 +143,23 @@ disposable spike: real TreeDocument, atomicity/dry-run/diff/revision proof
   accepted, not merely on this card being `Done`.
 - Can proceed in parallel with `P6-001`; the two decisions are independent
   (transport does not constrain the patch model, and vice versa).
+
+## Outcome
+
+Accepted 2026-08-27: `Documentation~/decisions/ADR-P6-002-domain-patch-revision-and-diff-model.md`
+(`AIBT-025`). Confirmed the already-corrected narrower scope by spiking live against the real
+Unity `6000.5.8f1` Editor via Unity MCP `execute_code`: `SemanticEditTransaction.Apply` correctly
+handles multi-operation composition, atomicity (a real `ChildPolicy` violation left the document
+completely unchanged with real diagnostics attached), and dry-run (free -- no persistence step
+exists to skip). Found and fixed a bug in the spike's own test construction along the way (not in
+the code under test). Decided the two genuinely open pieces: an expected-revision precondition
+wrapper (spiked and correct), and semantic/layout diff formats (purpose-built, node/field-level,
+spiked against real documents). New finding beyond `P6-003`'s own correction: semantic
+(`TreeDocument`) and layout (`LayoutDocument`) operations are separated at the type level, not
+just convention (`SemanticEditOperations` vs `LayoutOrganizationOperations`'s full method-signature
+lists), so domain patches are two kinds, never unified -- and `LayoutDocument` has no revision
+field at all, so its precondition is a computed canonical-JSON content hash instead (no persisted
+format change). A real finding worth flagging for `P6-004`: a multi-operation semantic patch
+increments `Revision` once per individual operation, not once per patch (1 -> 3 for a two-operation
+patch in the spike) -- callers must always use the actual returned revision, never assume a fixed
+increment. Full detail in `Planning~/Evidence/P6-002/`.

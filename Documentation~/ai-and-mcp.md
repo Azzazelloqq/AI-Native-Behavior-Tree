@@ -89,6 +89,16 @@ Do not expose every behavior node as a separate MCP tool. Generic semantic opera
 
 The repository provides a short workflow guide, generated node catalog, recipes, anti-patterns, good and bad examples, and versioned migrations. Optional `AGENTS.md`, `SKILL.md`, or provider-specific adapters may be generated, but the canonical contracts remain schemas and authoring APIs.
 
+## Domain patches
+
+A domain patch is a semantic patch (`TreeDocument`, checked against its `Revision`) or a
+layout patch (`LayoutDocument`, checked against a computed content hash), never both in one
+transaction -- matching the codebase's own type-level separation between semantic and layout
+operations. Dry-run is calling the transaction and not persisting the result; no separate
+dry-run code path exists. A caller must always use the actual revision/hash returned by the
+last accepted patch as the expected value for its next one, never assume a fixed increment.
+Full rationale: [ADR P6-002](decisions/ADR-P6-002-domain-patch-revision-and-diff-model.md).
+
 ## Transport and hosting
 
 The MCP server is an external `dotnet` process built on the official C# MCP SDK (stdio transport), launched by the AI client's own MCP configuration, never code loaded into Unity's Editor assembly graph. A thin, dependency-free Editor-side listener bridges it to a running Unity Editor instance over a discovery file. This requires the .NET SDK installed on the user's machine; no server binary is vendored inside the AIBT package. Full rationale and rejected alternatives: [ADR P6-001](decisions/ADR-P6-001-mcp-transport-and-permission-model.md).
