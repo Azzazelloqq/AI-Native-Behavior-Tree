@@ -1,0 +1,25 @@
+{
+  "schema": "aibt-p6-003-verification-v1",
+  "passed": true,
+  "findings": [
+    "RESEARCH|Authoring/Registry/NodeRegistry.cs, NodeManifestCanonicalJson.cs|CONFIRMED|already a full read-only indexable/hashable catalog and exact ai-and-mcp.md-shaped JSON formatter; reused directly, not reimplemented",
+    "RESEARCH|.aibt/policy.json readers|CONFIRMED|none exist anywhere in production code (grep); TreeValidator consumes an in-memory TreeValidationPolicy never populated from the file -- this card builds the first reader",
+    "RESEARCH|Runtime/Core/Identity/Revision.cs, Editor/Editing/SemanticEditOperations.cs|CONFIRMED|Revision (monotonic ulong) already exists and is already incremented by 1 on every semantic edit; task card's original revision placeholder hedge withdrawn",
+    "RESEARCH|TreeDocument constructor default-revision normalization|CONFIRMED|revision.IsValid ? revision : new Revision(1) -- a freshly built TreeDocument's revision is 1, not 0; found via a failing test, then confirmed by reading the constructor",
+    "RESEARCH|Editor/Editing/SemanticEditTransaction.cs|CONFIRMED (new finding)|already implements a speculative-apply/compile-validate/accept-or-reject-unchanged primitive covering most of ai-and-mcp.md's safe-mutation-protocol shape; narrows P6-002's real open scope to expected-revision + diff format",
+    "RESEARCH|AIBT9001-9007 diagnostic codes|CONFIRMED|already used by Tests/BehaviorCases/Framework/Serialization/BehaviorCaseJsonDiagnostics.cs; AIBT9008 picked as the next free code in the 9000-9999 ToolingAndTestInput range",
+    "COMMAND|Unity MCP refresh_unity (compile=request, mode=force)|PASSED|0 compile errors after CS0118 namespace/type ambiguity fix",
+    "COMMAND|Unity MCP run_tests EditMode: AIBT.Tests.Editor.Discovery.NodeCatalogQueryTests/ProjectPolicySnapshotTests/ProjectManifestQueryTests|PASSED|13/13, 0 failed, 0 skipped",
+    "COMMAND|Unity MCP run_tests EditMode: existing NodeRegistry + Editing suites (regression check)|PASSED|39/39, 0 failed, 0 skipped, no regressions",
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 95.",
+    "COMMAND|git diff --check|PASSED|no whitespace errors",
+    "ACCEPTANCE|Every field ai-and-mcp.md's Node manifest section lists is present when the underlying registry entry has it, honestly absent when it does not|MET|TryGetContract delegates to NodeManifestCanonicalJson.ToJson directly, byte-for-byte parity proven by test",
+    "ACCEPTANCE|A search over a paginated result set returns stable, deterministic ordering across repeated calls|MET|SearchIsCaseInsensitiveAndDeterministicAcrossRepeatedCalls, PageReturnsDeterministicSlicesAndEmptyPastTheEnd",
+    "ACCEPTANCE|The project manifest's policy summary matches .aibt/policy.json byte for byte in meaning|MET|PolicySummaryMatchesTheSourceDocumentInMeaning",
+    "ACCEPTANCE|Enumeration and hash behavior mirror P1-004's own insertion-order independence guarantee|MET|NewlyRegisteredFixtureNodeAppearsWithoutAnyCodeChangeHere",
+    "DELIVERABLE|Authoring/Discovery/NodeCatalogQuery.cs, DiscoveryDiagnosticCodes.cs, ProjectPolicySnapshot.cs, ProjectManifestQuery.cs|created",
+    "DELIVERABLE|Tests/Editor/Discovery/NodeCatalogQueryTests.cs, ProjectPolicySnapshotTests.cs, ProjectManifestQueryTests.cs|created (13 tests)",
+    "DELIVERABLE|Planning~/Tasks/P6/P6-002-domain-patch-revision-and-diff-model-decision.md|corrected (SemanticEditTransaction/Revision finding, narrower real scope)",
+    "WORK_ITEM_STATUS|P6-003|draft->in_progress->done"
+  ]
+}

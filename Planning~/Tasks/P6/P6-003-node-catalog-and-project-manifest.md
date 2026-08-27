@@ -1,6 +1,18 @@
 # P6-003 — Node catalog and project manifest query layer
 
-Status: `Draft`
+Status: `Done`
+
+**Pre-implementation research correction (2026-08-27):** this card is thinner than its own
+prose implies. `Authoring/Registry/NodeRegistry.cs` (public) is already a full read-only,
+indexable, hashable catalog; `Authoring/Registry/NodeManifestCanonicalJson.cs` (`internal`,
+same assembly, directly callable from `Authoring/Discovery/`) already serializes a
+`NodeManifest` to exactly the JSON shape `ai-and-mcp.md`'s "Node manifest" section requires
+— reuse both directly, do not reimplement. `Runtime/Core/Identity/Revision.cs` already
+exists (`readonly struct Revision(ulong)`) and `Editor/Editing/SemanticEditOperations.cs`
+already increments it by 1 on every semantic edit — the "tree/revision listing" deliverable
+below uses this real value directly; the original placeholder hedge is withdrawn. No ambient
+"the project's registry" exists anywhere; this card's query layer accepts a `NodeRegistry`
+instance from its caller rather than discovering one itself.
 
 ## Objective
 
@@ -37,6 +49,11 @@ This card builds the query layer only; it is not itself an MCP tool
   (`P2-004`/`P2-005`) a real custom node would use; the catalog must surface
   a codegen-registered node the same way as a Phase 1 fixture, with no
   special-casing.
+- `Authoring/Registry/NodeRegistry.cs`, `Authoring/Registry/NodeManifestCanonicalJson.cs`,
+  `Authoring/Registry/NodeRegistryBuilder.cs`, `Authoring/Registry/Generated/GeneratedNodeRegistry.cs`
+  — the real reusable query/formatting surface this card wraps.
+- `Runtime/Core/Identity/Revision.cs`, `Editor/Editing/SemanticEditOperations.cs` — the
+  already-implemented monotonic revision this card's tree listing reads directly.
 
 ## Allowed changes
 
@@ -60,11 +77,12 @@ This card builds the query layer only; it is not itself an MCP tool
 - A node-catalog query API: search by canonical ID/keyword, exact single-node
   contract lookup, paginated enumeration.
 - A project-manifest query API: registered backends/capabilities, a policy
-  summary sourced from `.aibt/policy.json`, and a tree/revision listing
-  (revision field sourced from whatever `P6-002`'s accepted ADR defines —
-  if `P6-002` is not yet accepted when this card starts, use the tree's
-  existing `CompiledContentHash`/document identity and flag the gap in
-  Handoff notes rather than inventing a revision counter here).
+  summary sourced from `.aibt/policy.json` (via a new small reader this card
+  builds, since none exists in production code today), and a tree/revision
+  listing sourced directly from each supplied `TreeDocument`'s real
+  `Revision.Value` (`Runtime/Core/Identity/Revision.cs`, already implemented
+  and already incremented by `SemanticEditOperations` — no placeholder
+  needed).
 - Tests proving catalog/manifest output is generated, not hand-authored:
   a newly registered fixture node must appear without touching this card's
   code.
@@ -99,6 +117,26 @@ Verify-Static.ps1
 - `P6-011` (generated agent documentation) consumes this same query layer
   as its data source, per `ai-and-mcp.md`'s "Duplicated hand-maintained
   catalogs are forbidden."
-- If `P6-002`'s revision model is not yet accepted, the interim revision
-  source used here is a documented placeholder, not a silent commitment —
-  `P6-004`/`P6-006` must reconcile it once `P6-002` lands.
+- `P6-002`'s own scope narrows because of this card's research finding:
+  revision is already a decided, implemented concept (`Revision`,
+  monotonic `ulong`, incremented by `SemanticEditOperations`); `P6-002`'s
+  real open question is the atomic-multi-operation/dry-run wrapper and the
+  semantic/layout diff format, not "what does revision mean." That card's
+  framing was corrected in the same commit as this card's evidence.
+
+## Outcome
+
+Done. `Authoring/Discovery/NodeCatalogQuery.cs`/`DiscoveryDiagnosticCodes.cs`/
+`ProjectPolicySnapshot.cs`/`ProjectManifestQuery.cs` implement the query layer, reusing
+`NodeManifestCanonicalJson`/`NodeRegistry` directly (no second catalog formatter) and adding
+the first-ever `.aibt/policy.json` reader in production code. Research before implementation
+found the card significantly thinner than its own prose stated (registry/JSON-formatting
+already existed; `Revision`/`SemanticEditOperations` already implement the revision model) and
+surfaced a new finding not anticipated by the card: `Editor/Editing/SemanticEditTransaction.cs`
+already implements most of `P6-002`'s "safe mutation protocol" transaction shape -- that card's
+framing was corrected accordingly, in this same commit. 13 new tests pass (search/pagination
+determinism, `TryGetContract` byte-for-byte parity with `NodeManifestCanonicalJson`, policy
+parse/malformed/missing-file diagnostics, real-revision tree listing including after a
+`SemanticEditOperations` edit), all run live against the actual Unity `6000.5.8f1` Editor via
+Unity MCP, plus a 39/39 regression check of the existing `NodeRegistry`/`Editing` suites. Full
+detail in `Planning~/Evidence/P6-003/`.

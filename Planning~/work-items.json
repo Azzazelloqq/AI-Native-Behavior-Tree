@@ -1284,7 +1284,7 @@
       "id": "P6-003",
       "phase": 6,
       "title": "Node catalog and project manifest query layer",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-003-node-catalog-and-project-manifest.md",
       "dependsOn": [

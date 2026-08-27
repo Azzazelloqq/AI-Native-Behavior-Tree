@@ -10,6 +10,45 @@ patch operation is, how an expected revision is checked and produced, what
 dry-run returns, and what a semantic diff versus a layout diff contains.
 This card decides the model; `P6-004` implements it.
 
+**Pre-implementation research correction (2026-08-27, found while implementing
+`P6-003`):** this card's scope is narrower than its own prose states. Two
+things this Objective describes as open are already decided and working in
+production code, confirmed by reading it directly:
+
+- **Revision already means something concrete and implemented.**
+  `Runtime/Core/Identity/Revision.cs` is a `readonly struct Revision(ulong
+  value)`; `TreeDocument` already carries one, normalizing an unset value to
+  `1` (`revision.IsValid ? revision : new Revision(1)`); and
+  `Editor/Editing/SemanticEditOperations.cs` already increments it by exactly
+  1 on every semantic edit (`new Revision(source.Revision.Value + 1)`). This
+  card does not need to invent a revision model -- it needs to decide how an
+  *expected* revision is checked as a precondition (not yet done anywhere)
+  and confirm this monotonic counter is the right thing to check against
+  (it is, per `identity-and-hashing-v1.md`'s own separation of concerns:
+  `Revision` is an edit-sequence counter, `CompiledContentHash` is a content
+  identity -- they are not competing concepts, no need to reconcile them).
+- **`Editor/Editing/SemanticEditTransaction.cs` already implements the core
+  transaction primitive.** `SemanticEditTransaction.Apply(before, edit,
+  registry, options)` applies a `Func<TreeDocument, TreeDocument>`
+  speculatively, compiles/validates the candidate through the real
+  `ReferenceCompiler`/`TreeValidator`, and returns either the accepted
+  candidate or the original document completely unchanged, with the real
+  diagnostics attached (`SemanticEditResult`). Because `edit` is an arbitrary
+  function, a multi-operation patch is already expressible as a composition
+  of `SemanticEditOperations` calls passed to one `Apply` call -- and because
+  `Apply` never itself persists anything (the caller decides what to do with
+  the returned `Document`), "dry-run" may already be nothing more than
+  "call `Apply` and don't persist the result."
+
+This card's real remaining job: (1) confirm the above by spiking against a
+real multi-operation composition, including a deliberately invalid step;
+(2) decide the expected-revision precondition (reject before even attempting
+`edit` if `before.Revision` doesn't match the caller's expectation); (3)
+decide the semantic-diff and layout-diff format, the one piece with no
+existing implementation at all. It does not need to design atomicity or
+accept/reject semantics from scratch -- confirm `SemanticEditTransaction`
+already provides them correctly, or find and report a real gap.
+
 ## Depends on
 
 - `P5-010` (Phase 5 integration gate; Phase 6 entry per `MASTER_PLAN.md`).
@@ -35,6 +74,10 @@ This card decides the model; `P6-004` implements it.
 - `Documentation~/specifications/diagnostics-v1.md` — a rejected/failed
   patch (revision mismatch, invalid partial tree) must surface as a
   structured diagnostic, not a bespoke error shape.
+- `Editor/Editing/SemanticEditTransaction.cs`, `Runtime/Core/Identity/Revision.cs`
+  — the already-working transaction primitive and revision type this card
+  confirms and wraps with an expected-revision precondition and a diff
+  format, rather than designing from scratch (see the correction above).
 
 ## Allowed changes
 
