@@ -1254,7 +1254,7 @@
       "id": "P6-001",
       "phase": 6,
       "title": "MCP transport and permission-model decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-001-mcp-transport-and-permission-model-decision.md",
       "dependsOn": [
