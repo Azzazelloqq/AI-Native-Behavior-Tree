@@ -1,0 +1,22 @@
+{
+  "schema": "aibt-p6-004-verification-v1",
+  "passed": true,
+  "findings": [
+    "RESEARCH|Editor/AIBT.Editor.asmdef|CONFIRMED|references AIBT.Runtime, AIBT.Authoring, Newtonsoft.Json, Unity.Collections; SemanticEditOperations/SemanticEditTransaction/LayoutOrganizationOperations all live in this assembly, not AIBT.Authoring",
+    "CORRECTION|Planning~/Tasks/P6/P6-004-domain-patch-transaction-engine.md|APPLIED|engine location corrected from Authoring/Patching/ to Editor/Patching/ before implementation, per architecture.md's dependency direction (Authoring cannot reference Editor)",
+    "COMMAND|Unity MCP refresh_unity (compile=request, mode=force)|PASSED (after 2 fix cycles)|CS0118 NodeRegistry namespace/type ambiguity fixed (same class of issue as P6-003); AIBT2025 parameter-not-declared fixed by registering a custom parameterized test-leaf manifest instead of a zero-parameter fixture",
+    "COMMAND|Unity MCP run_tests EditMode: AIBT.Tests.Editor.Patching.SemanticPatchTransactionTests/LayoutPatchTransactionTests|PASSED|8/8, 0 failed, 0 skipped (1 test assertion corrected mid-run: adding a node under root correctly also marks root Changed, since its Children list changed -- the diff was right, the first draft of the test assertion was incomplete)",
+    "COMMAND|Unity MCP run_tests EditMode: LayoutSemanticIsolationTests (P3-007) + SemanticEditOperationsTests + SemanticEditTransactionTests (regression)|PASSED|9/9, 0 failed, 0 skipped, no regressions",
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 95.",
+    "COMMAND|git diff --check|PASSED|no whitespace errors",
+    "ACCEPTANCE|A multi-operation patch with one invalid operation persists nothing|MET|InvalidOperationInsideAMultiOperationPatchPersistsNothing: ReferenceEquals(result.Document, before) true",
+    "ACCEPTANCE|A layout-only patch produces an empty semantic diff and an unchanged semantic revision|MET|by construction -- LayoutPatchTransaction never touches TreeDocument at all, confirmed by its own signature and P3-007's re-run",
+    "ACCEPTANCE|A dry-run patch never mutates the document, the compiled program, or the revision|MET|RepeatedCallsWithTheSameInputProduceByteIdenticalResultsAndNeverPersist / ...ProduceTheSameHashAndNeverPersist, both asserting the original input's own fields are unchanged after two calls",
+    "ACCEPTANCE|Revision-mismatch, invalid-operation, and successful-apply are each covered by at least one test using a real TreeDocument|MET|RevisionMismatchIsRejectedBeforeAnyOperationRuns, InvalidOperationInsideAMultiOperationPatchPersistsNothing, ValidMultiOperationPatchIsAcceptedAndDiffedCorrectly, all against real TreeDocument/ReferenceCompiler",
+    "DELIVERABLE|Editor/Patching/SemanticPatchTransaction.cs, SemanticPatchResult.cs, SemanticDiff.cs, SemanticDiffEntry.cs, SemanticPatchDiagnostics.cs|created",
+    "DELIVERABLE|Editor/Patching/LayoutPatchTransaction.cs, LayoutPatchResult.cs, LayoutDiff.cs, LayoutDiffEntry.cs, LayoutPatchDiagnostics.cs|created",
+    "DELIVERABLE|Tests/Editor/Patching/SemanticPatchTransactionTests.cs, LayoutPatchTransactionTests.cs|created (8 tests)",
+    "DELIVERABLE|Planning~/Tasks/P6/P6-004-domain-patch-transaction-engine.md|corrected (Editor/Patching/ location, updated Required reading)",
+    "WORK_ITEM_STATUS|P6-004|draft->in_progress->done"
+  ]
+}

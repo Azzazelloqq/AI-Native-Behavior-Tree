@@ -1299,14 +1299,14 @@
       "id": "P6-004",
       "phase": 6,
       "title": "Domain-patch transaction engine",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-004-domain-patch-transaction-engine.md",
       "dependsOn": [
         "P6-002"
       ],
       "owns": [
-        "Authoring/Patching/",
+        "Editor/Patching/",
         "Tests/Editor/Patching/",
         "Planning~/Evidence/P6-004/"
       ]
