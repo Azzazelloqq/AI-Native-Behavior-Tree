@@ -1,0 +1,16 @@
+{
+  "name": "AIBT.Benchmarks.Phase5.HotReload.Editor",
+  "rootNamespace": "AIBT.Benchmarks.Phase5.HotReload",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring",
+    "Unity.Burst",
+    "AIBT.Benchmarks.Phase5.HotReload"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

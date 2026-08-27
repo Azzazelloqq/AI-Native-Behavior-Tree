@@ -1,0 +1,31 @@
+{
+  "schema": "aibt-p5-009-hot-reload-benchmark-v1",
+  "environment": { "unityVersion": "6000.5.8f1", "applicationPlatform": "WindowsPlayer", "isEditor": false, "operatingSystem": "Windows 11  (10.0.26200)", "processorType": "Intel(R) Core(TM) Ultra 9 275HX", "processorCount": 24, "systemMemoryMB": 32189 },
+  "configuration": { "warmupSamples": 5, "measuredSamples": 15 },
+  "scenarios": [
+    {
+      "name": "single-leaf",
+      "nodeCount": 1,
+      "compileOnlyMicroseconds": { "medianMicroseconds": 933.800, "minMicroseconds": 741.900, "maxMicroseconds": 1231.900 },
+      "fullRestartTotalMicroseconds": { "medianMicroseconds": 1846.700, "minMicroseconds": 1692.700, "maxMicroseconds": 2299.800 },
+      "compatibleMigrationTotalMicroseconds": { "medianMicroseconds": 964.700, "minMicroseconds": 746.300, "maxMicroseconds": 1674.700 },
+      "subtreeRestartTotalMicroseconds": { "medianMicroseconds": 890.700, "minMicroseconds": 770.600, "maxMicroseconds": 1307.300 }
+    },
+    {
+      "name": "shallow-sequence-5-leaves",
+      "nodeCount": 6,
+      "compileOnlyMicroseconds": { "medianMicroseconds": 982.200, "minMicroseconds": 781.500, "maxMicroseconds": 1348.300 },
+      "fullRestartTotalMicroseconds": { "medianMicroseconds": 1919.100, "minMicroseconds": 1747.000, "maxMicroseconds": 2134.600 },
+      "compatibleMigrationTotalMicroseconds": { "medianMicroseconds": 1043.100, "minMicroseconds": 822.300, "maxMicroseconds": 1504.700 },
+      "subtreeRestartTotalMicroseconds": { "medianMicroseconds": 1010.000, "minMicroseconds": 797.500, "maxMicroseconds": 1274.800 }
+    },
+    {
+      "name": "deep-sequence-63-nodes",
+      "nodeCount": 63,
+      "compileOnlyMicroseconds": { "medianMicroseconds": 2907.700, "minMicroseconds": 2634.900, "maxMicroseconds": 3431.000 },
+      "fullRestartTotalMicroseconds": { "medianMicroseconds": 5959.100, "minMicroseconds": 5423.600, "maxMicroseconds": 7072.200 },
+      "compatibleMigrationTotalMicroseconds": { "medianMicroseconds": 3086.600, "minMicroseconds": 2820.000, "maxMicroseconds": 3527.900 },
+      "subtreeRestartTotalMicroseconds": { "medianMicroseconds": 3025.500, "minMicroseconds": 2851.100, "maxMicroseconds": 3478.600 }
+    }
+  ]
+}

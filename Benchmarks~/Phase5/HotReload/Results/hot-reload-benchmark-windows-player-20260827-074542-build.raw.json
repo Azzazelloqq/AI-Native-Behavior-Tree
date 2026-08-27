@@ -1,0 +1,12 @@
+{
+    "schema": "aibt-p5-009-windows-build-v1",
+    "unityVersion": "6000.5.8f1",
+    "target": "StandaloneWindows64",
+    "result": "Succeeded",
+    "totalErrors": 0,
+    "totalWarnings": 0,
+    "outputBytes": 95867592,
+    "scriptingBackend": "Mono2x",
+    "developmentBuild": false,
+    "output": "C:\\Users\\User\\AppData\\Local\\Temp\\aibt-p5-009-hotreload-player-087d5eaa1bb74f5298b431da07e2f562\\Build\\Windows-x64\\AIBTP5009HotReloadBenchmark.exe"
+}

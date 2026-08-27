@@ -1,0 +1,9 @@
+{
+  "schema": "aibt-p5-009-hot-reload-population-scaling-v1",
+  "scope": "shallow-sequence-5-leaves (6 nodes), compatible-migration path, population = number of independently-created live instances reloaded against the same before/after document pair in one batch",
+  "populations": [
+    { "populationSize": 1, "totalMedianMicroseconds": 4728.200, "perInstanceMedianMicroseconds": 4728.200 },
+    { "populationSize": 10, "totalMedianMicroseconds": 45893.500, "perInstanceMedianMicroseconds": 4589.350 },
+    { "populationSize": 50, "totalMedianMicroseconds": 234519.100, "perInstanceMedianMicroseconds": 4690.382 }
+  ]
+}

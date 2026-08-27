@@ -1,0 +1,27 @@
+{
+  "schema": "aibt-p5-009-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 83.",
+    "COMMAND|Unity Editor batchmode: HotReloadBenchmarkRunner (execute_code invocation of RunAndWriteResults)|PASSED|3 tree shapes x 4 cost categories, 5 warmup + 15 measured samples each, see Benchmarks~/Phase5/HotReload/Results/hot-reload-benchmark-windows-editor-20260827.json",
+    "COMMAND|Run-HotReloadPlayerBenchmark.ps1 (isolated project build + real Windows x64 Standalone Player run)|PASSED|see Benchmarks~/Phase5/HotReload/Results/hot-reload-benchmark-windows-player-20260827-074542.json and -build.raw.json (result=Succeeded, target=StandaloneWindows64, developmentBuild=false)",
+    "COMMAND|Unity Editor batchmode: population-scaling supplementary measurement (execute_code)|PASSED|see Benchmarks~/Phase5/HotReload/Results/hot-reload-benchmark-population-scaling-windows-editor-20260827.json",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite)|PASSED_WITH_PREEXISTING_FAILURES|1446 tests, same 3 pre-existing unrelated failures as every prior evidence file (GeneratedArtifactContractTests x2, SaveStoreTests.SaveStore_AutoSave_WritesToDisk)",
+    "ACCEPTANCE|Every measured number records its environment and raw samples, not just an aggregate|MET|median/min/max per case plus full environment block (Unity/package version, platform, OS, CPU, memory), matching every prior Phase 4 benchmark's own convention",
+    "ACCEPTANCE|Migration cost is shown separately from full-restart cost at the same tree/population size|MET|see README.md's tables and 'full restart costs ~1.9-2x a compatible migration' finding, measured on both Editor and Player",
+    "ACCEPTANCE|No threshold, default, or supported reload size claim appears anywhere in this card's output|MET|README.md and this file report findings only",
+    "ACCEPTANCE|At least one measurement runs on a real, non-Editor Player build|MET|hot-reload-benchmark-windows-player-20260827-074542.json: applicationPlatform=WindowsPlayer, isEditor=false, backed by build evidence proving a real Succeeded, non-development StandaloneWindows64 build",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/Unity/Runtime/HotReloadBenchmarkRunner.cs|created",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/Unity/Runtime/AIBT.Benchmarks.Phase5.HotReload.asmdef|created",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/Unity/Editor/HotReloadBenchmarkBuild.cs|created",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/Unity/Editor/AIBT.Benchmarks.Phase5.HotReload.Editor.asmdef|created",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/Run-HotReloadPlayerBenchmark.ps1|created",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/README.md|created",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/Results/hot-reload-benchmark-windows-editor-20260827.json|created",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/Results/hot-reload-benchmark-windows-player-20260827-074542.json|created",
+    "DELIVERABLE|Benchmarks~/Phase5/HotReload/Results/hot-reload-benchmark-population-scaling-windows-editor-20260827.json|created",
+    "DISCLOSED_LIMITATION|Debug-instrumentation overhead (trace capture during reload) not measured -- HotReloadPreviewDriver hardcodes traceSink: null with no injection point; fixing this needs either an internals-visible assembly outside this card's Allowed changes, or a public API change forbidden by this card's own Forbidden changes clause",
+    "DISCLOSED_LIMITATION|Reference-executor backend only, per the user's decision after P5-007's native-backend gap",
+    "WORK_ITEM_STATUS|P5-009|draft->done"
+  ]
+}

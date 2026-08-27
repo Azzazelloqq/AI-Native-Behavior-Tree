@@ -1,6 +1,6 @@
 # P5-009 — Hot-reload benchmark evidence
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -81,3 +81,24 @@ at least one real, non-Editor Player run
 - `P5-010` cites this card's numbers as measured evidence, same as every
   prior gate cited its own phase's benchmark cards, without converting them
   into a default.
+
+## Outcome
+
+`Benchmarks~/Phase5/HotReload/Unity/HotReloadBenchmarkRunner.cs` measures full restart, compatible
+migration, and subtree restart (each isolated from compile-only cost) across three tree shapes, via
+the public `HotReloadPreviewDriver` facade only. Run in Editor batchmode
+(`Results/hot-reload-benchmark-windows-editor-20260827.json`) and in a real, non-development Windows
+x64 Standalone Player built and run through an isolated project
+(`Results/hot-reload-benchmark-windows-player-20260827-074542.json`,
+`Run-HotReloadPlayerBenchmark.ps1`/`HotReloadBenchmarkBuild.cs`), satisfying the card's explicit
+real-Player acceptance criterion. **Key finding**: full restart costs ~1.9-2x a compatible migration
+at the same tree size, on both Editor and Player -- migration is measurably cheaper, not just
+theoretically so. A supplementary population-scaling measurement
+(`Results/hot-reload-benchmark-population-scaling-windows-editor-20260827.json`) found reload cost
+does not amortize across a population of live instances (no batched-reload API exists today) --
+disclosed as a real architecture characteristic. **Debug-instrumentation overhead was not measured**
+and is disclosed as a genuine, structurally-grounded gap (`HotReloadPreviewDriver` hardcodes
+`traceSink: null` with no injection point, and adding one or using an internals-visible assembly
+were both outside this card's allowed/forbidden-changes fence) -- full detail and reasoning in
+`Benchmarks~/Phase5/HotReload/README.md`'s "Scope and limitations" section. Full detail in
+`Planning~/Evidence/P5-009/`.

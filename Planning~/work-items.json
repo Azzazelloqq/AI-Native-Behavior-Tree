@@ -1213,7 +1213,7 @@
       "id": "P5-009",
       "phase": 5,
       "title": "Hot-reload benchmark evidence",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P5/P5-009-hot-reload-benchmark-evidence.md",
       "dependsOn": [
