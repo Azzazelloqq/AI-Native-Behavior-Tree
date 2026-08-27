@@ -39,3 +39,17 @@ All notable changes to this project will be documented here. The project follows
   calibrated model. Real, non-Development Player benchmark evidence on Windows
   x64, Android ARM64 (physical device), and single-thread Web. No performance
   default, regression threshold, or supported-hardware-class claim adopted.
+- Hot reload for the reference-executor backend (`OQ-007` resolved): a
+  compatibility classifier localizing structural changes to the smallest
+  necessary restart region, safe full restart, and idle-instance compatible
+  state migration (memory/generation/cooldown flags/blackboard) built as one
+  construct-fresh-and-selectively-copy mechanism keyed by stable authoring
+  node ID, never by compiled index or in-place mutation. An explicit,
+  explained Editor hot-reload workflow shows the actual classification and
+  strategy used for every reload, verified live in the Editor. Measured
+  evidence (Editor batchmode and a real, non-development Windows x64
+  Standalone Player) shows compatible migration costs roughly half of a full
+  restart at the same tree size. Native-backend hot reload does not exist;
+  migration runs only against an idle old instance, falling back to full
+  restart for a genuinely active one — both disclosed. No regression
+  threshold or "acceptable reload cost" claim adopted.

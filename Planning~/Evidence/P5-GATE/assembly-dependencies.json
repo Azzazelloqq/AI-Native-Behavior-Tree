@@ -1,0 +1,41 @@
+{
+  "schema": "aibt-p5-gate-assembly-dependencies-v1",
+  "candidateCommit": "42a32eab7953944823401eccb40b8b60a5c94bfd",
+  "asmdefs": {
+    "AIBT.Runtime": {
+      "path": "Runtime/AIBT.Runtime.asmdef",
+      "references": ["Unity.Burst", "Unity.Collections"],
+      "includePlatforms": []
+    },
+    "AIBT.Authoring": {
+      "path": "Authoring/AIBT.Authoring.asmdef",
+      "references": ["AIBT.Runtime", "Newtonsoft.Json"],
+      "includePlatforms": []
+    },
+    "AIBT.Editor": {
+      "path": "Editor/AIBT.Editor.asmdef",
+      "references": ["AIBT.Runtime", "AIBT.Authoring", "Newtonsoft.Json", "Unity.Collections"],
+      "includePlatforms": ["Editor"]
+    }
+  },
+  "dependencyDirectionCheck": {
+    "rule": "AIBT.Editor depends on AIBT.Authoring/AIBT.Runtime; neither depends back on AIBT.Editor",
+    "result": "PASSED",
+    "evidence": "AIBT.Runtime.asmdef references only Unity.Burst/Unity.Collections; AIBT.Authoring.asmdef references only AIBT.Runtime/Newtonsoft.Json -- neither lists AIBT.Editor. Unchanged from P4-GATE: Phase 5's new Editor/HotReload/ and Authoring/HotReload/ files live inside these same three existing asmdefs, no new production asmdef reference was added."
+  },
+  "forbiddenTokenAudit": {
+    "tokens": ["using UnityEditor", "Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "scannedPaths": ["Runtime/", "Authoring/"],
+    "command": "grep -rE \"using UnityEditor|Unity\\.Entities|UnityMCP|OpenAI|Anthropic\" Runtime/ Authoring/",
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "editorScopedForbiddenTokenAudit": {
+    "tokens": ["Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "note": "using UnityEditor is expected and allowed in Editor/; only Entities/MCP/LLM tokens are forbidden there too",
+    "scannedPaths": ["Editor/"],
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "note": "Phase 5's own benchmark harness (Benchmarks~/Phase5/HotReload/Unity/{Runtime,Editor}/*.asmdef) is intentionally excluded from this audit: the Benchmarks~/ tilde suffix hides it from Unity's asset database entirely, matching every prior phase's benchmark folders (Benchmarks~/Phase2, Phase4) -- it is not part of the shipped package's production assembly surface."
+}

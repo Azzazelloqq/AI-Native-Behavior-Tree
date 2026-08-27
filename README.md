@@ -10,7 +10,9 @@ Phase 3 adds editor tooling on `UnityEditor.Experimental.GraphView`: a read-only
 
 Phase 4 measures scheduling and batching on real, non-Editor Players (Windows x64, Android ARM64, single-thread Web) and implements a calibrated work-estimation/batching model plus an `Auto` policy-selection heuristic. `Auto` currently underperforms the best fixed policy (`Immediate`/`Budgeted`/`BatchedJobsSameFrame`/`PipelinedJobs`) in most measured cases — reported honestly, not tuned away — and runtime autotuning was evaluated and rejected in favor of the static calibrated model. No performance default, regression threshold, or supported-hardware-class claim is adopted anywhere in the package.
 
-> Status: Phases 1 through 4 are complete (`P2-025`, `P3-013`, and `P4-009` integration gates all accepted — see `Planning~/Evidence/`). MCP integration and hot reload remain later phases.
+Phase 5 adds hot reload for the reference-executor backend: a resolved compatibility model (construct-fresh-and-selectively-copy by stable authoring node ID, never in-place mutation), full restart, localized subtree restart, idle-instance compatible state migration, and an explicit, explained Editor workflow. Measured evidence shows compatible migration costs roughly half of a full restart at the same tree size, on both Editor and a real Windows Player. Native-backend hot reload does not exist yet, and migration is scoped to an idle old instance (a genuinely active one falls back to full restart) — both disclosed, not silently assumed.
+
+> Status: Phases 1 through 5 are complete (`P2-025`, `P3-013`, `P4-009`, and `P5-010` integration gates all accepted — see `Planning~/Evidence/`). MCP integration remains a later phase.
 
 ## Design goals
 

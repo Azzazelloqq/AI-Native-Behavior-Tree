@@ -1,6 +1,6 @@
 # P5-010 — Phase 5 integration gate
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -80,3 +80,28 @@ public API, generated artifact, dependency, cleanliness, and diff checks
 - Phase 6 (AI and MCP) depends on this gate's confirmation that the
   hot-reload contract is stable enough for MCP tooling to trigger and
   observe reloads programmatically, per `Documentation~/ai-and-mcp.md`.
+
+## Outcome
+
+**Accepted 2026-08-27 against commit `42a32eab7953944823401eccb40b8b60a5c94bfd`.**
+A clean detached UPM harness (fresh project referencing `com.azzazello.aibt`
+as a local `file:` package, nothing else from the host `Modules` project)
+compiled cleanly and passed the full detached EditMode regression at
+**1089/1089**, 0 failed, 0 skipped. Every Phase 5 test fixture
+(`HotReloadProgramIdentityMapTests`, `HotReloadCompatibilityClassifierTests`,
+`HotReloadFullRestartTests`, `HotReloadStateMigrationTests`,
+`HotReloadSchedulerEstimatorResetTests`, `HotReloadPreviewDriverTests`) and
+`P3-007`'s inherited isolation proof re-ran and passed individually against
+this exact snapshot. `OQ-007` confirmed `Resolved` via `ADR-P5-001`
+(`AIBT-023`, Accepted). Public API surface grew from `P4-GATE`'s 382
+types/1994 members to **391 types/2024 members, confirmed purely additive**
+by diff (`HotReloadPreviewDriver`, `HotReloadCompatibilityClassifier`,
+`HotReloadProgramIdentityMap`, `HotReloadWorkflowWindow`, and their
+supporting types) -- unlike Phase 4, which added zero, Phase 5 legitimately
+needed a public, inspectable classification/identity model. `README.md` and
+`CHANGELOG.md` were found stale (still describing Phases 1-4 as complete) and
+updated, checked against a fresh claims inventory. Two real, disclosed scope
+reductions are recorded rather than smoothed over: native-backend hot reload
+does not exist, and compatible/subtree migration only runs against an idle
+old instance. **Phase 5 is complete.** Full detail in
+`Planning~/Evidence/P5-GATE/`.
