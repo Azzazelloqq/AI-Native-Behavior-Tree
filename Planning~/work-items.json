@@ -1249,6 +1249,195 @@
       "owns": [
         "Planning~/Evidence/P5-GATE/"
       ]
+    },
+    {
+      "id": "P6-001",
+      "phase": 6,
+      "title": "MCP transport and permission-model decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P6/P6-001-mcp-transport-and-permission-model-decision.md",
+      "dependsOn": [
+        "P5-010"
+      ],
+      "owns": [
+        "Spikes~/McpTransportModel/",
+        "Planning~/Evidence/P6-001/"
+      ]
+    },
+    {
+      "id": "P6-002",
+      "phase": 6,
+      "title": "Domain-patch, revision, and diff model decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P6/P6-002-domain-patch-revision-and-diff-model-decision.md",
+      "dependsOn": [
+        "P5-010"
+      ],
+      "owns": [
+        "Spikes~/DomainPatchModel/",
+        "Planning~/Evidence/P6-002/"
+      ]
+    },
+    {
+      "id": "P6-003",
+      "phase": 6,
+      "title": "Node catalog and project manifest query layer",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-003-node-catalog-and-project-manifest.md",
+      "dependsOn": [
+        "P5-010"
+      ],
+      "owns": [
+        "Authoring/Discovery/",
+        "Tests/Editor/Discovery/",
+        "Planning~/Evidence/P6-003/"
+      ]
+    },
+    {
+      "id": "P6-004",
+      "phase": 6,
+      "title": "Domain-patch transaction engine",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-004-domain-patch-transaction-engine.md",
+      "dependsOn": [
+        "P6-002"
+      ],
+      "owns": [
+        "Authoring/Patching/",
+        "Tests/Editor/Patching/",
+        "Planning~/Evidence/P6-004/"
+      ]
+    },
+    {
+      "id": "P6-005",
+      "phase": 6,
+      "title": "MCP server host, discovery tools, and permission enforcement",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-005-mcp-server-host-and-discovery-tools.md",
+      "dependsOn": [
+        "P6-001",
+        "P6-003"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-005/"
+      ]
+    },
+    {
+      "id": "P6-006",
+      "phase": 6,
+      "title": "MCP authoring tools",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-006-mcp-authoring-tools.md",
+      "dependsOn": [
+        "P6-004",
+        "P6-005"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-006/"
+      ]
+    },
+    {
+      "id": "P6-007",
+      "phase": 6,
+      "title": "MCP verification tools: validate, compile, simulate, explain",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-007-mcp-verification-tools-validate-compile-simulate.md",
+      "dependsOn": [
+        "P6-005"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-007/"
+      ]
+    },
+    {
+      "id": "P6-008",
+      "phase": 6,
+      "title": "MCP verification tools: trace, test, benchmark",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-008-mcp-verification-tools-trace-test-benchmark.md",
+      "dependsOn": [
+        "P6-005"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-008/"
+      ]
+    },
+    {
+      "id": "P6-009",
+      "phase": 6,
+      "title": "Node development tools",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-009-node-development-tools.md",
+      "dependsOn": [
+        "P6-005"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-009/"
+      ]
+    },
+    {
+      "id": "P6-010",
+      "phase": 6,
+      "title": "Custom MCP tool provider registration and permission model",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-010-custom-mcp-tool-providers.md",
+      "dependsOn": [
+        "P6-001",
+        "P6-005"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-010/"
+      ]
+    },
+    {
+      "id": "P6-011",
+      "phase": 6,
+      "title": "Generated agent documentation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-011-generated-agent-documentation.md",
+      "dependsOn": [
+        "P6-003",
+        "P6-006",
+        "P6-009"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-011/"
+      ]
+    },
+    {
+      "id": "P6-012",
+      "phase": 6,
+      "title": "Phase 6 integration gate",
+      "status": "draft",
+      "kind": "review",
+      "card": "Planning~/Tasks/P6/P6-012-phase6-integration-gate.md",
+      "dependsOn": [
+        "P6-001",
+        "P6-002",
+        "P6-003",
+        "P6-004",
+        "P6-005",
+        "P6-006",
+        "P6-007",
+        "P6-008",
+        "P6-009",
+        "P6-010",
+        "P6-011"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-GATE/"
+      ]
     }
   ]
 }
