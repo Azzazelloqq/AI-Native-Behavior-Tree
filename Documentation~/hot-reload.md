@@ -102,8 +102,13 @@ which nodes are excluded from that copy:
    (`Migrate`/`New`/`Dropped`) applies without any forced restart.
 
 Because all three are the same mechanism, `P5-005` and `P5-006` build one
-shared copy implementation with a parameterized exclusion set, not two
-separate ones -- see `ADR-P5-001`'s "Correction" section.
+shared copy implementation (`HotReloadStateMigration`) with a parameterized
+exclusion set, not two separate ones -- see `ADR-P5-001`'s "Correction"
+section. Per that ADR's implementation addendum, strategies 2 and 3 both copy
+state (memory, activation generation, cooldown-init flags, blackboard values)
+**only when the old instance is idle** (no active frames) -- migrating a live
+frame stack mid-execution is real, disclosed follow-up work; either strategy
+falls back to strategy 1 whenever the old instance is still active.
 
 ## Interaction with async operations and commands
 

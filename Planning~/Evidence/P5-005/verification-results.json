@@ -1,0 +1,14 @@
+{
+  "schema": "aibt-p5-005-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 83.",
+    "REFERENCE|This card's mechanism is HotReloadStateMigration.Migrate (Planning~/Evidence/P5-006/), and localization is HotReloadCompatibilityClassifier (Planning~/Evidence/P5-003/) -- per ADR-P5-001's correction, no separate implementation exists for this card",
+    "TEST_RESULT|HotReloadCompatibilityClassifierTests.TypeChange_NodeIsIncompatible_DescendantSweptIntoRestartRegion_RootIsJustTheChangedNode (P5-003)|Passed|proves an unrelated sibling subtree stays classified Migrate and outside the exclusion set",
+    "TEST_RESULT|HotReloadStateMigrationTests.Migrate_DoesNotMigrateStateForIncompatibleTypeChange (P5-006)|Passed|proves an IncompatibleRestart node is excluded from the copy (ResetNodeCount==1, MigratedNodeCount==0)",
+    "ACCEPTANCE|A change localized to one subtree leaves every sibling subtree's observable state provably unchanged across the restart|MET|via P5-003's classifier test cited above",
+    "ACCEPTANCE|A change that legitimately affects shared state outside the localized subtree is never subtree-restarted -- it falls back to full restart|MET|HotReloadCompatibilityClassifierTests.SharedBlackboardWriteInsideCandidateRegion_EscalatesToFullTreeRestart (P5-003)",
+    "ACCEPTANCE|Repeated subtree restarts targeting different subtrees in sequence never leave the instance in a state divergent from an equivalent full restart|NOT_SEPARATELY_TESTED|the underlying copy mechanism (P5-006) is exercised per-call, not across a repeated-divergent-subtree sequence; a dedicated golden-equivalence proof across repeated distinct localized reloads remains open follow-up work if P5-007/P5-009 need it",
+    "WORK_ITEM_STATUS|P5-005|draft->ready->done (mechanism and evidence held jointly with P5-006 per ADR-P5-001's card-split correction)"
+  ]
+}

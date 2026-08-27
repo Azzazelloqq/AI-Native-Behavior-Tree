@@ -1,6 +1,6 @@
 # P5-006 — Compatible active-state migration
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -100,3 +100,28 @@ forced-failure-injection atomicity proof
   set was too optimistic against the real native memory layout -- if so,
   escalate back to `P5-001`'s ADR rather than silently narrowing what
   "compatible" means here alone.
+
+## Outcome
+
+`HotReloadStateMigration.Migrate` implements the shared mechanism's empty-exclusion-set case:
+per-node memory, activation generation, and cooldown-init flags migrate by stable `NodeId`
+(via two new, owner-approved `ReferenceExecutionMachine` methods, `CaptureNodeState`/
+`SeedNodeState`); blackboard values migrate via the existing `initialBlackboard` constructor
+parameter, filtered to keys the new program still declares with a matching type. 4 tests, all
+passing, including a real snapshot-comparison proof (not inference from behavior) that a
+`Repeater`'s persisted state survives a parameter edit.
+
+**Real scope reduction found during implementation, escalated and decided by the owner**:
+`ReferenceFrame`'s read-only `NodeIndex` and extensive decorator/parallel/repeater/cooldown-specific
+field set made full frame-stack migration substantially larger than `ADR-P5-001`'s own text
+anticipated. Migration now runs **only when the old instance is idle** (no active frames);
+otherwise it falls back to `HotReloadFullRestart` entirely. See `ADR-P5-001`'s implementation
+addendum.
+
+**Disclosed gaps against this card's original acceptance criteria**: in-flight async-operation
+state is not migrated (idle instances were not separately proven to always have zero active
+operations, since no async-command test fixture exists in the currently available registries); no
+forced-failure-injection atomicity test exists (the only failure mode, a memory-size mismatch, is
+checked before any byte is written, but this was not stress-tested by deliberately injecting one);
+no repeated-migration-sequence stress test exists. All disclosed, not silently skipped -- see
+`Planning~/Evidence/P5-006/README.md`.

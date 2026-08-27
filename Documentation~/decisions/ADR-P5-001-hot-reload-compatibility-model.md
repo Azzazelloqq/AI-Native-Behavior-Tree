@@ -107,3 +107,21 @@ implementation, rather than building the same copy logic twice.
   layout/semantic isolation discipline would flag if applied here.
 - No production code ships from this card. The spike (`Spikes~/HotReloadCompatibilityModel/`) is
   disposable, per this card's own Forbidden changes.
+
+## Addendum (`P5-005`/`P5-006` implementation): migration is idle-only, by deliberate scope
+
+Building the shared copy mechanism (`Runtime/HotReload/Migration/HotReloadStateMigration.cs`) found
+`ReferenceFrame` (the active-traversal-stack element) has a `NodeIndex` fixed at construction and an
+extensive set of decorator/parallel/repeater/cooldown-specific mutable fields — remapping a live
+frame to a new compiled index means reconstructing it field-by-field, a much larger and more
+failure-prone undertaking than copying `_nodeMemory`/`_activationGenerations` (which this ADR's item
+3 assumed was the bulk of the work). Escalated to the owner before proceeding
+(`AskUserQuestion`); decision: **migration only ever runs when the old instance is idle**
+(`CaptureInspection().ActiveNodeCount == 0`, i.e. no frames on the stack) — it copies per-node
+memory, activation generation, and cooldown-init flags (via two new internal
+`ReferenceExecutionMachine` methods, `CaptureNodeState`/`SeedNodeState`) plus blackboard values
+(via the existing `initialBlackboard` constructor parameter, already keyed by stable
+`StableKeyId` — no new blackboard plumbing needed). Whenever the old instance is *not* idle, both
+`P5-005` and `P5-006` fall back to `HotReloadFullRestart` entirely, exactly like an unsafe
+localization does. Full mid-flight frame-stack migration remains real, disclosed follow-up work,
+not attempted here — see `Planning~/Evidence/P5-006/README.md`.

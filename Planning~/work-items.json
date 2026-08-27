@@ -1139,7 +1139,7 @@
       "id": "P5-005",
       "phase": 5,
       "title": "Affected-subtree restart",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P5/P5-005-affected-subtree-restart.md",
       "dependsOn": [
@@ -1147,8 +1147,6 @@
         "P5-004"
       ],
       "owns": [
-        "Runtime/HotReload/SubtreeRestart/",
-        "Tests/Runtime/HotReload/SubtreeRestart/",
         "Planning~/Evidence/P5-005/"
       ]
     },
@@ -1156,7 +1154,7 @@
       "id": "P5-006",
       "phase": 5,
       "title": "Compatible active-state migration",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P5/P5-006-compatible-active-state-migration.md",
       "dependsOn": [
@@ -1166,7 +1164,9 @@
       ],
       "owns": [
         "Runtime/HotReload/Migration/",
-        "Tests/Runtime/HotReload/Migration/",
+        "Tests/Editor/HotReload/Migration/",
+        "Runtime/Execution/Reference/Core/ReferenceExecutionMachine.cs",
+        "Runtime/Execution/Reference/Core/ReferenceExecutionContracts.cs",
         "Planning~/Evidence/P5-006/"
       ]
     },

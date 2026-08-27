@@ -124,6 +124,54 @@ namespace AIBT
                 checked((uint)_operationLedger.ActiveCount));
         }
 
+        /// <summary>
+        /// Captures <paramref name="nodeIndex"/>'s persisted instance state (memory, activation
+        /// generation, cooldown-init flag) for hot-reload migration into another instance
+        /// (<c>ADR-P5-001</c>). Read-only; never mutates this instance. Does not capture this
+        /// node's position on the active frame stack -- migration
+        /// (<c>Runtime/HotReload/Migration/</c>) only ever calls this when the source instance has
+        /// no active frames at all.
+        /// </summary>
+        internal ReferenceNodeStateSnapshot CaptureNodeState(RuntimeNodeIndex nodeIndex)
+        {
+            if (!nodeIndex.IsValid || nodeIndex.Value >= (uint)_program.Nodes.Count)
+                throw new ArgumentOutOfRangeException(nameof(nodeIndex));
+
+            var record = _program.Nodes[(int)nodeIndex.Value];
+            var memory = new byte[record.InstanceMemorySize];
+            Array.Copy(_nodeMemory, (int)record.InstanceMemoryOffset, memory, 0, (int)record.InstanceMemorySize);
+            return new ReferenceNodeStateSnapshot(
+                memory,
+                _activationGenerations[(int)nodeIndex.Value],
+                _cooldownInitialized[(int)nodeIndex.Value]);
+        }
+
+        /// <summary>
+        /// Seeds <paramref name="nodeIndex"/>'s persisted instance state from a snapshot captured
+        /// on another, layout-compatible instance, for hot-reload migration (<c>ADR-P5-001</c>).
+        /// Valid only before this instance's first accepted update -- migration happens once,
+        /// immediately after construction, never mid-execution, matching how the constructor's own
+        /// <c>initialBlackboard</c> parameter seeds blackboard state.
+        /// </summary>
+        internal void SeedNodeState(RuntimeNodeIndex nodeIndex, ReferenceNodeStateSnapshot snapshot)
+        {
+            if (_lastAcceptedUpdateId != 0 || _hasOpenUpdate)
+                throw new InvalidOperationException("Node state can be seeded only before this instance's first update.");
+            if (!nodeIndex.IsValid || nodeIndex.Value >= (uint)_program.Nodes.Count)
+                throw new ArgumentOutOfRangeException(nameof(nodeIndex));
+
+            var record = _program.Nodes[(int)nodeIndex.Value];
+            if (snapshot.Memory.Length != (int)record.InstanceMemorySize)
+            {
+                throw new ArgumentException(
+                    "The snapshot's memory size does not match this node's instance-memory size.", nameof(snapshot));
+            }
+
+            Array.Copy(snapshot.Memory, 0, _nodeMemory, (int)record.InstanceMemoryOffset, (int)record.InstanceMemorySize);
+            _activationGenerations[(int)nodeIndex.Value] = snapshot.ActivationGeneration;
+            _cooldownInitialized[(int)nodeIndex.Value] = snapshot.CooldownInitialized;
+        }
+
         internal ReferenceExecutionEnvelope Update(ReferenceUpdateContext update)
             => Update(update, ReferenceStepBudget.Unlimited);
 

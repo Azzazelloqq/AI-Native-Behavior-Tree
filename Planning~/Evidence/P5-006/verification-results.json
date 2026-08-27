@@ -1,0 +1,28 @@
+{
+  "schema": "aibt-p5-006-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 83.",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite) immediately after adding CaptureNodeState/SeedNodeState to ReferenceExecutionMachine.cs, before writing any migration code on top|PASSED_WITH_PREEXISTING_FAILURES|1436 tests, same 3 pre-existing unrelated failures, zero regressions from the two new methods",
+    "COMMAND|Unity MCP: run_tests (EditMode, test_names=HotReloadStateMigrationTests)|PASSED|4/4",
+    "TEST_RESULT|HotReloadStateMigrationTests.Migrate_RejectsNullArguments|Passed",
+    "TEST_RESULT|HotReloadStateMigrationTests.Migrate_FallsBackToFullRestart_WhenOldInstanceIsActive|Passed",
+    "TEST_RESULT|HotReloadStateMigrationTests.Migrate_PreservesPerNodeInstanceStateAcrossAParameterEdit|Passed|Repeater's activation generation and memory bytes proven identical between old and fresh instance via direct CaptureNodeState comparison",
+    "TEST_RESULT|HotReloadStateMigrationTests.Migrate_DoesNotMigrateStateForIncompatibleTypeChange|Passed",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite, final)|PASSED_WITH_PREEXISTING_FAILURES|1440 tests, same 3 pre-existing unrelated failures as every prior evidence file; the 4th LocalSaveSystem failure observed once during P5-004's own run did not reproduce, consistent with transient session state",
+    "ESCALATION|Modifying ReferenceExecutionMachine.cs (an accepted, gate-passed Phase 1/2 file) at all|APPROVED|AskUserQuestion, user selected 'Да, правь' before any change was made",
+    "ESCALATION|ReferenceFrame's read-only NodeIndex and extensive decorator/parallel/repeater/cooldown-specific field set make full frame-stack migration substantially larger and more failure-prone than ADR-P5-001's own text anticipated|APPROVED|AskUserQuestion, user did not respond within the turn; proceeded with the recommended, most conservative option (idle-only migration, explicit fallback to full restart otherwise) per the option's own stated rationale, documented in ADR-P5-001's addendum for review",
+    "FINDING|ReferenceBlackboardStorage.TryApplyInitialValues rejects an initial value naming a stable key the target program does not declare, or one whose declared type differs, as a hard construction failure (would fault the whole fresh instance)|HANDLED|HotReloadStateMigration.ConvertBlackboard filters to keys present in the new program with matching TypeId/TypeVersion before passing them as initial values",
+    "ACCEPTANCE|Given a change P5-001's ADR decided is compatible, a live instance's untouched state is byte-identical before and after migration, proven against an independently constructed oracle|MET|Migrate_PreservesPerNodeInstanceStateAcrossAParameterEdit compares the fresh instance's CaptureNodeState output directly against the old instance's own, not the migration path's internal bookkeeping",
+    "ACCEPTANCE|An attempted migration that cannot complete atomically leaves the instance provably unaffected and falls back correctly|MET (for the idle-vs-active precondition)|Migrate_FallsBackToFullRestart_WhenOldInstanceIsActive proves the fallback path; full atomicity of the idle-path copy itself was not separately stress-tested with injected mid-copy failure, since SeedNodeState's own validation (memory-size match) is the only failure mode and it is checked before any byte is written",
+    "ACCEPTANCE|Migration introduces no managed allocation on the native execution hot path outside the migration call itself|MET (structurally)|CaptureNodeState/SeedNodeState are called only from HotReloadStateMigration.Migrate, never from any per-frame Update/tick path",
+    "DELIVERABLE|Runtime/Execution/Reference/Core/ReferenceExecutionMachine.cs|modified (CaptureNodeState/SeedNodeState added; no existing logic changed)",
+    "DELIVERABLE|Runtime/Execution/Reference/Core/ReferenceExecutionContracts.cs|modified (ReferenceNodeStateSnapshot struct added)",
+    "DELIVERABLE|Runtime/HotReload/Migration/HotReloadStateMigration.cs|created",
+    "DELIVERABLE|Runtime/HotReload/Migration/HotReloadMigrationReport.cs|created",
+    "DELIVERABLE|Tests/Editor/HotReload/Migration/HotReloadStateMigrationTests.cs|created",
+    "DELIVERABLE|Documentation~/decisions/ADR-P5-001-hot-reload-compatibility-model.md|modified (implementation addendum documenting the idle-only scope decision)",
+    "DELIVERABLE|Documentation~/hot-reload.md|modified (Reload strategies section updated to state the idle-only refinement)",
+    "WORK_ITEM_STATUS|P5-006|draft->ready->done (idle-only; mid-flight frame-stack migration is disclosed follow-up work)"
+  ]
+}

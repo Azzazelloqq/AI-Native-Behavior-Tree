@@ -129,4 +129,25 @@ namespace AIBT
         internal DiagnosticCollection Diagnostics { get; }
         internal CommandBatch Commands { get; }
     }
+
+    /// <summary>
+    /// One node's persisted instance state (memory, activation generation, cooldown-init flag),
+    /// captured from one <see cref="ReferenceExecutionMachine"/> for hot-reload migration into
+    /// another (<c>Documentation~/decisions/ADR-P5-001-hot-reload-compatibility-model.md</c>).
+    /// Carries no node identity of its own -- the caller tracks which stable node ID this
+    /// snapshot belongs to, via <c>HotReloadProgramIdentityMap</c>.
+    /// </summary>
+    internal readonly struct ReferenceNodeStateSnapshot
+    {
+        internal ReferenceNodeStateSnapshot(byte[] memory, uint activationGeneration, bool cooldownInitialized)
+        {
+            Memory = memory ?? throw new ArgumentNullException(nameof(memory));
+            ActivationGeneration = activationGeneration;
+            CooldownInitialized = cooldownInitialized;
+        }
+
+        internal byte[] Memory { get; }
+        internal uint ActivationGeneration { get; }
+        internal bool CooldownInitialized { get; }
+    }
 }

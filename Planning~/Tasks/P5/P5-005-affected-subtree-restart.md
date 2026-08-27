@@ -1,6 +1,6 @@
 # P5-005 — Affected-subtree restart
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -81,3 +81,15 @@ negative test: shared-state-crossing change falls back to full restart
   per-instance work-estimate state from the instance's actual current shape.
 - `P5-008` needs this card's per-subtree reporting to show the user "only
   this part of the tree reloaded," not a blanket "reloaded" notice.
+
+## Outcome
+
+Per `ADR-P5-001`'s own correction, this card and `P5-006` share one implementation
+(`Runtime/HotReload/Migration/HotReloadStateMigration.Migrate`): the localized exclusion set is
+`P5-003`'s `RestartSubtreeRootNodeIds`, expanded to full descendant `NodeId` sets and excluded from
+the copy -- no separate `Runtime/HotReload/SubtreeRestart/` implementation was built, since doing
+so would have duplicated the exact copy logic `ADR-P5-001` says not to duplicate. Proven by
+`HotReloadCompatibilityClassifierTests` (localization itself, `P5-003`) and
+`HotReloadStateMigrationTests.Migrate_DoesNotMigrateStateForIncompatibleTypeChange` (exclusion from
+the copy, `P5-006`). Same idle-only scope as `P5-006` (see that card's Outcome). Full detail in
+`Planning~/Evidence/P5-005/`.
