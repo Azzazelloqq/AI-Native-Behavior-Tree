@@ -1193,7 +1193,7 @@
       "id": "P5-008",
       "phase": 5,
       "title": "Editor hot-reload workflow",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P5/P5-008-editor-hot-reload-workflow.md",
       "dependsOn": [
@@ -1204,7 +1204,8 @@
       ],
       "owns": [
         "Editor/HotReload/",
-        "Tests/Editor/HotReload/",
+        "Authoring/HotReload/",
+        "Tests/Editor/HotReload/Preview/",
         "Planning~/Evidence/P5-008/"
       ]
     },

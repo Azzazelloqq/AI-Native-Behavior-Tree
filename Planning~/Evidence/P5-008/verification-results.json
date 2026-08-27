@@ -1,0 +1,26 @@
+{
+  "schema": "aibt-p5-008-verification-v1",
+  "passed": true,
+  "findings": [
+    "COMMAND|Tools~/Verification/Verify-Static.ps1|PASSED|AIBT static verification passed. Work items: 83.",
+    "COMMAND|Unity MCP: run_tests (EditMode, test_names=HotReloadPreviewDriverTests)|PASSED|5/5",
+    "TEST_RESULT|HotReloadPreviewDriverTests.TryCreate_RejectsInvalidArguments|Passed",
+    "TEST_RESULT|HotReloadPreviewDriverTests.TryReload_CompatibleParameterEdit_MigratesEveryNode|Passed",
+    "TEST_RESULT|HotReloadPreviewDriverTests.TryReload_IncompatibleTypeChange_ReportsIncompatibleRestart|Passed",
+    "TEST_RESULT|HotReloadPreviewDriverTests.TryReload_WhileOldInstanceIsActive_FallsBackToFullRestart|Passed",
+    "TEST_RESULT|HotReloadPreviewDriverTests.TryReload_RejectsAnUncompilableDocument|Passed",
+    "COMMAND|Unity MCP: execute_code driving the real HotReloadWorkflowWindow live in the user's open Editor (LoadFromPath/ReloadFromPath, reading back actual UI Label text, not simulated)|PASSED|three scenarios in one session, see README.md's table: subtree restart (child type change), compatible migration (reorder), full restart (reload while active)",
+    "COMMAND|Unity MCP: run_tests (EditMode, full suite)|PASSED_WITH_PREEXISTING_FAILURES|1446 tests, same 3 pre-existing unrelated failures as every prior evidence file",
+    "ACCEPTANCE|Every reload this workflow triggers shows the user the actual strategy used and the actual classification result, verified by a live interactive Editor session via Unity MCP|MET|see the live-proof table in README.md",
+    "ACCEPTANCE|A reload the classifier marked incompatible is never silently presented as a successful migration|MET|the subtree-restart scenario's outcome text names the incompatible node and its category explicitly (IncompatibleRestart), not folded into a generic success message",
+    "ACCEPTANCE|The workflow does not itself become a second, competing hot-reload trigger path|MET|a single explicit 'Reload From...' button is the only trigger; no file-watching or background reload exists",
+    "DELIVERABLE|Authoring/HotReload/HotReloadPreviewDriver.cs|created",
+    "DELIVERABLE|Authoring/HotReload/HotReloadPreviewOutcome.cs|created",
+    "DELIVERABLE|Editor/HotReload/HotReloadWorkflowWindow.cs|created",
+    "DELIVERABLE|Tests/Editor/HotReload/Preview/HotReloadPreviewDriverTests.cs|created",
+    "DELIVERABLE|Tests/Editor/HotReload/Preview/Fixtures/before.aibt.json|created",
+    "DELIVERABLE|Tests/Editor/HotReload/Preview/Fixtures/after-incompatible-child.aibt.json|created",
+    "DELIVERABLE|Tests/Editor/HotReload/Preview/Fixtures/after-compatible-reorder.aibt.json|created",
+    "WORK_ITEM_STATUS|P5-008|draft->ready->done"
+  ]
+}

@@ -1,6 +1,6 @@
 # P5-008 — Editor hot-reload workflow
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -80,3 +80,15 @@ live interactive Editor session via Unity MCP driving at least one reload of eac
 - `P5-010` (the Phase 5 gate) re-runs this card's live-interactive proof
   against the final committed snapshot, the same way `P3-013` re-ran
   `P3-007`'s isolation proof.
+
+## Outcome
+
+`HotReloadPreviewDriver` (public `AIBT.Authoring`, mirroring `P3-009`'s `ReferencePreviewDriver`
+boundary-crossing pattern) wraps `HotReloadCompatibilityClassifier`/`HotReloadStateMigration` for
+`HotReloadWorkflowWindow` (public `AIBT.Editor`, `AIBT/Hot Reload Workflow` menu item) to consume
+without internals access. A single explicit "Reload From..." button is the only trigger. 5 headless
+tests, all passing. **Live interactive proof**: the real window was driven live in the user's open
+Unity Editor via Unity MCP, through all three reload strategies in one session (subtree restart,
+compatible migration, full-restart fallback), with real UI output read back directly -- see
+`Planning~/Evidence/P5-008/README.md`'s table. Reference-executor backend only, per the user's
+decision after `P5-007`'s native-backend gap. Full detail in `Planning~/Evidence/P5-008/`.

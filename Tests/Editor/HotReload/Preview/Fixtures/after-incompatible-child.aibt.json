@@ -1,0 +1,25 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.test.hot-reload-workflow-demo",
+  "name": "Hot Reload Workflow Demo (After -- incompatible child)",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "a",
+        "b"
+      ]
+    },
+    "a": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "b": {
+      "type": "aibt.test.failure",
+      "typeVersion": 1
+    }
+  }
+}
