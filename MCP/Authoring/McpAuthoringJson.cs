@@ -134,13 +134,19 @@ namespace AIBT.Mcp.Authoring
             var children = json["children"] != null
                 ? ((JArray)json["children"]).Select(t => new NodeId(t.Value<string>()))
                 : Enumerable.Empty<NodeId>();
+            var observer = json["observer"] != null && json["observer"].Type != JTokenType.Null
+                ? ReadObserver((JObject)json["observer"])
+                : null;
+            var bindings = json["bindings"] != null && json["bindings"].Type != JTokenType.Null
+                ? ReadBindings((JObject)json["bindings"])
+                : null;
 
-            return new NodeDocument(id, typeId, typeVersion, children, parameters, observer: null, displayName, description, tags);
+            return new NodeDocument(id, typeId, typeVersion, children, parameters, observer, displayName, description, tags, bindings);
         }
 
         internal static JObject WriteNode(NodeDocument node)
         {
-            return new JObject
+            var json = new JObject
             {
                 ["id"] = node.Id.Value,
                 ["typeId"] = node.TypeId,
@@ -151,6 +157,76 @@ namespace AIBT.Mcp.Authoring
                 ["tags"] = new JArray((node.Tags ?? TagSet.Empty).Values),
                 ["children"] = new JArray(node.Children.Select(id => id.Value)),
             };
+
+            if (node.Observer != null)
+            {
+                json["observer"] = WriteObserver(node.Observer);
+            }
+
+            if (node.Bindings != null)
+            {
+                json["bindings"] = WriteBindings(node.Bindings);
+            }
+
+            return json;
+        }
+
+        /// <summary>
+        /// Mirrors <c>CanonicalTreeJson</c>'s own (private) observer JSON shape:
+        /// <c>{mode, watchedKeys}</c>. Round-tripped verbatim -- authoring payloads never invent a
+        /// different shape than the canonical on-disk format uses for the same concept.
+        /// </summary>
+        private static NodeObserver ReadObserver(JObject json)
+        {
+            var mode = RequireString(json, "mode");
+            if (mode != "self" && mode != "lower-priority" && mode != "both")
+            {
+                throw new FormatException("Observer mode must be self, lower-priority, or both.");
+            }
+
+            if (!(json["watchedKeys"] is JArray watchedKeys) || watchedKeys.Count == 0)
+            {
+                throw new FormatException("Observer watchedKeys must be a non-empty array.");
+            }
+
+            return new NodeObserver(mode, watchedKeys.Select(t => t.Value<string>()));
+        }
+
+        private static JObject WriteObserver(NodeObserver observer)
+        {
+            return new JObject
+            {
+                ["mode"] = observer.Mode,
+                ["watchedKeys"] = new JArray(observer.WatchedKeys),
+            };
+        }
+
+        /// <summary>
+        /// Mirrors <c>CanonicalTreeJson</c>'s own (private) generated-bindings JSON shape: a flat
+        /// <c>{memberId: blackboardKeyId, ...}</c> map.
+        /// </summary>
+        private static NodeBindingMap ReadBindings(JObject json)
+        {
+            var pairs = json.Properties().Select(p => new KeyValuePair<string, string>(p.Name, p.Value.Value<string>()));
+            try
+            {
+                return new NodeBindingMap(pairs);
+            }
+            catch (ArgumentException exception)
+            {
+                throw new FormatException("Invalid generated binding map: " + exception.Message);
+            }
+        }
+
+        private static JObject WriteBindings(NodeBindingMap bindings)
+        {
+            var result = new JObject();
+            foreach (var pair in bindings.Values)
+            {
+                result[pair.Key] = pair.Value;
+            }
+
+            return result;
         }
 
         internal static List<NodeDocument> ReadNodes(JArray json)

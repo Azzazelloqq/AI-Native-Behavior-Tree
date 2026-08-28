@@ -128,3 +128,10 @@ Done — see `Planning~/Evidence/P6-006/` for the full account. Summary:
   inline/request_layout, plus the complete permission-negative matrix)
   against the real permanent server via the official Inspector CLI and the
   real Unity bridge. `Verify-Static.ps1` and `git diff --check` both pass.
+
+**Addendum (2026-08-28):** `McpAuthoringJson.WriteNode`/`ReadNode` silently dropped `Observer` and
+generated `Bindings` on every extract/inline subtree round trip — fixed, both fields now round-trip
+byte-for-byte. Found while fixing: the production built-in registry these tools use has no
+Condition-kind node type at all, so no tree carrying a legitimate `Observer` can currently be
+validated/accepted through this card's own tools regardless — see
+`Planning~/Evidence/P6-006/README.md`'s 2026-08-28 addendum for the full account.

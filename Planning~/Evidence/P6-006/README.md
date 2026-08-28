@@ -151,6 +151,57 @@ Tools~/Verification/Verify-Static.ps1 -- passed, 95 work items
 git diff --check -- clean
 ```
 
+## Addendum (2026-08-28): Observer/Bindings no longer silently dropped by extract/inline
+
+Owner-confirmed fix session (6 findings from P6-006/P6-007 review). Finding 1 (important): this
+card's own "Scope and limitations" already disclosed that `Observer` and generated `Bindings` were
+not carried through extract/inline -- but on inspection this was a genuine data-loss bug in
+`McpAuthoringJson.WriteNode`/`ReadNode`, not an inherent limitation: `WriteNode` never emitted
+`observer`/`bindings` at all, and `ReadNode` always built every `NodeDocument` via the 9-arg
+constructor, hard-coding `observer: null` and (transitively) `bindings: null`. Fixed: both
+functions now mirror `CanonicalTreeJson`'s own (private) JSON shape for these two fields --
+`observer`: `{mode, watchedKeys}`; `bindings`: a flat `{memberId: blackboardKeyId, ...}` map --
+written only when non-null, read into the existing 10-arg `NodeDocument` constructor. No change
+was needed in `McpAuthoringOperations.CaptureSubtree`/`AttachSubtree`: they already pass whole
+`NodeDocument` objects through untouched: the loss was entirely at the JSON boundary.
+
+**A real reachability gap found while writing the test, disclosed rather than worked around
+silently**: the production built-in registry `McpAuthoringToolDispatcher.BuildRegistryAndOptions`
+always builds (`NodeRegistryBuilder.CreateWithBuiltIns().Build()`) contains **zero
+`NodeBehaviorKind.Condition` node types** among its 11 `aibt.core.*` manifests (confirmed by
+reading `BuiltInNodeManifests.cs` directly). `TreeValidator.ValidateObserver`
+(`Authoring/Validation/TreeValidator.cs`) requires an `Observer`-bearing node to be Condition-kind
+and the sole child of a `reactive-sequence`/`reactive-selector` -- so **no tree that MCP's authoring
+tools can actually validate and accept today can legitimately carry a non-null `Observer`**, making
+the bug's real-world blast radius (through this specific registry) currently zero, though the fix
+is still correct and load-bearing for any hand-authored/future tree this surface reads. `Bindings`
+has an independent, equally-total gap: `CanonicalTreeJson.ValidateRepresentable` restricts non-null
+`Bindings` to tree format version 2, while `create_tree` always creates format version 1 (a
+separate, already-disclosed finding, item 5 of this same fix session) -- so a non-null `Bindings`
+is likewise never legitimately present in any tree MCP itself creates today.
+
+Because of this reachability gap, the fix could not be proven through the full
+`apply_domain_patch`/`extract_subtree`/`inline_subtree` dispatcher path (any such patch would be
+rejected by `TreeValidator` with `InvalidObserverContext`) -- it is instead proven by a direct unit
+test on the JSON mapping functions themselves, the exact layer the bug lived in:
+`Tests/Editor/Mcp/Authoring/McpAuthoringJsonTests.cs`, asserting
+`McpAuthoringJson.ReadNode(McpAuthoringJson.WriteNode(node))` round-trips to a `NodeDocument` that
+is `Equals` to the original (which already compares `Observer`/`Bindings` by value) for a node
+carrying both a non-null `Observer` and `Bindings`, and separately confirms the no-observer/no-bindings
+path still round-trips to `null` with no regression. This required a new
+`InternalsVisibleTo("AIBT.Editor.Tests")` grant from `AIBT.Mcp` (`MCP/AssemblyInfo.cs`, new file --
+`AIBT.Mcp` had none before; every other AIBT assembly already grants this to its test assemblies,
+`AIBT.Mcp` simply never needed direct internal test access before since every existing MCP test
+goes through the public `McpToolDispatcher.Dispatch` entry point).
+
+Verification: `AIBT.Tests.Editor.Mcp.*` -- 63/63 passed (includes the 2 new tests); a
+`Patching`+`Editing` regression re-run -- 15/15 passed, no regressions. `Verify-Static.ps1` passed
+(95 work items). `git diff --check` clean.
+
+The `Bindings` line in this evidence's own "Scope and limitations" section below is now stale
+(Observer/Bindings loss is fixed, not a standing limitation) and is corrected in place rather than
+left to contradict this addendum.
+
 ## Scope and limitations
 
 - Blackboard tool (`set_blackboard_keys`/`create_tree`'s initial `blackboard`) supports only
@@ -161,8 +212,10 @@ git diff --check -- clean
   Revision") is now inaccurate for the MCP surface specifically, per finding 5 above -- a
   documentation correction is recommended follow-up, out of this implementation card's own scope.
 - Extract/inline preserves `TypeId`/`TypeVersion`/`Children`/`Parameters`/`DisplayName`/
-  `Description`/`Tags` exactly; `Observer` and generated `Bindings` are not carried through
-  (neither is exercised by any Phase 1 built-in node type, so nothing in the accepted round-trip
-  proof exercises them either) -- disclosed, not silently dropped.
+  `Description`/`Tags`/`Observer`/`Bindings` exactly (fixed 2026-08-28, see the Addendum above).
+  Neither `Observer` nor non-null `Bindings` can currently occur in any tree the production
+  built-in registry actually validates and accepts (no Condition-kind node type exists among the
+  11 `aibt.core.*` manifests, and `create_tree` never creates tree format version 2) -- a disclosed
+  reachability gap in the registry/format this card's tools use, not a limitation of the fix.
 - Single client, single Unity instance at a time, same as `P6-005`'s own disclosed scope,
   unchanged here.
