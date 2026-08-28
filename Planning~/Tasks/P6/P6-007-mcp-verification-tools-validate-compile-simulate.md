@@ -122,3 +122,13 @@ Done — see `Planning~/Evidence/P6-007/` for the full account. Summary:
   simulate against the real project's own `tree.test.preview-success-then-running` fixture,
   explain-diagnostic, and a permission-negative check) — all fixture files cleaned up afterward.
   `Verify-Static.ps1` and `git diff --check` both pass.
+
+**Addendum (2026-08-28):** owner-approved `InternalsVisibleTo("AIBT.Mcp")` widening on
+`Authoring`/`Runtime`/`Editor` (new `Editor/AssemblyInfo.cs`) made 3 more `DiagnosticCatalog`s
+reachable (`TreeJsonDiagnostics`, `NodeRegistryDiagnostics`, `LayoutJsonDiagnostics` — 5 total now).
+4 more (`ReferenceCompilerDiagnostics`, `ReferenceExecutionDiagnostics`, `CommandAsyncDiagnostics`,
+`BlackboardStorageDiagnostics`) stay unreachable regardless — each declares its own `Catalog` field
+`private`, not `internal` — left as an owner-confirmed disclosed limitation. See
+`Planning~/Evidence/P6-007/README.md`'s 2026-08-28 addendum for the full account, including a
+correction to the original fix-session brief's assumption that `AIBT3010` would become reachable
+(it doesn't — its catalog is one of the 4 private ones).

@@ -170,15 +170,52 @@ diagnostic-collection writer both `MCP/Authoring/` and `MCP/Verification/` call.
 to this card's own tools or tests -- `DiagnosticJson.Serialize`'s output is unchanged, only which
 class invokes it.
 
+## Addendum (2026-08-28): explain-diagnostic reaches 5 catalogs now, owner-approved widening
+
+Same fix session as the other 2026-08-28 addenda above (item 4). Finding 1's own "Widening this
+would require an `InternalsVisibleTo` grant... flagged here for a future card or owner decision"
+-- the owner explicitly approved that widening. `Authoring/AssemblyInfo.cs`, `Runtime/AssemblyInfo.cs`
+(both edited) and a new `Editor/AssemblyInfo.cs` (`AIBT.Editor` had none before) now all grant
+`InternalsVisibleTo("AIBT.Mcp")`.
+
+Re-checking every `DiagnosticCatalog` holder's *actual* accessibility (not just its containing
+class) before updating `explain-diagnostic`, rather than assuming the grant alone was sufficient,
+found the real picture is more nuanced than "internal vs. public": 3 more catalogs became
+genuinely reachable --
+`TreeJsonDiagnostics.Catalog` (`AIBT1001`-`1008`), `NodeRegistryDiagnostics.Catalog`
+(`AIBT3001`-`3005`), `LayoutJsonDiagnostics.Catalog` (`AIBT1101`-`1111`) -- but 4 others stay
+unreachable regardless of any `InternalsVisibleTo` grant, because each declares its own `Catalog`
+field `private`, not `internal`: `ReferenceCompilerDiagnostics` (`AIBT2042`-`2046`,
+`AIBT3010`-`3019`), `ReferenceExecutionDiagnostics` (`AIBT4001`-`4008`), `CommandAsyncDiagnostics`
+(`AIBT4101`-`4110`), `BlackboardStorageDiagnostics` (`AIBT4201`-`4209`). Per explicit owner
+decision, these 4 are left as a disclosed, found-but-not-fixed limitation rather than also
+widening their field accessibility (a different, smaller change touching already-accepted
+Runtime/Authoring files outside this pass's scope).
+
+This also corrected a stale assumption in the original 6-item fix-session brief, which expected
+`AIBT3010` to become reachable after the grant -- it does not (its catalog is private). The
+existing "reports unreachable" test previously used `AIBT3010` for that reason; it now uses
+`AIBT9012` (`McpDiagnostics.PermissionDenied`) instead, since MCP's own `AIBT9xxx` tool-level codes
+have no `DiagnosticCatalog` anywhere and are therefore permanently unreachable, a more robust proof
+than a code whose reachability depends on another file's field-access modifier.
+
+Verified: `AIBT.Tests.Editor.Mcp.*` -- 67/67 passed (64 pre-existing + 3 new parametrized cases,
+one per newly-reachable catalog); a full project-wide EditMode run -- 1531/1534 passed, the 3
+failures being pre-existing host-project noise unrelated to AIBT (`AddressableAssets`,
+`LocalSaveSystem`, and a `CodeGen` assembly-identity test — the same category of host-project noise
+`P3-013`/`P4-009`/`P5-010`'s own gate evidence already documented as not reproducing in a clean
+detached harness). `Verify-Static.ps1` passed (95 work items). `git diff --check` clean.
+
 ## Scope and limitations
 
-- `explain-diagnostic` can only look up codes in `TreeValidationDiagnosticCatalog`
-  (`AIBT2010`-`2041`) and `BlackboardDiagnosticCatalog` (`AIBT2001`-`2008`) -- every other
-  subsystem's diagnostics (compiler `AIBT3xxx`, node registry, JSON layers, runtime execution,
-  this card's own `AIBT9xxx` tool-level codes) report `catalogReachable: false`. Widening this
-  would require an `InternalsVisibleTo` grant or new public accessors on other assemblies' owning
-  classes -- a cross-assembly change outside this card's scope, flagged here for a future card or
-  owner decision rather than done silently.
+- `explain-diagnostic` can look up codes in 5 catalogs now (fixed 2026-08-28, see the Addendum
+  above): `TreeValidationDiagnosticCatalog` (`AIBT2010`-`2041`), `BlackboardDiagnosticCatalog`
+  (`AIBT2001`-`2008`), `TreeJsonDiagnostics` (`AIBT1001`-`1008`), `NodeRegistryDiagnostics`
+  (`AIBT3001`-`3005`), and `LayoutJsonDiagnostics` (`AIBT1101`-`1111`). Four more subsystems'
+  diagnostics (compiler `AIBT3010`-`3019`/`2042`-`2046`, runtime execution `AIBT4xxx`, async
+  commands, blackboard storage) report `catalogReachable: false` -- not from a missing
+  `InternalsVisibleTo` grant anymore, but because each holder's own `Catalog` field is `private`, a
+  disclosed limitation left to a future card or owner decision rather than fixed silently.
 - `simulate` supports only plain `update` steps with driver-assigned sequential
   `updateId`/`snapshotRevision`; no events, completions, resume, abort, step budget, custom tree
   instance ID, or root seed -- inherited directly from `ReferencePreviewDriver`'s own public

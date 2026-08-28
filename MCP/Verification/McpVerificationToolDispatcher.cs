@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Editor.Layout;
 using AIBT.Mcp.Authoring;
 using Newtonsoft.Json.Linq;
 
@@ -153,10 +154,17 @@ namespace AIBT.Mcp.Verification
 
             var response = new JObject { ["code"] = codeText };
 
-            // Only these two subsystem catalogs are public and reachable from AIBT.Mcp (no
-            // InternalsVisibleTo grant exists for this assembly on any other one) -- every other
-            // subsystem's DiagnosticCatalog is internal or private. Disclosed honestly rather than
-            // fabricating a description for a code this MCP surface cannot actually look up.
+            // AIBT.Mcp now has an InternalsVisibleTo grant from AIBT.Authoring, AIBT.Runtime, and
+            // AIBT.Editor (widened 2026-08-28), reaching every internal-or-public DiagnosticCatalog
+            // holder in those three assemblies: TreeValidationDiagnosticCatalog/
+            // BlackboardDiagnosticCatalog (already public before the grant), plus
+            // TreeJsonDiagnostics/NodeRegistryDiagnostics/LayoutJsonDiagnostics. Four remain
+            // unreachable regardless of the grant -- ReferenceCompilerDiagnostics,
+            // ReferenceExecutionDiagnostics, CommandAsyncDiagnostics, BlackboardStorageDiagnostics
+            // -- because each declares its own Catalog field `private`, a stricter per-type
+            // restriction InternalsVisibleTo cannot bypass; a disclosed, found-but-not-fixed
+            // limitation (see Planning~/Evidence/P6-007/README.md's 2026-08-28 addendum), not
+            // silently worked around by touching those already-accepted files' field accessibility.
             if (TreeValidationDiagnosticCatalog.Catalog.TryGet(code, out var treeDescriptor))
             {
                 WriteDescriptor(response, treeDescriptor);
@@ -164,6 +172,18 @@ namespace AIBT.Mcp.Verification
             else if (BlackboardDiagnosticCatalog.Catalog.TryGet(code, out var blackboardDescriptor))
             {
                 WriteDescriptor(response, blackboardDescriptor);
+            }
+            else if (TreeJsonDiagnostics.Catalog.TryGet(code, out var treeJsonDescriptor))
+            {
+                WriteDescriptor(response, treeJsonDescriptor);
+            }
+            else if (NodeRegistryDiagnostics.Catalog.TryGet(code, out var registryDescriptor))
+            {
+                WriteDescriptor(response, registryDescriptor);
+            }
+            else if (LayoutJsonDiagnostics.Catalog.TryGet(code, out var layoutJsonDescriptor))
+            {
+                WriteDescriptor(response, layoutJsonDescriptor);
             }
             else
             {

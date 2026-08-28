@@ -214,16 +214,40 @@ namespace AIBT.Tests.Editor.Mcp.Verification
         }
 
         [Test]
-        public void ExplainDiagnosticReportsUnreachableForACodeOutsideTheTwoPublicCatalogs()
+        public void ExplainDiagnosticReportsUnreachableForAnMcpToolLevelCodeWithNoCatalogAtAll()
         {
-            // AIBT3010 (compiler, ReferenceCompilerDiagnostics) -- internal, no InternalsVisibleTo
-            // grant to AIBT.Mcp, confirmed by direct reading of Authoring/AssemblyInfo.cs.
+            // AIBT9012 (McpDiagnostics.PermissionDenied) has no DiagnosticCatalog anywhere --
+            // confirmed by grep: none of McpDiagnostics/McpAuthoringDiagnostics/
+            // McpVerificationDiagnostics (the AIBT9xxx MCP-tool-level codes) declare one. This is
+            // permanently unreachable regardless of any InternalsVisibleTo grant, unlike AIBT3010
+            // (ReferenceCompilerDiagnostics) which used to be the example here: that one is merely
+            // unreachable today because its Catalog field is private, not because of a missing
+            // grant -- a distinction that matters after the 2026-08-28 InternalsVisibleTo widening
+            // (see below), which made AIBT.Mcp able to see three more catalogs.
             var response = Dispatch("explain_diagnostic", new JObject
             {
-                ["diagnostic"] = new JObject { ["code"] = "AIBT3010" },
+                ["diagnostic"] = new JObject { ["code"] = "AIBT9012" },
             }, "Read");
 
             Assert.That((bool)response["result"]["catalogReachable"], Is.False, response.ToString());
+        }
+
+        [TestCase("AIBT1004", "SyntaxAndSerialization")] // TreeJsonDiagnostics (Authoring)
+        [TestCase("AIBT3001", "RegistryAndCompiler")] // NodeRegistryDiagnostics (Authoring)
+        [TestCase("AIBT1104", "SyntaxAndSerialization")] // LayoutJsonDiagnostics (Editor)
+        public void ExplainDiagnosticReturnsCatalogFactsForEachNewlyReachableCatalog(string code, string expectedSubsystem)
+        {
+            // Proves the 2026-08-28 InternalsVisibleTo widening (Authoring/Runtime/Editor ->
+            // AIBT.Mcp) actually made these three catalogs reachable, not just that the grant
+            // compiles -- each of these three codes previously reported catalogReachable: false.
+            var response = Dispatch("explain_diagnostic", new JObject
+            {
+                ["diagnostic"] = new JObject { ["code"] = code },
+            }, "Read");
+
+            Assert.That((bool)response["result"]["catalogReachable"], Is.True, response.ToString());
+            Assert.That((string)response["result"]["subsystem"], Is.EqualTo(expectedSubsystem));
+            Assert.That((string)response["result"]["defaultSeverity"], Is.Not.Null.And.Not.Empty);
         }
 
         // ---- permission negative matrix --------------------------------------------------------
