@@ -1350,13 +1350,15 @@
       "id": "P6-007",
       "phase": 6,
       "title": "MCP verification tools: validate, compile, simulate, explain",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-007-mcp-verification-tools-validate-compile-simulate.md",
       "dependsOn": [
         "P6-005"
       ],
       "owns": [
+        "MCP/Verification/",
+        "Tests/Editor/Mcp/Verification/",
         "Planning~/Evidence/P6-007/"
       ]
     },

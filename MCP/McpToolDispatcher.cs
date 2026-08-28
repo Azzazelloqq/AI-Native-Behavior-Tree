@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
 using AIBT.Mcp.Authoring;
+using AIBT.Mcp.Verification;
 using Newtonsoft.Json.Linq;
 
 namespace AIBT.Mcp
@@ -67,6 +68,18 @@ namespace AIBT.Mcp
                     return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.ApplyDomainPatch(projectRoot, args));
                 case "request_layout":
                     return WithPermission(granted, McpPermissionCategory.LayoutEdit, () => McpAuthoringToolDispatcher.RequestLayout(projectRoot, args));
+
+                // P6-007 verification tools -- every tool wraps exactly one already-accepted
+                // production entry point (TreeValidator, ReferenceCompiler, ReferencePreviewDriver)
+                // via McpVerificationToolDispatcher; this switch only enforces permission.
+                case "validate":
+                    return WithPermission(granted, McpPermissionCategory.Compilation, () => McpVerificationToolDispatcher.Validate(projectRoot, args));
+                case "compile":
+                    return WithPermission(granted, McpPermissionCategory.Compilation, () => McpVerificationToolDispatcher.Compile(projectRoot, args));
+                case "simulate":
+                    return WithPermission(granted, McpPermissionCategory.TestExecution, () => McpVerificationToolDispatcher.Simulate(projectRoot, args));
+                case "explain_diagnostic":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpVerificationToolDispatcher.ExplainDiagnostic(projectRoot, args));
 
                 default:
                     return Error(McpDiagnostics.UnknownTool.Value, "Unknown tool: " + tool);
