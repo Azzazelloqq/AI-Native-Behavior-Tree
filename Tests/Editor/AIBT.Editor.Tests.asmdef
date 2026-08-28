@@ -5,6 +5,7 @@
     "AIBT.Runtime",
     "AIBT.Authoring",
     "AIBT.Editor",
+    "AIBT.Mcp",
     "Unity.Burst",
     "Unity.Collections"
   ],

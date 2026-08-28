@@ -1,6 +1,6 @@
 # P6-005 — MCP server host, discovery tools, and permission enforcement
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -86,3 +86,18 @@ Verify-Static.ps1
 - `P6-006`, `P6-007`, `P6-008`, `P6-009`, `P6-010` all register their tools
   through this card's server/permission scaffolding; none should stand up
   a second server or a second enforcement path.
+
+## Outcome
+
+Done. `MCP~/Server/` (the external `dotnet` process, promoted from `P6-001`'s disposable
+spike) and `MCP/` (`AIBT.Mcp`, the Unity-side bridge) implement `ADR-P6-001` for real: three
+discovery tools (`aibt_get_project_manifest`, `aibt_search_nodes`, `aibt_get_node_contract`)
+and seven static resources, all backed directly by `P6-003`'s query layer, gated by a real
+`McpPermissionEnforcer` (fail-closed by default). 30 new Unity EditMode tests pass, plus a
+21/21 regression re-run of `P6-003`/`P6-004`'s suites. Live end-to-end verification against the
+real permanent server via the official `@modelcontextprotocol/inspector` CLI found and fixed
+two real bugs invisible to unit tests alone (a wrong package-root path assumption for static
+resources, and an MCP resource-template that never showed up in `resources/list`), plus
+confirmed a real environment-variable-passthrough gotcha in the Inspector CLI itself (fixed via
+a `.mcp.json`-shaped config, the same mechanism a real AI client uses) -- all disclosed in
+`Planning~/Evidence/P6-005/`, not smoothed over.

@@ -1315,7 +1315,7 @@
       "id": "P6-005",
       "phase": 6,
       "title": "MCP server host, discovery tools, and permission enforcement",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-005-mcp-server-host-and-discovery-tools.md",
       "dependsOn": [
@@ -1323,6 +1323,9 @@
         "P6-003"
       ],
       "owns": [
+        "MCP/",
+        "MCP~/",
+        "Tests/Editor/Mcp/Discovery/",
         "Planning~/Evidence/P6-005/"
       ]
     },
