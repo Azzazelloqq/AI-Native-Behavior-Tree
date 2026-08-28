@@ -224,6 +224,21 @@ Verified: `AIBT.Tests.Editor.Mcp.*` -- 64/64 passed (63 pre-existing + 1 new), i
 `DiagnosticJson.Serialize(new AuthoringDiagnostic(...))` call, mirroring P6-007's own parity-test
 shape. `Verify-Static.ps1` passed (95 work items). `git diff --check` clean.
 
+## Addendum (2026-08-28): ai-and-mcp.md's Revision line corrected (finding 5's own follow-up)
+
+Same fix session, item 6 (documentation-only, no code/test change; recorded here rather than a
+separate mini-evidence file since it directly closes out finding 5's own recommended follow-up
+above). `Documentation~/ai-and-mcp.md`'s "Domain patches" section said a semantic patch is
+"checked against its `Revision`" -- accurate for the general `SemanticPatchTransaction` engine
+(`Editor/Patching/`, confirmed by reading it: it does check `TreeDocument.Revision` directly), but
+misleading for the MCP surface this document exists to describe, which checks a content hash
+instead (finding 5's own escalated decision, above) precisely because `TreeDocument.Revision`
+resets across MCP's per-call reload-from-disk. Corrected to describe the content-hash check MCP
+callers actually observe, while preserving the true, unaffected fact that the in-process
+`Editor/Editing`/`Editor/Patching` human-editor path (a single live session, no reload) still uses
+`Revision` directly -- verified by reading `Editor/Patching/SemanticPatchTransaction.cs` directly
+rather than assuming the ADR-P6-002 prose without checking the code.
+
 ## Scope and limitations
 
 - Blackboard tool (`set_blackboard_keys`/`create_tree`'s initial `blackboard`) supports only

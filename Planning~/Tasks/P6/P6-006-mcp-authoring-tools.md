@@ -141,3 +141,8 @@ validated/accepted through this card's own tools regardless — see
 with the shared, canonical `MCP/McpDiagnosticJson.cs` — the same real `DiagnosticJson.Serialize`
 entry point `P6-007`'s tools already used, extracted to a neutral location so neither card's folder
 owns "the real one." See `Planning~/Evidence/P6-006/README.md`'s second 2026-08-28 addendum.
+
+**Addendum (2026-08-28):** `Documentation~/ai-and-mcp.md`'s "Domain patches" section (finding 5's
+own recommended follow-up) corrected to describe the content-hash check MCP callers actually
+observe, no longer claiming `Revision` for the MCP surface specifically. See
+`Planning~/Evidence/P6-006/README.md`'s third 2026-08-28 addendum.

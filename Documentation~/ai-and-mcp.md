@@ -91,11 +91,17 @@ The repository provides a short workflow guide, generated node catalog, recipes,
 
 ## Domain patches
 
-A domain patch is a semantic patch (`TreeDocument`, checked against its `Revision`) or a
-layout patch (`LayoutDocument`, checked against a computed content hash), never both in one
-transaction -- matching the codebase's own type-level separation between semantic and layout
-operations. Dry-run is calling the transaction and not persisting the result; no separate
-dry-run code path exists. A caller must always use the actual revision/hash returned by the
+A domain patch is a semantic patch (`TreeDocument`) or a layout patch (`LayoutDocument`), never
+both in one transaction -- matching the codebase's own type-level separation between semantic
+and layout operations. On this MCP surface, both kinds are checked against a computed content
+hash supplied by the caller (`expectedHash`/`contentHash` for semantic patches, an equivalent
+hash for layout patches), not a revision counter: `TreeDocument.Revision` is never persisted to
+`*.aibt.json`, so it always resets across the reload-per-call boundary every MCP call crosses
+and cannot detect a real concurrent edit between two separate calls. (The in-process
+`Editor/Editing`/`Editor/Patching` human-editor path -- a single live session, no reload --
+still uses `TreeDocument.Revision` directly as its own precondition; only the MCP surface uses
+the content-hash fix.) Dry-run is calling the transaction and not persisting the result; no
+separate dry-run code path exists. A caller must always use the actual hash returned by the
 last accepted patch as the expected value for its next one, never assume a fixed increment.
 Full rationale: [ADR P6-002](decisions/ADR-P6-002-domain-patch-revision-and-diff-model.md).
 
