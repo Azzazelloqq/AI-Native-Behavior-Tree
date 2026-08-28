@@ -1444,6 +1444,22 @@
       "owns": [
         "Planning~/Evidence/P6-GATE/"
       ]
+    },
+    {
+      "id": "P6-013",
+      "phase": 6,
+      "title": "ReferencePreviewDriver simulation-capability decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P6/P6-013-reference-preview-driver-simulation-capability-decision.md",
+      "dependsOn": [
+        "P6-007",
+        "P3-009"
+      ],
+      "owns": [
+        "Spikes~/ReferencePreviewSimulationCapability/",
+        "Planning~/Evidence/P6-013/"
+      ]
     }
   ]
 }
