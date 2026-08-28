@@ -1,6 +1,6 @@
 # P6-006 — MCP authoring tools
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -19,8 +19,12 @@ validation or persistence path.
 ## Required reading
 
 - `Documentation~/ai-and-mcp.md`'s "Core MCP surface > Authoring" section.
-- `Authoring/Patching/` (`P6-004`'s transaction engine — the only mutation
-  path this card may call).
+- `Editor/Patching/` (`P6-004`'s transaction engine — the only mutation
+  path this card may call; this line originally said `Authoring/Patching/`,
+  corrected per `P6-004`'s own evidence, which found the engine actually
+  lives in `Editor/Patching/` since its dependencies — `SemanticEditOperations`/
+  `SemanticEditTransaction`/`LayoutOrganizationOperations` — are `AIBT.Editor`
+  types).
 - `Editor/Organization/` and `Editor/Layout/` (`P3-004`/`P3-005`'s
   deterministic auto-layout and manual-organization services) for
   "request layout of the affected region" — reuse, do not reimplement.
@@ -83,3 +87,44 @@ Verify-Static.ps1
 - `P6-011` (generated agent documentation) uses this card's tools as the
   source for authoring recipes; keep tool descriptions accurate, they will
   be quoted verbatim.
+
+## Outcome
+
+Done — see `Planning~/Evidence/P6-006/` for the full account. Summary:
+
+- All 11 Authoring tools implemented in `MCP/Authoring/`, wired through
+  `McpToolDispatcher.cs` (11 new permission-tagged cases) and relayed by 11
+  new thin server methods in `MCP~/Server/AuthoringTools.cs`. Every mutation
+  routes through `P6-004`'s `SemanticPatchTransaction`/`LayoutPatchTransaction`.
+- Real gaps found and resolved before/while implementing, all disclosed in
+  the evidence: no pure `Move`/`Replace`/blackboard/extract-inline operation
+  existed (added as new pure functions inside this card's own module, never
+  touching `Editor/Editing/`); a real atomicity trap in `TreeDocument`'s
+  legacy mutating instance methods (avoided, never called); no treeId→path
+  resolution existed (added to `AibtTreeDiscovery`); no semantic-tree
+  persistence helper existed (added, mirroring `LayoutPersistenceController`).
+- **A pre-existing, load-bearing bug found and escalated**: `TreeDocument.Revision`
+  is never persisted to `*.aibt.json`, so it always resets to 1 across the
+  reload-per-call boundary every MCP call crosses — `SemanticPatchTransaction.Apply`'s
+  own revision precondition could never detect a real concurrent edit between
+  two separate MCP calls. Escalated to the owner rather than silently picked;
+  **decided: a content-hash precondition** (`expectedHash`/`contentHash`),
+  the same fix `ADR-P6-002` already made for `LayoutDocument`. `ai-and-mcp.md`'s
+  "checked against its Revision" line is now inaccurate for the MCP surface
+  specifically — a documentation correction is recommended follow-up work,
+  out of this card's own scope.
+- Two interpretive judgment calls, both disclosed: "replace" keeps
+  `NodeId`/`Children`, swapping only type/parameters; "extract/inline" is
+  payload-based (no live subtree-reference concept exists anywhere in AIBT).
+- Two further real bugs found live: `ReferenceCompilerOptions.SourceId`
+  needed a relative logical path, not the absolute file path (`AIBT3010`,
+  caught by the first EditMode run); the Inspector CLI's `--tool-arg`
+  key=value parser mishandles JSON-text argument values (worked around with
+  `--tool-args-json`, live-only finding).
+- Verified: 17 new EditMode tests (real dispatcher entry point, including
+  the extract/inline compiled-content-hash round-trip), 45/45 regression
+  (Discovery+Patching+Editing), 62/62 full re-run after live verification's
+  domain reload, and a full live session (create/add/dry-run-remove/extract/
+  inline/request_layout, plus the complete permission-negative matrix)
+  against the real permanent server via the official Inspector CLI and the
+  real Unity bridge. `Verify-Static.ps1` and `git diff --check` both pass.

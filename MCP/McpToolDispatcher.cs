@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Mcp.Authoring;
 using Newtonsoft.Json.Linq;
 
 namespace AIBT.Mcp
@@ -40,6 +41,33 @@ namespace AIBT.Mcp
                     return WithPermission(granted, McpPermissionCategory.Read, () => GetNodeContract(args));
                 case "get_static_resource":
                     return WithPermission(granted, McpPermissionCategory.Read, () => GetStaticResource(projectRoot, args));
+
+                // P6-006 authoring tools -- every mutating call goes through P6-004's
+                // SemanticPatchTransaction/LayoutPatchTransaction via McpAuthoringToolDispatcher;
+                // this switch only enforces permission, mirroring the discovery tools above.
+                case "create_tree":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.CreateTree(projectRoot, args));
+                case "add_node":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.AddNode(projectRoot, args));
+                case "remove_node":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.RemoveNode(projectRoot, args));
+                case "move_node":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.MoveNode(projectRoot, args));
+                case "replace_node":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.ReplaceNode(projectRoot, args));
+                case "configure_node":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.ConfigureNode(projectRoot, args));
+                case "set_blackboard_keys":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.SetBlackboardKeys(projectRoot, args));
+                case "extract_subtree":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.ExtractSubtree(projectRoot, args));
+                case "inline_subtree":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.InlineSubtree(projectRoot, args));
+                case "apply_domain_patch":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.ApplyDomainPatch(projectRoot, args));
+                case "request_layout":
+                    return WithPermission(granted, McpPermissionCategory.LayoutEdit, () => McpAuthoringToolDispatcher.RequestLayout(projectRoot, args));
+
                 default:
                     return Error(McpDiagnostics.UnknownTool.Value, "Unknown tool: " + tool);
             }
@@ -52,7 +80,14 @@ namespace AIBT.Mcp
                 return Error(denial.Code.Value, denial.Message);
             }
 
-            return Result(handler());
+            try
+            {
+                return Result(handler());
+            }
+            catch (McpToolException ex)
+            {
+                return Error(ex.Code.Value, ex.Message);
+            }
         }
 
         private static JObject GetProjectManifest(string projectRoot)

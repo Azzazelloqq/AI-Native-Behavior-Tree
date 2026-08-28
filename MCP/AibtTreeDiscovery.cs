@@ -15,26 +15,47 @@ namespace AIBT.Mcp
     {
         public readonly struct ScanResult
         {
-            public ScanResult(IReadOnlyList<TreeDocument> trees, IReadOnlyList<string> skippedFiles)
+            public ScanResult(IReadOnlyList<TreeDocument> trees, IReadOnlyList<string> treePaths, IReadOnlyList<string> skippedFiles)
             {
                 Trees = trees;
+                TreePaths = treePaths;
                 SkippedFiles = skippedFiles;
             }
 
             public IReadOnlyList<TreeDocument> Trees { get; }
 
+            /// <summary>Absolute source file path for each entry in <see cref="Trees"/>, same index order.</summary>
+            public IReadOnlyList<string> TreePaths { get; }
+
             /// <summary>Absolute paths of *.aibt.json files that failed to parse.</summary>
             public IReadOnlyList<string> SkippedFiles { get; }
+
+            /// <summary>Resolves the absolute source path for a tree by ID, for authoring tools that need to write it back.</summary>
+            public bool TryFindPath(TreeId treeId, out string path)
+            {
+                for (var index = 0; index < Trees.Count; index++)
+                {
+                    if (Trees[index].TreeId == treeId)
+                    {
+                        path = TreePaths[index];
+                        return true;
+                    }
+                }
+
+                path = null;
+                return false;
+            }
         }
 
         public static ScanResult Scan(string rootDirectory)
         {
             var trees = new List<TreeDocument>();
+            var treePaths = new List<string>();
             var skipped = new List<string>();
 
             if (!Directory.Exists(rootDirectory))
             {
-                return new ScanResult(trees, skipped);
+                return new ScanResult(trees, treePaths, skipped);
             }
 
             var files = Directory.GetFiles(rootDirectory, "*.aibt.json", SearchOption.AllDirectories);
@@ -57,6 +78,7 @@ namespace AIBT.Mcp
                 if (result.Success)
                 {
                     trees.Add(result.Document);
+                    treePaths.Add(files[index]);
                 }
                 else
                 {
@@ -64,7 +86,7 @@ namespace AIBT.Mcp
                 }
             }
 
-            return new ScanResult(trees, skipped);
+            return new ScanResult(trees, treePaths, skipped);
         }
     }
 }
