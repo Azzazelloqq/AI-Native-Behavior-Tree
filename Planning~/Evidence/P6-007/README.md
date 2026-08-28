@@ -160,6 +160,16 @@ Tools~/Verification/Verify-Static.ps1 -- passed, 95 work items
 git diff --check -- clean
 ```
 
+## Addendum (2026-08-28): diagnostic JSON writer shared with P6-006, no longer duplicated
+
+Finding 5 above flagged P6-006's hand-rolled diagnostic JSON as known follow-up work. Fixed in the
+same session that fixed a real P6-006 data-loss bug (see `Planning~/Evidence/P6-006/README.md`'s
+2026-08-28 addendum): this card's own `WriteDiagnostics` (previously local to
+`McpVerificationJson.cs`) moved to a new neutral `MCP/McpDiagnosticJson.cs`, now the single
+diagnostic-collection writer both `MCP/Authoring/` and `MCP/Verification/` call. No behavior change
+to this card's own tools or tests -- `DiagnosticJson.Serialize`'s output is unchanged, only which
+class invokes it.
+
 ## Scope and limitations
 
 - `explain-diagnostic` can only look up codes in `TreeValidationDiagnosticCatalog`

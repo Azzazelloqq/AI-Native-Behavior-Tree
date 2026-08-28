@@ -59,7 +59,7 @@ namespace AIBT.Mcp.Authoring
                 ["accepted"] = compilation.Success,
                 ["contentHash"] = ComputeSemanticHash(document),
                 ["path"] = path,
-                ["diagnostics"] = WriteDiagnostics(compilation.Diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(compilation.Diagnostics),
             };
 
             if (compilation.Success && !dryRun)
@@ -68,7 +68,7 @@ namespace AIBT.Mcp.Authoring
                 if (writeDiagnostics.Count > 0)
                 {
                     response["accepted"] = false;
-                    response["diagnostics"] = WriteDiagnostics(writeDiagnostics);
+                    response["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(writeDiagnostics);
                 }
             }
 
@@ -274,7 +274,7 @@ namespace AIBT.Mcp.Authoring
                     ["diff"] = WriteLayoutDiff(LayoutDiff.Between(
                         new LayoutDocument(document.TreeId, LayoutDirection.TopToBottom, new Dictionary<NodeId, LayoutNodePlacement>()),
                         existing.Document)),
-                    ["diagnostics"] = WriteDiagnostics(DiagnosticCollection.Empty),
+                    ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(DiagnosticCollection.Empty),
                 };
             }
 
@@ -294,7 +294,7 @@ namespace AIBT.Mcp.Authoring
                 ["accepted"] = result.Accepted,
                 ["hash"] = result.ResultHash,
                 ["diff"] = WriteLayoutDiff(result.Diff),
-                ["diagnostics"] = WriteDiagnostics(result.Diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(result.Diagnostics),
             };
         }
 
@@ -338,7 +338,7 @@ namespace AIBT.Mcp.Authoring
                     ["accepted"] = false,
                     ["contentHash"] = actualHash,
                     ["diff"] = WriteSemanticDiff(SemanticDiff.Empty),
-                    ["diagnostics"] = WriteDiagnostics(new DiagnosticCollection(new[] { mismatch })),
+                    ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(new DiagnosticCollection(new[] { mismatch })),
                 };
             }
 
@@ -355,7 +355,7 @@ namespace AIBT.Mcp.Authoring
                         ["accepted"] = false,
                         ["contentHash"] = actualHash,
                         ["diff"] = WriteSemanticDiff(SemanticDiff.Empty),
-                        ["diagnostics"] = WriteDiagnostics(writeDiagnostics),
+                        ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(writeDiagnostics),
                     };
                 }
             }
@@ -365,7 +365,7 @@ namespace AIBT.Mcp.Authoring
                 ["accepted"] = result.Accepted,
                 ["contentHash"] = result.Accepted ? ComputeSemanticHash(result.Document) : actualHash,
                 ["diff"] = WriteSemanticDiff(result.Diff),
-                ["diagnostics"] = WriteDiagnostics(result.Diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(result.Diagnostics),
             };
         }
 
@@ -488,25 +488,6 @@ namespace AIBT.Mcp.Authoring
             }
 
             return new JObject { ["entries"] = entries };
-        }
-
-        private static JArray WriteDiagnostics(DiagnosticCollection diagnostics)
-        {
-            var array = new JArray();
-            foreach (var diagnostic in diagnostics)
-            {
-                array.Add(new JObject
-                {
-                    ["code"] = diagnostic.Code.Value,
-                    ["severity"] = diagnostic.Severity.ToString(),
-                    ["message"] = diagnostic.Message,
-                    ["treeId"] = diagnostic.Location.TreeId.IsValid ? diagnostic.Location.TreeId.Value : null,
-                    ["nodeId"] = diagnostic.Location.NodeId.IsValid ? diagnostic.Location.NodeId.Value : null,
-                    ["jsonPointer"] = diagnostic.Location.JsonPointer,
-                });
-            }
-
-            return array;
         }
 
         private static string RequireString(JObject json, string property)

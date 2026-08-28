@@ -281,6 +281,44 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
             Assert.That(afterInlineCompiledHash, Is.EqualTo(beforeCompiledHash), "extract then inline back at the same attachment point must reproduce the original compiled program exactly.");
         }
 
+        [Test]
+        public void CreateTreeOnAnInvalidTreeReturnsCanonicalDiagnosticJsonByteForByte()
+        {
+            var response = Dispatch("create_tree", new JObject
+            {
+                ["treeId"] = "tree.invalid",
+                ["name"] = "Invalid",
+                ["path"] = "invalid.aibt.json",
+                ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.InverterTypeId, ["typeVersion"] = 1 },
+            }, "SemanticEdit");
+
+            Assert.That((bool)response["result"]["accepted"], Is.False, response.ToString());
+            var toolDiagnostics = (JArray)response["result"]["diagnostics"];
+            Assert.That(toolDiagnostics.Count, Is.GreaterThan(0));
+
+            var document = new TreeDocument(
+                TreeDocument.CurrentFormat,
+                TreeDocument.CurrentFormatVersion,
+                new TreeId("tree.invalid"),
+                "Invalid",
+                new NodeId("root"),
+                new[] { new NodeDocument(new NodeId("root"), BuiltInNodeManifests.InverterTypeId, 1) });
+            var registry = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
+            var options = new ReferenceCompilerOptions("invalid.aibt.json", ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 0));
+            var direct = ReferenceCompiler.Compile(document, registry, options);
+
+            Assert.That(direct.Success, Is.False, "An inverter root with no child must fail to compile.");
+            Assert.That(toolDiagnostics.Count, Is.EqualTo(direct.Diagnostics.Count));
+            for (var index = 0; index < direct.Diagnostics.Count; index++)
+            {
+                var directJson = JObject.Parse(DiagnosticJson.Serialize(new AuthoringDiagnostic(direct.Diagnostics[index])));
+                Assert.That(JToken.DeepEquals(toolDiagnostics[index], directJson), Is.True,
+                    "Diagnostic " + index + " differs (this is the exact bug the P6-006 diagnostic-JSON-unification fix closed -- " +
+                    "the tool must use the real canonical AIBT.Authoring.DiagnosticJson.Serialize shape, not a hand-rolled subset).\n" +
+                    "Tool: " + toolDiagnostics[index] + "\nDirect: " + directJson);
+            }
+        }
+
         /// <summary>Creates "tree.session" at "session.aibt.json" and returns its contentHash.</summary>
         private string CreateSessionTree()
         {

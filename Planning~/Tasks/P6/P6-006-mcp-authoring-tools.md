@@ -135,3 +135,9 @@ byte-for-byte. Found while fixing: the production built-in registry these tools 
 Condition-kind node type at all, so no tree carrying a legitimate `Observer` can currently be
 validated/accepted through this card's own tools regardless — see
 `Planning~/Evidence/P6-006/README.md`'s 2026-08-28 addendum for the full account.
+
+**Addendum (2026-08-28):** this card's hand-rolled diagnostic JSON writer (dropped
+`treeInstanceId`/`documentId`/`line`/`column`/`relatedLocations`/`suggestedOperation`) was replaced
+with the shared, canonical `MCP/McpDiagnosticJson.cs` — the same real `DiagnosticJson.Serialize`
+entry point `P6-007`'s tools already used, extracted to a neutral location so neither card's folder
+owns "the real one." See `Planning~/Evidence/P6-006/README.md`'s second 2026-08-28 addendum.

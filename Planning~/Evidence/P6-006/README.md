@@ -202,6 +202,28 @@ The `Bindings` line in this evidence's own "Scope and limitations" section below
 (Observer/Bindings loss is fixed, not a standing limitation) and is corrected in place rather than
 left to contradict this addendum.
 
+## Addendum (2026-08-28): unified diagnostic JSON with P6-007, not a second hand-rolled shape
+
+Same fix session as the Observer/Bindings addendum above. Finding 2: `McpAuthoringToolDispatcher`'s
+own `WriteDiagnostics` was a hand-rolled writer that silently dropped `treeInstanceId`,
+`documentId`, `line`/`column`, `relatedLocations`, and `suggestedOperation` from every diagnostic
+every authoring tool returns -- a real regression against `diagnostics-v1.md`'s own canonical
+shape, and inconsistent with P6-007 (built after this card), whose 4 verification tools already use
+the real canonical serializer, `AIBT.Authoring.DiagnosticJson.Serialize`.
+
+Fixed by extraction, not by reaching into P6-007's folder: `MCP/McpDiagnosticJson.cs` (new, neutral
+top-level `AIBT.Mcp` file, sibling to `McpToolDispatcher.cs`) now owns the one
+`WriteDiagnostics(DiagnosticCollection) : JArray` helper both tool groups call --
+`McpVerificationJson.cs`'s own copy (P6-007) was removed as now-duplicate, not kept as "the real
+one" while this card grew a second reference to it; both dispatchers repointed to the shared
+helper. No behavior change to `DiagnosticJson.Serialize`'s own output, only which class calls it.
+
+Verified: `AIBT.Tests.Editor.Mcp.*` -- 64/64 passed (63 pre-existing + 1 new), including a new
+`CreateTreeOnAnInvalidTreeReturnsCanonicalDiagnosticJsonByteForByte` test proving Authoring's
+`create_tree` now returns diagnostic JSON byte-for-byte identical to a direct
+`DiagnosticJson.Serialize(new AuthoringDiagnostic(...))` call, mirroring P6-007's own parity-test
+shape. `Verify-Static.ps1` passed (95 work items). `git diff --check` clean.
+
 ## Scope and limitations
 
 - Blackboard tool (`set_blackboard_keys`/`create_tree`'s initial `blackboard`) supports only

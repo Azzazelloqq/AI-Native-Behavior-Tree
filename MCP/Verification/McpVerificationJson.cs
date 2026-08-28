@@ -7,34 +7,15 @@ using Newtonsoft.Json.Linq;
 namespace AIBT.Mcp.Verification
 {
     /// <summary>
-    /// JSON plumbing for the Verification tool group: the real canonical diagnostic serializer
-    /// (<see cref="AIBT.Authoring.DiagnosticJson"/>, named by diagnostics-v1.md itself), a
-    /// ProjectPolicySnapshot -&gt; TreeValidationPolicy mapping (the two types are otherwise
-    /// unrelated -- see McpVerificationToolDispatcher's Validate for why this exists), and a
-    /// restricted reader for behavior-case-v1.md's plain "update" step shape (the only step kind
-    /// ReferencePreviewDriver can actually drive).
+    /// JSON plumbing for the Verification tool group: a ProjectPolicySnapshot -&gt;
+    /// TreeValidationPolicy mapping (the two types are otherwise unrelated -- see
+    /// McpVerificationToolDispatcher's Validate for why this exists), and a restricted reader for
+    /// behavior-case-v1.md's plain "update" step shape (the only step kind ReferencePreviewDriver
+    /// can actually drive). Diagnostic-collection JSON is <see cref="AIBT.Mcp.McpDiagnosticJson"/>
+    /// now (shared with the Authoring tool group, not owned here).
     /// </summary>
     internal static class McpVerificationJson
     {
-        /// <summary>
-        /// Serializes a whole collection using the real canonical per-diagnostic writer
-        /// (<see cref="DiagnosticJson.Serialize"/>) -- reusing it, not reimplementing it. Each
-        /// diagnostic is written once via the canonical writer, then re-parsed into a JObject so
-        /// multiple diagnostics can be collected into one JSON array; the resulting bytes for each
-        /// entry are exactly what the canonical writer alone would have produced.
-        /// </summary>
-        internal static JArray WriteDiagnostics(DiagnosticCollection diagnostics)
-        {
-            var array = new JArray();
-            foreach (var diagnostic in diagnostics)
-            {
-                var json = DiagnosticJson.Serialize(new AuthoringDiagnostic(diagnostic));
-                array.Add(JObject.Parse(json));
-            }
-
-            return array;
-        }
-
         /// <summary>
         /// Maps a per-project policy snapshot (already read from .aibt/policy.json by P6-003/P6-005)
         /// to the type TreeValidator actually consumes. The two types are otherwise unrelated --

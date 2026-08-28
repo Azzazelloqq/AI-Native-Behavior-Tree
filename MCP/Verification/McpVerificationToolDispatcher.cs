@@ -42,7 +42,7 @@ namespace AIBT.Mcp.Verification
             {
                 ["valid"] = !HasError(diagnostics),
                 ["policyApplied"] = policyApplied,
-                ["diagnostics"] = McpVerificationJson.WriteDiagnostics(diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(diagnostics),
             };
         }
 
@@ -60,7 +60,7 @@ namespace AIBT.Mcp.Verification
             {
                 ["success"] = result.Success,
                 ["contentHash"] = result.Success ? result.Program.Header.CompiledContentHash.HexadecimalValue : null,
-                ["diagnostics"] = McpVerificationJson.WriteDiagnostics(result.Diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(result.Diagnostics),
             };
         }
 
@@ -78,7 +78,7 @@ namespace AIBT.Mcp.Verification
                     ["accepted"] = false,
                     ["backend"] = "ReferencePreviewDriver (Phase 1 reference executor)",
                     ["nodeSet"] = "Phase 1 fixture/built-in registry (ReferencePreviewFixtureEnvironment) -- built-in composites/decorators plus aibt.test.success/failure/running only",
-                    ["diagnostics"] = McpVerificationJson.WriteDiagnostics(compileDiagnostics),
+                    ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(compileDiagnostics),
                     ["steps"] = new JArray(),
                 };
             }
@@ -115,7 +115,7 @@ namespace AIBT.Mcp.Verification
                 ["backend"] = "ReferencePreviewDriver (Phase 1 reference executor)",
                 ["nodeSet"] = "Phase 1 fixture/built-in registry (ReferencePreviewFixtureEnvironment) -- built-in composites/decorators plus aibt.test.success/failure/running only",
                 ["terminalResult"] = driver.TerminalResult?.ToString(),
-                ["diagnostics"] = McpVerificationJson.WriteDiagnostics(compileDiagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(compileDiagnostics),
                 ["steps"] = stepResults,
             };
         }
