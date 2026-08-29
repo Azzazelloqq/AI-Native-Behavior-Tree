@@ -239,6 +239,37 @@ callers actually observe, while preserving the true, unaffected fact that the in
 `Revision` directly -- verified by reading `Editor/Patching/SemanticPatchTransaction.cs` directly
 rather than assuming the ADR-P6-002 prose without checking the code.
 
+## Addendum (2026-08-29): Agent/Shared blackboard scope investigated, deferred to P6-014
+
+Same fix session (item 5, the last of 6). This finding's own "Enum32, Registered types, and
+Agent/Shared scope... rejected explicitly" text (below) was investigated in depth rather than
+either silently built or silently left as-is, in two escalating passes.
+
+**Pass 1** found the two blockers this finding's own text names smaller than expected:
+`BlackboardScopeContract` is a trivial opaque `(contractId, contractVersion)` pair needing no
+external registry; the registered-type-default catalog (`RegisteredBlackboardTypeCatalog`) is only
+needed for `Enum32`/`Registered` defaults, which this tool already excludes independently -- so a
+built-in-scalar-only Agent/Shared scope needs no catalog access at all. The owner approved
+proceeding on that narrowed basis.
+
+**Pass 2**, done before writing any code, found a real, deeper blocker pass 1 missed:
+`TreeValidator.ValidateBlackboardScope` rejects any Agent/Shared key outright unless
+`ReferenceCompilationPolicy.SupportsAgentScope`/`SupportsSharedScope` are `true` -- and
+`ReferenceCompilationPolicy.Phase1`, the exact policy constant every MCP tool hardcodes
+(including this card's own `BuildRegistryAndOptions`), has both `false`. A codebase-wide grep
+found `supportsAgentScope`/`supportsSharedScope: true` used only in three test files, never in any
+production path. Supporting Agent/Shared through MCP therefore means becoming the first production
+consumer of a capability flag left off everywhere else in the codebase, under a policy constant
+deliberately named `Phase1` -- a materially bigger decision than "widen JSON parsing" for this
+finding's own originally-stated scope.
+
+Per explicit owner decision, this was deferred to its own `Draft` spike/decision card,
+`Planning~/Tasks/P6/P6-014-mcp-blackboard-agent-shared-scope-decision.md` (dependent on this card,
+done; not required for the `P6-012` gate), rather than deciding or implementing mid-session. No
+production code changed for this finding. The "Scope and limitations" bullet below is left as-is
+(still accurate -- Agent/Shared remains rejected today) rather than rewritten to imply a decision
+was reached.
+
 ## Scope and limitations
 
 - Blackboard tool (`set_blackboard_keys`/`create_tree`'s initial `blackboard`) supports only

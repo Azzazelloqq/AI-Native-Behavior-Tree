@@ -109,3 +109,22 @@ Phase 6 (AI and MCP) was decomposed into `P6-001` through `P6-012` on 2026-08-27
 `P6-008` (trace/test/benchmark tools) and `P6-009` (node development tools) each depend only on `P6-005` (done); `P6-010` (custom tool providers) depends only on the accepted `P6-001` ADR. All three are now assignable in parallel; none has been started.
 
 `P6-013` (`ReferencePreviewDriver` simulation-capability decision) was added 2026-08-28 during a dedicated fix session on 6 owner-confirmed findings from `P6-006`/`P6-007`'s own evidence (see `Planning~/Evidence/P6-006/` and `Planning~/Evidence/P6-007/`'s several 2026-08-28 addenda for the other five, already applied). It was **not** implemented directly: `P6-007`'s `simulate` tool cannot inject events/completions or drive resume/abort/step-budget, and confirming whether `P6-008` would close that gap found it does not (`P6-008` uses entirely different entry points). A deeper look found `ReferenceExecutionMachine` -- the already-accepted engine `ReferencePreviewDriver` wraps -- already implements completions injection, `Resume`, `Abort`, and a caller-supplied `TreeInstanceId` internally; only the facade never surfaces them. Widening a P3-009-owned public API is still a "must escalate" change per `DECISION_BOUNDARIES.md`, so rather than deciding unilaterally, the owner chose to spin this off as its own `Draft` spike/decision card (dependent on `P6-007` and `P3-009`, both done; not required for the `P6-012` gate) instead of deciding the widening question mid-session. See `Planning~/Tasks/P6/P6-013-reference-preview-driver-simulation-capability-decision.md`.
+
+`P6-014` (MCP blackboard Agent/Shared scope decision) was added 2026-08-29, during the same fix
+session, as the sixth and last finding (`P6-006`'s blackboard tool rejects non-Tree scope
+explicitly). Two investigation passes are recorded in the card itself rather than repeated here:
+the first found the "obvious" blockers (`BlackboardScopeContract`, the registered-type-default
+catalog) smaller than expected -- a built-in-scalar-only scope needs no catalog access at all, since
+Enum32/Registered types are already excluded. The owner approved narrowing to that scope and
+proceeding, but a second pass then found a real, deeper blocker the first pass missed:
+`TreeValidator.ValidateBlackboardScope` rejects Agent/Shared keys outright unless
+`ReferenceCompilationPolicy.SupportsAgentScope`/`SupportsSharedScope` are `true`, and
+`ReferenceCompilationPolicy.Phase1` -- the exact policy constant hardcoded by every MCP tool -- has
+both `false`. A codebase-wide grep found `supportsAgentScope`/`supportsSharedScope: true` used only
+in three test files, never in any production path. Supporting Agent/Shared through MCP would mean
+becoming the first production consumer of a capability flag left off everywhere else, under a
+policy constant deliberately named `Phase1` -- a materially bigger decision than "widen JSON
+parsing," per `DECISION_BOUNDARIES.md`'s escalation rule. The owner deferred this to its own
+`Draft` spike/decision card (dependent on `P6-006`, done; not required for the `P6-012` gate)
+rather than deciding mid-session. See
+`Planning~/Tasks/P6/P6-014-mcp-blackboard-agent-shared-scope-decision.md`.

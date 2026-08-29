@@ -146,3 +146,12 @@ owns "the real one." See `Planning~/Evidence/P6-006/README.md`'s second 2026-08-
 own recommended follow-up) corrected to describe the content-hash check MCP callers actually
 observe, no longer claiming `Revision` for the MCP surface specifically. See
 `Planning~/Evidence/P6-006/README.md`'s third 2026-08-28 addendum.
+
+**Addendum (2026-08-29):** Agent/Shared blackboard scope support (this card's own disclosed
+limitation) was investigated in two passes and deferred to a new spike/decision card, `P6-014`
+(mirroring `P6-013`'s own defer-rather-than-decide pattern), after finding a real blocker deeper
+than JSON mapping: `ReferenceCompilationPolicy.Phase1`
+-- hardcoded by every MCP tool, this card's own included -- disables the exact execution-capability
+flags `TreeValidator` requires for Agent/Shared scope, and no production code anywhere enables them
+today. No production code changed. See `Planning~/Evidence/P6-006/README.md`'s 2026-08-29 addendum
+and `Planning~/Tasks/P6/P6-014-mcp-blackboard-agent-shared-scope-decision.md`.
