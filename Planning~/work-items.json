@@ -1365,7 +1365,7 @@
     {
       "id": "P6-008",
       "phase": 6,
-      "title": "MCP verification tools: trace, test, benchmark",
+      "title": "MCP verification tools: test, benchmark",
       "status": "draft",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-008-mcp-verification-tools-trace-test-benchmark.md",
@@ -1474,6 +1474,22 @@
       "owns": [
         "Spikes~/McpBlackboardAgentSharedScope/",
         "Planning~/Evidence/P6-014/"
+      ]
+    },
+    {
+      "id": "P6-015",
+      "phase": 6,
+      "title": "Native trace production-wiring decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P6/P6-015-native-trace-production-wiring-decision.md",
+      "dependsOn": [
+        "P6-005",
+        "P3-010"
+      ],
+      "owns": [
+        "Spikes~/NativeTraceProductionWiring/",
+        "Planning~/Evidence/P6-015/"
       ]
     }
   ]
