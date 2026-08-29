@@ -3,23 +3,29 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using AIBT.Authoring;
-using AIBT.Authoring.BehaviorCases;
 
-namespace AIBT.Tests.Integration.SemanticSlice
+namespace AIBT.Authoring.BehaviorCases
 {
-    internal sealed class ReferenceBehaviorCaseExecutorFactory : IBehaviorCaseExecutorFactory
+    /// <summary>
+    /// A real-tree <see cref="IBehaviorCaseExecutorFactory"/> for production (non-test-assembly)
+    /// callers such as MCP's <c>run-tests</c> tool. Compiles and executes against exactly
+    /// <see cref="ReferencePreviewFixtureEnvironment"/>'s registries -- the same production,
+    /// already-accepted (P3-009) built-in/fixture node set <c>ReferencePreviewDriver</c> and
+    /// MCP's own <c>simulate</c> tool (P6-007) already use -- rather than
+    /// <c>Tests/Integration/SemanticSlice/ReferenceBehaviorCaseAdapter.cs</c>'s test-only
+    /// <c>SemanticSliceNodeContracts</c> registries, which are explicitly documented "do not ship
+    /// in production registries" and stay in their own Tests assembly untouched by this card.
+    /// </summary>
+    internal sealed class AuthoringBehaviorCaseExecutorFactory : IBehaviorCaseExecutorFactory
     {
         private static readonly CompiledCompilerVersion CompilerVersion
             = new CompiledCompilerVersion(1, 0, 0, 1);
         private readonly string _treeRoot;
-        private readonly NodeRegistry _nodeRegistry;
 
-        internal ReferenceBehaviorCaseExecutorFactory(string treeRoot, NodeRegistry nodeRegistry)
+        internal AuthoringBehaviorCaseExecutorFactory(string treeRoot)
         {
             if (string.IsNullOrEmpty(treeRoot)) throw new ArgumentException("A tree fixture root is required.", nameof(treeRoot));
             _treeRoot = Path.GetFullPath(treeRoot);
-            _nodeRegistry = nodeRegistry ?? throw new ArgumentNullException(nameof(nodeRegistry));
         }
 
         public IBehaviorCaseExecutor Create(BehaviorCaseExecutorConfiguration configuration)
@@ -28,13 +34,14 @@ namespace AIBT.Tests.Integration.SemanticSlice
                 throw new NotSupportedException("Phase 1 reference execution has no random service; rootSeed must be zero.");
             var treePath = ResolveTreePath(configuration.Tree);
             var read = CanonicalTreeJson.Parse(File.ReadAllBytes(treePath), configuration.Tree);
+            var registry = ReferencePreviewFixtureEnvironment.CreateNodeRegistry();
             if (!read.Success) throw new InvalidOperationException(Diagnostics(read.Diagnostics));
-            var validation = TreeValidator.Validate(read.Document, _nodeRegistry);
+            var validation = TreeValidator.Validate(read.Document, registry);
             if (validation.Any(item => item.Severity == DiagnosticSeverity.Error))
                 throw new InvalidOperationException(Diagnostics(validation));
             var compilation = ReferenceCompiler.Compile(
                 read.Document,
-                _nodeRegistry,
+                registry,
                 new ReferenceCompilerOptions(
                     NormalizeSourceId(configuration.Tree),
                     ReferenceCompilationPolicy.Phase1,
@@ -49,16 +56,16 @@ namespace AIBT.Tests.Integration.SemanticSlice
             var machine = new ReferenceExecutionMachine(
                 compilation.Program,
                 configuration.TreeInstanceId,
-                SemanticSliceNodeContracts.CreateLeafRegistry(),
+                ReferencePreviewFixtureEnvironment.CreateLeafRegistry(),
                 trace,
-                ReferenceMemoryCompositeRegistry.CreatePhase1BuiltIns(),
-                ReferenceReactiveCompositeRegistry.CreatePhase1BuiltIns(),
-                ReferenceDecoratorRegistry.CreatePhase1BuiltIns(),
-                ReferenceParallelRegistry.CreatePhase1BuiltIns(),
+                ReferencePreviewFixtureEnvironment.CreateMemoryCompositeRegistry(),
+                ReferencePreviewFixtureEnvironment.CreateReactiveCompositeRegistry(),
+                ReferencePreviewFixtureEnvironment.CreateDecoratorRegistry(),
+                ReferencePreviewFixtureEnvironment.CreateParallelRegistry(),
                 RegisteredBlackboardRegistry.Empty,
-                SemanticSliceNodeContracts.CreateObserverRegistry(),
+                ReferencePreviewFixtureEnvironment.CreateObserverRegistry(),
                 initialBlackboard: initialValues);
-            return new ReferenceBehaviorCaseExecutor(machine, trace, keyMetadata, configuration.TreeInstanceId);
+            return new AuthoringBehaviorCaseExecutor(machine, trace, keyMetadata, configuration.TreeInstanceId);
         }
 
         private string ResolveTreePath(string relativePath)
@@ -109,14 +116,14 @@ namespace AIBT.Tests.Integration.SemanticSlice
         internal string EnumContract { get; }
     }
 
-    internal sealed class ReferenceBehaviorCaseExecutor : IBehaviorCaseExecutor
+    internal sealed class AuthoringBehaviorCaseExecutor : IBehaviorCaseExecutor
     {
         private readonly ReferenceExecutionMachine _machine;
         private readonly CollectingTraceSink _trace;
         private readonly IReadOnlyDictionary<ulong, SourceBlackboardKey> _keyMetadata;
         private readonly TreeInstanceId _treeInstanceId;
 
-        internal ReferenceBehaviorCaseExecutor(
+        internal AuthoringBehaviorCaseExecutor(
             ReferenceExecutionMachine machine,
             CollectingTraceSink trace,
             IReadOnlyDictionary<ulong, SourceBlackboardKey> keyMetadata,
@@ -227,7 +234,7 @@ namespace AIBT.Tests.Integration.SemanticSlice
             ReferenceBlackboardSnapshot snapshot)
         {
             var values = new SortedDictionary<string, BehaviorCaseObservedBlackboardValue>(
-                AIBT.Authoring.Utf8OrdinalComparer.Instance);
+                Utf8OrdinalComparer.Instance);
             for (var index = 0; index < snapshot.Entries.Count; index++)
             {
                 var entry = snapshot.Entries[index];

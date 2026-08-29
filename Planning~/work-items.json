@@ -1366,13 +1366,18 @@
       "id": "P6-008",
       "phase": 6,
       "title": "MCP verification tools: test, benchmark",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-008-mcp-verification-tools-trace-test-benchmark.md",
       "dependsOn": [
         "P6-005"
       ],
       "owns": [
+        "MCP/Testing/",
+        "Authoring/BehaviorCases/",
+        "Authoring/Benchmarking/",
+        "Runtime/Scheduling/SchedulingPolicyDriver.cs",
+        "Tests/Editor/Mcp/Testing/",
         "Planning~/Evidence/P6-008/"
       ]
     },

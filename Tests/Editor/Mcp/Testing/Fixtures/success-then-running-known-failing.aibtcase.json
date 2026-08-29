@@ -1,0 +1,25 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "mcp run-tests known-failing (wrong progress expectation)",
+  "tree": "success-then-running.aibt.json",
+  "treeInstanceId": 1,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "success"
+      }
+    }
+  ],
+  "tags": [
+    "mcp",
+    "run-tests",
+    "known-failing"
+  ]
+}

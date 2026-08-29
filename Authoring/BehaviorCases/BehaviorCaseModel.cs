@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace AIBT.Tests.BehaviorCases
+namespace AIBT.Authoring.BehaviorCases
 {
     internal enum BehaviorCaseOperation : byte { Update, Resume, Restart, Abort }
     internal enum BehaviorCaseProgress : byte { Completed, Waiting, Suspended, Rejected, Faulted }

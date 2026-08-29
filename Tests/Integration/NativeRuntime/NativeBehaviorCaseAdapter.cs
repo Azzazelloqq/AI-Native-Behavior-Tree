@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using AIBT.Authoring;
 using AIBT.Burst;
-using AIBT.Tests.BehaviorCases;
+using AIBT.Authoring.BehaviorCases;
 using AIBT.Tests.Integration.SemanticSlice;
 using Unity.Collections;
 

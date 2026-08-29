@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AIBT.Burst;
-using AIBT.Tests.BehaviorCases;
+using AIBT.Authoring.BehaviorCases;
 using NUnit.Framework;
 using Unity.Collections;
 

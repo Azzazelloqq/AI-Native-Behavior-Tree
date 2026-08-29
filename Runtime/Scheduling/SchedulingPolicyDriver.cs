@@ -3,7 +3,7 @@ using AIBT.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 
-namespace AIBT.Tests.Runtime.Benchmarking
+namespace AIBT.Runtime.Scheduling
 {
     /// <summary>
     /// Constructs N independent native tree-instance agents from one already-compiled

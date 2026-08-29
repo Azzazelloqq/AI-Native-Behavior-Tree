@@ -1,6 +1,6 @@
 using System;
 
-namespace AIBT.Tests.BehaviorCases
+namespace AIBT.Authoring.BehaviorCases
 {
     internal sealed class BehaviorCaseJsonReadResult
     {

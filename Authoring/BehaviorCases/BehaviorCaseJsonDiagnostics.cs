@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace AIBT.Tests.BehaviorCases
+namespace AIBT.Authoring.BehaviorCases
 {
     internal static class BehaviorCaseJsonDiagnosticCodes
     {

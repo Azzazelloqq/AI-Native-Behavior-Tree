@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using AIBT.Tests.BehaviorCases;
+using AIBT.Authoring.BehaviorCases;
 using NUnit.Framework;
 using UnityEngine;
 

@@ -2,8 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using AIBT.Benchmarks.Phase4.Scheduling;
-using AIBT.Tests.Runtime.Benchmarking;
+using AIBT.Authoring.Benchmarking;
+using AIBT.Runtime.Scheduling;
 using Unity.Collections;
 using UnityEngine;
 

@@ -1,7 +1,7 @@
 using System.IO;
 using System.Linq;
 using AIBT.Authoring;
-using AIBT.Tests.BehaviorCases;
+using AIBT.Authoring.BehaviorCases;
 using NUnit.Framework;
 using UnityEngine;
 

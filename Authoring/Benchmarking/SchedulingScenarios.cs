@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using AIBT.Authoring;
 
-namespace AIBT.Benchmarks.Phase4.Scheduling
+namespace AIBT.Authoring.Benchmarking
 {
     /// <summary>
     /// The <c>Documentation~/benchmarks.md</c> scenario catalog. Each entry states what it
@@ -12,10 +12,12 @@ namespace AIBT.Benchmarks.Phase4.Scheduling
     /// (blackboard access, command emission, async operations, managed nodes, cost tagging) that
     /// do not exist in a reusable form anywhere in AIBT today; building those is out of this
     /// card's scope, and this catalog does not fake them with structurally-similar trees that
-    /// would not actually isolate what they claim to. This file lives only under
-    /// <c>Benchmarks~/Phase4/</c> (copied into the isolated Player-benchmark project alongside
-    /// <c>Runtime/</c> and <c>Authoring/</c>) because it needs <c>AIBT.Authoring</c>'s compiler,
-    /// which <c>Tests/Runtime/Benchmarking/</c> deliberately does not reference.
+    /// would not actually isolate what they claim to. Promoted here (P6-008) from its original
+    /// <c>Benchmarks~/Phase4/Scheduling/Unity/</c> location -- it needs <c>AIBT.Authoring</c>'s
+    /// compiler, which <c>Runtime/Scheduling/SchedulingPolicyDriver.cs</c> deliberately does not
+    /// reference -- so both MCP's <c>run-benchmark</c> tool and the isolated Player-benchmark
+    /// project (which now picks this file up via its existing wholesale <c>Authoring/</c> copy
+    /// step) share one source of truth.
     /// </summary>
     internal static class SchedulingScenarios
     {

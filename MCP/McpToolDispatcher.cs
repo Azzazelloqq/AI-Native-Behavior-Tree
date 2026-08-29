@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
 using AIBT.Mcp.Authoring;
+using AIBT.Mcp.Testing;
 using AIBT.Mcp.Verification;
 using Newtonsoft.Json.Linq;
 
@@ -80,6 +81,15 @@ namespace AIBT.Mcp
                     return WithPermission(granted, McpPermissionCategory.TestExecution, () => McpVerificationToolDispatcher.Simulate(projectRoot, args));
                 case "explain_diagnostic":
                     return WithPermission(granted, McpPermissionCategory.Read, () => McpVerificationToolDispatcher.ExplainDiagnostic(projectRoot, args));
+
+                // P6-008 test/benchmark tools (narrowed 2026-08-29 -- trace/compare-trace deferred
+                // to P6-015) -- run_tests wraps the promoted P1-017 behavior-case runner, run_benchmark
+                // wraps the promoted P4-001 scheduling driver and its approved scenario catalog, via
+                // McpTestingToolDispatcher.
+                case "run_tests":
+                    return WithPermission(granted, McpPermissionCategory.TestExecution, () => McpTestingToolDispatcher.RunTests(projectRoot, args));
+                case "run_benchmark":
+                    return WithPermission(granted, McpPermissionCategory.BenchmarkExecution, () => McpTestingToolDispatcher.RunBenchmark(projectRoot, args));
 
                 default:
                     return Error(McpDiagnostics.UnknownTool.Value, "Unknown tool: " + tool);

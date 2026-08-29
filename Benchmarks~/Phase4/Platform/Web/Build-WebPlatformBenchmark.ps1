@@ -27,12 +27,7 @@ $aibtRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..\..'))
 $projectRoot = Split-Path -Parent (Split-Path -Parent $aibtRoot)
 $runtimeSource = Join-Path $aibtRoot 'Runtime'
 $authoringSource = Join-Path $aibtRoot 'Authoring'
-$driverSource = Join-Path $aibtRoot 'Tests\Runtime\Benchmarking\SchedulingPolicyDriver.cs'
-$scenariosSource = Join-Path $aibtRoot 'Benchmarks~\Phase4\Scheduling\Unity\SchedulingScenarios.cs'
 $benchmarkSource = Join-Path $PSScriptRoot 'Unity'
-
-if (-not (Test-Path -LiteralPath $driverSource -PathType Leaf)) { throw "SchedulingPolicyDriver.cs was not found: $driverSource" }
-if (-not (Test-Path -LiteralPath $scenariosSource -PathType Leaf)) { throw "SchedulingScenarios.cs was not found: $scenariosSource" }
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $stamp = [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')
@@ -71,8 +66,6 @@ New-Item -ItemType Directory -Path $isolatedHarness -Force | Out-Null
 Copy-Item -LiteralPath $runtimeSource -Destination (Join-Path $isolatedAibtRoot 'Runtime') -Recurse
 Copy-Item -LiteralPath $authoringSource -Destination (Join-Path $isolatedAibtRoot 'Authoring') -Recurse
 Copy-Item -Path (Join-Path $benchmarkSource '*') -Destination $isolatedHarness -Recurse
-Copy-Item -LiteralPath $driverSource -Destination (Join-Path $isolatedHarness 'Runtime\SchedulingPolicyDriver.cs')
-Copy-Item -LiteralPath $scenariosSource -Destination (Join-Path $isolatedHarness 'Runtime\SchedulingScenarios.cs')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'ProjectSettings\ProjectVersion.txt') -Destination (Join-Path $isolatedSettings 'ProjectVersion.txt')
 
 $manifest = @'

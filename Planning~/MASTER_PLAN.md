@@ -108,6 +108,47 @@ Phase 6 (AI and MCP) was decomposed into `P6-001` through `P6-012` on 2026-08-27
 
 `P6-008` (trace/test/benchmark tools) and `P6-009` (node development tools) each depend only on `P6-005` (done); `P6-010` (custom tool providers) depends only on the accepted `P6-001` ADR. All three are now assignable in parallel; none has been started.
 
+`P6-008` was narrowed 2026-08-29, before implementation began, when research found its `trace`/
+`compare-trace` half's own premise false: nothing in production or tests anywhere wires a *real*
+running native tree's lifecycle steps into a `NativeTraceChannelOwnerV1` -- the only two things
+that ever write trace records are synthetic test fixtures never derived from an actual compiled
+tree's execution, exactly the gap `Planning~/Evidence/P3-010/README.md` already disclosed and
+deliberately left open. That half was spun off into `P6-015` (`Draft`, its own spike/decision
+card, mirroring `P3-010`/`P6-013`/`P6-014`'s pattern) rather than built silently inside a
+tool-wrapping card. `P6-008` (**now titled** "MCP verification tools: test, benchmark", narrowed
+to `run-tests`/`run-benchmark`) is **done**: its own two entry points, `BehaviorCaseRunner`
+(`P1-017`) and `SchedulingPolicyDriver`/`SchedulingScenarios` (`P4-001`), turned out to live in
+Editor-only Tests assemblies `AIBT.Mcp` cannot reference without violating `architecture.md`'s
+dependency direction (`MCP -> Runtime/Authoring/Editor`, never `MCP -> Tests`) -- resolved by
+**promoting** the genuinely reusable, test-framework-free logic into the production layers
+`AIBT.Mcp` already sits on: the whole `Tests/BehaviorCases/Framework/` tree moved unchanged into
+`Authoring/BehaviorCases/`, and `SchedulingPolicyDriver`/`SchedulingScenarios` moved unchanged into
+`Runtime/Scheduling/`/`Authoring/Benchmarking/` (the latter promoted out of the previously-uncompiled
+`Benchmarks~/Phase4/Scheduling/Unity/` template folder into the main project for the first time).
+`Tests/Integration/SemanticSlice/ReferenceBehaviorCaseAdapter.cs` was deliberately **not** promoted
+-- it hardcodes test-only `SemanticSliceNodeContracts` registries explicitly documented "do not
+ship in production registries" -- a fresh `Authoring/BehaviorCases/AuthoringBehaviorCaseExecutorFactory.cs`
+was written instead, reusing `ReferencePreviewFixtureEnvironment`'s own already-accepted (`P3-009`)
+production registries, the same Phase 1 fixture/built-in node set `simulate` (`P6-007`) already
+uses. Every promotion kept its moved types `internal`, relying on `AIBT.Authoring`'s/`AIBT.Runtime`'s
+existing `InternalsVisibleTo("AIBT.Mcp")` grants -- no new public API surface. The isolated
+Phase 4 Player-benchmark harnesses (`Benchmarks~/Phase4/{Scheduling,AutoComparison,Platform/*}/`)
+had their own per-file special-case copy steps for the two promoted files removed (now redundant
+and a duplicate-type risk, since their own existing wholesale `Runtime/`/`Authoring/` copy steps
+pick the promoted files up automatically) -- a mechanical fix verified by inspection only, not by
+re-running the full Player harness (out of proportion for this card, disclosed as `not run`).
+`Authoring/AssemblyInfo.cs` gained one more `InternalsVisibleTo("AIBT.Runtime.Tests")` grant so
+those isolated harnesses' own same-named local assembly (an established trick already used for
+`AIBT.Runtime`'s own grant) can still see the promoted `SchedulingScenarios`. A real bug was found
+live: `UnityEngine.Application.unityVersion`/`platform`/`isBatchMode` are main-thread-only and
+throw when called from the MCP bridge's background TCP-handling thread (`AIBT9013`) -- fixed by
+using only thread-safe `System.Environment` fields for `run-benchmark`'s environment metadata. 997
+regression tests (`AIBT.BehaviorCases.Tests`, `AIBT.Integration.Tests`, `AIBT.Runtime.Tests`,
+`AIBT.Editor.Tests`) plus 8 new `Tests/Editor/Mcp/Testing/` tests all pass; live end-to-end
+verification against the real permanent `MCP~/Server/` via the official Inspector CLI exercised
+`run_tests`/`run_benchmark` (including the placeholder-scenario refusal and the permission-negative
+matrix) against real project fixtures. See `Planning~/Evidence/P6-008/`.
+
 `P6-013` (`ReferencePreviewDriver` simulation-capability decision) was added 2026-08-28 during a dedicated fix session on 6 owner-confirmed findings from `P6-006`/`P6-007`'s own evidence (see `Planning~/Evidence/P6-006/` and `Planning~/Evidence/P6-007/`'s several 2026-08-28 addenda for the other five, already applied). It was **not** implemented directly: `P6-007`'s `simulate` tool cannot inject events/completions or drive resume/abort/step-budget, and confirming whether `P6-008` would close that gap found it does not (`P6-008` uses entirely different entry points). A deeper look found `ReferenceExecutionMachine` -- the already-accepted engine `ReferencePreviewDriver` wraps -- already implements completions injection, `Resume`, `Abort`, and a caller-supplied `TreeInstanceId` internally; only the facade never surfaces them. Widening a P3-009-owned public API is still a "must escalate" change per `DECISION_BOUNDARIES.md`, so rather than deciding unilaterally, the owner chose to spin this off as its own `Draft` spike/decision card (dependent on `P6-007` and `P3-009`, both done; not required for the `P6-012` gate) instead of deciding the widening question mid-session. See `Planning~/Tasks/P6/P6-013-reference-preview-driver-simulation-capability-decision.md`.
 
 `P6-014` (MCP blackboard Agent/Shared scope decision) was added 2026-08-29, during the same fix

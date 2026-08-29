@@ -1,0 +1,25 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.mcp-testing.success-then-running",
+  "name": "MCP run-tests fixture: success then running",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "a",
+        "b"
+      ]
+    },
+    "a": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "b": {
+      "type": "aibt.test.running",
+      "typeVersion": 1
+    }
+  }
+}

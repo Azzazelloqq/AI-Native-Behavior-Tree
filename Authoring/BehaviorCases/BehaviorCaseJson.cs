@@ -7,7 +7,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace AIBT.Tests.BehaviorCases
+namespace AIBT.Authoring.BehaviorCases
 {
     internal static class BehaviorCaseJson
     {
