@@ -1496,6 +1496,102 @@
         "Spikes~/NativeTraceProductionWiring/",
         "Planning~/Evidence/P6-015/"
       ]
+    },
+    {
+      "id": "P6-016",
+      "phase": 6,
+      "title": "Editor graph-view unification decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P6/P6-016-editor-graph-view-unification-decision.md",
+      "dependsOn": [
+        "P3-013",
+        "P5-010"
+      ],
+      "owns": [
+        "Spikes~/EditorGraphViewUnification/",
+        "Planning~/Evidence/P6-016/"
+      ]
+    },
+    {
+      "id": "P6-017",
+      "phase": 6,
+      "title": "Per-project leaf-registration mechanism decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P6/P6-017-per-project-leaf-registration-decision.md",
+      "dependsOn": [
+        "P3-009",
+        "P6-007",
+        "P6-008"
+      ],
+      "owns": [
+        "Spikes~/PerProjectLeafRegistration/",
+        "Planning~/Evidence/P6-017/"
+      ]
+    },
+    {
+      "id": "P6-018",
+      "phase": 6,
+      "title": "Active-instance hot-reload migration decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P6/P6-018-active-instance-hot-reload-migration-decision.md",
+      "dependsOn": [
+        "P5-006",
+        "P5-010"
+      ],
+      "owns": [
+        "Spikes~/ActiveInstanceHotReloadMigration/",
+        "Planning~/Evidence/P6-018/"
+      ]
+    },
+    {
+      "id": "P6-019",
+      "phase": 6,
+      "title": "Auto scheduler heuristic recalibration",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-019-auto-scheduler-heuristic-recalibration.md",
+      "dependsOn": [
+        "P4-005",
+        "P4-006",
+        "P4-007"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-019/"
+      ]
+    },
+    {
+      "id": "P6-020",
+      "phase": 6,
+      "title": "Hot-reload debug-instrumentation trace injection decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P6/P6-020-hot-reload-debug-instrumentation-trace-injection-decision.md",
+      "dependsOn": [
+        "P5-008",
+        "P5-009"
+      ],
+      "owns": [
+        "Spikes~/HotReloadTraceInjection/",
+        "Planning~/Evidence/P6-020/"
+      ]
+    },
+    {
+      "id": "P6-021",
+      "phase": 6,
+      "title": "MCP diagnostic-catalog accessibility and benchmark-harness housekeeping",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P6/P6-021-mcp-diagnostic-catalog-and-benchmark-harness-housekeeping.md",
+      "dependsOn": [
+        "P6-007",
+        "P6-008"
+      ],
+      "owns": [
+        "Planning~/Evidence/P6-021/"
+      ]
     }
   ]
 }

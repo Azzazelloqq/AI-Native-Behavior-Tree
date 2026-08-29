@@ -149,6 +149,26 @@ verification against the real permanent `MCP~/Server/` via the official Inspecto
 `run_tests`/`run_benchmark` (including the placeholder-scenario refusal and the permission-negative
 matrix) against real project fixtures. See `Planning~/Evidence/P6-008/`.
 
+A follow-up tech-debt survey the same session (2026-08-29, prompted directly by `P6-008`'s own
+work) found seven disclosed limitations across Phase 3-5 evidence that had never been turned into
+their own tracked work items -- each already recorded in some card's own "known limitations"/
+addendum prose, but none assignable. Six new `Draft` cards were added, split by size per explicit
+owner direction ("big ones get their own card, small ones share one"): `P6-016` (no Phase 3/5
+Editor tool is wired into `Editor/Graph/`'s live `GraphView` window -- eight tools each disclosed
+this independently), `P6-017` (no production per-project leaf-registration mechanism exists --
+`P3-009`/`P6-007`/`P6-008` each independently hardcode the same fixed Phase 1 fixture set),
+`P6-018` (hot-reload state migration only runs against an idle instance, per `ADR-P5-001`'s own
+implementation addendum), `P6-019` (`P4-005`'s `Auto` selection rule has a specific, named defect
+`P4-007` diagnosed but did not fix -- recalibration, not runtime adaptation, which `ADR-P4-007`
+already rejected), and `P6-020` (`HotReloadPreviewDriver` hardcodes `traceSink: null`, blocking the
+debug-instrumentation-overhead measurement `P5-009` disclosed it could not take). The two small
+items -- widening 4 more `private` diagnostic-catalog `Catalog` fields to `internal` for
+`explain_diagnostic`, and live-verifying (not just inspecting) the 5 isolated Phase 4
+benchmark-harness scripts `P6-008` edited -- were bundled into one card, `P6-021`, rather than each
+getting a separate spike/decision cycle. None of the six is required for the Phase 6 integration
+gate (`P6-012`); all mirror `P6-013`/`P6-014`/`P6-015`'s own pattern of deciding cross-phase debt
+on paper before any production change.
+
 `P6-013` (`ReferencePreviewDriver` simulation-capability decision) was added 2026-08-28 during a dedicated fix session on 6 owner-confirmed findings from `P6-006`/`P6-007`'s own evidence (see `Planning~/Evidence/P6-006/` and `Planning~/Evidence/P6-007/`'s several 2026-08-28 addenda for the other five, already applied). It was **not** implemented directly: `P6-007`'s `simulate` tool cannot inject events/completions or drive resume/abort/step-budget, and confirming whether `P6-008` would close that gap found it does not (`P6-008` uses entirely different entry points). A deeper look found `ReferenceExecutionMachine` -- the already-accepted engine `ReferencePreviewDriver` wraps -- already implements completions injection, `Resume`, `Abort`, and a caller-supplied `TreeInstanceId` internally; only the facade never surfaces them. Widening a P3-009-owned public API is still a "must escalate" change per `DECISION_BOUNDARIES.md`, so rather than deciding unilaterally, the owner chose to spin this off as its own `Draft` spike/decision card (dependent on `P6-007` and `P3-009`, both done; not required for the `P6-012` gate) instead of deciding the widening question mid-session. See `Planning~/Tasks/P6/P6-013-reference-preview-driver-simulation-capability-decision.md`.
 
 `P6-014` (MCP blackboard Agent/Shared scope decision) was added 2026-08-29, during the same fix
