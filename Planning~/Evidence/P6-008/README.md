@@ -220,7 +220,9 @@ Live: real bridge + real permanent MCP~/Server/ + official Inspector CLI --
   permission-negative: both tools with only Read granted -> AIBT9012
   discovery file cleaned up; background listener thread disclosed as not stoppable post-hoc
 Tools~/Verification/Verify-Static.ps1 -- passed, 98 work items
-git diff --check -- clean
+git diff --check -- flags only new Unity-generated .meta files' own standard trailing-space
+  boilerplate (userData:/assetBundleName:/assetBundleVariant:, present identically in every
+  existing .meta file in the repo); zero real whitespace issues in any authored file
 Run-SchedulingBenchmark.ps1 (and the 4 sibling Phase4 harness scripts): path/reference changes
   verified by inspection only, NOT re-run end-to-end (disclosed as "not run")
 ```
