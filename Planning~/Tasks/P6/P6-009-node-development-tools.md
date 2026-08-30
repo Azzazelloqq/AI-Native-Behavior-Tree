@@ -2,6 +2,29 @@
 
 Status: `Draft`
 
+## Scope correction (2026-08-30)
+
+`test-node`'s own literal wording ("running the generated node's own tests") and this card's
+acceptance criteria ("producing a node that actually executes through generated dispatch
+afterward") were found, before implementation, to assume a capability that does not exist: a
+generic way to drive an arbitrary generated node through real Burst dispatch
+(`NativeBurstDispatchWorkspaceOwnerV2`/`ExecuteImmediate`). The only existing example,
+`Tools~/Verification/P2/CodeGen/SampleGolden/PublicBurstNodeSampleGoldenTests.cs.txt`, hand-computes
+every field offset/ordinal/binding-table entry for one specific, already-known sample node --
+there is no reusable translator from a compiled node's own descriptor metadata into the native
+dispatch-workspace shape real execution requires, and `burst-node-abi-v2.md`'s opaque-context rule
+rules out any reflection shortcut. Building that translator generically is a substantial new
+capability in its own right, spun off into its own decision card, `P6-022`, rather than built ad
+hoc mid-card (owner-confirmed via `AskUserQuestion`, mirroring `P6-008`'s `P6-015` split).
+
+`test-node` is narrowed to what is genuinely, honestly provable without that translator: the
+compiled shard's `AibtGeneratedMetadata` is structurally valid and registry-materializable
+(`GeneratedShardMetadataMaterializer.MaterializeArtifact` + `GeneratedNodeRegistry.Build`, both
+real, already-accepted production entry points) -- real verification, just not runtime dispatch
+execution. This card's own acceptance criteria below are corrected to match; `P6-022`, once
+accepted and implemented, is expected to widen `test-node` to genuine dispatch execution as a
+follow-up.
+
 ## Objective
 
 Expose `Documentation~/ai-and-mcp.md`'s "Node development" tool group over
@@ -61,7 +84,9 @@ already-accepted `P2-004`/`P2-005` codegen pipeline.
 - An `analyze-and-compile-node` tool running the real Roslyn analyzer and a
   real Unity compile against the generated code, returning analyzer/compile
   diagnostics, never a bare pass/fail.
-- A `test-node` tool running the generated node's own tests.
+- A `test-node` tool proving the generated node's compiled metadata is structurally valid and
+  registry-materializable (per this card's Scope correction, above) -- not, for this card, genuine
+  dispatch execution, deferred to `P6-022`.
 - An `apply-node` tool that is the only step that persists/registers the
   generated node into the project, requiring an explicit prior successful
   analyze/compile/test result to be re-affirmed, not silently assumed.
@@ -71,10 +96,14 @@ already-accepted `P2-004`/`P2-005` codegen pipeline.
 - The full gate (generate -> preview/diff -> analyze -> compile -> test ->
   explicit apply) is exercised end-to-end at least once against a real,
   non-trivial custom node (a Condition with typed blackboard read, per the
-  sample), producing a node that actually executes through generated
-  dispatch afterward.
-- Calling `apply-node` without a prior successful analyze/compile/test
-  result in the same session is rejected with a structured diagnostic.
+  sample), producing a node that is real, compiled, and found by the real
+  project's node registry/`NodeCatalogQuery` afterward -- not, for this
+  card, a proof that it executes through generated dispatch (see Scope
+  correction; that proof is `P6-022`'s own deliverable).
+- Calling `apply-node` without the staged content currently matching a
+  prior successful analyze-and-compile-node/test-node check (re-verified by
+  content hash, not a trusted caller claim or session state) is rejected
+  with a structured diagnostic.
 - `preview-node-diff` output changes nothing on disk, verified by a
   before/after file-state comparison.
 - A deliberately broken template input produces an analyzer/compile
@@ -84,8 +113,9 @@ already-accepted `P2-004`/`P2-005` codegen pipeline.
 
 ```text
 real MCP client: full generate->preview->analyze->compile->test->apply gate
-  against a real Condition node, ending in real generated-dispatch execution
-apply-without-prior-verification refusal proof
+  against a real Condition node and a real Action node, ending with the
+  applied node real, compiled, and registry-searchable
+apply-without-a-matching-clean-check refusal proof
 preview-no-persistence proof
 Verify-Static.ps1
 clean Unity import and compile after apply

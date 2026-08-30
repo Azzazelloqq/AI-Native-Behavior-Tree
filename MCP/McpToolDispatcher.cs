@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
 using AIBT.Mcp.Authoring;
+using AIBT.Mcp.NodeDevelopment;
 using AIBT.Mcp.Testing;
 using AIBT.Mcp.Verification;
 using Newtonsoft.Json.Linq;
@@ -90,6 +91,22 @@ namespace AIBT.Mcp
                     return WithPermission(granted, McpPermissionCategory.TestExecution, () => McpTestingToolDispatcher.RunTests(projectRoot, args));
                 case "run_benchmark":
                     return WithPermission(granted, McpPermissionCategory.BenchmarkExecution, () => McpTestingToolDispatcher.RunBenchmark(projectRoot, args));
+
+                // P6-009 node development tools -- generate/preview operate only on the quarantined
+                // staging slot; analyze-and-compile-node/test-node inspect it; apply-node is the
+                // only step that persists into the real project, via McpNodeDevelopmentToolDispatcher.
+                case "generate_node":
+                    return WithPermission(granted, McpPermissionCategory.CodeGeneration, () => McpNodeDevelopmentToolDispatcher.GenerateNode(projectRoot, args));
+                case "preview_node_diff":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpNodeDevelopmentToolDispatcher.PreviewNodeDiff(projectRoot, args));
+                case "generate_node_tests_and_manifest":
+                    return WithPermission(granted, McpPermissionCategory.CodeGeneration, () => McpNodeDevelopmentToolDispatcher.GenerateNodeTestsAndManifest(projectRoot, args));
+                case "analyze_and_compile_node":
+                    return WithPermission(granted, McpPermissionCategory.Compilation, () => McpNodeDevelopmentToolDispatcher.AnalyzeAndCompileNode(projectRoot, args));
+                case "test_node":
+                    return WithPermission(granted, McpPermissionCategory.TestExecution, () => McpNodeDevelopmentToolDispatcher.TestNode(projectRoot, args));
+                case "apply_node":
+                    return WithPermission(granted, McpPermissionCategory.CodeGeneration, () => McpNodeDevelopmentToolDispatcher.ApplyNode(projectRoot, args));
 
                 default:
                     return Error(McpDiagnostics.UnknownTool.Value, "Unknown tool: " + tool);

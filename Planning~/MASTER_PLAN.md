@@ -169,6 +169,34 @@ getting a separate spike/decision cycle. None of the six is required for the Pha
 gate (`P6-012`); all mirror `P6-013`/`P6-014`/`P6-015`'s own pattern of deciding cross-phase debt
 on paper before any production change.
 
+`P6-009` (node development tools) is **done**: `MCP/NodeDevelopment/` implements all 6 tools this
+card owns (`generate-node`, `preview-node-diff`, `generate-node-tests-and-manifest`,
+`analyze-and-compile-node`, `test-node`, `apply-node`) -- the first time in the project's history a
+genuinely new custom node is generated, compiled through the real packaged Roslyn analyzer, and
+registered end-to-end. `test-node`'s own literal wording assumed a capability that does not exist
+(a generic translator from a compiled node's descriptor metadata into the native dispatch-workspace
+shape real execution requires -- the only existing example,
+`Tools~/Verification/P2/CodeGen/SampleGolden/PublicBurstNodeSampleGoldenTests.cs.txt`, hand-computes
+every field offset for one specific known node), spun off into its own `P6-022` decision card
+(owner-confirmed, mirroring `P6-008`'s `P6-015` split) rather than built ad hoc; `test-node` is
+narrowed to compile-clean + registry-materialization-valid, both real, already-`public` production
+checks. Building this card found and fixed a second real gap in shared, `P6-005`-owned bridge
+infrastructure (owner-confirmed before touching it): `McpBridgeListener` does not survive a Unity
+domain reload by default -- confirmed empirically live (a script write's resulting reload silently
+killed the listening TCP port) -- which never surfaced before because every earlier P6 tool only
+ever wrote data files that never trigger compilation. Fixed with a new
+`MCP/McpBridgeAutoRestart.cs` (`[InitializeOnLoad]` + `SessionState`, verified surviving two real
+domain reloads), and `analyze-and-compile-node` was designed as a two-call, instantaneous,
+non-blocking start/check pair so no single request can ever be caught mid-reload. Live verification
+against the real running Editor drove the full generate-preview-analyze-compile-test-apply gate for
+both maintained templates (Condition and Action, the owner's chosen scope over the acceptance
+criteria's narrower Condition-only bar) to a real, compiled, registry-searchable applied node each,
+catching and fixing two further real bugs along the way (a generated-source namespace access gap,
+and an `AIBT5011` one-shard-per-assembly collision when two applied nodes shared no destination
+asmdef) -- both confirmed clean on re-verification. 18 new EditMode tests plus a 1015/1015
+regression (run twice) all pass; `P6-011`'s only remaining dependency besides `P6-003`/`P6-006`
+(both already done) is now satisfied. See `Planning~/Evidence/P6-009/`.
+
 `P6-013` (`ReferencePreviewDriver` simulation-capability decision) was added 2026-08-28 during a dedicated fix session on 6 owner-confirmed findings from `P6-006`/`P6-007`'s own evidence (see `Planning~/Evidence/P6-006/` and `Planning~/Evidence/P6-007/`'s several 2026-08-28 addenda for the other five, already applied). It was **not** implemented directly: `P6-007`'s `simulate` tool cannot inject events/completions or drive resume/abort/step-budget, and confirming whether `P6-008` would close that gap found it does not (`P6-008` uses entirely different entry points). A deeper look found `ReferenceExecutionMachine` -- the already-accepted engine `ReferencePreviewDriver` wraps -- already implements completions injection, `Resume`, `Abort`, and a caller-supplied `TreeInstanceId` internally; only the facade never surfaces them. Widening a P3-009-owned public API is still a "must escalate" change per `DECISION_BOUNDARIES.md`, so rather than deciding unilaterally, the owner chose to spin this off as its own `Draft` spike/decision card (dependent on `P6-007` and `P3-009`, both done; not required for the `P6-012` gate) instead of deciding the widening question mid-session. See `Planning~/Tasks/P6/P6-013-reference-preview-driver-simulation-capability-decision.md`.
 
 `P6-014` (MCP blackboard Agent/Shared scope decision) was added 2026-08-29, during the same fix

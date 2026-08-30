@@ -6,13 +6,21 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using UnityEditor;
 
 namespace AIBT.Mcp
 {
     /// <summary>
     /// The Unity-side half of ADR-P6-001's bridge: a TCP listener with no MCP SDK dependency,
     /// discovered by the external MCP~/Server/ process via a discovery file under Library/.
-    /// Explicit start/stop only (McpBridgeWindow) -- never auto-started with the Editor.
+    /// Explicit start/stop only (McpBridgeWindow, or a direct caller) -- never auto-started with
+    /// the Editor itself. <see cref="Start"/>/<see cref="Stop"/> record the running state in
+    /// <see cref="SessionState"/> (survives a domain reload within the same Editor session,
+    /// unlike a plain field) so <see cref="McpBridgeAutoRestart"/> can bring a live instance back
+    /// after a script compile's domain reload destroys this object -- found necessary by P6-009,
+    /// the first card whose tools write real .cs source the Editor recompiles; every prior P6
+    /// tool only ever wrote data files (*.aibt.json/*.aibtcase.json), which never triggers a
+    /// domain reload, so this gap never surfaced before.
     /// </summary>
     public sealed class McpBridgeListener : IDisposable
     {
@@ -45,11 +53,13 @@ namespace AIBT.Mcp
             _running = true;
 
             WriteDiscoveryFile();
+            McpBridgeAutoRestart.NotifyRunning(true);
 
             _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "AibtMcpBridge" };
             _acceptThread.Start();
         }
 
+        /// <summary>Explicit stop, e.g. from the Bridge window's own Stop button. Clears the auto-restart flag -- a deliberate stop must not be immediately undone by the next domain reload.</summary>
         public void Stop()
         {
             if (!_running)
@@ -58,6 +68,7 @@ namespace AIBT.Mcp
             }
 
             _running = false;
+            McpBridgeAutoRestart.NotifyRunning(false);
             try
             {
                 _listener.Stop();
