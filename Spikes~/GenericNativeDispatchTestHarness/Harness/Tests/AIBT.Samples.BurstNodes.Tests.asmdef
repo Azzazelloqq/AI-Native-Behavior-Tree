@@ -1,0 +1,20 @@
+{
+  "name": "AIBT.Samples.BurstNodes.Tests",
+  "rootNamespace": "AIBT.Spikes.P6022NativeDispatchHarness",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring",
+    "AIBT.Spikes.P6022NativeDispatchHarness.Node",
+    "AIBT.Spikes.P6022NativeDispatchHarness.Catalog",
+    "Unity.Collections"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.Spikes.P6022NativeDispatchHarness.Node",
+  "rootNamespace": "AIBT.Spikes.P6022NativeDispatchHarness",
+  "references": [
+    "AIBT.Runtime"
+  ],
+  "analyzers": [
+    "GUID:31a3f09584684895a0a72916d3ad4de0"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

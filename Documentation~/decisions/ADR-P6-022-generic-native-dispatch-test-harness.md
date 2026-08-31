@@ -1,6 +1,6 @@
 # ADR P6-022: Generic native-dispatch test-harness translator
 
-- Status: Accepted 2026-08-31
+- Status: Accepted 2026-08-31 (spike addendum 2026-08-31)
 - Date: 2026-08-31
 - Decision ID: AIBT-033
 
@@ -90,41 +90,73 @@ dispatch execution requires.
    its own request buffers for whatever specific tick sequence it wants to exercise; this ADR does
    not claim otherwise.
 
-## Explicitly unverified -- the required disposable spike could not be completed in this session
+## Spike addendum (2026-08-31, follow-up session) -- the disposable spike is now complete
 
-Per this card's own acceptance criteria, the recommended translator must be proven against a real
-compiled shard, driving a real `ExecuteImmediate` call through a generically-constructed workspace
-shape. **This spike was not completed.** Unlike every other decision card in this session (all of
-which spiked directly against the live, MCP-connected Unity Editor with fast iterate-fix-rerun
-cycles), proving this translator requires compiling a real generated Burst-node catalog, which only
-exists as source-generator OUTPUT -- `Samples~/BurstNodes/Catalog/PublicBurstNodeCatalog.cs` is a
-7-line `partial class` stub; its actual dispatch body is emitted by AIBT's own Roslyn source
-generator only inside an isolated Unity project build (the existing `Tools~/Verification/P2/CodeGen/
-Build-And-Verify.ps1` gate, or a scoped-down version of its own "SampleUnityProject" stage). That is
-a slow (multiple minutes per attempt), blind (log-file-only, no MCP introspection into failures),
-non-interactive iteration loop, a materially different and riskier verification path than this
-session's other spikes. Combined with finding 3 above (the `Registered`-field-encoding mapping
-needing further research before any implementation is safe), attempting to force a spike through in
-this session risked exactly the "forcing a design that silently drops fidelity" outcome this card's
-own text explicitly warns against, rather than a genuine, honest proof.
+The isolated-project spike this ADR originally deferred was run to completion.
+`Spikes~/GenericNativeDispatchTestHarness/` implements `GenericNativeDispatchTranslatorV1` exactly
+per the case/field mapping and name-based encoding translation decided above, and
+`GenericNativeDispatchSpikeTests.ThresholdCondition_GenericallyTranslatedDispatch_ReadsTypedBlackboardValue`
+drives a real, unmodified `ExecuteImmediate` through a workspace shape built entirely from
+`GeneratedShardMetadataMaterializer`-parsed compiled metadata (no hand-copied per-node offsets),
+via `Run-GenericNativeDispatchTestHarnessSpike.ps1` (a scoped-down copy of
+`Tools~/Verification/P2/CodeGen/Build-And-Verify.ps1`'s own "SampleUnityProject" stage). Result:
+**1/1 pass** -- Enter succeeds, Tick below the configured threshold reads `Failure`, Tick at/above
+it reads `Success`, matching the real `PublicBurstNodeSampleGoldenTests` scenario's own
+independently hardcoded result for the identical semantics.
 
-This is disclosed plainly rather than fabricated: the case/field/binding-shape mapping is
-**decided and verified correct by direct reading of the real constructors and enums involved**
-(findings 1-2 above are load-bearing, concrete facts, not speculation), but **not yet proven by a
-live, running spike**. A follow-up session should budget time for the isolated-project batch-build
-iteration loop specifically (distinct from a live-Editor decision session), starting from a scoped-down
-copy of `Build-And-Verify.ps1`'s own "SampleUnityProject" stage (lines ~200-262) with a translator
-test file in place of the golden test's own hand-authored fixture, and should resolve the
-`Registered`-field-encoding question (finding 3) before extending coverage beyond built-in types.
+**Real finding beyond the two already recorded above: a workspace's `Cases` array must be
+positionally self-consistent, starting at index 0.** `NativeBurstDispatchWorkspaceOwnerV2.
+TryCreate`'s own `ValidateShape` rejects any case whose `CatalogCaseIndex` does not equal its own
+array position (`Cases[i].CatalogCaseIndex == i`), and `BurstDispatchBridgeCoreV2.
+TryGetExecutionRequest` forwards `NativeBurstDispatchRequestV2.CatalogCaseIndex` verbatim into the
+generated `ExecuteImmediate`'s own `switch (catalogCaseIndex)` -- the same value serves both the
+workspace's internal bookkeeping and the real per-node dispatch selector. The practical
+consequence: **the real, two-node `Samples~/BurstNodes` sample cannot be used to spike an isolated
+single-case shape for `ThresholdConditionNode` specifically**, because that node sits at real
+dispatch index 1 (after `AsyncWriteActionNode` at index 0, per `GeneratedMetadataEmitter`'s own
+alphabetical `TypeId` ordering) -- a single-case shape targeting index 1 alone fails `ValidateShape`
+before it ever reaches dispatch, and reaching index 1 legitimately requires the workspace to also
+carry a structurally valid index-0 case, which for this sample means translating
+`AsyncWriteActionNode`'s own `AsyncOperation`/`Completion` bindings -- explicitly out of this card's
+decided scope (finding 4 above). This was confirmed empirically (a first attempt using
+`ThresholdConditionNode` directly failed `TryCreate` with `InvalidEncoding` for exactly this
+reason), not assumed. The spike was completed instead against a dedicated, disposable single-node
+shard (`Spikes~/GenericNativeDispatchTestHarness/Harness/Node/`, a field-for-field copy of
+`ThresholdConditionNode`'s own shape, decorated with the real `[AibtBurstNode]`/`[AibtCatalogShard]`
+attributes and compiled by the same checked-in Roslyn analyzer), which the generator necessarily
+assigns dispatch index 0 as its only node -- a legitimate way to prove the translator against real
+generated dispatch without smuggling the excluded async case in, but it means this spike does not,
+by itself, prove the translator against a pre-existing *multi-node* catalog. A future card widening
+coverage to a specific node inside a larger real catalog (e.g. one added live via `P6-009`'s
+`generate-node`/`apply-node`) must translate that catalog's full case prefix (`0..targetIndex`), not
+an isolated single case picked out of the middle.
+
+The two enum-mapping findings recorded above are now also empirically confirmed, not just verified
+by inspection: the translator's name-to-name `GeneratedFieldEncoding` -> `NativeBurstDispatchFieldEncodingV2`
+switch and `GeneratedBindingKind` -> `NativeBurstDispatchBindingKindV2` switch both round-tripped
+correctly through real dispatch for the proven scope (`GeneratedHandle`, `UInt32`, `BlackboardRead`).
+A second real structural requirement was found and is now load-bearing in the translator: for every
+case, `NativeBurstDispatchCanonicalInputV2.CaseRanges` must carry exactly two entries per case
+(configuration, memory) and `BindingRanges` exactly two per binding (primary, secondary) -- not one
+of each, as a first draft of the translator assumed (also caught the same way, via a real
+`TryCreate` `InvalidEncoding` rejection, not by inspection alone).
+
+`Registered`-encoded fields and the `AsyncOperation`/`Completion` binding pair remain explicitly
+unproven and undesigned at the field-encoding level, per finding 3/4 above -- unchanged by this
+addendum. Verified: `Verify-Static.ps1` passed after this addendum (only documentation/planning and
+disposable `Spikes~/` files changed; no production file was touched, per this card's own
+Forbidden-changes clause). See `Planning~/Evidence/P6-022/README.md` for the full run record.
 
 ## Consequences
 
-- A future implementation card builds the translator per this ADR's own case/field mapping (verified
-  correct) and encoding name-mapping requirement (verified necessary), proves it via the isolated-
-  project spike this session could not complete, and only then widens `P6-009`'s `test-node` to
-  actually drive generated dispatch for built-in-typed, non-async node shapes.
+- A future implementation card builds the translator into production per this ADR's own case/field
+  mapping and encoding name-mapping requirement (both now proven, not just verified by inspection),
+  and widens `P6-009`'s `test-node` to actually drive generated dispatch for built-in-typed,
+  non-async, single-case-reachable node shapes -- explicitly accounting for the dispatch-index
+  contiguity finding above when the target node is not already at index 0 in its real catalog.
 - `Registered`-encoded fields and the `AsyncOperation`/`Completion` binding pair remain explicitly
   unproven and undesigned at the field-encoding level; a future card must research and resolve that
   gap separately before claiming coverage.
 - No production file (`Runtime/Execution/Burst/Dispatch/`, `Authoring/Registry/Generated/`,
-  `CodeGen~/AIBT.CodeGen`) was touched, per this card's own Forbidden-changes clause.
+  `CodeGen~/AIBT.CodeGen`) was touched, per this card's own Forbidden-changes clause -- the spike and
+  its dedicated single-node fixture live entirely under `Spikes~/GenericNativeDispatchTestHarness/`.
