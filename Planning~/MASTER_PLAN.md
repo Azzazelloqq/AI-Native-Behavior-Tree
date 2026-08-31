@@ -274,3 +274,18 @@ own exit is recoverable by deferring it into the following `Completed` step, but
 composite's own exit is not, confirmed by a second spike test rather than assumed. Left open for a
 future implementation card, per this card's own Forbidden-changes clause. See
 `Planning~/Evidence/P6-015/`.
+
+`P6-020` (hot-reload debug-instrumentation trace injection decision) is **done, accepted**:
+`ADR-P6-020` (`AIBT-028`) decides `HotReloadPreviewDriver.TryReload` gains a purely additive
+`internal` overload accepting an optional `IReferenceTraceSink`, resolving `P5-009`'s own two-
+candidate question directly -- since the sink type is itself `internal` to `AIBT.Runtime`, a public-
+parameter option was never actually available. A future benchmark-owning assembly needs
+`InternalsVisibleTo` grants from both `AIBT.Runtime` and `AIBT.Authoring`, mirroring `P4-001`'s own
+technique. A disposable spike (`Spikes~/HotReloadTraceInjection/`, run live via Unity MCP against the
+real, unmodified `HotReloadStateMigration.Migrate`) proved both branches (compatible migration, and
+the internal fallback to `HotReloadFullRestart` for an active instance) correctly forward a caller-
+supplied sink, and found a real, disclosed nuance along the way: the sink attaches to the resulting
+fresh machine's own future ticks, not the reload procedure's own internal state-capture bookkeeping,
+which never calls it at all -- a future benchmark card must measure post-reload ticking cost, not
+the reload procedure's own cost, since those are genuinely different things. `HotReloadPreviewDriverTests`
+(`P5-008`'s own suite) re-run unmodified, still passing. See `Planning~/Evidence/P6-020/`.

@@ -1576,7 +1576,7 @@
       "id": "P6-020",
       "phase": 6,
       "title": "Hot-reload debug-instrumentation trace injection decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-020-hot-reload-debug-instrumentation-trace-injection-decision.md",
       "dependsOn": [
