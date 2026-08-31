@@ -323,3 +323,19 @@ subsequent `Update`, without fault. Scope: only when every node on the active pa
 since a coherent traversal path cannot be partially migrated the way idle per-node state can.
 `HotReloadStateMigrationTests` (the existing idle-instance suite) re-run unmodified, still passing.
 See `Planning~/Evidence/P6-018/`.
+
+`P6-017` (per-project leaf-node registration mechanism decision) is **done, accepted: a real,
+buildable capability, deferred to a dedicated future engineering card**. `ADR-P6-017` (`AIBT-031`)
+found `ReferenceLeafRegistry`/`ReferenceLeafBinding` already fully general -- no engine change
+needed there, `CreatePhase1Fixtures()` is one convenience factory among possible others, mirroring
+`P6-014`'s own `Phase1` finding. A disposable spike (`Spikes~/PerProjectLeafRegistration/`, run live
+via Unity MCP) ticked a genuinely new leaf type through a real, unmodified `ReferenceExecutionMachine`
+alongside the built-ins, then confirmed the real blocker is a deliberately-enforced three-layer wall,
+not an unbuilt discovery mechanism: `NodeRegistryBuilder.AddUserExtension` (the only public
+registration path) never attaches a `NodeHandlerBindingContract`; that type is itself `internal`;
+and `NodeRegistryBuilder`'s own `ValidateBinding` explicitly rejects a `UserExtension` registration
+that carries one -- reproduced by direct compile failure (`AIBT3012`), not inferred. `P6-010`'s own
+attribute/`TypeCache` discovery pattern is the right template for finding a project's registered
+leaves once a public contract exists, but does not solve today's actual blocker, which is that no
+such public contract exists yet. `ReferencePreviewParityTests` (`P3-009`'s own suite) re-run
+unmodified, still passing. See `Planning~/Evidence/P6-017/`.

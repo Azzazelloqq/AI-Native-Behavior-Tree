@@ -1527,7 +1527,7 @@
       "id": "P6-017",
       "phase": 6,
       "title": "Per-project leaf-registration mechanism decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-017-per-project-leaf-registration-decision.md",
       "dependsOn": [
