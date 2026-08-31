@@ -1495,7 +1495,7 @@
       "id": "P6-015",
       "phase": 6,
       "title": "Native trace production-wiring decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-015-native-trace-production-wiring-decision.md",
       "dependsOn": [

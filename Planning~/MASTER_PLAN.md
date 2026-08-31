@@ -257,3 +257,20 @@ both rejected as out of scope, confirmed by direct evidence (a literal, already-
 genuine missing engine capability, not facade gaps this card could resolve. No production file was
 touched, per this card's own Forbidden-changes clause; a future, not-yet-numbered implementation
 card applies the ADR. See `Planning~/Evidence/P6-013/`.
+
+`P6-015` (native trace production-wiring decision) is **done, accepted**: `ADR-P6-015` (`AIBT-027`)
+decides the real-lifecycle-step-to-trace-record translation lives as an external recorder
+co-located with whatever already drives `NativeLifecycleMachineV1` (e.g. `SchedulingPolicyDriver`),
+hooking its existing `TryAdvance`/`TryCompleteDispatch` call sites additively -- never a change
+inside the machine itself -- with a fixed mapping from `NativeLifecycleStepKindV1` (plus dispatch
+completion phase) to `NativeTraceEventKindV1`. A disposable spike (`Spikes~/NativeTraceProductionWiring/`,
+run live via Unity MCP against the real, unmodified machine and a real `NativeTraceChannelOwnerV1`)
+drove a real compiled 3-node tree across two updates and proved the resulting trace reads back
+correctly, unmodified, through `NativeExecutionDebuggerSession.TryReadTrace` and
+`TraceTimelineModel.Build` (both of their own existing test suites re-run unmodified, still
+passing). A real, disclosed finding surfaced along the way: `NativeLifecycleStepResultV1.CompositeExited`
+carries no exit status at all (unlike `Completed`'s own `HasRootStatus`/`RootStatus`) -- the root's
+own exit is recoverable by deferring it into the following `Completed` step, but a *nested*
+composite's own exit is not, confirmed by a second spike test rather than assumed. Left open for a
+future implementation card, per this card's own Forbidden-changes clause. See
+`Planning~/Evidence/P6-015/`.
