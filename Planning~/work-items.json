@@ -1402,7 +1402,7 @@
       "id": "P6-010",
       "phase": 6,
       "title": "Custom MCP tool provider registration and permission model",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-010-custom-mcp-tool-providers.md",
       "dependsOn": [
@@ -1410,6 +1410,9 @@
         "P6-005"
       ],
       "owns": [
+        "MCP/CustomTools/",
+        "MCP~/Server/CustomTools.cs",
+        "Tests/Editor/Mcp/CustomTools/",
         "Planning~/Evidence/P6-010/"
       ]
     },

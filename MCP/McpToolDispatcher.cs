@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
 using AIBT.Mcp.Authoring;
+using AIBT.Mcp.CustomTools;
 using AIBT.Mcp.NodeDevelopment;
 using AIBT.Mcp.Testing;
 using AIBT.Mcp.Verification;
@@ -108,6 +109,16 @@ namespace AIBT.Mcp
                 case "apply_node":
                     return WithPermission(granted, McpPermissionCategory.CodeGeneration, () => McpNodeDevelopmentToolDispatcher.ApplyNode(projectRoot, args));
 
+                // P6-010 custom tool providers -- list_custom_tools is a Read-gated discovery
+                // query like the P6-003 discovery tools above; call_custom_tool's required
+                // permission category is the named provider's own declaration (data, not a
+                // literal), looked up before WithPermission runs, exactly like every other case
+                // hardcodes its own literal category.
+                case "list_custom_tools":
+                    return WithPermission(granted, McpPermissionCategory.Read, McpCustomToolsToolDispatcher.ListCustomTools);
+                case "call_custom_tool":
+                    return DispatchCustomTool(granted, projectRoot, args);
+
                 default:
                     return Error(McpDiagnostics.UnknownTool.Value, "Unknown tool: " + tool);
             }
@@ -128,6 +139,18 @@ namespace AIBT.Mcp
             {
                 return Error(ex.Code.Value, ex.Message);
             }
+        }
+
+        private static string DispatchCustomTool(HashSet<McpPermissionCategory> granted, string projectRoot, JObject args)
+        {
+            var toolName = (string)args["toolName"];
+            var build = McpCustomToolsToolDispatcher.DiscoverAndBuild();
+            if (toolName == null || !build.ByToolName.TryGetValue(toolName, out var provider))
+            {
+                return Error(McpCustomToolsDiagnostics.UnknownCustomTool.Value, "Unknown custom tool: " + toolName);
+            }
+
+            return WithPermission(granted, provider.PermissionCategory, () => McpCustomToolsToolDispatcher.Call(provider, projectRoot, args));
         }
 
         private static JObject GetProjectManifest(string projectRoot)

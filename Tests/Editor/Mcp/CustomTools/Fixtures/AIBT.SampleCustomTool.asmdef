@@ -1,0 +1,16 @@
+{
+  "name": "AIBT.SampleCustomTool",
+  "rootNamespace": "AIBT.SampleCustomTool",
+  "references": [
+    "AIBT.Mcp"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Newtonsoft.Json.dll"
+  ],
+  "noEngineReferences": false
+}
