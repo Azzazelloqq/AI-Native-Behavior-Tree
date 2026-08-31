@@ -1,0 +1,57 @@
+{
+  "schema": "aibt-p6-gate-assembly-dependencies-v1",
+  "candidateCommit": "97e3501e71534f8de2e063cf74cdf52a36a43d04",
+  "asmdefs": {
+    "AIBT.Runtime": {
+      "path": "Runtime/AIBT.Runtime.asmdef",
+      "references": ["Unity.Burst", "Unity.Collections"],
+      "includePlatforms": [],
+      "changedSinceP5Gate": false
+    },
+    "AIBT.Authoring": {
+      "path": "Authoring/AIBT.Authoring.asmdef",
+      "references": ["AIBT.Runtime", "Newtonsoft.Json"],
+      "includePlatforms": [],
+      "changedSinceP5Gate": false
+    },
+    "AIBT.Editor": {
+      "path": "Editor/AIBT.Editor.asmdef",
+      "references": ["AIBT.Runtime", "AIBT.Authoring", "Newtonsoft.Json", "Unity.Collections"],
+      "includePlatforms": ["Editor"],
+      "changedSinceP5Gate": false
+    },
+    "AIBT.Mcp": {
+      "path": "MCP/AIBT.Mcp.asmdef",
+      "references": ["AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "Newtonsoft.Json", "Unity.Collections"],
+      "includePlatforms": ["Editor"],
+      "changedSinceP5Gate": "new assembly, introduced by P6-005"
+    }
+  },
+  "dependencyDirectionCheck": {
+    "rule": "AIBT.Mcp depends on AIBT.Editor/AIBT.Authoring/AIBT.Runtime; none of the lower three depends back on AIBT.Mcp, and AIBT.Editor still depends only on AIBT.Authoring/AIBT.Runtime, never the reverse",
+    "result": "PASSED",
+    "evidence": "AIBT.Runtime.asmdef, AIBT.Authoring.asmdef, and AIBT.Editor.asmdef are byte-identical to P5-GATE's own recorded references (confirmed by direct comparison) -- Phase 6's new Authoring/Discovery/ (P6-003) and Editor/Patching/ (P6-004) files live inside these same three existing asmdefs, no new reference added to any of them. A repository-wide grep for the literal string \"AIBT.Mcp\" across every Runtime/Authoring/Editor .asmdef file returned zero matches, confirming AIBT.Mcp is a leaf consumer, never referenced back."
+  },
+  "forbiddenTokenAudit": {
+    "tokens": ["using UnityEditor", "Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "scannedPaths": ["Runtime/", "Authoring/"],
+    "command": "grep -rlE \"using UnityEditor|Unity\\.Entities|UnityMCP|OpenAI|Anthropic\" Runtime/ Authoring/",
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "editorScopedForbiddenTokenAudit": {
+    "tokens": ["Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "note": "using UnityEditor is expected and allowed in Editor/ and MCP/; only Entities/MCP-bridge/LLM-provider tokens are forbidden there too",
+    "scannedPaths": ["Editor/"],
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "mcpScopedForbiddenTokenAudit": {
+    "tokens": ["Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "note": "New for P6-GATE: AIBT.Mcp is the real MCP bridge itself, so this audit specifically confirms it never depends on a third-party MCP client library, nor any literal LLM-provider SDK (ai-and-mcp.md's own 'model-neutral' principle) -- its own protocol implementation is hand-rolled newline-delimited JSON over a plain TcpListener, confirmed by inspection.",
+    "scannedPaths": ["MCP/"],
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "note": "Phase 6's own MCP~/Server/ (the external dotnet process) is intentionally excluded from this audit: the MCP~/ tilde suffix hides it from Unity's asset database entirely, matching every prior phase's tilde-hidden folders (Benchmarks~/, Spikes~/, Tools~/) -- it is not part of the shipped Unity package's production assembly surface, and it does depend on the real ModelContextProtocol SDK by design (ADR-P6-001), which is expected and does not apply to this audit's Unity-assembly scope."
+}

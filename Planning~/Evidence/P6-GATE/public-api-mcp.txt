@@ -1,0 +1,37 @@
+ASSEMBLY AIBT.Mcp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+TYPE AIBT.Mcp.AibtTreeDiscovery
+TYPE AIBT.Mcp.CustomTools.ICustomMcpToolProvider
+TYPE AIBT.Mcp.McpBridgeListener
+TYPE AIBT.Mcp.McpBridgeWindow
+TYPE AIBT.Mcp.McpPermissionCategory
+TYPE AIBT.Mcp.McpPermissionEnforcer
+TYPE AIBT.Mcp.McpToolDispatcher
+  FIELD AIBT.Mcp.McpPermissionCategory ArbitraryProjectIntegration
+  FIELD AIBT.Mcp.McpPermissionCategory BenchmarkExecution
+  FIELD AIBT.Mcp.McpPermissionCategory CodeGeneration
+  FIELD AIBT.Mcp.McpPermissionCategory Compilation
+  FIELD AIBT.Mcp.McpPermissionCategory LayoutEdit
+  FIELD AIBT.Mcp.McpPermissionCategory Read
+  FIELD AIBT.Mcp.McpPermissionCategory SemanticEdit
+  FIELD AIBT.Mcp.McpPermissionCategory TestExecution
+  FIELD System.Int32 value__
+  PROPERTY AIBT.Mcp.McpPermissionCategory PermissionCategory
+  PROPERTY Newtonsoft.Json.Linq.JObject InputSchema
+  PROPERTY Newtonsoft.Json.Linq.JObject OutputSchema
+  PROPERTY System.Boolean IsRunning
+  PROPERTY System.Boolean SupportsCancellation
+  PROPERTY System.Boolean SupportsDryRun
+  PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> SideEffects
+  PROPERTY System.Int32 Port
+  PROPERTY System.String Description
+  PROPERTY System.String ToolName
+METHOD AIBT.Mcp.AibtTreeDiscovery+ScanResult Scan(System.String)
+METHOD AIBT.Mcp.McpBridgeWindow ShowWindow()
+METHOD Newtonsoft.Json.Linq.JObject Invoke(System.String,Newtonsoft.Json.Linq.JObject,System.Boolean)
+METHOD System.Boolean Require(System.Collections.Generic.ISet`1<AIBT.Mcp.McpPermissionCategory>,AIBT.Mcp.McpPermissionCategory,AIBT.Diagnostic&)
+METHOD System.String Dispatch(System.String,System.String)
+METHOD System.Void .ctor()
+METHOD System.Void .ctor(System.String,System.String)
+METHOD System.Void Dispose()
+METHOD System.Void Start()
+METHOD System.Void Stop()

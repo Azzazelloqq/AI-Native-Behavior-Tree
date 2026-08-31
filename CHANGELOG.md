@@ -53,3 +53,16 @@ All notable changes to this project will be documented here. The project follows
   migration runs only against an idle old instance, falling back to full
   restart for a genuinely active one — both disclosed. No regression
   threshold or "acceptable reload cost" claim adopted.
+- A real, working MCP integration: a standalone `dotnet` MCP server bridged to
+  the Unity Editor, discovery/authoring/verification/test/benchmark/
+  node-development tools, a fail-closed permission model covering 8
+  categories, custom MCP tool providers discovered via inversion of control
+  with no AIBT-side reference to the consuming project, and generated agent
+  documentation (node catalog, workflow guide, recipes, anti-patterns,
+  versioned migrations stub) sourced from the same production data every
+  tool uses. Every tool live-verified against a real MCP client, including a
+  genuinely new custom node generated, compiled, tested, and applied
+  end-to-end. Trace inspection does not exist (no production code wires a
+  real running native tree into a trace channel yet), and a just-generated
+  custom node is not yet discoverable through the same discovery tools —
+  both disclosed, not silently assumed.

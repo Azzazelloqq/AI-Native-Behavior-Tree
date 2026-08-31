@@ -12,7 +12,9 @@ Phase 4 measures scheduling and batching on real, non-Editor Players (Windows x6
 
 Phase 5 adds hot reload for the reference-executor backend: a resolved compatibility model (construct-fresh-and-selectively-copy by stable authoring node ID, never in-place mutation), full restart, localized subtree restart, idle-instance compatible state migration, and an explicit, explained Editor workflow. Measured evidence shows compatible migration costs roughly half of a full restart at the same tree size, on both Editor and a real Windows Player. Native-backend hot reload does not exist yet, and migration is scoped to an idle old instance (a genuinely active one falls back to full restart) — both disclosed, not silently assumed.
 
-> Status: Phases 1 through 5 are complete (`P2-025`, `P3-013`, `P4-009`, and `P5-010` integration gates all accepted — see `Planning~/Evidence/`). MCP integration remains a later phase.
+Phase 6 adds a real, working MCP integration: a standalone `dotnet` MCP server (`MCP~/Server/`) bridged to the Unity Editor (`AIBT.Mcp`), with discovery, authoring, validation/compilation/simulation, test/benchmark, and custom-node-generation tools, a fail-closed permission model, custom MCP tool providers a consuming project can register via inversion of control, and generated agent documentation (node catalog, workflow guide, recipes, anti-patterns). Every tool is live-verified against a real MCP client (the official `@modelcontextprotocol/inspector` CLI), including generating, compiling, testing, and applying a genuinely new custom node end-to-end. Two gaps are disclosed rather than silently assumed: no production code wires a real running native tree into a trace channel yet, so trace inspection does not exist; and a custom node an agent just generated and applied is not yet discoverable through the same discovery tools the agent would use next (both tied to tracked follow-up decisions, `P6-015` and `P6-017`).
+
+> Status: Phases 1 through 6 are complete (`P2-025`, `P3-013`, `P4-009`, `P5-010`, and `P6-012` integration gates all accepted — see `Planning~/Evidence/`).
 
 ## Design goals
 
@@ -31,7 +33,8 @@ Phase 5 adds hot reload for the reference-executor backend: a resolved compatibi
 | `Authoring/` | Semantic authoring model, validation, compilation contracts |
 | `Editor/` | Graph adapter, layout, editing, validation, preview, and debugger components (implemented; not yet wired into one live window) |
 | `CodeGen~/` | Generated Burst dispatch, analyzers, and templates |
-| `Tools~/McpServer/` | Planned optional MCP server and AI-agent integration |
+| `MCP/` | Unity-side MCP bridge (Editor-only): discovery, authoring, verification, node-development, and custom-tool-provider support |
+| `MCP~/Server/` | Standalone MCP server (external `dotnet` process) |
 | `Schemas~/` | Draft schemas for canonical files and tool contracts |
 | `Tests/` | Runtime and editor behavior tests |
 | `Benchmarks~/` | Reproducible performance and platform research |
