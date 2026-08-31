@@ -1592,7 +1592,7 @@
       "id": "P6-021",
       "phase": 6,
       "title": "MCP diagnostic-catalog accessibility and benchmark-harness housekeeping",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-021-mcp-diagnostic-catalog-and-benchmark-harness-housekeeping.md",
       "dependsOn": [

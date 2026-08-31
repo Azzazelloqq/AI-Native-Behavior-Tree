@@ -29,7 +29,7 @@ namespace AIBT.Authoring
             | DiagnosticField.NodeId
             | DiagnosticField.RelatedLocations;
 
-        private static readonly DiagnosticCatalog Catalog = new DiagnosticCatalog(new[]
+        internal static readonly DiagnosticCatalog Catalog = new DiagnosticCatalog(new[]
         {
             Descriptor(ReferenceCompilerDiagnosticCodes.InvalidOptions),
             Descriptor(ReferenceCompilerDiagnosticCodes.PolicyHashMismatch),

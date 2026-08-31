@@ -220,7 +220,7 @@ namespace AIBT
 
     internal static class BlackboardStorageDiagnostics
     {
-        private static readonly DiagnosticCatalog Catalog = new DiagnosticCatalog(new[]
+        internal static readonly DiagnosticCatalog Catalog = new DiagnosticCatalog(new[]
         {
             Descriptor(BlackboardStorageDiagnosticCodes.InvalidSlot),
             Descriptor(BlackboardStorageDiagnosticCodes.UndeclaredAccess),

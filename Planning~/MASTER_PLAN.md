@@ -223,3 +223,21 @@ parsing," per `DECISION_BOUNDARIES.md`'s escalation rule. The owner deferred thi
 `Draft` spike/decision card (dependent on `P6-006`, done; not required for the `P6-012` gate)
 rather than deciding mid-session. See
 `Planning~/Tasks/P6/P6-014-mcp-blackboard-agent-shared-scope-decision.md`.
+
+`P6-021` (MCP diagnostic-catalog accessibility and benchmark-harness housekeeping) is **done**: the
+only card in the `P6-013`-`P6-022` tech-debt batch that is mechanical rather than a spike/decision
+cycle. Widened `ReferenceCompilerDiagnostics`/`ReferenceExecutionDiagnostics`/
+`CommandAsyncDiagnostics`/`BlackboardStorageDiagnostics`'s own `Catalog` fields from `private` to
+`internal` (matching `P6-007`'s own 2026-08-28 addendum pattern exactly) so `explain_diagnostic` can
+reach all four, proven by 4 new parametrized tests through the real `McpToolDispatcher.Dispatch`
+entry point -- no diagnostic code, severity, or field contract changed, only reachability. Also
+closed `P6-008`'s own disclosed "not run" gap on the 5 isolated Phase 4 benchmark harness scripts it
+mechanically edited: ran 3 of the 5 end-to-end (`Run-SchedulingBenchmark.ps1`,
+`Run-AutoComparisonBenchmark.ps1`, both Editor batchmode, plus **`Run-WindowsPlatformBenchmark.ps1`,
+which built and ran a real Windows x64 IL2CPP/Burst non-Development Standalone Player** -- the one
+that actually satisfies "real Player build produced," since the two Editor-batchmode scripts do not
+build a Player at all); `Build-AndroidPlatformBenchmark.ps1`/`Build-WebPlatformBenchmark.ps1` were
+not run this session (both need real device/browser access `P4-008` already used once and separately
+acquired), disclosed honestly rather than assumed identical from the 3 passing scripts. Full
+regression re-run (1585/1585 executed, same 3 pre-existing unrelated failures, zero new). See
+`Planning~/Evidence/P6-021/`.

@@ -154,17 +154,17 @@ namespace AIBT.Mcp.Verification
 
             var response = new JObject { ["code"] = codeText };
 
-            // AIBT.Mcp now has an InternalsVisibleTo grant from AIBT.Authoring, AIBT.Runtime, and
+            // AIBT.Mcp has an InternalsVisibleTo grant from AIBT.Authoring, AIBT.Runtime, and
             // AIBT.Editor (widened 2026-08-28), reaching every internal-or-public DiagnosticCatalog
             // holder in those three assemblies: TreeValidationDiagnosticCatalog/
             // BlackboardDiagnosticCatalog (already public before the grant), plus
-            // TreeJsonDiagnostics/NodeRegistryDiagnostics/LayoutJsonDiagnostics. Four remain
-            // unreachable regardless of the grant -- ReferenceCompilerDiagnostics,
-            // ReferenceExecutionDiagnostics, CommandAsyncDiagnostics, BlackboardStorageDiagnostics
-            // -- because each declares its own Catalog field `private`, a stricter per-type
-            // restriction InternalsVisibleTo cannot bypass; a disclosed, found-but-not-fixed
-            // limitation (see Planning~/Evidence/P6-007/README.md's 2026-08-28 addendum), not
-            // silently worked around by touching those already-accepted files' field accessibility.
+            // TreeJsonDiagnostics/NodeRegistryDiagnostics/LayoutJsonDiagnostics (2026-08-28), and
+            // ReferenceCompilerDiagnostics/ReferenceExecutionDiagnostics/CommandAsyncDiagnostics/
+            // BlackboardStorageDiagnostics (P6-021 -- each of these four also had its own Catalog
+            // field `private`, a stricter per-type restriction InternalsVisibleTo alone could not
+            // bypass; widened to `internal` to match the earlier three). Nothing outside these nine
+            // catalogs is reachable, and nothing here changed any catalog's own code/severity/field
+            // contract -- only reachability.
             if (TreeValidationDiagnosticCatalog.Catalog.TryGet(code, out var treeDescriptor))
             {
                 WriteDescriptor(response, treeDescriptor);
@@ -184,6 +184,22 @@ namespace AIBT.Mcp.Verification
             else if (LayoutJsonDiagnostics.Catalog.TryGet(code, out var layoutJsonDescriptor))
             {
                 WriteDescriptor(response, layoutJsonDescriptor);
+            }
+            else if (ReferenceCompilerDiagnostics.Catalog.TryGet(code, out var compilerDescriptor))
+            {
+                WriteDescriptor(response, compilerDescriptor);
+            }
+            else if (ReferenceExecutionDiagnostics.Catalog.TryGet(code, out var executionDescriptor))
+            {
+                WriteDescriptor(response, executionDescriptor);
+            }
+            else if (CommandAsyncDiagnostics.Catalog.TryGet(code, out var commandAsyncDescriptor))
+            {
+                WriteDescriptor(response, commandAsyncDescriptor);
+            }
+            else if (BlackboardStorageDiagnostics.Catalog.TryGet(code, out var blackboardStorageDescriptor))
+            {
+                WriteDescriptor(response, blackboardStorageDescriptor);
             }
             else
             {

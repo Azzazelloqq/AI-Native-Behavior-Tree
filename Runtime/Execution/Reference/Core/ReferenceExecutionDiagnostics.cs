@@ -14,7 +14,7 @@ namespace AIBT
 
     internal static class ReferenceExecutionDiagnostics
     {
-        private static readonly DiagnosticCatalog Catalog = new DiagnosticCatalog(new[]
+        internal static readonly DiagnosticCatalog Catalog = new DiagnosticCatalog(new[]
         {
             Descriptor(ReferenceExecutionDiagnosticCodes.InvalidOperation),
             Descriptor(ReferenceExecutionDiagnosticCodes.MissingHandler),

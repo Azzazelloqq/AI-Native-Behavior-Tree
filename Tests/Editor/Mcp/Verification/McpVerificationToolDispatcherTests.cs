@@ -250,6 +250,26 @@ namespace AIBT.Tests.Editor.Mcp.Verification
             Assert.That((string)response["result"]["defaultSeverity"], Is.Not.Null.And.Not.Empty);
         }
 
+        [TestCase("AIBT3010", "RegistryAndCompiler")] // ReferenceCompilerDiagnostics (Authoring)
+        [TestCase("AIBT4001", "Execution")] // ReferenceExecutionDiagnostics (Runtime)
+        [TestCase("AIBT4101", "Execution")] // CommandAsyncDiagnostics (Runtime)
+        [TestCase("AIBT4201", "Execution")] // BlackboardStorageDiagnostics (Runtime)
+        public void ExplainDiagnosticReturnsCatalogFactsForEachP6021ReachableCatalog(string code, string expectedSubsystem)
+        {
+            // P6-021: each of these four Catalog fields was `private` (a stricter per-type
+            // restriction the 2026-08-28 InternalsVisibleTo grant alone could not bypass) and each
+            // previously reported catalogReachable: false -- widened to `internal` to match the
+            // earlier three catalogs the test case above already proves.
+            var response = Dispatch("explain_diagnostic", new JObject
+            {
+                ["diagnostic"] = new JObject { ["code"] = code },
+            }, "Read");
+
+            Assert.That((bool)response["result"]["catalogReachable"], Is.True, response.ToString());
+            Assert.That((string)response["result"]["subsystem"], Is.EqualTo(expectedSubsystem));
+            Assert.That((string)response["result"]["defaultSeverity"], Is.Not.Null.And.Not.Empty);
+        }
+
         // ---- permission negative matrix --------------------------------------------------------
 
         [TestCase("validate", "Read")]

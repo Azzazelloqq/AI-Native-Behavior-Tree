@@ -16,7 +16,7 @@ namespace AIBT
 
     internal static class CommandAsyncDiagnostics
     {
-        private static readonly DiagnosticCatalog Catalog = new DiagnosticCatalog(new[]
+        internal static readonly DiagnosticCatalog Catalog = new DiagnosticCatalog(new[]
         {
             Descriptor(CommandAsyncDiagnosticCodes.DuplicateCompletionOrderingKey, DiagnosticSeverity.Error),
             Descriptor(CommandAsyncDiagnosticCodes.NonIncreasingSourceSequence, DiagnosticSeverity.Error),
