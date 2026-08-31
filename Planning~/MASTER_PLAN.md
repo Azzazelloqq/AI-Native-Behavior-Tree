@@ -241,3 +241,19 @@ not run this session (both need real device/browser access `P4-008` already used
 acquired), disclosed honestly rather than assumed identical from the 3 passing scripts. Full
 regression re-run (1585/1585 executed, same 3 pre-existing unrelated failures, zero new). See
 `Planning~/Evidence/P6-021/`.
+
+`P6-013` (`ReferencePreviewDriver` simulation-capability decision) is **done, accepted**:
+`ADR-P6-013` (`AIBT-026`) decides `ReferencePreviewDriver`'s facade should be widened for
+completions injection, resume-with-step-budget, abort, and a caller-supplied `TreeInstanceId` --
+all four already implemented internally by the wrapped `ReferenceExecutionMachine`, never exposed.
+A disposable spike (`Spikes~/ReferencePreviewSimulationCapability/`, run live via Unity MCP against
+the real, unmodified engine) proved all four, and found a real, non-obvious fact along the way:
+`ReferenceExecutionMachine.RequestAbort` cannot cancel a *waiting* operation at all (it requires an
+already-open update and is rejected once a tick reaches `Waiting`) -- the ADR instead specifies the
+`Abort(update, reason, index)` overload, which opens its own fresh update and actually works for
+exactly the case a preview caller needs. `rootSeed` and behavior-case-style external "events" are
+both rejected as out of scope, confirmed by direct evidence (a literal, already-shipped
+`NotSupportedException("Phase 1 reference execution does not consume external events.")`) to be
+genuine missing engine capability, not facade gaps this card could resolve. No production file was
+touched, per this card's own Forbidden-changes clause; a future, not-yet-numbered implementation
+card applies the ADR. See `Planning~/Evidence/P6-013/`.
