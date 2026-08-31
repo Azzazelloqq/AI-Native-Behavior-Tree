@@ -1544,7 +1544,7 @@
       "id": "P6-018",
       "phase": 6,
       "title": "Active-instance hot-reload migration decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-018-active-instance-hot-reload-migration-decision.md",
       "dependsOn": [

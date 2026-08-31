@@ -304,3 +304,22 @@ fresh machine's own future ticks, not the reload procedure's own internal state-
 which never calls it at all -- a future benchmark card must measure post-reload ticking cost, not
 the reload procedure's own cost, since those are genuinely different things. `HotReloadPreviewDriverTests`
 (`P5-008`'s own suite) re-run unmodified, still passing. See `Planning~/Evidence/P6-020/`.
+
+`P6-018` (active-instance hot-reload migration decision) is **done, accepted: build it**.
+`ADR-P6-018` (`AIBT-030`) found `ADR-P5-001`'s own implementation addendum's blocking analysis
+inaccurate: `ReferenceFrame`'s only read-only property is `NodeIndex` (set once at construction,
+which migration needs anyway), not the "extensive per-decorator-type fields" the addendum named --
+all 30+ other fields already have normal settable properties. The real gap is structural:
+`ReferenceExecutionMachine`'s own frame stack (`_frames`) is `private`, with no accessor at all,
+unlike per-node state's existing `CaptureNodeState`/`SeedNodeState`. A disposable spike
+(`Spikes~/ActiveInstanceHotReloadMigration/`, run live via Unity MCP against a real, actively-
+executing instance -- a `Repeater(count: 3)` wrapping a perpetually-`Running` leaf, 2 real nested
+active frames with genuine decorator state) migrated the entire frame stack field-for-field across a
+real `Migrate`-category parameter edit (reflection standing in only for the not-yet-built
+`CaptureFrameStack`/`SeedFrameStack` accessor pair this ADR specifies, per this card's own
+Forbidden-changes clause) and proved the migrated instance kept running correctly under a real
+subsequent `Update`, without fault. Scope: only when every node on the active path classifies
+`Migrate`; any `IncompatibleRestart`/`Dropped` node on that path still falls back to full restart,
+since a coherent traversal path cannot be partially migrated the way idle per-node state can.
+`HotReloadStateMigrationTests` (the existing idle-instance suite) re-run unmodified, still passing.
+See `Planning~/Evidence/P6-018/`.
