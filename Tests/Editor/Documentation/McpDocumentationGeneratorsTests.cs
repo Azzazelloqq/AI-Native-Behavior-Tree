@@ -194,8 +194,19 @@ namespace AIBT.Tests.Editor.Documentation
 
         private static string FindGeneratedDocumentationDirectory()
         {
-            var directory = new DirectoryInfo(UnityEngine.Application.dataPath);
-            return Path.Combine(directory.FullName, "AIBT", "Documentation~", "generated");
+            // Found live by P6-012 running this exact test against a detached UPM harness: this host
+            // project embeds AIBT directly under Assets/ (a plain folder containing package.json, not
+            // registered under Packages/), so PackageManager.PackageInfo.FindForAssembly returns null
+            // here -- but a real file:/registry UPM consumer (the detached harness) resolves it via
+            // PackageInfo instead, at a completely different physical path. Documentation~/generated/
+            // is a committed subfolder of the package's own git tree either way, so try the real
+            // package-manager resolution first and fall back to the embedded-layout assumption only
+            // when Package Manager genuinely does not know about it.
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(McpBuiltInTools).Assembly);
+            var packageRoot = packageInfo != null
+                ? packageInfo.resolvedPath
+                : Path.Combine(UnityEngine.Application.dataPath, "AIBT");
+            return Path.Combine(packageRoot, "Documentation~", "generated");
         }
     }
 }
