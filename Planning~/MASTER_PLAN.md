@@ -356,3 +356,18 @@ recalibrated rule: **`Auto` now matches the best fixed policy in 24 of 24 cases,
 -- reported honestly, with `P4-005`'s/`P4-006`'s own prior evidence left unedited. Full host-project
 EditMode regression: 1586/1586 executed, same 3 pre-existing unrelated failures, zero new ones. See
 `Planning~/Evidence/P6-019/`.
+
+`P6-016` (Editor graph-view unification decision) is **done, accepted, tool-by-tool**. `ADR-P6-016`
+(`AIBT-032`) found the "eight tools" are not architecturally uniform, contrary to the card's own
+framing risk: reading every one of their own directories found only two
+(`BehaviorTreePreviewWindow`/`TraceTimelineWindow`) actually own a duplicated `GraphView` worth
+unifying; five (`P3-004`/`P3-005`/`P3-006`/`P3-008`/`P3-010`) own no window or view at all -- pure
+library code operating on documents directly -- and integrate instead as UI commands calling their
+existing APIs, never a view-sharing mechanism; one (`HotReloadWorkflowWindow`) stays standalone by
+reasoned exception (its own focused, sequential reload flow genuinely benefits from a dedicated
+window). A disposable spike (`Spikes~/EditorGraphViewUnification/`, run live via Unity MCP against
+the real, unmodified `BehaviorTreeGraphView`) proved two independent consumers of one shared view
+instance see the identical live node objects by reference (not copies), and that a document-operating
+tool (`SemanticEditOperations.AddNode`) needs no new mechanism at all -- just calling its existing
+API and re-populating the shared view. `BehaviorTreeGraphAdapterTests`/`SemanticEditOperationsTests`
+re-run unmodified, still passing. See `Planning~/Evidence/P6-016/`.

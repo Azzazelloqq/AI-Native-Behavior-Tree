@@ -1511,7 +1511,7 @@
       "id": "P6-016",
       "phase": 6,
       "title": "Editor graph-view unification decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-016-editor-graph-view-unification-decision.md",
       "dependsOn": [
