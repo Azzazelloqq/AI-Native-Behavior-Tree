@@ -1617,6 +1617,262 @@
         "Spikes~/GenericNativeDispatchTestHarness/",
         "Planning~/Evidence/P6-022/"
       ]
+    },
+    {
+      "id": "P7-001",
+      "phase": 7,
+      "title": "Public API and persisted-format stability inventory",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P7/P7-001-public-api-and-format-stability-inventory.md",
+      "dependsOn": [
+        "P6-012"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-001/"
+      ]
+    },
+    {
+      "id": "P7-002",
+      "phase": 7,
+      "title": "Supported-platform matrix and regression-threshold proposal",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P7/P7-002-supported-platform-matrix-and-regression-thresholds.md",
+      "dependsOn": [
+        "P4-009",
+        "P6-021"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-002/"
+      ]
+    },
+    {
+      "id": "P7-003",
+      "phase": 7,
+      "title": "Profiler integration and validation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-003-profiler-integration.md",
+      "dependsOn": [
+        "P2-025",
+        "P4-009"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-003/"
+      ]
+    },
+    {
+      "id": "P7-004",
+      "phase": 7,
+      "title": "Long-running and stress test suite",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-004-long-running-and-stress-tests.md",
+      "dependsOn": [
+        "P2-021",
+        "P4-009"
+      ],
+      "owns": [
+        "Tests/Runtime/Stress/",
+        "Planning~/Evidence/P7-004/"
+      ]
+    },
+    {
+      "id": "P7-005",
+      "phase": 7,
+      "title": "Migration-tooling design decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P7/P7-005-migration-tooling-decision.md",
+      "dependsOn": [
+        "P6-011",
+        "P2-005"
+      ],
+      "owns": [
+        "Spikes~/MigrationToolingDecision/",
+        "Planning~/Evidence/P7-005/"
+      ]
+    },
+    {
+      "id": "P7-006",
+      "phase": 7,
+      "title": "Migration tooling implementation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-006-migration-tooling-implementation.md",
+      "dependsOn": [
+        "P7-005"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-006/"
+      ]
+    },
+    {
+      "id": "P7-007",
+      "phase": 7,
+      "title": "Native trace production-wiring implementation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-007-native-trace-production-wiring-implementation.md",
+      "dependsOn": [
+        "P6-015"
+      ],
+      "owns": [
+        "Runtime/Scheduling/SchedulingPolicyDriver.cs",
+        "Planning~/Evidence/P7-007/"
+      ]
+    },
+    {
+      "id": "P7-008",
+      "phase": 7,
+      "title": "Per-project leaf-registration mechanism implementation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-008-per-project-leaf-registration-implementation.md",
+      "dependsOn": [
+        "P6-017"
+      ],
+      "owns": [
+        "Authoring/Registry/NodeRegistryBuilder.cs",
+        "Planning~/Evidence/P7-008/"
+      ]
+    },
+    {
+      "id": "P7-009",
+      "phase": 7,
+      "title": "Generic native-dispatch translator production implementation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-009-generic-native-dispatch-translator-implementation.md",
+      "dependsOn": [
+        "P6-022",
+        "P6-009"
+      ],
+      "owns": [
+        "MCP/NodeDevelopment/",
+        "Planning~/Evidence/P7-009/"
+      ]
+    },
+    {
+      "id": "P7-010",
+      "phase": 7,
+      "title": "Production Play-mode host decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P7/P7-010-production-play-mode-host-decision.md",
+      "dependsOn": [
+        "P2-019",
+        "P3-010",
+        "P5-010"
+      ],
+      "owns": [
+        "Spikes~/ProductionPlayModeHost/",
+        "Planning~/Evidence/P7-010/"
+      ]
+    },
+    {
+      "id": "P7-011",
+      "phase": 7,
+      "title": "Native-backend hot reload decision",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P7/P7-011-native-backend-hot-reload-decision.md",
+      "dependsOn": [
+        "P5-010"
+      ],
+      "owns": [
+        "Spikes~/NativeHotReloadModel/",
+        "Planning~/Evidence/P7-011/"
+      ]
+    },
+    {
+      "id": "P7-012",
+      "phase": 7,
+      "title": "Native-backend hot reload implementation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-012-native-backend-hot-reload-implementation.md",
+      "dependsOn": [
+        "P7-011"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-012/"
+      ]
+    },
+    {
+      "id": "P7-013",
+      "phase": 7,
+      "title": "Samples expansion",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-013-samples-expansion.md",
+      "dependsOn": [
+        "P6-010",
+        "P5-008"
+      ],
+      "owns": [
+        "Samples~/CustomMcpToolProvider/",
+        "Planning~/Evidence/P7-013/"
+      ]
+    },
+    {
+      "id": "P7-014",
+      "phase": 7,
+      "title": "Generated C# API reference documentation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-014-generated-api-reference-documentation.md",
+      "dependsOn": [
+        "P6-012"
+      ],
+      "owns": [
+        "Documentation~/generated/",
+        "Planning~/Evidence/P7-014/"
+      ]
+    },
+    {
+      "id": "P7-015",
+      "phase": 7,
+      "title": "Release automation",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-015-release-automation.md",
+      "dependsOn": [
+        "P0-002"
+      ],
+      "owns": [
+        ".github/workflows/",
+        "Planning~/Evidence/P7-015/"
+      ]
+    },
+    {
+      "id": "P7-016",
+      "phase": 7,
+      "title": "Phase 7 integration gate",
+      "status": "blocked",
+      "kind": "review",
+      "card": "Planning~/Tasks/P7/P7-016-phase7-integration-gate.md",
+      "dependsOn": [
+        "P7-001",
+        "P7-002",
+        "P7-003",
+        "P7-004",
+        "P7-005",
+        "P7-006",
+        "P7-007",
+        "P7-008",
+        "P7-009",
+        "P7-010",
+        "P7-011",
+        "P7-012",
+        "P7-013",
+        "P7-014",
+        "P7-015"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-GATE/"
+      ]
     }
   ]
 }

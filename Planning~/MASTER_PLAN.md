@@ -396,4 +396,55 @@ disposable single-node shard built for exactly this purpose (necessarily assigne
 a legitimate proof of the translator itself but not of extracting an arbitrary node from the middle
 of a pre-existing multi-node catalog -- disclosed as a real, load-bearing scope boundary for whichever
 future card widens `P6-009`'s `test-node` into production, rather than smoothed over. See
-`Planning~/Evidence/P6-022/`.
+`Planning~/Evidence/P6-022/`. **Phase 6 is now complete**: `P6-001` through `P6-022` are all `Done`.
+
+`P0-005`, `P0-006`, `P1-019`, and `P5-007` were re-checked on 2026-08-31 against a real, live
+GitHub Actions API query (not assumption) rather than assumed stale or superseded by later gates.
+**All four remain genuinely, correctly open, not stale bookkeeping.** `P0-005`/`P0-006`/`P1-019`
+cascade from one single unresolved item: the `Validation` workflow's own `unity` job
+(`runs-on: [self-hosted, Windows, X64, unity-6000.5.8f1]`) has never been picked up by any runner
+-- confirmed live via `GET /repos/.../actions/runs/33381826491/jobs`, showing `status: queued`,
+`runner_id: 0` for that exact job, queued since the most recent push to `main`. This is a distinct
+concern from `P3-013`/`P4-009`/`P5-010`/`P6-012`'s own local detached-UPM-harness EditMode
+regressions (which all passed and needed no runner) -- a real GitHub Actions run on PRs is what
+`P0-005` itself requires, and nothing else has ever substituted for it. `P5-007` remains blocked for
+the same reason recorded in its own evidence: native-backend hot reload does not exist, restated
+unchanged through `P5-GATE` and `P6-GATE`'s own phase-handoff notes. No file was changed by this
+check; the owner chose to proceed to Phase 7 decomposition rather than stand up a self-hosted runner
+this session.
+
+Phase 7 (production hardening) was decomposed into `P7-001` through `P7-016` on 2026-08-31,
+grounded in `Documentation~/roadmap.md`'s Phase 7 scope and `Documentation~/scope.md`'s "Release
+criteria for 1.0" list, plus `Planning~/Evidence/P6-GATE/phase7-inputs.md`'s own handoff (native
+hot reload and a production Play-mode host both still open; the applied-node-discoverability and
+trace-inspection gaps tied to `P6-017`/`P6-015`, both already decided but not yet built; a real
+`generate_node` template defect). Two genuinely undecided architectural questions get a dedicated
+spike/decision card before implementation, mirroring `P3-001`/`P5-001`/`P6-001`'s own pattern:
+`P7-010` (a production Play-mode host -- the single most-repeated disclosed gap across the whole
+project, independently found by `P3-009`, `P3-010`, `P3-011`, `P6-008`, and `P6-012`'s own gate
+session) and `P7-011` (native-backend hot reload, `P5-004`'s own disclosed "separate
+capacity-plan/lease subsystem" gap, restated unchanged since). `P7-001` (public-API/persisted-format
+stability inventory) and `P7-002` (supported-platform matrix/regression-threshold proposal) are also
+decision-shaped cards, but for a different reason: `Planning~/USER_ACTIONS.md` already requires the
+owner's explicit approval for exactly what they produce ("Approve final public API and
+persisted-format stability review"; "Approve the exact supported browser/version policy" and
+"acceptable regression thresholds after research results exist") -- these cards assemble the real
+evidence so that approval is a decision, not a guess. Three cards apply already-accepted-but-not-yet-built
+decisions from the `P6-013`-`P6-022` tech-debt batch: `P7-007` (`ADR-P6-015`, native trace
+production-wiring), `P7-008` (`ADR-P6-017`, per-project leaf registration -- this card's own
+acceptance criteria fold in fixing the applied-node-discoverability gap the `P6-012` gate reproduced
+live, since it is a direct consequence of the same registry-wiring gap, not a separate problem), and
+`P7-009` (`ADR-P6-022`, the generic native-dispatch translator -- bundled with the small, disclosed
+`generate_node` `Bool`-typed template defect, mirroring `P6-021`'s own precedent for grouping small
+mechanical fixes rather than giving each its own decision cycle). `P7-005`/`P7-006` split a decision
+from its implementation for migration tooling, since no mechanism spec exists yet for
+`Documentation~/scope.md`'s "versioned node contracts and data migrations" beyond `P6-011`'s own
+disclosed documentation stub. `P7-003` (profiler integration), `P7-004` (long-running/stress
+tests), `P7-013` (samples expansion), and `P7-014` (generated API reference documentation) are
+straightforward implementation cards against an already-clear roadmap line. `P7-015` (release
+automation) is scoped explicitly around `P0-005`'s own still-open runner gap rather than silently
+assuming it will be resolved first. `P7-016` is the Phase 7 integration gate, mirroring
+`P2-025`/`P3-013`/`P4-009`/`P5-010`/`P6-012`'s own shape, and is the first gate whose own acceptance
+criteria explicitly require a recorded owner decision (from `P7-001`/`P7-002`) rather than only
+internal verification -- it does not, itself, declare `1.0.0`; that remains the owner's release
+decision per `Planning~/USER_ACTIONS.md`.
