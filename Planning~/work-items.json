@@ -1420,7 +1420,7 @@
       "id": "P6-011",
       "phase": 6,
       "title": "Generated agent documentation",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-011-generated-agent-documentation.md",
       "dependsOn": [
@@ -1429,6 +1429,10 @@
         "P6-009"
       ],
       "owns": [
+        "MCP/Documentation/",
+        "MCP/McpBuiltInTools.cs",
+        "Tests/Editor/Documentation/",
+        "Documentation~/generated/",
         "Planning~/Evidence/P6-011/"
       ]
     },

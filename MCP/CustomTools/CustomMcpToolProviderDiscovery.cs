@@ -16,21 +16,11 @@ namespace AIBT.Mcp.CustomTools
     /// </summary>
     internal static class CustomMcpToolProviderDiscovery
     {
-        /// <summary>Bare tool names already used by a built-in AIBT MCP tool (McpToolDispatcher's own
-        /// switch keys, mirroring MCP~/Server/'s "aibt_"-prefixed static tool names minus the prefix
-        /// stripped, plus the discovery-tool bridge keys directly). A custom tool colliding with one
-        /// of these is rejected -- it would otherwise be ambiguous which handler actually owns it.</summary>
-        private static readonly HashSet<string> ReservedToolNames = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "get_project_manifest", "search_nodes", "get_node_contract", "get_static_resource",
-            "create_tree", "add_node", "remove_node", "move_node", "replace_node", "configure_node",
-            "set_blackboard_keys", "extract_subtree", "inline_subtree", "apply_domain_patch", "request_layout",
-            "validate", "compile", "simulate", "explain_diagnostic",
-            "run_tests", "run_benchmark",
-            "generate_node", "preview_node_diff", "generate_node_tests_and_manifest",
-            "analyze_and_compile_node", "test_node", "apply_node",
-            "list_custom_tools", "call_custom_tool",
-        };
+        /// <summary>Bare tool names already used by a built-in AIBT MCP tool. A custom tool
+        /// colliding with one of these is rejected -- it would otherwise be ambiguous which handler
+        /// actually owns it. Sourced from McpBuiltInTools (P6-011 promoted this out of a private
+        /// copy here so the generated workflow guide can reference the same real list).</summary>
+        private static readonly HashSet<string> ReservedToolNames = new HashSet<string>(McpBuiltInTools.BridgeToolNames, StringComparer.Ordinal);
 
         internal readonly struct BuildResult
         {
