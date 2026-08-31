@@ -66,7 +66,13 @@ namespace AIBT.Mcp.Documentation
 
         private static string FormatJson(JObject value)
         {
-            return value.ToString(Newtonsoft.Json.Formatting.Indented);
+            // Newtonsoft's Formatting.Indented embeds Environment.NewLine, which is platform-
+            // dependent (\r\n on Windows) -- found live by P6-012's detached-harness gate: a fresh
+            // Windows regeneration produced \r\n inside this block while the git-checked-out
+            // committed file (normalized to \n by .gitattributes' eol=lf) did not, so the two never
+            // matched. Normalized explicitly so this document's line endings are always \n,
+            // independent of the host OS, matching every other generator in this file.
+            return value.ToString(Newtonsoft.Json.Formatting.Indented).Replace("\r\n", "\n");
         }
     }
 }
