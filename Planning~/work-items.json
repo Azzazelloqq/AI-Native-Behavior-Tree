@@ -1607,7 +1607,7 @@
       "id": "P6-022",
       "phase": 6,
       "title": "Generic native-dispatch test-harness decision",
-      "status": "draft",
+      "status": "review",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-022-generic-native-dispatch-test-harness-decision.md",
       "dependsOn": [

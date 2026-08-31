@@ -371,3 +371,22 @@ instance see the identical live node objects by reference (not copies), and that
 tool (`SemanticEditOperations.AddNode`) needs no new mechanism at all -- just calling its existing
 API and re-populating the shared view. `BehaviorTreeGraphAdapterTests`/`SemanticEditOperationsTests`
 re-run unmodified, still passing. See `Planning~/Evidence/P6-016/`.
+
+`P6-022` (generic native-dispatch test-harness decision) is **partial: decision made and verified by
+direct code reading, but not yet fully closed** -- the card's own required live spike (driving a
+real `ExecuteImmediate` call through a generically-constructed workspace shape) was not completed
+this session. `ADR-P6-022` (`AIBT-033`) decides the translator reads `CanonicalDescriptorJson` (via
+the already-accepted `GeneratedShardMetadataMaterializer`) for per-node case/field/binding shape,
+plus the generated catalog's own reflected fingerprints for the handshake, and verifies the mapping
+mechanically correct for built-in-typed, non-async node shapes by reading the real
+`NativeBurstDispatchCaseV2`/`NativeBurstDispatchFieldV2` constructors directly. A real, load-bearing
+finding surfaced along the way: `GeneratedFieldEncoding` and `NativeBurstDispatchFieldEncodingV2`
+are not numerically aligned (`GeneratedHandle` differs, `FixedBytes`/`Registered` have no dispatch
+equivalent at all) -- a naive cast would silently corrupt dispatch behavior, confirmed by direct
+enum comparison. The spike itself was not attempted: unlike this session's other decision cards
+(all spiked live against the MCP-connected Editor), proving this translator requires compiling a
+real generated Burst-node catalog inside a slow, non-interactive isolated Unity project build, and
+combined with the still-undesigned `Registered`-field-encoding question, forcing a spike through
+risked exactly the "silently drops fidelity" outcome this card's own text warns against. Disclosed
+plainly rather than fabricated; work-item status is `review`, not `done`. See
+`Planning~/Evidence/P6-022/`.
