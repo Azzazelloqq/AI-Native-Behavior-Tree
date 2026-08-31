@@ -224,6 +224,21 @@ parsing," per `DECISION_BOUNDARIES.md`'s escalation rule. The owner deferred thi
 rather than deciding mid-session. See
 `Planning~/Tasks/P6/P6-014-mcp-blackboard-agent-shared-scope-decision.md`.
 
+`P6-014` is **done: not implemented, deferred**. `ADR-P6-014` (`AIBT-029`) found the true picture one
+layer harder than either investigation pass placed it: a disposable spike confirmed `TreeValidator`
+does respect `SupportsAgentScope`/`SupportsSharedScope` (a custom, non-`Phase1` policy instance makes
+it accept an Agent-scope document `Phase1`'s own defaults reject), but `ReferenceCompiler.cs`'s own
+separate Tree-scope-only check (`AIBT3012`) does not consult those flags at all -- it is
+unconditional. The exact same opt-in policy that satisfies `TreeValidator` still fails compilation,
+so a validated Agent/Shared document can never become a `CompiledProgram`, and the runtime-storage
+question (whether `ReferenceExecutionMachine` actually executes such a slot) never arises --
+`ReferenceBlackboardStorage`'s own matching rejection is unreachable, not merely unexercised. Both
+`ReferenceCompiler.cs` and `ReferenceBlackboardStorage.cs` independently say "Phase 1 ... supports
+only Tree-scope" in their own diagnostic text, confirming `Phase1`'s naming is a deliberate,
+engine-level boundary. MCP's current explicit rejection needs no change; supporting this for real
+would require a future engine capability card making the compiler's own check policy-aware, not an
+MCP authoring change. See `Planning~/Evidence/P6-014/`.
+
 `P6-021` (MCP diagnostic-catalog accessibility and benchmark-harness housekeeping) is **done**: the
 only card in the `P6-013`-`P6-022` tech-debt batch that is mechanical rather than a spike/decision
 cycle. Widened `ReferenceCompilerDiagnostics`/`ReferenceExecutionDiagnostics`/

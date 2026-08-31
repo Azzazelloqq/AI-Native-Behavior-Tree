@@ -1480,7 +1480,7 @@
       "id": "P6-014",
       "phase": 6,
       "title": "MCP blackboard Agent/Shared scope decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P6/P6-014-mcp-blackboard-agent-shared-scope-decision.md",
       "dependsOn": [
