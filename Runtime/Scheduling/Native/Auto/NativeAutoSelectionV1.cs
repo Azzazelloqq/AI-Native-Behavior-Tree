@@ -93,20 +93,26 @@ namespace AIBT
                     chosen = NativeAutoPolicyV1.PipelinedJobs;
                     reason = NativeAutoSelectionReasonV1.PipelinedPreferredForThroughput;
                 }
-                else if (IsSupported(candidates, NativeAutoPolicyV1.BatchedJobsSameFrame))
-                {
-                    chosen = NativeAutoPolicyV1.BatchedJobsSameFrame;
-                    reason = NativeAutoSelectionReasonV1.BatchedForSameFrameThroughput;
-                }
+                // P6-019 recalibration: Immediate/Budgeted are tried BEFORE BatchedJobsSameFrame --
+                // reversed from the original rule, which unconditionally preferred batching here
+                // with no real cost comparison. P4-002's/P4-006's own measured cost curves showed
+                // Immediate/Budgeted cheaper than BatchedJobsSameFrame in 24 of 24 measured points
+                // (16-1024 agents); this reorder is fully grounded in that evidence, with no new
+                // numeric threshold introduced, per the owner's own approved scope for this card.
                 else if (IsSupported(candidates, NativeAutoPolicyV1.Immediate))
                 {
                     chosen = NativeAutoPolicyV1.Immediate;
-                    reason = NativeAutoSelectionReasonV1.FallbackToOnlyAvailablePolicy;
+                    reason = NativeAutoSelectionReasonV1.PreferredOverBatchedByMeasuredCost;
                 }
                 else if (IsSupported(candidates, NativeAutoPolicyV1.Budgeted))
                 {
                     chosen = NativeAutoPolicyV1.Budgeted;
-                    reason = NativeAutoSelectionReasonV1.FallbackToOnlyAvailablePolicy;
+                    reason = NativeAutoSelectionReasonV1.PreferredOverBatchedByMeasuredCost;
+                }
+                else if (IsSupported(candidates, NativeAutoPolicyV1.BatchedJobsSameFrame))
+                {
+                    chosen = NativeAutoPolicyV1.BatchedJobsSameFrame;
+                    reason = NativeAutoSelectionReasonV1.BatchedForSameFrameThroughput;
                 }
                 else
                 {
@@ -121,7 +127,13 @@ namespace AIBT
         }
 
         /// <summary>
-        /// `P4-007`'s lightweight-adaptation experiment (`OQ-006`). Identical to
+        /// `P4-007`'s lightweight-adaptation experiment (`OQ-006`, rejected -- kept only for its own
+        /// experimental test coverage, never called by any shipped production caller). Deliberately
+        /// NOT recalibrated by `P6-019`: that card's own scope is <see cref="TrySelect"/>'s
+        /// deterministic rule specifically, and this method's own fallback tail (unchanged, still
+        /// preferring `BatchedJobsSameFrame` before Immediate/Budgeted below) is exactly what its own
+        /// existing tests exercise on purpose to demonstrate the deterministic-rule mistake the
+        /// adaptive mechanism was built to route around. Identical to
         /// <see cref="TrySelect"/> for a forced policy, and identical for the
         /// below-minimum-workload and explicit-budget priors (a caller's explicit signals are not
         /// second-guessed by tracked cost data). The one difference: at the exact decision point
@@ -130,8 +142,10 @@ namespace AIBT
         /// pipeline-eligible large workload), this method compares each viable candidate's own
         /// <see cref="NativeAutoPolicyCostTrackerV1"/> -- its smoothed, bounded recent real cost --
         /// and picks whichever is currently cheapest, but only once at least two candidates have
-        /// an established estimate; with fewer than two, it falls back to exactly
-        /// <see cref="TrySelect"/>'s deterministic rule (a cold start has no real data to compare).
+        /// an established estimate; with fewer than two, it falls back to this method's own
+        /// unchanged copy of the pre-`P6-019` deterministic rule (a cold start has no real data to
+        /// compare) -- no longer literally identical to <see cref="TrySelect"/> after `P6-019`'s own
+        /// recalibration of that method specifically; see this method's own updated remarks above.
         /// </summary>
         internal static bool TrySelectAdaptive(
             in NativeAutoConfigurationV1 configuration,

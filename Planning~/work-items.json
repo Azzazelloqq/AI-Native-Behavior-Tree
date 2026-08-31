@@ -1560,7 +1560,7 @@
       "id": "P6-019",
       "phase": 6,
       "title": "Auto scheduler heuristic recalibration",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P6/P6-019-auto-scheduler-heuristic-recalibration.md",
       "dependsOn": [

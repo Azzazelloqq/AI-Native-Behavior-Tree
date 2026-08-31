@@ -134,9 +134,28 @@ namespace AIBT.Tests.Runtime.NativeExecution.Scheduling.Auto
         }
 
         [Test]
-        public void LargeWorkloadWithSameFrameRequiredSelectsBatchedJobsSameFrame()
+        public void LargeWorkloadWithSameFrameRequiredPrefersImmediateOverBatchedByMeasuredCost()
         {
+            // P6-019 recalibration: with Immediate supported (the default "All" set), a large
+            // same-frame workload now prefers Immediate over BatchedJobsSameFrame -- the reverse of
+            // the pre-recalibration rule this exact scenario used to exercise -- because P4-002's/
+            // P4-006's own real cost curves showed Immediate cheaper in 24 of 24 measured points.
             var configuration = Configuration(latencyMode: NativeAutoLatencyModeV1.SameFrame, minimumJobWorkloadNanoseconds: 1);
+            Assert.That(NativeAutoSelectionV1.TrySelect(
+                configuration, Workload(estimatedWorkPerAgentNanoseconds: 100000), 1000, out var explanation, out var failure), Is.True, failure.Code.ToString());
+            Assert.That(explanation.ChosenPolicy, Is.EqualTo(NativeAutoPolicyV1.Immediate));
+            Assert.That(explanation.Reason, Is.EqualTo(NativeAutoSelectionReasonV1.PreferredOverBatchedByMeasuredCost));
+        }
+
+        [Test]
+        public void LargeWorkloadStillSelectsBatchedJobsSameFrameWhenItIsTheOnlySameFrameCapablePolicySupported()
+        {
+            // BatchedJobsSameFrame remains reachable -- P6-019 demotes it in priority, it does not
+            // remove it -- when it is genuinely the only same-frame-capable policy the caller has
+            // made available.
+            var configuration = Configuration(
+                supportedPolicies: NativeAutoSupportedPoliciesV1.BatchedJobsSameFrame,
+                latencyMode: NativeAutoLatencyModeV1.SameFrame, minimumJobWorkloadNanoseconds: 1);
             Assert.That(NativeAutoSelectionV1.TrySelect(
                 configuration, Workload(estimatedWorkPerAgentNanoseconds: 100000), 1000, out var explanation, out var failure), Is.True, failure.Code.ToString());
             Assert.That(explanation.ChosenPolicy, Is.EqualTo(NativeAutoPolicyV1.BatchedJobsSameFrame));
@@ -153,7 +172,12 @@ namespace AIBT.Tests.Runtime.NativeExecution.Scheduling.Auto
             Assert.That(NativeAutoSelectionV1.TrySelect(
                 configuration, Workload(estimatedWorkPerAgentNanoseconds: 100000), 1000, out var explanation, out var failure), Is.True, failure.Code.ToString());
             Assert.That(explanation.ChosenPolicy, Is.EqualTo(NativeAutoPolicyV1.Immediate));
-            Assert.That(explanation.Reason, Is.EqualTo(NativeAutoSelectionReasonV1.FallbackToOnlyAvailablePolicy));
+            // P6-019 recalibration: Immediate is now reached via the evidence-based preference
+            // branch (it would have won this comparison even if Batched were also supported), not
+            // the old "only available policy" fallback -- FallbackToOnlyAvailablePolicy is no longer
+            // reachable from TrySelect at all (it remains live only in TrySelectAdaptive's own
+            // deliberately-unchanged fallback tail).
+            Assert.That(explanation.Reason, Is.EqualTo(NativeAutoSelectionReasonV1.PreferredOverBatchedByMeasuredCost));
         }
 
         [TestCase(0u, "Low")]

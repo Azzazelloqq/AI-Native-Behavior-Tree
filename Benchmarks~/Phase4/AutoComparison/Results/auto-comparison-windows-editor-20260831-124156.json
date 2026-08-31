@@ -1,0 +1,957 @@
+{
+    "schema": "aibt-p4-006-auto-comparison-v1",
+    "capturedAtUtc": "2026-08-31T12:43:17.4327252Z",
+    "scope": "Auto policy (LatencyMode=SameFrame) vs best fixed policy across P4-001's implemented scenario catalog",
+    "environment": {
+        "unityVersion": "6000.5.8f1",
+        "editorBatchMode": true,
+        "operatingSystem": "Windows 11  (10.0.26200)",
+        "processorType": "Intel(R) Core(TM) Ultra 9 275HX",
+        "processorCount": 24,
+        "jobWorkerCount": 23,
+        "commandLine": [
+            "C:\\Program Files\\Unity\\Hub\\Editor\\6000.5.8f1\\Editor\\Unity.exe",
+            "-batchmode",
+            "-nographics",
+            "-burst-enable-compilation",
+            "-projectPath",
+            "C:\\Users\\User\\AppData\\Local\\Temp\\aibt-p4-006-auto-comparison-498f4f546680449ea7cae270a15dfd5b",
+            "-executeMethod",
+            "AIBT.Benchmarks.Phase4.AutoComparison.AutoComparisonRunner.Run",
+            "-aibtBenchmarkOutput",
+            "C:\\UnityProjects\\Modules\\Assets\\AIBT\\Benchmarks~\\Phase4\\AutoComparison\\Results\\auto-comparison-windows-editor-20260831-124156.json",
+            "-aibtWarmupSamples",
+            "5",
+            "-aibtMeasuredSamples",
+            "15",
+            "-aibtAgentCounts",
+            "16,64,256,1024",
+            "-logFile",
+            "C:\\UnityProjects\\Modules\\Assets\\AIBT\\Benchmarks~\\Phase4\\AutoComparison\\Results\\auto-comparison-windows-editor-20260831-124156.log",
+            "-quit"
+        ],
+        "thermalAndPowerConditions": "Not controlled or recorded"
+    },
+    "configuration": {
+        "agentCounts": [
+            16,
+            64,
+            256,
+            1024
+        ],
+        "warmupSamples": 5,
+        "measuredSamples": 15,
+        "minimumJobWorkloadNanoseconds": 50000.0,
+        "targetBatchWorkNanoseconds": 50000.0,
+        "latencyMode": "SameFrame"
+    },
+    "scenarios": [
+        {
+            "name": "scheduling-baseline-empty-job",
+            "isolates": "The fixed per-tick overhead of beginning and completing an update on the smallest possible tree (one leaf), isolated from any node-execution cost.",
+            "cases": [
+                {
+                    "agentCount": 16,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 2937.5
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 2943.75
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 17956.25
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 2937.5,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 2937.5,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 4.0,
+                        "estimatedWorkPerAgentNanoseconds": 241.1,
+                        "estimatedTotalWorkNanoseconds": 3857.6,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 64,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 2851.5625
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 2929.6875
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 17993.75
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 2851.5625,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 2851.5625,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 4.0,
+                        "estimatedWorkPerAgentNanoseconds": 241.1,
+                        "estimatedTotalWorkNanoseconds": 15430.4,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 256,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 2875.0
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 2928.515625
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 24471.09375
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 2875.0,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 2875.0,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 4.0,
+                        "estimatedWorkPerAgentNanoseconds": 241.1,
+                        "estimatedTotalWorkNanoseconds": 61721.6,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 1024,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 2869.921875
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 2996.484375
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 59059.9609375
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 2869.921875,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 2869.921875,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 4.0,
+                        "estimatedWorkPerAgentNanoseconds": 241.1,
+                        "estimatedTotalWorkNanoseconds": 246886.4,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                }
+            ]
+        },
+        {
+            "name": "shallow-tree-cheap-conditions",
+            "isolates": "A small, flat sequence of cheap leaves -- the common case for simple agent behavior.",
+            "cases": [
+                {
+                    "agentCount": 16,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 15156.25
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 15637.5
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 96512.5
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 15156.25,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 15156.25,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 23.0,
+                        "estimatedWorkPerAgentNanoseconds": 1386.325,
+                        "estimatedTotalWorkNanoseconds": 22181.2,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 64,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 15373.4375
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 16171.875
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 68503.125
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 15373.4375,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 15373.4375,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 23.0,
+                        "estimatedWorkPerAgentNanoseconds": 1386.325,
+                        "estimatedTotalWorkNanoseconds": 88724.8,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 256,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 15310.546875
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 15915.625
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 70396.484375
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 15310.546875,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 15310.546875,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 23.0,
+                        "estimatedWorkPerAgentNanoseconds": 1386.325,
+                        "estimatedTotalWorkNanoseconds": 354899.2,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 1024,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 15562.890625
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 16142.3828125
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 98987.6953125
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 15562.890625,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 15562.890625,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 23.0,
+                        "estimatedWorkPerAgentNanoseconds": 1386.325,
+                        "estimatedTotalWorkNanoseconds": 1419596.8,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                }
+            ]
+        },
+        {
+            "name": "deep-sequence-selector-traversal",
+            "isolates": "Traversal cost through many nested composite levels before reaching a leaf.",
+            "cases": [
+                {
+                    "agentCount": 16,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 176100.0
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 183075.0
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 961243.75
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 176100.0,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 176100.0,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 283.0,
+                        "estimatedWorkPerAgentNanoseconds": 17057.825,
+                        "estimatedTotalWorkNanoseconds": 272925.2,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 64,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 177259.375
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 184289.0625
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 697440.625
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 177259.375,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 177259.375,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 283.0,
+                        "estimatedWorkPerAgentNanoseconds": 17057.825,
+                        "estimatedTotalWorkNanoseconds": 1091700.8,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 256,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 178290.234375
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 185112.5
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 627667.1875
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 178290.234375,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 178290.234375,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 283.0,
+                        "estimatedWorkPerAgentNanoseconds": 17057.825,
+                        "estimatedTotalWorkNanoseconds": 4366803.2,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 1024,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 177886.71875
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 185360.64453125
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 631567.28515625
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 177886.71875,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 177886.71875,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 283.0,
+                        "estimatedWorkPerAgentNanoseconds": 17057.825,
+                        "estimatedTotalWorkNanoseconds": 17467212.8,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                }
+            ]
+        },
+        {
+            "name": "wide-branching-frequent-failures",
+            "isolates": "A wide composite where most children fail, isolating early-exit/failure-path cost.",
+            "cases": [
+                {
+                    "agentCount": 16,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 5193.75
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 5325.0
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 28650.0
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 5193.75,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 5193.75,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 8.0,
+                        "estimatedWorkPerAgentNanoseconds": 482.2,
+                        "estimatedTotalWorkNanoseconds": 7715.2,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 64,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 5026.5625
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 5203.125
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 25384.375
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 5026.5625,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 5026.5625,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 8.0,
+                        "estimatedWorkPerAgentNanoseconds": 482.2,
+                        "estimatedTotalWorkNanoseconds": 30860.8,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 256,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 5052.34375
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 5205.078125
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 32994.53125
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 5052.34375,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 5052.34375,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 8.0,
+                        "estimatedWorkPerAgentNanoseconds": 482.2,
+                        "estimatedTotalWorkNanoseconds": 123443.2,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 1024,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 5131.8359375
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 5355.859375
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 65026.85546875
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 5131.8359375,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 5131.8359375,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 8.0,
+                        "estimatedWorkPerAgentNanoseconds": 482.2,
+                        "estimatedTotalWorkNanoseconds": 493772.8,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                }
+            ]
+        },
+        {
+            "name": "predominantly-running-actions",
+            "isolates": "Leaves that stay Running every tick, isolating the cost of resuming an already-entered tree without re-traversal.",
+            "cases": [
+                {
+                    "agentCount": 16,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 3400.0
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 3531.25
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 20668.75
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 3400.0,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 3400.0,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 5.0,
+                        "estimatedWorkPerAgentNanoseconds": 301.375,
+                        "estimatedTotalWorkNanoseconds": 4822.0,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 64,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 3348.4375
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 3500.0
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 18601.5625
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 3348.4375,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 3348.4375,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 5.0,
+                        "estimatedWorkPerAgentNanoseconds": 301.375,
+                        "estimatedTotalWorkNanoseconds": 19288.0,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 256,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 3343.359375
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 3544.921875
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 26683.984375
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 3343.359375,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 3343.359375,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 5.0,
+                        "estimatedWorkPerAgentNanoseconds": 301.375,
+                        "estimatedTotalWorkNanoseconds": 77152.0,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 1024,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 3456.54296875
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 3610.83984375
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 59582.6171875
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 3456.54296875,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 3456.54296875,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 5.0,
+                        "estimatedWorkPerAgentNanoseconds": 301.375,
+                        "estimatedTotalWorkNanoseconds": 308608.0,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                }
+            ]
+        },
+        {
+            "name": "many-programs-small-populations",
+            "isolates": "Many distinct small compiled programs with few agents each, isolating per-program (not per-agent) scheduling overhead.",
+            "cases": [
+                {
+                    "agentCount": 16,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 2856.25
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 2937.5
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 17468.75
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 2856.25,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 2856.25,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 4.0,
+                        "estimatedWorkPerAgentNanoseconds": 241.1,
+                        "estimatedTotalWorkNanoseconds": 3857.6,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 64,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 2834.375
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 3000.0
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 17018.75
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 2834.375,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "BelowMinimumJobWorkload",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 2834.375,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 4.0,
+                        "estimatedWorkPerAgentNanoseconds": 241.1,
+                        "estimatedTotalWorkNanoseconds": 15430.4,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 256,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 2818.75
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 2914.0625
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 24657.8125
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 2818.75,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 2818.75,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 4.0,
+                        "estimatedWorkPerAgentNanoseconds": 241.1,
+                        "estimatedTotalWorkNanoseconds": 61721.6,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                },
+                {
+                    "agentCount": 1024,
+                    "allMeasuredPolicies": [
+                        {
+                            "policy": "Immediate",
+                            "medianNanosecondsPerAgent": 2827.5390625
+                        },
+                        {
+                            "policy": "Budgeted",
+                            "medianNanosecondsPerAgent": 2942.96875
+                        },
+                        {
+                            "policy": "BatchedJobsSameFrame",
+                            "medianNanosecondsPerAgent": 57416.11328125
+                        }
+                    ],
+                    "bestFixedPolicy": "Immediate",
+                    "bestFixedMedianNanosecondsPerAgent": 2827.5390625,
+                    "autoChosenPolicy": "Immediate",
+                    "autoReason": "PreferredOverBatchedByMeasuredCost",
+                    "autoConfidence": "Low",
+                    "autoMeasuredMedianNanosecondsPerAgent": 2827.5390625,
+                    "gapNanosecondsPerAgent": 0.0,
+                    "gapPercent": 0.0,
+                    "outcome": "MatchesOrBeats",
+                    "explanation": {
+                        "expectedNodeStepsPerAgent": 4.0,
+                        "estimatedWorkPerAgentNanoseconds": 241.1,
+                        "estimatedTotalWorkNanoseconds": 246886.4,
+                        "batchSize": 0,
+                        "batchCount": 0,
+                        "workerUtilizationProxy": 0.0,
+                        "hasConfiguredBudget": false,
+                        "exceedsConfiguredBudget": false
+                    }
+                }
+            ]
+        }
+    ],
+    "limitations": [
+        "PipelinedJobs is excluded from this comparison by design -- P4-001's benchmark harness was never wired to measure it (built separately in P4-003); restricting to LatencyMode=SameFrame means Auto never selects it here, so no unmeasurable choice can occur.",
+        "Auto's own measured cost for a chosen policy is that same policy's already-measured cost at this scenario/agentCount in this same run -- Auto invents no new execution semantics (P4-005's own forbidden-changes bars that), so there is no separate 'run Auto itself' execution to measure.",
+        "One run on one workstation; not generalized to other hardware.",
+        "No regression threshold or shipping recommendation is drawn from any gap recorded here -- P4-007 interprets these results, this file only records them.",
+        "The Auto configuration used here (minimum job workload, target batch work, batch/memory bounds) is this measurement run's own choice, not a claimed shipped default."
+    ]
+}

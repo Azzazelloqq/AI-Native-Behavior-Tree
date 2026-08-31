@@ -71,6 +71,17 @@ namespace AIBT
         /// candidates have real observations (see <see cref="NativeAutoSelectionV1.TrySelectAdaptive"/>).
         /// </summary>
         AdaptiveLowestTrackedCost = 6,
+
+        /// <summary>
+        /// `P6-019`'s deterministic recalibration: `Immediate`/`Budgeted` are preferred over
+        /// `BatchedJobsSameFrame` for same-frame-required throughput, because `P4-002`'s and
+        /// `P4-006`'s own real measured cost curves showed `Immediate`/`Budgeted` cheaper in 24 of
+        /// 24 measured points (16-1024 agents) -- `BatchedJobsSameFrame`'s per-chunk overhead never
+        /// amortized at any tested scale on that workstation. This is a static, evidence-grounded
+        /// preference order, never runtime-tracked cost (that is
+        /// <see cref="AdaptiveLowestTrackedCost"/>'s own, separate, rejected experiment).
+        /// </summary>
+        PreferredOverBatchedByMeasuredCost = 7,
     }
 
     /// <summary>

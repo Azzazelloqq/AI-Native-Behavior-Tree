@@ -339,3 +339,20 @@ attribute/`TypeCache` discovery pattern is the right template for finding a proj
 leaves once a public contract exists, but does not solve today's actual blocker, which is that no
 such public contract exists yet. `ReferencePreviewParityTests` (`P3-009`'s own suite) re-run
 unmodified, still passing. See `Planning~/Evidence/P6-017/`.
+
+`P6-019` (Auto scheduler heuristic recalibration) is **done, implemented, owner-approved**. Per
+`P4-006`'s/`P4-007`'s own already-accepted finding (`Auto` underperformed the best fixed policy in
+23 of 24 measured cases because `NativeAutoSelectionV1.TrySelect` unconditionally preferred
+`BatchedJobsSameFrame` for same-frame-required throughput with no real cost comparison), the owner
+approved a specific, presented-before-implementation fix: reorder `TrySelect`'s branches so
+`Immediate`/`Budgeted` are tried before `BatchedJobsSameFrame` (demoted, not removed -- it remains
+reachable when it is the only same-frame-capable policy supported), grounded entirely in `P4-002`'s/
+`P4-006`'s own already-measured cost curves (`Immediate`/`Budgeted` cheaper in 24 of 24 measured
+points). No new numeric threshold or coefficient was introduced -- the existing data does not
+support deriving a reliable break-even formula, and this card's own text forbids fabricating one.
+`P4-007`'s own rejected runtime-autotuning experiment (`TrySelectAdaptive`) was deliberately left
+untouched. Re-running `P4-006`'s own 24-case comparison methodology unchanged against the
+recalibrated rule: **`Auto` now matches the best fixed policy in 24 of 24 cases, up from 1 of 24**
+-- reported honestly, with `P4-005`'s/`P4-006`'s own prior evidence left unedited. Full host-project
+EditMode regression: 1586/1586 executed, same 3 pre-existing unrelated failures, zero new ones. See
+`Planning~/Evidence/P6-019/`.
