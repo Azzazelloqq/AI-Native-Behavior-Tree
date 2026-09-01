@@ -1775,7 +1775,7 @@
       "id": "P7-011",
       "phase": 7,
       "title": "Native-backend hot reload decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P7/P7-011-native-backend-hot-reload-decision.md",
       "dependsOn": [

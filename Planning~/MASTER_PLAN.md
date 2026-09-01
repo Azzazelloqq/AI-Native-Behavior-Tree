@@ -480,3 +480,36 @@ spike's own required verification had already passed; the Unity Editor became un
 bridge for an extended period during that run, the owner confirmed not to pursue it further, and the
 stuck job was cleared -- disclosed as not completed rather than silently omitted, since it was never
 part of this card's own Required verification. See `Planning~/Evidence/P7-010/`.
+
+`P7-011` (native-backend hot reload decision) is **done, accepted**: `ADR-P7-011` (`AIBT-035`)
+decides `ADR-P5-001`'s construct-fresh-and-selectively-copy model applies to the native backend by
+reusing `NativeProgramImageOwnerV1.TryCreate`/`NativeInstanceArenaOwnerV1.TryCreate` unchanged for
+fresh-instance construction (both already derive their own capacity), and finds state capture/seeding
+needs **zero new internal engine methods** -- a real, positive difference from the reference-executor
+backend, which needed two new methods (`CaptureNodeState`/`SeedNodeState`) before migration was
+buildable at all; native composes entirely from `NativeInstanceArenaOwnerV1`'s already-public
+execution-lease/View API. A disposable spike (`Spikes~/NativeHotReloadModel/`, 2 tests, live via
+Unity MCP `run_tests` against the real, unmodified `6000.5.8f1` Editor) proved both: full restart
+(abort an active old instance, construct a fresh one bound to a new program) and migration of a
+genuinely **active** (non-idle) instance's per-node `Frame`/`Generation` state across a real
+compiled-index-shifting reorder, keyed by stable `NodeId` through only public Owner API. **Native
+migration is not restricted to an idle old instance the way the reference executor's own
+implementation is** -- confirmed by reading real code, not assumed identical: `NativeFrameStateV1` is
+one uniform blittable struct for every node kind, unlike the reference executor's polymorphic
+`ReferenceFrame`, which is what forced that restriction there. A second real, disclosed finding:
+native's `TryRequestAbort` requires an *open* update, the opposite precondition from the reference
+executor's own `Abort` (which requires *no* open update) -- confirmed live by a real
+`NativeLifetimeStateInvalid` failure on first attempt (aborting a `Waiting`, between-ticks instance
+directly is rejected; a caller must reopen a fresh update first, safely resuming rather than
+re-entering the already-active instance). A third finding, caught by reasoning through the spike's
+own captured values rather than a failing assertion: the spike's own naive whole-`Frame` copy does
+not implement `ADR-P5-001`'s already-decided composite-cursor-reset rule (item 2) -- a verbatim
+`ChildCursor` copy would silently point at the wrong child after a reorder if the migrated instance
+were driven further; the rule transfers unchanged to native's own `ChildCursor` field and is
+disclosed as real follow-up scope for `P7-012`, not smoothed over. No production file under
+`Runtime/Execution/Native/`, `Runtime/Compiled/Native/`, `Runtime/State/Native/`, or
+`Runtime/Scheduling/Native/` was touched, per this card's own Forbidden-changes clause. The Unity
+Editor became genuinely unresponsive to the MCP bridge twice during this card's work, disclosed in
+its own evidence rather than smoothed over; both recovered (the first after the owner manually
+restarted the Editor) and did not affect the correctness of the spike results. See
+`Planning~/Evidence/P7-011/`.
