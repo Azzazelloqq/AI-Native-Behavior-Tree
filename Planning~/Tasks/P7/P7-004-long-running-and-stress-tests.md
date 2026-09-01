@@ -1,6 +1,6 @@
 # P7-004 — Long-running and stress test suite
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -75,3 +75,24 @@ Tests/Runtime/Stress/ run to completion at least twice, confirming reproducible 
 - Any real defect this card's stress tests surface is its own bug-fix scope, escalated per
   `Planning~/AGENT_WORKFLOW.md`'s stop conditions rather than silently patched inside this card if
   the fix would touch a different area's owned files.
+
+## Outcome
+
+Done. `Tests/Runtime/Stress/` (new, test-only) delivers all three: a 20,000-tick-cycle soak test
+proving zero managed GC allocation and no native-array resizing after warmup; a 10,240-agent
+(10x `P4-002`'s largest measured population) stress test with no crash and no determinism drift
+against a 16-agent control; and a repeated-reload-under-load test for both backends, comparing a
+never-reloaded group against an all-untouched control while a repeatedly-reloaded group survives 10
+full-restart waves.
+
+Two real findings surfaced during test-driven development (not assumed, not guessed): a normally-
+completed native instance is terminal (`HasRootStatus` is cleared only on the abort path, confirmed
+by reading `PopFrame`/`PopAbortedFrame` directly) — the soak tests' first draft wrongly assumed
+"tick to completion, then begin again," which failed reproducibly; and `NativeCommandAsyncOwnerV1`'s
+own operation-record table is a monotonic lifetime log, not a reclaimable ring buffer — `TryCancel`
+marks an operation's state in place but never frees its slot. Both are disclosed, existing behavior
+this card's own soak-test design had to discover and conform to, not defects. See
+`Planning~/Evidence/P7-004/README.md`.
+
+No stress test surfaced a real production defect this pass; full EditMode regression (1615 tests)
+shows no new failures beyond the 3 already-pre-existing, unrelated ones.

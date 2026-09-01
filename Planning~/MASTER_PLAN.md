@@ -660,3 +660,28 @@ already-pre-existing, unrelated ones. Tree-blackboard content, the `V2` construc
 deeper multi-frame-deep concurrent active state, and a dedicated subtree-restart test remain
 explicitly out of scope, disclosed rather than smoothed over, matching `P7-011`'s own "Explicitly
 unverified" framing. See `Planning~/Evidence/P7-012/`.
+
+`P7-004` (long-running and stress test suite) is **done**: `Tests/Runtime/Stress/` (new, test-only)
+adds the layer `roadmap.md` names for Phase 7 -- a 20,000-tick-cycle soak test (zero managed GC
+allocation and no native-array resizing after warmup, extending `P2-021`'s own established
+technique by two-plus orders of magnitude); a 10,240-agent stress test (10x `P4-002`'s largest
+measured population) via `SchedulingPolicyDriver.TryRunBatchedJobsSameFrame` at `batchSize=128`
+(`P4-002`'s own largest measured, deliberately-costly configuration), every agent asserted against
+a 16-agent control for determinism drift; and a repeated-reload-under-load test for both backends,
+comparing a never-reloaded group against an all-untouched control while a repeatedly-reloaded group
+survives 10 full-restart waves. Two real findings surfaced during test-driven development, both
+genuine test failures traced to their root cause rather than worked around: a normally-completed
+native instance is terminal (`NativeLifecycleMachineV1.TryBeginUpdate` requires
+`control.HasRootStatus == 0`, and reading `PopFrame`/`PopAbortedFrame` directly shows that flag is
+cleared only on the abort path, never after a normal completion) -- the soak tests' first draft
+wrongly assumed a "tick to completion, then begin again" model and failed reproducibly with
+`NativeLifetimeStateInvalid` on the second cycle, fixed by redesigning around the engine's actual
+established usage pattern (a perpetually-active agent, `Waiting` between ticks, matching
+`NativeExecutionEquivalenceTests.Scenario`'s own `BeginNextUpdate` convention); and
+`NativeCommandAsyncOwnerV1`'s own operation-record table is a monotonic lifetime log, not a
+reclaimable ring buffer (`TryCancel` marks an operation's own state in place but never frees its
+slot, confirmed by reading `TryStart`/`TryCancel` directly) -- the soak test's third assertion was
+redesigned around this real contract (proving the capacity boundary is safe, not asserting a
+"never exhausted" property that would be false by design). No stress test surfaced a real
+production defect this pass; full EditMode regression (1615 tests) shows no new failures beyond the
+3 already-pre-existing, unrelated ones. See `Planning~/Evidence/P7-004/`.
