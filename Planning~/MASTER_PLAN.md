@@ -685,3 +685,30 @@ redesigned around this real contract (proving the capacity boundary is safe, not
 "never exhausted" property that would be false by design). No stress test surfaced a real
 production defect this pass; full EditMode regression (1615 tests) shows no new failures beyond the
 3 already-pre-existing, unrelated ones. See `Planning~/Evidence/P7-004/`.
+
+`P7-001` (public API and persisted-format stability inventory) is **done**: produces the concrete
+material `USER_ACTIONS.md`'s "Approve final public API and persisted-format stability review"
+requires -- a proposal, not a freeze. `Tools~/Verification/P7/Audit/Get-FullPublicApi.ps1` (new,
+permanent) widens the stale, 2-assembly `Tools~/Verification/P2/Audit/` dump script to all four
+public assemblies -- every gate since `P3-GATE` had improvised and thrown away this same extension
+each time rather than committing it. Run live against current `main`: 4 assemblies, 417 types, 2111
+members. A mechanical diff against all five prior gates' own `public-api.txt` dumps confirms every
+one of their "purely additive" claims empirically for the first time across the *entire*
+P2-through-current history in one pass (each gate previously only checked its own diff against its
+immediate predecessor): **zero removals or breaking renames anywhere in the project's history.** The
+25 lines new since `P6-GATE` trace entirely to `P7-008`'s own public surface, a consistency check
+confirming the diff pipeline is accurate (`P7-007`/`P7-009`/`P7-012`/`P7-004`'s own new code is
+`internal` or test-only, correctly contributing nothing). Also closed a real gap found by reading
+`Verify-Schemas.ps1` directly: it only ever validates 2 of the project's 6 JSON schemas against a
+real document; the other 4 are now validated live too (all pass), surfacing one genuine finding along
+the way -- `node-manifest.schema.json` governs a single node's own manifest shape, not the aggregate
+`get_project_manifest` response, which has no schema of its own (first validation attempt against the
+wrong document shape failed with 19 errors before this was understood; fixed by generating a real
+single-node example live via `McpToolDispatcher.Dispatch("get_node_contract", ...)`, mirroring
+`P7-008`/`P7-009`'s own temporary-script live-verification pattern). Git-log/timestamp comparison
+also confirmed no schema has ever changed shape after the gate that accepted it. The actual
+deliverable, `Planning~/Evidence/P7-001/stability-review-proposal.md`, recommends
+`AIBT.Runtime`/`AIBT.Authoring` stable-for-1.0 and `AIBT.Editor`/`AIBT.Mcp` still-experimental, and
+raises 5 explicit open questions for the owner. No production file was touched; no freeze was
+decided -- that remains the owner's own decision per `DECISION_BOUNDARIES.md`. See
+`Planning~/Evidence/P7-001/`.

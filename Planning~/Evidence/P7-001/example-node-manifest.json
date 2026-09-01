@@ -1,0 +1,53 @@
+﻿{
+    "typeId":  "aibt.core.memory-sequence",
+    "version":  1,
+    "summary":  "Run ordered children until one fails or runs, retaining the running child.",
+    "category":  "Memory sequence",
+    "kind":  "composite",
+    "whenToUse":  "Use for ordered multi-step behavior whose completed steps should not be reevaluated.",
+    "whenNotToUse":  "Do not use when earlier conditions must be checked on every update.",
+    "parameters":  {
+
+                   },
+    "childPolicy":  {
+                        "minimum":  0,
+                        "maximum":  null,
+                        "ordered":  true
+                    },
+    "reads":  [
+
+              ],
+    "writes":  [
+
+               ],
+    "sideEffects":  [
+
+                    ],
+    "possibleStatuses":  [
+                             "failure",
+                             "running",
+                             "success"
+                         ],
+    "memory":  {
+                   "size":  4,
+                   "alignment":  4,
+                   "lifetime":  "activation"
+               },
+    "configuration":  {
+                          "size":  0,
+                          "alignment":  1
+                      },
+    "cancellation":  "abort-only",
+    "executionDomain":  "burst",
+    "deterministic":  true,
+    "costHint":  "low",
+    "examples":  [
+                     {
+                         "title":  "Base behavior",
+                         "parameters":  {
+
+                                        },
+                         "expectedBehavior":  "An empty memory sequence succeeds."
+                     }
+                 ]
+}

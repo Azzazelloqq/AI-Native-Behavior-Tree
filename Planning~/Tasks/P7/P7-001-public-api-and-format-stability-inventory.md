@@ -1,6 +1,6 @@
 # P7-001 — Public API and persisted-format stability inventory
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -80,3 +80,27 @@ schema-vs-writer/reader conformance check for every Schemas~/*.schema.json file
 - `P7-016` (the Phase 7 integration gate) cites this card's proposal, plus the owner's actual
   decision on it, as one of its own acceptance criteria — the gate cannot itself decide the freeze
   either.
+
+## Outcome
+
+Done. `Tools~/Verification/P7/Audit/Get-FullPublicApi.ps1` (new, permanent) widens the stale,
+2-assembly `Tools~/Verification/P2/Audit/` dump script to all four public assemblies — every gate
+since `P3-GATE` had improvised and thrown away this same extension. Run live: 4 assemblies, 417
+types, 2111 members. A mechanical diff against all five prior gates' own dumps confirms every one of
+their "purely additive" claims empirically, for the first time across the full P2-through-current
+history in one pass: zero removals or renames anywhere, ever. The 25 lines new since `P6-GATE` trace
+entirely to `P7-008`'s own public surface.
+
+Closed a real gap found in `Tools~/Verification/Verify-Schemas.ps1`: it only ever validated 2 of 6
+schemas against a real document. The other 4 are now validated live too (all pass) — surfacing one
+genuine finding along the way: `node-manifest.schema.json` governs a single node's own manifest, not
+the aggregate `get_project_manifest` response, which has no schema of its own (flagged as open
+question 4). Also confirmed via git-log/timestamp comparison that no schema has ever changed shape
+after the gate that accepted it.
+
+The actual deliverable — `Planning~/Evidence/P7-001/stability-review-proposal.md` — recommends
+`AIBT.Runtime`/`AIBT.Authoring` stable-for-1.0 and `AIBT.Editor`/`AIBT.Mcp` still-experimental, and
+raises 5 explicit open questions for the owner (Mcp's external protocol stability, Editor's own
+scrutiny level, the tree format's v1/v2 coexistence, whether the aggregate manifest response needs
+its own schema, and whether the new dump script should become a CI-enforced check). No production
+file was touched; no freeze was decided. See `Planning~/Evidence/P7-001/README.md`.

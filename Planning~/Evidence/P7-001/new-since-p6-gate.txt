@@ -1,0 +1,25 @@
+  FIELD AIBT.NodeAbortReason Explicit
+  FIELD AIBT.NodeAbortReason HotReload
+  FIELD AIBT.NodeAbortReason ObserverLowerPriority
+  FIELD AIBT.NodeAbortReason ObserverSelf
+  FIELD AIBT.NodeAbortReason Timeout
+  FIELD AIBT.NodeAbortReason TreeStopped
+  FIELD AIBT.NodeExitReason Aborted
+  FIELD AIBT.NodeExitReason Failure
+  FIELD AIBT.NodeExitReason Success
+  PROPERTY System.ReadOnlySpan`1<System.Byte> Configuration
+  PROPERTY System.Span`1<System.Byte> Memory
+METHOD AIBT.Authoring.NodeRegistryBuilder AddProjectExtension(AIBT.Authoring.NodeManifest,AIBT.IReferenceLeafBehavior)
+METHOD AIBT.IReferenceLeafBehavior CreateBehavior()
+METHOD AIBT.NodeStatus Tick(AIBT.ReferenceLeafContext&)
+METHOD System.Boolean TryGetProjectLeafBehavior(System.String,AIBT.IReferenceLeafBehavior&)
+METHOD System.Boolean TryReadBlackboard(System.UInt32,AIBT.BlackboardValue&)
+METHOD System.Boolean TryWriteBlackboard(System.UInt32,AIBT.BlackboardValue)
+METHOD System.Void Abort(AIBT.ReferenceLeafContext&,AIBT.NodeAbortReason)
+METHOD System.Void Enter(AIBT.ReferenceLeafContext&)
+METHOD System.Void Exit(AIBT.ReferenceLeafContext&,AIBT.NodeExitReason)
+TYPE AIBT.Authoring.IReferenceLeafBehaviorProvider
+TYPE AIBT.IReferenceLeafBehavior
+TYPE AIBT.NodeAbortReason
+TYPE AIBT.NodeExitReason
+TYPE AIBT.ReferenceLeafContext

@@ -1622,13 +1622,14 @@
       "id": "P7-001",
       "phase": 7,
       "title": "Public API and persisted-format stability inventory",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P7/P7-001-public-api-and-format-stability-inventory.md",
       "dependsOn": [
         "P6-012"
       ],
       "owns": [
+        "Tools~/Verification/P7/Audit/",
         "Planning~/Evidence/P7-001/"
       ]
     },
