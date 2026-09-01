@@ -1,6 +1,6 @@
 # P7-008 — Per-project leaf-registration mechanism implementation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -93,3 +93,16 @@ live interactive proof via Unity MCP against the real open Editor
 
 - A future card may migrate `P3-009`/`P6-007`/`P6-008`'s own hardcoded fixture registries onto this
   new public surface, but that is explicitly out of this card's own scope unless trivial.
+
+## Outcome
+
+Done. `IReferenceLeafBehavior`/`ReferenceLeafContext` (public, `Runtime/Execution/Reference/Leaves/
+Public/`), `IReferenceLeafBehaviorProvider` (public, `Authoring/Registry/`), and
+`NodeRegistryBuilder.AddProjectExtension` give a project a genuinely public registration path;
+`MCP/Authoring/ProjectLeafExtensionDiscovery.cs` (new, mirrors `P6-010`'s `TypeCache` pattern) wires
+discovered project registrations into `aibt_search_nodes`/`aibt_get_node_contract`/
+`get_project_manifest`. Proven with a real project-style leaf executing through an unmodified
+`ReferenceExecutionMachine`, and live against the real open Editor via `execute_code` calling the
+real `AIBT.Mcp.McpToolDispatcher.Dispatch` directly. Full detail, including a real TypeCache-
+contamination regression this card's own verification caught and fixed, in
+`Planning~/Evidence/P7-008/README.md`.

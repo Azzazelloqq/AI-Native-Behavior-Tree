@@ -7,6 +7,7 @@ namespace AIBT.Authoring
     {
         private readonly List<Registration> _registrations = new List<Registration>();
         private readonly Func<string, ulong> _typeIdHash;
+        private readonly Dictionary<string, IReferenceLeafBehavior> _projectBehaviors = new Dictionary<string, IReferenceLeafBehavior>(StringComparer.Ordinal);
 
         public NodeRegistryBuilder()
             : this(StableHash.Fnv1A64)
@@ -39,6 +40,34 @@ namespace AIBT.Authoring
             _registrations.Add(new Registration(manifest, NodeManifestSource.UserExtension, null));
             return this;
         }
+
+        // Applies ADR-P6-017 (P7-008): the public registration path for a project's own
+        // reference-executor leaf. Unlike AddUserExtension, this attaches a real handler binding
+        // (ValidateBinding accepts one for UserExtension only when it arrived this way) and keeps
+        // the actual behavior instance available via TryGetProjectLeafBehavior so a registry
+        // consumer can wire it into a ReferenceLeafRegistry for execution.
+        public NodeRegistryBuilder AddProjectExtension(NodeManifest manifest, IReferenceLeafBehavior behavior)
+        {
+            if (manifest == null)
+            {
+                throw new ArgumentNullException(nameof(manifest));
+            }
+
+            if (behavior == null)
+            {
+                throw new ArgumentNullException(nameof(behavior));
+            }
+
+            _registrations.Add(new Registration(manifest, NodeManifestSource.UserExtension, CreateProjectHandlerBinding(manifest)));
+            _projectBehaviors[manifest.TypeId] = behavior;
+            return this;
+        }
+
+        // Only populated by AddProjectExtension. Lets a registry consumer (e.g. a test or the MCP
+        // discovery-tool wiring) obtain the actual executable behavior for a project-registered
+        // leaf, to fold into a ReferenceLeafRegistry alongside the built-in/fixture bindings.
+        public bool TryGetProjectLeafBehavior(string typeId, out IReferenceLeafBehavior behavior)
+            => _projectBehaviors.TryGetValue(typeId, out behavior);
 
         public NodeRegistryBuildResult Build()
         {
@@ -136,6 +165,17 @@ namespace AIBT.Authoring
                 manifest.ExecutionDomain);
         }
 
+        // Project extension type IDs are project-qualified (not "aibt."-prefixed, per
+        // ValidateSource's reserved-namespace check), so the binding's HandlerId is derived by
+        // prefixing rather than substring-stripping "aibt." off the front.
+        private static NodeHandlerBindingContract CreateProjectHandlerBinding(NodeManifest manifest)
+        {
+            return new NodeHandlerBindingContract(
+                "aibt.reference.project." + manifest.TypeId,
+                manifest.Version,
+                manifest.ExecutionDomain);
+        }
+
         private static void ValidateSource(Registration registration, ICollection<Diagnostic> diagnostics)
         {
             var typeId = registration.Manifest.TypeId;
@@ -172,13 +212,13 @@ namespace AIBT.Authoring
         private static void ValidateBinding(Registration registration, ICollection<Diagnostic> diagnostics)
         {
             var binding = registration.HandlerBinding;
-            if (registration.Source == NodeManifestSource.UserExtension)
-            {
-                if (binding != null)
-                {
-                    diagnostics.Add(NodeRegistryDiagnostics.InvalidBinding(registration.Manifest.TypeId, "Phase 1 user extensions cannot bind reference handlers."));
-                }
 
+            // UserExtension is the only source where a binding is optional: AddUserExtension never
+            // attaches one (unbound, as before P7-008 -- unchanged), while AddProjectExtension
+            // (P7-008, ADR-P6-017) does attach one and expects it validated exactly like a
+            // built-in/fixture binding below.
+            if (registration.Source == NodeManifestSource.UserExtension && binding == null)
+            {
                 return;
             }
 

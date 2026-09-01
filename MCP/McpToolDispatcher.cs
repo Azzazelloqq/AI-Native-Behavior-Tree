@@ -155,7 +155,7 @@ namespace AIBT.Mcp
 
         private static JObject GetProjectManifest(string projectRoot)
         {
-            var registryResult = NodeRegistryBuilder.CreateWithBuiltIns().Build();
+            var registryResult = ProjectLeafExtensionDiscovery.BuildWithBuiltInsAndProjectExtensions();
             var scan = AibtTreeDiscovery.Scan(projectRoot);
 
             ProjectPolicySnapshot policy;
@@ -180,7 +180,7 @@ namespace AIBT.Mcp
 
         private static JObject SearchNodes(JObject args)
         {
-            var registryResult = NodeRegistryBuilder.CreateWithBuiltIns().Build();
+            var registryResult = ProjectLeafExtensionDiscovery.BuildWithBuiltInsAndProjectExtensions();
             var query = new NodeCatalogQuery(registryResult.Registry);
             var keyword = (string)args["keyword"];
             var offset = (int?)args["offset"] ?? 0;
@@ -206,7 +206,7 @@ namespace AIBT.Mcp
 
         private static JObject GetNodeContract(JObject args)
         {
-            var registryResult = NodeRegistryBuilder.CreateWithBuiltIns().Build();
+            var registryResult = ProjectLeafExtensionDiscovery.BuildWithBuiltInsAndProjectExtensions();
             var query = new NodeCatalogQuery(registryResult.Registry);
             var typeId = (string)args["typeId"];
 

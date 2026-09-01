@@ -546,3 +546,39 @@ including one targeting an already-deleted class, ruling out this card's own new
 -- a distinct instability from `P7-010`/`P7-011`'s own earlier MCP-bridge unresponsiveness this same
 session; bringing the Editor window into focus resolved it, disclosed rather than smoothed over. See
 `Planning~/Evidence/P7-007/`.
+
+`P7-008` (per-project leaf-registration mechanism implementation) is **done**: `ADR-P6-017`
+(`AIBT-031`) is applied to production. `IReferenceLeafBehavior`/`ReferenceLeafContext` (new, public,
+`Runtime/Execution/Reference/Leaves/Public/`) are the public equivalents of the internal
+`IReferenceLeafHandler`/`ReferenceNodeContext` -- `ReferenceLeafContext` is a public `readonly ref
+struct` holding a private by-value copy of the internal context, safe because `Configuration`/
+`Memory` are span views over arrays already held by reference and blackboard I/O is forwarded
+through the internal context's own captured service interface, never mutable struct state.
+`IReferenceLeafBehaviorProvider` (new, public, `Authoring/Registry/`) pairs a project's
+`NodeManifest` with a behavior factory, mirroring `ICustomMcpToolProvider`'s own `P6-010` shape.
+`NodeRegistryBuilder.AddProjectExtension` attaches a real handler binding under the existing
+`NodeManifestSource.UserExtension` source; `ValidateBinding`'s `UserExtension` case changes from
+"any binding is an error" to "binding is optional, validated like a built-in/fixture binding when
+present" -- the pre-existing `AddUserExtension` (no-binding) path is untouched, so the ADR's own
+"unchanged negative test" passes unmodified. `MCP/Authoring/ProjectLeafExtensionDiscovery.cs` (new,
+Editor-only) mirrors `P6-010`'s own `TypeCache`-based discovery split exactly and wires discovered
+project registrations into `aibt_search_nodes`/`aibt_get_node_contract`/`get_project_manifest`
+(the three `NodeRegistryBuilder.CreateWithBuiltIns()` call sites in `MCP/McpToolDispatcher.cs`),
+degrading to a built-ins-only build if a malformed project registration fails validation, rather
+than surfacing a null registry to every discovery tool. Proven with a real project-style leaf
+(defined using only the new public contract) ticking correctly through a real, unmodified
+`ReferenceExecutionMachine`, and live against the real open `6000.5.8f1` Editor via Unity MCP
+`execute_code` calling the real `AIBT.Mcp.McpToolDispatcher.Dispatch` entry point directly against a
+temporary script added outside `AIBT/` (deleted afterward). This card's own live verification caught
+a real regression before it shipped: `UnityEditor.TypeCache` scans every loaded assembly, test
+assemblies included, so the first version of this card's own proof test's public-parameterless-
+constructor fixture got itself live-discovered, breaking the pre-existing
+`McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` (12 entries instead of
+11 in a supposedly clean environment) -- fixed by giving the test fixture a non-public constructor,
+since `Type.GetConstructor(Type.EmptyTypes)`'s default binding only returns public ones; full
+regression re-ran clean after the fix (1589/1592, the 3 remaining failures pre-existing and
+unrelated -- a `CodeGen` package-path environment assumption and an unrelated `LocalSaveSystem`
+package test). Reference-executor backend only, per the ADR's own scope; `P3-009`/`P6-007`/`P6-008`
+still build their own registries from the fixed Phase 1 fixture/built-in set unchanged, and no
+async-operation support exists on the public leaf context in this v1 -- both disclosed, not silently
+assumed solved. See `Planning~/Evidence/P7-008/`.

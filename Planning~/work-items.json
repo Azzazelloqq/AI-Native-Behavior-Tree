@@ -1727,7 +1727,7 @@
       "id": "P7-008",
       "phase": 7,
       "title": "Per-project leaf-registration mechanism implementation",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-008-per-project-leaf-registration-implementation.md",
       "dependsOn": [
