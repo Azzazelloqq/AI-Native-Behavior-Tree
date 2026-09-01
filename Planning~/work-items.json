@@ -1758,7 +1758,7 @@
       "id": "P7-010",
       "phase": 7,
       "title": "Production Play-mode host decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P7/P7-010-production-play-mode-host-decision.md",
       "dependsOn": [

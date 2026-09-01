@@ -448,3 +448,35 @@ assuming it will be resolved first. `P7-016` is the Phase 7 integration gate, mi
 criteria explicitly require a recorded owner decision (from `P7-001`/`P7-002`) rather than only
 internal verification -- it does not, itself, declare `1.0.0`; that remains the owner's release
 decision per `Planning~/USER_ACTIONS.md`.
+
+`P7-010` (production Play-mode host decision) is **done, accepted**: `ADR-P7-010` (`AIBT-034`)
+decides a future host is one `MonoBehaviour` per tree instance living in `Runtime/Integration/`
+(never `AIBT.Editor` or any `*.Tests` assembly), driving `Immediate`/`Budgeted` only in its initial
+scope (`BatchedJobsSameFrame`/`PipelinedJobs` need a separate, not-yet-designed population-level
+coordinator, since `SchedulingPolicyDriver.TryRunBatchedJobsSameFrame` takes a whole agent population
+in one call, not one instance at a time), ticking via plain `Update()` (no documented tie between
+tree progression and the physics timestep anywhere in `execution-and-scheduling.md`), and owning its
+own `NativeTraceChannelOwnerV1` per instance -- exactly the "caller-owned session" shape `P3-010`'s
+debugger and `ADR-P6-015`'s external recorder already expect. A disposable spike
+(`Spikes~/ProductionPlayModeHost/`, live via Unity MCP against the real, unmodified `6000.5.8f1`
+Editor) found a real, load-bearing platform fact before any of that: Unity flatly refuses
+`AddComponent` for a script in an Editor-only-platform asmdef, and independently also refuses one
+carrying `"optionalUnityReferences": ["TestAssemblies"]` (the flag `AIBT.Editor.Tests` itself uses) --
+reproduced live, confirming the host cannot live in `AIBT.Editor` or a `*.Tests` assembly regardless
+of any other reasoning. Once attached from a plain, non-restricted asmdef, the spike's `MonoBehaviour`
+ticked a real compiled tree (via the public `ReferencePreviewDriver`, a deliberate substitution for
+the native `SchedulingPolicyDriver` path a future in-`Runtime`-assembly host will drive directly, made
+only so this disposable, non-privileged spike needed no `AIBT.Runtime`-internal access) across over
+32,000 real `Update()` calls in one continuous live Play-mode session, and its own
+`NativeTraceChannelOwnerV1` was attached to and read by `P3-010`'s completely unmodified
+`NativeExecutionDebuggerSession.Attach`/`TryReadTrace` mid-session -- including a real,
+capacity-driven channel fault after sustained ticking, read back correctly via the existing
+`IsFaulted` flag with zero special-casing needed. `OnDestroy` disposed the channel's
+`Allocator.Persistent` arrays cleanly on Play-mode exit, with no leak diagnostic. No production file
+under `Runtime/`, `Authoring/`, or `Editor/` was touched, per this card's own Forbidden-changes
+clause -- a future, not-yet-numbered implementation card builds the real host per this ADR. A full
+detached EditMode regression was additionally attempted as a not-card-required sanity check after the
+spike's own required verification had already passed; the Unity Editor became unresponsive to the MCP
+bridge for an extended period during that run, the owner confirmed not to pursue it further, and the
+stuck job was cleared -- disclosed as not completed rather than silently omitted, since it was never
+part of this card's own Required verification. See `Planning~/Evidence/P7-010/`.

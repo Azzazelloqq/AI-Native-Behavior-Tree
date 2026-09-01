@@ -1,0 +1,11 @@
+{
+  "name": "AIBT.Spikes.ProductionPlayModeHost",
+  "rootNamespace": "AIBT.Spikes",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}
