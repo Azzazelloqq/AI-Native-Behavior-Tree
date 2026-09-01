@@ -1174,7 +1174,7 @@
       "id": "P5-007",
       "phase": 5,
       "title": "Scheduler and backend interaction",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P5/P5-007-scheduler-and-backend-interaction.md",
       "dependsOn": [
@@ -1790,13 +1790,17 @@
       "id": "P7-012",
       "phase": 7,
       "title": "Native-backend hot reload implementation",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-012-native-backend-hot-reload-implementation.md",
       "dependsOn": [
         "P7-011"
       ],
       "owns": [
+        "Runtime/Execution/Native/HotReload/",
+        "Tests/Runtime/NativeExecution/HotReload/",
+        "Tests/Integration/NativeRuntime/NativeHotReloadGoldenEquivalenceTests.cs",
+        "Tests/Integration/NativeRuntime/NativeHotReloadBatchIsolationTests.cs",
         "Planning~/Evidence/P7-012/"
       ]
     },

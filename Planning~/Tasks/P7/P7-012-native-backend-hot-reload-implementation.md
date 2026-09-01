@@ -1,6 +1,6 @@
 # P7-012 — Native-backend hot reload implementation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -75,3 +75,30 @@ Auto determinism-on-reload proof
 - `Planning~/Tasks/P5/P5-007-scheduler-and-backend-interaction.md`'s own status can move to `Done`
   once this card's evidence satisfies its remaining acceptance criteria — update its own Outcome
   section and `work-items.json` entry accordingly rather than leaving it stranded in `Draft`.
+
+## Outcome
+
+Done. Built `NativeHotReloadInstance`/`NativeHotReloadFullRestart`/`NativeHotReloadStateMigration`
+in `Runtime/Execution/Native/HotReload/`, reusing the existing backend-agnostic
+`HotReloadProgramIdentityMap`/`HotReloadCompatibilityClassifier` unchanged.
+
+Test-driven verification found a real bug this card's own required verification exists to catch:
+`ADR-P7-011`'s "apply the composite-cursor-reset rule to native's `ChildCursor`" framing described
+the right symptom but the wrong mechanism. Investigated directly against
+`NativeLifecycleMachineV1`'s own dispatch code (not assumed) while a migration test was genuinely
+failing: `_frames` is not indexed by compiled node index at all — it is a call stack indexed by
+DEPTH, reused across sibling nodes over an instance's lifetime. The first implementation copied
+`oldFrames[oldIndex] -> newFrames[newIndex]` by node index (mirroring the P7-011 spike's own
+simplified copy), which silently swapped two leaves' live/inactive Frame state the moment more than
+one node had ever been active in the same tree. Fixed by copying the active stack position-for-
+position by depth and remapping only each frame's own `NodeIndex` field — the same technique
+`Spikes~/ActiveInstanceHotReloadMigration/` had already proven for the reference executor (`P6-018`),
+generalized here to native. See `Planning~/Evidence/P7-012/README.md` for the full diagnostic trail.
+
+Also finished `P5-007`'s own long-blocked deliverables for the native backend: golden-equivalence
+re-run for all 4 accepted policies against a full-restarted instance, a batch-isolation proof, and
+an `Auto`-determinism-on-reload confirmation. `P5-007`'s own status moves to `Done` alongside this
+card, per its Handoff notes above.
+
+12 new tests, all passing; full EditMode regression (1609 tests) shows no new failures. Evidence:
+`Planning~/Evidence/P7-012/README.md`.

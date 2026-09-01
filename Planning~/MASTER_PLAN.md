@@ -621,3 +621,42 @@ prefix-translation path itself is proven by a new permanent 3-node real-compiled
 GeneratedArtifactContractTests.cs`'s own already-established in-assembly-analyzer pattern, no
 isolated project needed). `Registered`-encoded fields and `AsyncOperation`/`Completion` bindings
 remain explicitly unproven, per the ADR's own scope. See `Planning~/Evidence/P7-009/`.
+
+`P7-012` (native-backend hot reload implementation) is **done**: `ADR-P7-011` (`AIBT-035`) is
+applied to production, and `P5-007`'s own long-blocked deliverables (golden-equivalence re-run,
+batch isolation, `Auto` determinism for a hot-reloaded native instance) are finally closed alongside
+it -- `P5-007` moves to `Done` in the same pass. `NativeHotReloadInstance`/
+`NativeHotReloadFullRestart`/`NativeHotReloadStateMigration` (new, `Runtime/Execution/Native/HotReload/`)
+reuse `NativeProgramImageOwnerV1.TryCreate`/`NativeInstanceArenaOwnerV1.TryCreate` unchanged for
+fresh-instance construction and the existing backend-agnostic `HotReloadProgramIdentityMap`/
+`HotReloadCompatibilityClassifier` unchanged for classification, exactly as `ADR-P7-011` decided.
+Test-driven verification found a real bug the ADR's own spike had not: its "apply the
+composite-cursor-reset rule to native's `ChildCursor`" framing named the right symptom but the wrong
+mechanism. Investigated directly against `NativeLifecycleMachineV1`'s own dispatch code while a
+migration test was genuinely, reproducibly failing (not assumed, not guessed) -- `_frames` is not
+indexed by compiled node index at all, it is a call stack indexed by DEPTH, reused across sibling
+nodes over an instance's lifetime; a frame's own `NodeIndex` field, not its array position, says
+which node it represents. The first implementation (mirroring the ADR spike's own simplified copy)
+copied Frame state by node index, which silently swapped two leaves' live/inactive state the moment
+more than one node had ever been active in the same tree -- confirmed via `Debug.Log` diagnostics
+through several live Unity MCP `run_tests` round-trips, isolating the bug to exactly this mechanism
+after first ruling out the identity-map index resolution itself (independently verified correct).
+Fixed by copying the active call stack position-for-position by depth and remapping only each
+frame's own `NodeIndex` field, the same technique `Spikes~/ActiveInstanceHotReloadMigration/` had
+already proven for the reference executor (`P6-018`), generalized here to native's own
+depth-indexed `_frames`; an active path running through a node that cannot migrate now fails
+`TryMigrate` cleanly rather than silently truncating the stack. 12 new tests
+(`Tests/Runtime/NativeExecution/HotReload/`, `Tests/Integration/NativeRuntime/`) prove: full restart
+of a genuinely active instance; migration correctly resuming a reordered composite from its reset
+cursor (the exact gap `P7-011`'s own evidence disclosed as unverified); golden-equivalence for all 4
+accepted policies against a full-restarted instance (extending `NativeExecutionEquivalenceTests`'s
+own established trace-equality technique, since `NativeBehaviorCaseExecutor`'s simpler direct-array
+construction does not share a construction path with the new owner/lease-based hot-reload
+machinery); batch isolation (one reloaded lane among three leaves its untouched siblings
+bit-identical to an all-untouched control batch); and `Auto` determinism-on-reload, including a
+direct confirmation that a reseeded post-reload `NativeWorkEstimatorV1` matches a never-reloaded one
+for the same observations. Full EditMode regression (1609 tests) shows no new failures beyond the 3
+already-pre-existing, unrelated ones. Tree-blackboard content, the `V2` construction/lease path,
+deeper multi-frame-deep concurrent active state, and a dedicated subtree-restart test remain
+explicitly out of scope, disclosed rather than smoothed over, matching `P7-011`'s own "Explicitly
+unverified" framing. See `Planning~/Evidence/P7-012/`.
