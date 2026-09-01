@@ -101,21 +101,57 @@ namespace AIBT.Runtime.Scheduling
             NodeStatus[] leafStatusByRuntimeIndex,
             out ulong totalSteps,
             out NativeRuntimeFailureV1 failure)
+            => TryRunImmediate(agents, updateId, leafStatusByRuntimeIndex, recorders: null, out totalSteps, out failure);
+
+        /// <summary>
+        /// Same as the recorder-free overload, additionally writing real
+        /// <see cref="NativeTraceEventKindV1"/> records through <paramref name="recorders"/>
+        /// (parallel to <paramref name="agents"/>; a <c>null</c> array or a <c>null</c> element
+        /// skips recording for that agent) per <c>ADR-P6-015</c>'s own fixed mapping table --
+        /// implements <c>AIBT-027</c> (<c>P7-007</c>). Every recorder call is an additive hook only:
+        /// the scheduling decision itself is made by the exact same <see cref="TryHandleStep"/> call,
+        /// with the exact same inputs, as the recorder-free overload -- a recorder can never observe
+        /// or influence it. <c>TryRunBudgeted</c>/<c>TryRunBatchedJobsSameFrame</c> are deliberately
+        /// not wired here; see <c>Planning~/Evidence/P7-007/README.md</c> for the disclosed scope
+        /// boundary.
+        /// </summary>
+        internal static bool TryRunImmediate(
+            SchedulingAgent[] agents,
+            ulong updateId,
+            NodeStatus[] leafStatusByRuntimeIndex,
+            NativeTraceRecorderV1[] recorders,
+            out ulong totalSteps,
+            out NativeRuntimeFailureV1 failure)
         {
             totalSteps = 0;
             for (var index = 0; index < agents.Length; index++)
             {
                 var machine = agents[index].Machine;
+                var recorder = recorders?[index];
                 if (!machine.TryBeginUpdate(updateId, out failure)) return false;
+                recorder?.RecordUpdateStarted(updateId);
+                var lastStep = default(NativeLifecycleStepResultV1);
                 while (true)
                 {
                     if (!machine.TryAdvance(out var step, out failure)) return false;
                     totalSteps++;
+                    recorder?.RecordStep(updateId, step);
                     if (!TryHandleStep(ref machine, step, leafStatusByRuntimeIndex, out var done, out var terminal, out failure)) return false;
+                    if (recorder != null && step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
+                    {
+                        var status = step.Phase == BurstCallbackPhase.Tick ? leafStatusByRuntimeIndex[step.NodeIndex] : NodeStatus.Running;
+                        recorder.RecordDispatchCompletion(updateId, step, status);
+                    }
+
                     if (terminal.HasValue) agents[index].TerminalResult = terminal;
+                    lastStep = step;
                     if (done) break;
                 }
 
+                recorder?.RecordUpdateEnded(
+                    updateId,
+                    lastStep.Kind == NativeLifecycleStepKindV1.Completed && lastStep.HasRootStatus,
+                    lastStep.HasRootStatus ? lastStep.RootStatus : default);
                 agents[index].Machine = machine;
             }
 

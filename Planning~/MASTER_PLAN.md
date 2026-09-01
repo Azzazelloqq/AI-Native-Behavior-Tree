@@ -513,3 +513,36 @@ Editor became genuinely unresponsive to the MCP bridge twice during this card's 
 its own evidence rather than smoothed over; both recovered (the first after the owner manually
 restarted the Editor) and did not affect the correctness of the spike results. See
 `Planning~/Evidence/P7-011/`.
+
+`P7-007` (native trace production-wiring implementation) is **done**: `ADR-P6-015` (`AIBT-027`) is
+applied to production. `Runtime/Scheduling/NativeTraceRecorderV1.cs` (new) mirrors
+`Spikes~/NativeTraceProductionWiring/`'s already-proven recorder shape, wired additively into a new
+`SchedulingPolicyDriver.TryRunImmediate` overload (`NativeTraceRecorderV1[] recorders`, parallel to
+`agents`) that calls the exact same `TryHandleStep` with the exact same inputs the original body
+already did -- a recorder can observe but never influence a scheduling decision. The existing
+5-argument `TryRunImmediate` is now a one-line delegation to the new overload with `recorders: null`,
+proven bit-identical by the full, completely untouched `AIBT.Runtime.Tests` regression (588/588,
+including the pre-existing `SchedulingPolicyDriverTests`). Two new tests
+(`Tests/Runtime/NativeExecution/Scheduling/TraceWiring/`) prove a real two-update run through the
+wired driver produces a correctly ordered, correctly bracketed trace (root's own completion folded
+into a `NodeExited(0)` record with `ExitReason`, leaf `NodeEntered` recorded exactly once despite
+spanning two updates, zero dropped/faulted records) on a real `NativeTraceChannelOwnerV1`, read via
+the channel's own public snapshot API (`AIBT.Runtime.Tests` has no reference to `AIBT.Editor`, so it
+cannot itself exercise `NativeExecutionDebuggerSession`/`TraceTimelineModel`). The specific "reads
+back through `NativeExecutionDebuggerSession`/`TraceTimelineModel`, completely unmodified" proof the
+card's own acceptance criteria require was produced as a temporary, disposable live test (deleted
+after the run, matching this project's own established spike-then-delete pattern, since a permanent
+file exercising `AIBT.Editor` types falls outside this card's own `Tests/Runtime/NativeExecution/`
+Allowed-changes fence) -- 1/1 passing, live via Unity MCP. A real, deliberate scope narrowing:
+`TryRunBudgeted`/`TryRunBatchedJobsSameFrame` remain completely unwired, since `NativeLifecycleBudgetDriverV1`'s
+own resume-across-calls contract (whether a budget-suspended tick's `UpdateOpen` state permits a
+bracketing `RecordUpdateStarted`/`RecordUpdateEnded` pair the same way `Immediate`'s always-one-call
+tick does) was not going to be guessed at, and `ADR-P6-015` itself already disclosed exactly this
+same "not separately spiked" boundary for both policies. No production file under
+`Runtime/Execution/Native/` was touched, and no new trace event kind or field was introduced beyond
+the ADR's own accepted mapping table. Mid-session, the live Unity Editor's own Test Runner became
+unable to initialize any test job for roughly 15 minutes (four consecutive dispatch failures,
+including one targeting an already-deleted class, ruling out this card's own new code as the cause)
+-- a distinct instability from `P7-010`/`P7-011`'s own earlier MCP-bridge unresponsiveness this same
+session; bringing the Editor window into focus resolved it, disclosed rather than smoothed over. See
+`Planning~/Evidence/P7-007/`.

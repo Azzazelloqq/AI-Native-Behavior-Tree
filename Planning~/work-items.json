@@ -1712,7 +1712,7 @@
       "id": "P7-007",
       "phase": 7,
       "title": "Native trace production-wiring implementation",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-007-native-trace-production-wiring-implementation.md",
       "dependsOn": [
