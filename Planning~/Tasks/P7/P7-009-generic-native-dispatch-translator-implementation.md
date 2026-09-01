@@ -1,6 +1,6 @@
 # P7-009 — Generic native-dispatch translator production implementation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -90,3 +90,20 @@ live interactive proof via Unity MCP against the real open Editor
 
 - If a future project needs `Registered`-encoded fields or async/Completion node shapes driven
   through `test-node`, that is new research, not an extension of this card's own proven scope.
+
+## Outcome
+
+Done, with one owner-approved re-scoping. Investigation before implementation found the
+"non-index-0 custom node via test-node" acceptance criterion structurally unreachable through
+today's staging architecture (`StagingSlot` always stages exactly one node, always dispatch index 0)
+-- surfaced directly to the owner, who approved building the translator's full `0..targetIndex`
+prefix support anyway and proving it against a dedicated permanent fixture instead of through the
+live tool. `GenericNativeDispatchTranslatorV1` (`Authoring/Registry/Generated/`, not
+`Runtime/Execution/Burst/Dispatch/` -- a real dependency-direction correction) and
+`GenericNodeDispatchRunner` (`MCP/NodeDevelopment/`) drive real generated dispatch for `test-node`;
+a real `[AibtCatalogSet]`-in-a-separate-assembly requirement was discovered empirically
+(`AIBT5011`) and fixed via a companion `Pending/Catalog/` staging sub-assembly. The `Bool`-typed
+condition-template bug is fixed. All three -- real dispatch, honest out-of-scope reporting, and the
+Bool fix -- proven live against the real open Editor; the prefix-translation path proven by a new
+permanent 3-node fixture (`Tests/Editor/CodeGen/Dispatch/`). Full detail in
+`Planning~/Evidence/P7-009/README.md`.

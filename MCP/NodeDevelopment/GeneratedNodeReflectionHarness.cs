@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using AIBT.Authoring;
+using AIBT.Burst;
 
 namespace AIBT.Mcp.NodeDevelopment
 {
@@ -83,6 +84,28 @@ namespace AIBT.Mcp.NodeDevelopment
             return true;
         }
 
+        /// <summary>P7-009: materializes the shard's own artifact directly, so a caller (test-node's
+        /// dispatch-driving path) can read the target node's real TypeId/manifest without rebuilding
+        /// a registry it doesn't need.</summary>
+        internal static bool TryMaterializeArtifact(GeneratedShardReflection reflection, out GeneratedShardMetadataArtifact artifact, out string failureReason)
+        {
+            try
+            {
+                artifact = GeneratedShardMetadataMaterializer.MaterializeArtifact(
+                    reflection.ShardId, reflection.ShardVersion,
+                    reflection.DescriptorJson, reflection.DescriptorHash,
+                    reflection.RegistryJson, reflection.RegistryHash);
+                failureReason = null;
+                return true;
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            {
+                artifact = default;
+                failureReason = ex.Message;
+                return false;
+            }
+        }
+
         /// <summary>Materializes and rebuilds the real project registry (built-ins plus this shard's nodes) from reflected metadata -- proves the generated node is structurally valid and registry-registerable, via the real, already-accepted production entry points.</summary>
         internal static bool TryBuildRegistry(GeneratedShardReflection reflection, out NodeRegistry registry, out string failureReason)
         {
@@ -110,6 +133,81 @@ namespace AIBT.Mcp.NodeDevelopment
                 failureReason = ex.Message;
                 return false;
             }
+        }
+
+        // P7-009: locates the companion [AibtCatalogSet]-decorated type generate_node now stages
+        // alongside the node (see StagingSlot.WriteCatalogSet) -- ExecuteImmediate and the
+        // fingerprint properties BurstCatalogHandshake needs are only ever emitted on this type,
+        // never on the [AibtCatalogShard] type TryFindShardType locates.
+        internal static bool TryFindCatalogSetType(string assemblyName, out Type catalogSetType, out string failureReason)
+        {
+            var assembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(candidate => string.Equals(candidate.GetName().Name, assemblyName, StringComparison.Ordinal));
+            if (assembly == null)
+            {
+                catalogSetType = null;
+                failureReason = "Assembly '" + assemblyName + "' is not currently loaded.";
+                return false;
+            }
+
+            catalogSetType = assembly.GetTypes().FirstOrDefault(candidate =>
+                candidate.GetCustomAttributesData().Any(data => data.AttributeType.Name == "AibtCatalogSetAttribute"));
+            if (catalogSetType == null)
+            {
+                failureReason = "No [AibtCatalogSet] type was found in assembly '" + assemblyName + "'.";
+                return false;
+            }
+
+            failureReason = null;
+            return true;
+        }
+
+        // Mirrors Spikes~/GenericNativeDispatchTestHarness's own GeneratedHandshake(): the handshake
+        // is read from the real generated catalog's own reflected fingerprint properties, never
+        // recomputed (ADR-P6-022 decision 1).
+        internal static bool TryReflectHandshake(Type catalogSetType, out BurstCatalogHandshake handshake, out string failureReason)
+        {
+            if (!TryReadStaticProperty<BurstCatalogFingerprint>(catalogSetType, "Fingerprint", out var fingerprint, out failureReason)
+                || !TryReadStaticProperty<BurstHash256>(catalogSetType, "NodeRegistryFingerprint", out var nodeRegistry, out failureReason)
+                || !TryReadStaticProperty<BurstHash256>(catalogSetType, "ConfigurationLayoutFingerprint", out var configurationLayout, out failureReason)
+                || !TryReadStaticProperty<BurstHash256>(catalogSetType, "MemoryLayoutFingerprint", out var memoryLayout, out failureReason)
+                || !TryReadStaticProperty<BurstHash256>(catalogSetType, "AccessLayoutFingerprint", out var accessLayout, out failureReason))
+            {
+                handshake = default;
+                return false;
+            }
+
+            handshake = new BurstCatalogHandshake(2u, fingerprint, nodeRegistry, 1u, 1u, configurationLayout, memoryLayout, accessLayout);
+            failureReason = null;
+            return true;
+        }
+
+        internal static bool TryGetExecuteImmediate(Type catalogSetType, out MethodInfo executeImmediate, out string failureReason)
+        {
+            executeImmediate = catalogSetType.GetMethod("ExecuteImmediate", BindingFlags.Public | BindingFlags.Static);
+            if (executeImmediate == null)
+            {
+                failureReason = "Catalog set type '" + catalogSetType.FullName + "' has no generated ExecuteImmediate -- it did not compile through the packaged analyzer, or compiled with errors.";
+                return false;
+            }
+
+            failureReason = null;
+            return true;
+        }
+
+        private static bool TryReadStaticProperty<T>(Type type, string propertyName, out T value, out string failureReason)
+        {
+            var property = type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            if (property == null)
+            {
+                value = default;
+                failureReason = "Generated catalog set is missing property '" + propertyName + "'.";
+                return false;
+            }
+
+            value = (T)property.GetValue(null);
+            failureReason = null;
+            return true;
         }
 
         private static bool TryReadString(Type type, string fieldName, out string value, out string failureReason)

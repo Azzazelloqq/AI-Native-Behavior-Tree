@@ -582,3 +582,42 @@ package test). Reference-executor backend only, per the ADR's own scope; `P3-009
 still build their own registries from the fixed Phase 1 fixture/built-in set unchanged, and no
 async-operation support exists on the public leaf context in this v1 -- both disclosed, not silently
 assumed solved. See `Planning~/Evidence/P7-008/`.
+
+`P7-009` (generic native-dispatch translator production implementation) is **done**, with one
+owner-approved re-scoping. Investigation before implementation found the card's own "test-node run
+against a real, freshly generated, non-index-0 custom node" acceptance criterion structurally
+unreachable through today's staging architecture: `StagingSlot.WriteNode` always clears and stages
+exactly one node file in its own isolated one-node assembly, and `GeneratedMetadataEmitter` assigns
+dispatch index by ordering nodes within one compiled shard -- a staged node is therefore always
+dispatch index 0, and `test-node` only ever reflects the staging assembly, never a real applied
+catalog. Surfaced directly to the owner rather than guessed at; approved: build
+`GenericNativeDispatchTranslatorV1`'s full `0..targetIndex` case-prefix support anyway (matching
+what `ADR-P6-022` actually decided), proving that part against a dedicated permanent fixture instead
+of through the live tool, which can only ever exercise the index-0 case.
+`GenericNativeDispatchTranslatorV1` (new, `Authoring/Registry/Generated/` -- a real
+dependency-direction correction from the card's own tentative `Runtime/Execution/Burst/Dispatch/`
+location, since `AIBT.Runtime` cannot reference `AIBT.Authoring`'s materializer while `AIBT.Authoring`
+already can reach `AIBT.Runtime`'s internal dispatch contracts) ports the spike's proven single-case
+mapping, extended to flatten a real prefix's cases into the shared arrays
+`NativeBurstDispatchCaseV2`'s own range fields index into -- confirmed against
+`NativeBurstDispatchBindingValidationV2`'s own real consuming code (not assumed) that field/binding
+ordinals are local to their own case while a binding's own value-field position is global across the
+flattened array. `MCP/NodeDevelopment/GenericNodeDispatchRunner.cs` (new) drives the translator's
+output through a real `NativeBurstDispatchWorkspaceOwnerV2` with a generic, zero-initialized request
+(no per-field-name knowledge, so it works for any in-scope node shape), invoking the dynamically
+compiled catalog's `ExecuteImmediate` via reflection. A real, empirically-found compile-time
+constraint mid-implementation: `[AibtCatalogSet]` cannot reference a shard declared in the *same*
+compiled assembly (a real `AIBT5011` failure on first attempt, then confirmed against
+`Samples~/BurstNodes/`'s own existing shard-assembly/catalog-assembly split) -- fixed by staging the
+companion catalog-set file into its own `Pending/Catalog/` sub-assembly, referencing the node's own
+staging assembly by name. The disclosed `generate_node` `Bool`-typed condition-template bug
+(`current >= config.Minimum` does not compile for `bool`) is fixed (`==` for `Bool`, unchanged `>=`
+for every numeric type). All three -- real dispatch execution, honest out-of-scope reporting for an
+async-bound node, and the `Bool` fix -- were proven live against the real open `6000.5.8f1` Editor via
+Unity MCP `execute_code` calling the real `AIBT.Mcp.McpToolDispatcher.Dispatch` entry point directly
+through the real `generate_node` -> `analyze_and_compile_node` -> `test_node` sequence; the
+prefix-translation path itself is proven by a new permanent 3-node real-compiled fixture
+(`Tests/Editor/CodeGen/Dispatch/`, mirroring `Tests/Editor/CodeGen/Generation/
+GeneratedArtifactContractTests.cs`'s own already-established in-assembly-analyzer pattern, no
+isolated project needed). `Registered`-encoded fields and `AsyncOperation`/`Completion` bindings
+remain explicitly unproven, per the ADR's own scope. See `Planning~/Evidence/P7-009/`.

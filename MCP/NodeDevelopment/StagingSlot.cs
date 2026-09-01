@@ -30,6 +30,8 @@ namespace AIBT.Mcp.NodeDevelopment
                 File.Delete(existing);
             }
 
+            ClearCatalogSet(projectRoot);
+
             EnsureAsmdef(root);
             var nodePath = Path.Combine(root, nodeFileName);
             File.WriteAllText(nodePath, nodeSource);
@@ -45,6 +47,45 @@ namespace AIBT.Mcp.NodeDevelopment
             return testPath;
         }
 
+        /// <summary>
+        /// Writes a companion [AibtCatalogSet] file wiring the staged shard in, so the packaged
+        /// analyzer emits a real ExecuteImmediate the widened test-node tool (P7-009) can drive.
+        /// Lives in its own <c>Catalog/</c> sub-assembly, referencing the staging assembly by name --
+        /// confirmed empirically (a same-assembly attempt failed AIBT5011, "lacks a usable generated
+        /// shard authority"): a shard's generated authority members (IsUsable/AbiVersion) are only
+        /// visible to a [AibtCatalogSet] in an assembly that references the shard's own assembly,
+        /// exactly the split Samples~/BurstNodes/Runtime (shard) + Samples~/BurstNodes/Catalog
+        /// (catalog set) already use. Kept separate from apply-node's own MoveTo on purpose: this
+        /// file is a staging-time verification artifact, never something a project ships.
+        /// </summary>
+        internal static string WriteCatalogSet(string projectRoot, string catalogFileName, string catalogSource)
+        {
+            var root = CatalogRootPath(projectRoot);
+            Directory.CreateDirectory(root);
+            EnsureCatalogAsmdef(root);
+            var catalogPath = Path.Combine(root, catalogFileName);
+            File.WriteAllText(catalogPath, catalogSource);
+            return catalogPath;
+        }
+
+        private static void ClearCatalogSet(string projectRoot)
+        {
+            var root = CatalogRootPath(projectRoot);
+            if (!Directory.Exists(root))
+            {
+                return;
+            }
+
+            foreach (var existing in Directory.GetFiles(root, "*.cs"))
+            {
+                File.Delete(existing);
+            }
+        }
+
+        private static string CatalogRootPath(string projectRoot) => Path.Combine(RootPath(projectRoot), "Catalog");
+
+        // Recursive: includes the companion Catalog/ sub-assembly's own file, so preview/hash
+        // reflect the full staged generation (node + catalog set), not just the node alone.
         internal static IReadOnlyList<string> ListStagedFiles(string projectRoot)
         {
             var root = RootPath(projectRoot);
@@ -53,7 +94,17 @@ namespace AIBT.Mcp.NodeDevelopment
                 return Array.Empty<string>();
             }
 
-            return Directory.GetFiles(root, "*.cs").OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            return Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+        }
+
+        /// <summary>The staged node file itself, excluding its companion Catalog/ sub-assembly file
+        /// -- for callers (generate-node-tests-and-manifest) that need the node specifically, not
+        /// "whatever sorts first" across the full recursive listing.</summary>
+        internal static bool TryGetStagedNodeFile(string projectRoot, out string path)
+        {
+            var root = RootPath(projectRoot);
+            path = Directory.Exists(root) ? Directory.GetFiles(root, "*.cs").FirstOrDefault() : null;
+            return path != null;
         }
 
         internal static bool TryReadStaged(string projectRoot, string fileName, out string content)
@@ -175,6 +226,27 @@ namespace AIBT.Mcp.NodeDevelopment
                 + "  \"name\": \"AIBT.Generated.Staging\",\n"
                 + "  \"rootNamespace\": \"AIBT.Generated.Staging\",\n"
                 + "  \"references\": [\"AIBT.Runtime\"],\n"
+                + "  \"includePlatforms\": [\"Editor\"],\n"
+                + "  \"autoReferenced\": false,\n"
+                + "  \"analyzers\": [\"GUID:" + AnalyzerGuid + "\"]\n"
+                + "}\n";
+            File.WriteAllText(asmdefPath, asmdef);
+        }
+
+        // References the staging assembly by name -- see WriteCatalogSet's own doc comment for why
+        // the [AibtCatalogSet] type cannot live in the same assembly as the shard it references.
+        private static void EnsureCatalogAsmdef(string root)
+        {
+            var asmdefPath = Path.Combine(root, "AIBT.Generated.Staging.Catalog.asmdef");
+            if (File.Exists(asmdefPath))
+            {
+                return;
+            }
+
+            var asmdef = "{\n"
+                + "  \"name\": \"AIBT.Generated.Staging.Catalog\",\n"
+                + "  \"rootNamespace\": \"AIBT.Generated.Staging.Catalog\",\n"
+                + "  \"references\": [\"AIBT.Runtime\", \"AIBT.Generated.Staging\", \"Unity.Burst\"],\n"
                 + "  \"includePlatforms\": [\"Editor\"],\n"
                 + "  \"autoReferenced\": false,\n"
                 + "  \"analyzers\": [\"GUID:" + AnalyzerGuid + "\"]\n"

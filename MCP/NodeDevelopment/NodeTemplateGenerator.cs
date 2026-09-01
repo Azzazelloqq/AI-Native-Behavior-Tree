@@ -151,7 +151,7 @@ namespace AIBT.Mcp.NodeDevelopment
             builder.Append("            ref ").Append(spec.ConfigTypeName).Append("Memory memory,\n");
             builder.Append("            ref BurstTickContext context)\n        {\n");
             builder.Append("            var result = ").Append(spec.ShardTypeName).Append(".BurstAccess.TryRead(ref context, config.Current, out var current);\n");
-            builder.Append("            return result == BurstContextResult.Success && current >= config.").Append(spec.ThresholdFieldName).Append('\n');
+            builder.Append("            return result == BurstContextResult.Success && current ").Append(ComparisonOperator(spec.BlackboardReadType)).Append(" config.").Append(spec.ThresholdFieldName).Append('\n');
             builder.Append("                ? NodeStatus.Success\n                : NodeStatus.Failure;\n        }\n\n");
             builder.Append("        public static void Abort(\n");
             builder.Append("            in ").Append(spec.ConfigTypeName).Append(" config,\n");
@@ -167,7 +167,7 @@ namespace AIBT.Mcp.NodeDevelopment
                 builder.Append("            in ").Append(spec.ConfigTypeName).Append(" config,\n");
                 builder.Append("            ref BurstObserverContext context)\n        {\n");
                 builder.Append("            var result = ").Append(spec.ShardTypeName).Append(".BurstAccess.TryRead(ref context, config.Current, out var current);\n");
-                builder.Append("            return result == BurstContextResult.Success && current >= config.").Append(spec.ThresholdFieldName).Append('\n');
+                builder.Append("            return result == BurstContextResult.Success && current ").Append(ComparisonOperator(spec.BlackboardReadType)).Append(" config.").Append(spec.ThresholdFieldName).Append('\n');
                 builder.Append("                ? ConditionResult.Success\n                : ConditionResult.Failure;\n        }\n");
             }
             builder.Append("    }\n}\n");
@@ -271,6 +271,28 @@ namespace AIBT.Mcp.NodeDevelopment
             builder.Append("    }\n}\n");
             return builder.ToString();
         }
+
+        // Generates a companion [AibtCatalogSet] declaration wiring the staged shard in, so the
+        // packaged analyzer emits a real ExecuteImmediate the widened test-node tool (P7-009) can
+        // actually drive -- generate_node's own node template never declared one (no [AibtBurstNode]
+        // template ever needed a real dispatch entry point until this card widened test-node), and
+        // ExecuteImmediate is only ever emitted for an [AibtCatalogSet]-decorated type, never for the
+        // [AibtCatalogShard] type itself (confirmed by reading CodeGen~/AIBT.CodeGen/
+        // BurstNodeGenerator.cs's own reserved-member list and emission target directly).
+        internal static string GenerateCatalogSet(string @namespace, string catalogSetTypeName, string catalogSetId, string shardTypeName)
+        {
+            var builder = new StringBuilder();
+            builder.Append("using AIBT.Burst;\n\n");
+            builder.Append("namespace ").Append(@namespace).Append("\n{\n");
+            builder.Append("    [AibtCatalogSet(\"").Append(catalogSetId).Append("\", 1u, typeof(").Append(shardTypeName).Append("))]\n");
+            builder.Append("    public static partial class ").Append(catalogSetTypeName).Append(" { }\n}\n");
+            return builder.ToString();
+        }
+
+        // Bool has no >= operator in C# -- a Bool-typed condition compares for equality against its
+        // configured expected value instead of a numeric threshold. Every other supported value type
+        // keeps the original threshold-comparison semantics unchanged.
+        private static string ComparisonOperator(NodeValueType type) => type == NodeValueType.Bool ? "==" : ">=";
 
         private static string Escape(string value) => (value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
     }

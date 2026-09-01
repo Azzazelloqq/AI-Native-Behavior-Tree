@@ -32,6 +32,7 @@ namespace AIBT.Mcp.NodeDevelopment
     internal static class McpNodeDevelopmentToolDispatcher
     {
         private const string StagingAssemblyName = "AIBT.Generated.Staging";
+        private const string StagingCatalogAssemblyName = "AIBT.Generated.Staging.Catalog";
 
         // ---- generate-node ---------------------------------------------------------------------
 
@@ -41,6 +42,8 @@ namespace AIBT.Mcp.NodeDevelopment
             string fileName;
             string source;
             string shardId;
+            string shardTypeName;
+            string @namespace;
             switch (kind)
             {
                 case "condition":
@@ -48,23 +51,38 @@ namespace AIBT.Mcp.NodeDevelopment
                     source = NodeTemplateGenerator.GenerateCondition(conditionSpec);
                     fileName = conditionSpec.NodeTypeName + ".cs";
                     shardId = conditionSpec.ShardId;
+                    shardTypeName = conditionSpec.ShardTypeName;
+                    @namespace = conditionSpec.Namespace;
                     break;
                 case "action":
                     var actionSpec = ReadActionSpec(args);
                     source = NodeTemplateGenerator.GenerateAction(actionSpec);
                     fileName = actionSpec.NodeTypeName + ".cs";
                     shardId = actionSpec.ShardId;
+                    shardTypeName = actionSpec.ShardTypeName;
+                    @namespace = actionSpec.Namespace;
                     break;
                 default:
                     throw new McpToolException(McpNodeDevelopmentDiagnostics.UnknownNodeKind, "'" + kind + "' is not a maintained template kind. Supported: condition, action.");
             }
 
             StagingSlot.WriteNode(projectRoot, fileName, source);
+
+            // A companion [AibtCatalogSet] declaration, so the packaged analyzer emits a real
+            // ExecuteImmediate for the staged shard -- the widened test-node tool (P7-009) needs one
+            // to actually drive dispatch; no [AibtBurstNode] template ever needed this before.
+            var catalogSetTypeName = shardTypeName + "Catalog";
+            var catalogSetId = shardId + ".catalog";
+            var catalogFileName = catalogSetTypeName + ".cs";
+            var catalogSource = NodeTemplateGenerator.GenerateCatalogSet(@namespace, catalogSetTypeName, catalogSetId, shardTypeName);
+            StagingSlot.WriteCatalogSet(projectRoot, catalogFileName, catalogSource);
+
             return new JObject
             {
                 ["fileName"] = fileName,
                 ["source"] = source,
                 ["shardId"] = shardId,
+                ["catalogSetTypeName"] = catalogSetTypeName,
             };
         }
 
@@ -89,13 +107,12 @@ namespace AIBT.Mcp.NodeDevelopment
 
         internal static JObject GenerateNodeTestsAndManifest(string projectRoot, JObject args)
         {
-            var staged = StagingSlot.ListStagedFiles(projectRoot);
-            if (staged.Count == 0)
+            if (!StagingSlot.TryGetStagedNodeFile(projectRoot, out var stagedNodePath))
             {
                 throw new McpToolException(McpNodeDevelopmentDiagnostics.NoPendingGeneration, "No pending node generation -- call generate-node first.");
             }
 
-            var nodeFileName = Path.GetFileNameWithoutExtension(staged[0]);
+            var nodeFileName = Path.GetFileNameWithoutExtension(stagedNodePath);
             var testFileName = nodeFileName + "Tests.cs";
             // Manifest data needs no separate artifact: it is inherent in the [AibtBurstNode]/
             // [AibtNodeDocumentation] attributes generate-node already wrote (ai-and-mcp.md's own
@@ -185,13 +202,45 @@ namespace AIBT.Mcp.NodeDevelopment
                 return new JObject { ["valid"] = false, ["reason"] = reason };
             }
 
-            return new JObject
+            var result = new JObject
             {
                 ["valid"] = true,
                 ["shardId"] = reflection.ShardId,
                 ["contentHash"] = expectedContentHash,
-                ["scopeNote"] = "Proves compiled metadata is structurally valid and registry-materializable. Does not prove dispatch execution -- see P6-022.",
             };
+
+            // P7-009, applying ADR-P6-022: actually drives generated dispatch for a node within the
+            // translator's proven scope (built-in-typed fields, non-async bindings). A node outside
+            // that scope (Registered field, AsyncOperation/Completion binding) is reported honestly
+            // -- dispatchProven: false with a reason -- never a false pass.
+            if (!GeneratedNodeReflectionHarness.TryMaterializeArtifact(reflection, out var artifact, out var artifactFailure))
+            {
+                result["dispatchProven"] = false;
+                result["dispatchReason"] = artifactFailure;
+                return result;
+            }
+
+            if (!GeneratedNodeReflectionHarness.TryFindCatalogSetType(StagingCatalogAssemblyName, out var catalogSetType, out var catalogFailure))
+            {
+                result["dispatchProven"] = false;
+                result["dispatchReason"] = catalogFailure;
+                return result;
+            }
+
+            var dispatch = GenericNodeDispatchRunner.Run(artifact, catalogSetType);
+            result["dispatchProven"] = dispatch.DispatchProven;
+            if (dispatch.DispatchProven)
+            {
+                result["enteredSuccessfully"] = dispatch.EnteredSuccessfully;
+                result["tickStatus"] = dispatch.TickStatus;
+                result["tickCallbackFailure"] = dispatch.CallbackFailure;
+            }
+            else
+            {
+                result["dispatchReason"] = dispatch.Reason;
+            }
+
+            return result;
         }
 
         // ---- apply-node ------------------------------------------------------------------------

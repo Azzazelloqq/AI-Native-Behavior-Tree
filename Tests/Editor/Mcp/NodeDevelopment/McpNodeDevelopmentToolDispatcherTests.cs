@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using AIBT.Mcp;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -54,6 +55,28 @@ namespace AIBT.Tests.Editor.Mcp.NodeDevelopment
             Assert.That(source, Does.Contain("BlackboardReadHandle<uint> Current;"));
             Assert.That(File.Exists(Path.Combine(_assetsDir, "AIBT-Generated", "_Staging", "Pending", fileName)), Is.True);
             Assert.That(File.Exists(Path.Combine(_assetsDir, "AIBT-Generated", "_Staging", "Pending", "AIBT.Generated.Staging.asmdef")), Is.True);
+            var catalogSetTypeName = (string)response["result"]["catalogSetTypeName"];
+            Assert.That(catalogSetTypeName, Is.EqualTo("MyThresholdNodeShardCatalog"));
+            Assert.That(File.Exists(Path.Combine(_assetsDir, "AIBT-Generated", "_Staging", "Pending", "Catalog", catalogSetTypeName + ".cs")), Is.True,
+                "generate-node must also stage a companion [AibtCatalogSet] file (P7-009) so ExecuteImmediate is actually generated.");
+            Assert.That(File.Exists(Path.Combine(_assetsDir, "AIBT-Generated", "_Staging", "Pending", "Catalog", "AIBT.Generated.Staging.Catalog.asmdef")), Is.True,
+                "The companion catalog set needs its own assembly, referencing the staging assembly by name (AIBT5011 -- a shard's generated authority is only visible across an assembly reference, confirmed empirically).");
+        }
+
+        [Test]
+        public void GenerateNodeCondition_BoolBlackboardType_UsesEqualityNotThresholdComparison()
+        {
+            // P7-009: current >= config.Threshold does not compile for bool (CS0019) -- the
+            // template must emit == for Bool, unlike every other supported value type.
+            var args = ConditionArgs();
+            args["blackboardReadType"] = "Bool";
+            var response = Dispatch("generate_node", args, "CodeGeneration");
+
+            Assert.That(response["error"], Is.Null, response.ToString());
+            var source = (string)response["result"]["source"];
+            Assert.That(source, Does.Contain("BlackboardReadHandle<bool> Current;"));
+            Assert.That(source, Does.Contain("current == config.Minimum"));
+            Assert.That(source, Does.Not.Contain("current >= config.Minimum"));
         }
 
         [Test]
@@ -87,9 +110,14 @@ namespace AIBT.Tests.Editor.Mcp.NodeDevelopment
             Dispatch("generate_node", ActionArgs(), "CodeGeneration");
 
             var stagingDir = Path.Combine(_assetsDir, "AIBT-Generated", "_Staging", "Pending");
-            var csFiles = Directory.GetFiles(stagingDir, "*.cs");
-            Assert.That(csFiles, Has.Length.EqualTo(1), "generate-node must overwrite the single reserved slot, not accumulate files.");
-            Assert.That(Path.GetFileName(csFiles[0]), Is.EqualTo("MyAsyncNode.cs"));
+            var csFiles = Directory.GetFiles(stagingDir, "*.cs", SearchOption.AllDirectories);
+            // The node file plus its companion [AibtCatalogSet] file (P7-009, in its own Catalog/
+            // sub-assembly) -- still one reserved slot, not accumulation: the first generation's own
+            // node+catalog pair must be gone.
+            Assert.That(csFiles, Has.Length.EqualTo(2), "generate-node must overwrite the single reserved slot, not accumulate files.");
+            var names = csFiles.Select(Path.GetFileName).ToArray();
+            Assert.That(names, Does.Contain("MyAsyncNode.cs"));
+            Assert.That(names, Has.None.Contain("MyThresholdNode"), "The prior condition generation's files must be gone, not merely superseded.");
         }
 
         // ---- preview-node-diff --------------------------------------------------------------------
@@ -105,8 +133,11 @@ namespace AIBT.Tests.Editor.Mcp.NodeDevelopment
 
             Assert.That(response["error"], Is.Null, response.ToString());
             var files = (JArray)response["result"]["files"];
-            Assert.That(files.Count, Is.EqualTo(1));
-            Assert.That((string)files[0]["fileName"], Is.EqualTo("MyThresholdNode.cs"));
+            // The node file plus its companion [AibtCatalogSet] file (P7-009).
+            Assert.That(files.Count, Is.EqualTo(2));
+            var fileNames = files.Select(file => (string)file["fileName"]).ToArray();
+            Assert.That(fileNames, Does.Contain("MyThresholdNode.cs"));
+            Assert.That(fileNames, Does.Contain("MyThresholdNodeShardCatalog.cs"));
             Assert.That(Directory.GetFiles(stagingDir).Length, Is.EqualTo(before), "preview-node-diff must not change staged file count.");
         }
 
