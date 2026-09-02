@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using AIBT.Authoring;
 using AIBT.Mcp;
@@ -183,6 +185,94 @@ namespace AIBT.Tests.Editor.Documentation
             AssertFileMatches(Path.Combine(directory, "recipes.md"), McpRecipesDocumentGenerator.Generate());
             AssertFileMatches(Path.Combine(directory, "anti-patterns.md"), McpAntiPatternsDocumentGenerator.Generate());
             AssertFileMatches(Path.Combine(directory, "migrations.md"), McpMigrationsDocumentGenerator.Generate());
+
+            var apiReference = McpApiReferenceGenerator.Generate();
+            AssertFileMatches(Path.Combine(directory, "api-reference-runtime.md"), apiReference["AIBT.Runtime"]);
+            AssertFileMatches(Path.Combine(directory, "api-reference-authoring.md"), apiReference["AIBT.Authoring"]);
+            AssertFileMatches(Path.Combine(directory, "api-reference-editor.md"), apiReference["AIBT.Editor"]);
+            AssertFileMatches(Path.Combine(directory, "api-reference-mcp.md"), apiReference["AIBT.Mcp"]);
+        }
+
+        // P7-014's own literal acceptance criterion, proven mechanically: every public
+        // field/constructor/method/property reflected right now appears as its own signature line
+        // in the committed generated reference -- not a sampled spot-check.
+        [Test]
+        public void GeneratedApiReferenceCoversEveryPublicMemberInAllFourAssemblies()
+        {
+            var directory = FindGeneratedDocumentationDirectory();
+            var assemblyNames = new[] { "AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "AIBT.Mcp" };
+            var fileNames = new[] { "api-reference-runtime.md", "api-reference-authoring.md", "api-reference-editor.md", "api-reference-mcp.md" };
+
+            for (var index = 0; index < assemblyNames.Length; index++)
+            {
+                var assembly = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => a.GetName().Name == assemblyNames[index]);
+                Assert.That(assembly, Is.Not.Null, assemblyNames[index] + " must be loaded in this AppDomain.");
+
+                var expectedSignatures = new HashSet<string>(StringComparer.Ordinal);
+                var publicTypes = assembly.GetExportedTypes().Where(t => t.IsPublic).ToList();
+                foreach (var type in publicTypes)
+                {
+                    const BindingFlags flags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+                    foreach (var field in type.GetFields(flags))
+                    {
+                        if (field.Name.EndsWith(">k__BackingField", StringComparison.Ordinal)) continue;
+                        expectedSignatures.Add("FIELD " + TypeDisplayName(field.FieldType) + " " + field.Name);
+                    }
+                    foreach (var ctor in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                    {
+                        expectedSignatures.Add(MethodSignature(ctor));
+                    }
+                    foreach (var method in type.GetMethods(flags))
+                    {
+                        if (method.IsSpecialName) continue;
+                        expectedSignatures.Add(MethodSignature(method));
+                    }
+                    foreach (var property in type.GetProperties(flags))
+                    {
+                        expectedSignatures.Add("PROPERTY " + TypeDisplayName(property.PropertyType) + " " + property.Name);
+                    }
+                }
+
+                var documentText = File.ReadAllText(Path.Combine(directory, fileNames[index]));
+                var documentedSignatures = new HashSet<string>(
+                    Regex.Matches(documentText, @"^- `(.+)`$", RegexOptions.Multiline).Select(m => m.Groups[1].Value),
+                    StringComparer.Ordinal);
+
+                var missing = expectedSignatures.Except(documentedSignatures).ToList();
+                Assert.That(missing, Is.Empty,
+                    assemblyNames[index] + ": " + missing.Count + " public member(s) missing from the generated reference, e.g. " +
+                    string.Join(" | ", missing.Take(5)));
+
+                foreach (var type in publicTypes)
+                {
+                    Assert.That(documentText, Does.Contain("### `" + type.FullName + "`"),
+                        assemblyNames[index] + ": type " + type.FullName + " has no entry in the generated reference.");
+                }
+            }
+        }
+
+        // Mirrors McpApiReferenceGenerator's own private formatting helpers exactly -- kept as an
+        // independent copy (not a shared internal) so this test proves the COMMITTED FILE actually
+        // matches what a real, correct reflection pass expects, not merely what the generator's own
+        // internal formatting happens to produce.
+        private static string TypeDisplayName(Type type)
+        {
+            if (type.IsGenericType)
+            {
+                var name = type.GetGenericTypeDefinition().FullName;
+                var args = string.Join(",", type.GetGenericArguments().Select(TypeDisplayName));
+                return name + "<" + args + ">";
+            }
+            return type.FullName;
+        }
+
+        private static string MethodSignature(MethodBase method)
+        {
+            var name = method.IsConstructor ? ".ctor" : method.Name;
+            var parameters = string.Join(",", method.GetParameters().Select(p => TypeDisplayName(p.ParameterType)));
+            var returnType = method is MethodInfo methodInfo ? TypeDisplayName(methodInfo.ReturnType) : "System.Void";
+            return "METHOD " + returnType + " " + name + "(" + parameters + ")";
         }
 
         private static void AssertFileMatches(string path, string expected)

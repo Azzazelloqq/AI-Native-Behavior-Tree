@@ -733,3 +733,28 @@ as-is / approve with changes / reject pending more data), and **the owner approv
 (2026-09-02). `compatibility-matrix.md`'s own status banner moved from "DRAFT PROPOSAL" to
 "ACCEPTED" accordingly; it is now the reference every later platform claim should point at. No
 production file, test, or benchmark script was touched. See `Planning~/Evidence/P7-002/`.
+
+`P7-014` (generated C# API reference documentation) is **done**: decides and builds, in one pass
+(mirroring `P6-021`'s own precedent for a mechanical, non-architectural decision made and applied
+together), whether AIBT's public C# surface needs a generated reference or can rely on XML-doc
+comments plus `architecture.md`. Investigated directly first: real current XML-doc coverage is
+**~2.4-4.5% of public members** (a source-parse across all four assemblies, cross-checked two ways
+-- the regex sweep's own type count matched the reflection dump's exactly, and independently
+counting every `<summary>` tag confirmed the low number is real, not a parsing artifact), and
+`architecture.md` is confirmed narrative-only with no per-type/per-member entries at all -- neither
+supports "rely on XML comments" as a defensible choice. New `MCP/Documentation/
+McpApiReferenceGenerator.cs` mirrors `P6-011`'s own established generator pattern exactly, reflecting
+all four public assemblies live (placed inside `MCP/Documentation/` rather than an isolated-project
+script, since `AIBT.Mcp`'s own assembly already transitively references the other three, so its
+AppDomain naturally has all four loaded when the existing regenerate command runs) and writing
+`Documentation~/generated/api-reference-{runtime,authoring,editor,mcp}.md` -- every one of the 2,528
+reflected public declarations gets its own signature line, satisfying the card's own "100% of public
+members have a generated reference entry" bar exactly, without inventing prose for the ~95% of
+members that have none today. A type's own XML-doc `<summary>` is inlined where one exists (60 of
+417 types, 14.4%) via a best-effort source-parse keyed on exact `FullName`; member-level correlation
+was investigated and found too fragile to attempt this pass, disclosed rather than silently
+attempted. `Tests/Editor/Documentation/McpDocumentationGeneratorsTests.cs`'s drift-check was
+extended for the four new files, and a new coverage-check test proves the 100% bar mechanically
+(fresh reflection vs. committed file, not sampled) -- both passed live on the first run; full
+EditMode regression (1616 tests) shows no new failures beyond the 3 already-pre-existing, unrelated
+ones. See `Planning~/Evidence/P7-014/`.

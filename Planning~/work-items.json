@@ -1826,14 +1826,18 @@
       "id": "P7-014",
       "phase": 7,
       "title": "Generated C# API reference documentation",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-014-generated-api-reference-documentation.md",
       "dependsOn": [
         "P6-012"
       ],
       "owns": [
-        "Documentation~/generated/",
+        "MCP/Documentation/McpApiReferenceGenerator.cs",
+        "Documentation~/generated/api-reference-runtime.md",
+        "Documentation~/generated/api-reference-authoring.md",
+        "Documentation~/generated/api-reference-editor.md",
+        "Documentation~/generated/api-reference-mcp.md",
         "Planning~/Evidence/P7-014/"
       ]
     },

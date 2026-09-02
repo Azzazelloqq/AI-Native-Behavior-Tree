@@ -1,6 +1,6 @@
 # P7-014 — Generated C# API reference documentation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -74,3 +74,23 @@ if generated: regenerate-and-diff-clean check
 
 - `P7-016` (Phase 7 gate) cites this card's coverage proof as part of its own "complete API
   documentation" release-criterion check.
+
+## Outcome
+
+Done. Decided to generate rather than rely on XML-doc comments, grounded in real current coverage
+(~2.4-4.5% of public members, confirmed by a source-parse cross-checked two ways, not assumed) and
+`architecture.md`'s own narrative-only scope (no per-type/per-member entries at all). New
+`MCP/Documentation/McpApiReferenceGenerator.cs` mirrors `P6-011`'s own generator pattern exactly,
+reflecting all four public assemblies live and writing `Documentation~/generated/
+api-reference-{runtime,authoring,editor,mcp}.md`. Every public member gets its own signature line
+(satisfying the card's own "generated reference entry" acceptance bar for 100% of the 2,528
+reflected declarations); a type's own XML-doc `<summary>` is inlined where one exists in source (60
+of 417 types, 14.4%) via a best-effort source-parse — member-level correlation was investigated and
+found too fragile to attempt this pass, disclosed rather than silently attempted.
+
+`Tests/Editor/Documentation/McpDocumentationGeneratorsTests.cs`'s existing drift-check was extended
+for the four new files, and a new `GeneratedApiReferenceCoversEveryPublicMemberInAllFourAssemblies`
+test proves the card's own literal 100%-coverage acceptance criterion mechanically (fresh reflection
+vs. committed file, not sampled). Both passed live on the first run; full EditMode regression (1616
+tests) shows no new failures beyond the 3 already-pre-existing, unrelated ones. See
+`Planning~/Evidence/P7-014/README.md`.

@@ -28,6 +28,12 @@ namespace AIBT.Mcp.Documentation
             File.WriteAllText(Path.Combine(directory, "anti-patterns.md"), McpAntiPatternsDocumentGenerator.Generate());
             File.WriteAllText(Path.Combine(directory, "migrations.md"), McpMigrationsDocumentGenerator.Generate());
 
+            var apiReference = McpApiReferenceGenerator.Generate();
+            File.WriteAllText(Path.Combine(directory, "api-reference-runtime.md"), apiReference["AIBT.Runtime"]);
+            File.WriteAllText(Path.Combine(directory, "api-reference-authoring.md"), apiReference["AIBT.Authoring"]);
+            File.WriteAllText(Path.Combine(directory, "api-reference-editor.md"), apiReference["AIBT.Editor"]);
+            File.WriteAllText(Path.Combine(directory, "api-reference-mcp.md"), apiReference["AIBT.Mcp"]);
+
             Debug.Log("AIBT generated documentation written to " + directory);
         }
     }
