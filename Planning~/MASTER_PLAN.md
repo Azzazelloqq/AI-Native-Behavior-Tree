@@ -758,3 +758,25 @@ extended for the four new files, and a new coverage-check test proves the 100% b
 (fresh reflection vs. committed file, not sampled) -- both passed live on the first run; full
 EditMode regression (1616 tests) shows no new failures beyond the 3 already-pre-existing, unrelated
 ones. See `Planning~/Evidence/P7-014/`.
+
+`P7-013` (samples expansion) is **done**, with one owner-approved re-scoping found mid-
+implementation. `Samples~/CustomMcpToolProvider/` (new) demonstrates `ICustomMcpToolProvider`
+(`aibt_sample_greeting`), proven live against the real, permanent `MCP~/Server/` via the official
+`@modelcontextprotocol/inspector --cli` -- `tools/list` shows it among 33 real tools, `tools/call`
+returns a real response. Investigation before building the second sample found a real structural
+blocker: no public production API exists anywhere to drive a compiled tree with a chosen scheduling
+policy (every native-backend execution type is `internal`, confirmed against this session's own
+`P7-001` public-API dump), and the one public preview entry point
+(`ReferencePreviewDriver`/`HotReloadPreviewDriver`) compiles exclusively against a fixed
+built-in/fixture registry -- neither was updated for `P7-008`'s own new project-extension mechanism,
+though both drivers' own doc comments still claim no such mechanism exists at all. Surfaced to the
+owner via `AskUserQuestion` mid-implementation; approved: trim `Samples~/FullExample/` to
+demonstrate the hot-reload pass alone, on the fixed node set both preview drivers actually support,
+disclosed explicitly in the sample's own README rather than faked or silently dropped. Live-verified
+via Unity MCP `execute_code` against the real open Editor and `HotReloadWorkflowWindow` (`P5-008`) --
+also found live, not assumed, that the README's own first-draft claim ("live state survives the
+reload") was only true for an *idle* old instance; reloading an *active* one instead falls back to a
+full restart (the reference executor's own idle-only migration scope, a real pre-existing limitation
+distinct from `P7-012`'s native backend, which explicitly supports migrating an active instance).
+Corrected before shipping. No production file was touched; neither existing sample
+(`BurstNodes`/`SemanticSlice`) changed. See `Planning~/Evidence/P7-013/`.

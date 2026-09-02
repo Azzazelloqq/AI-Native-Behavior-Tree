@@ -1,0 +1,25 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.samples.full-example-hot-reload",
+  "name": "Full Example -- Hot Reload Pass (Before)",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "check",
+        "wait"
+      ]
+    },
+    "check": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "wait": {
+      "type": "aibt.test.running",
+      "typeVersion": 1
+    }
+  }
+}

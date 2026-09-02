@@ -1810,7 +1810,7 @@
       "id": "P7-013",
       "phase": 7,
       "title": "Samples expansion",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-013-samples-expansion.md",
       "dependsOn": [
@@ -1819,6 +1819,7 @@
       ],
       "owns": [
         "Samples~/CustomMcpToolProvider/",
+        "Samples~/FullExample/",
         "Planning~/Evidence/P7-013/"
       ]
     },
