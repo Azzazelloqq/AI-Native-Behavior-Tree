@@ -1,6 +1,6 @@
 # P7-003 — Profiler integration and validation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -85,3 +85,32 @@ P4-001 harness re-run with/without markers, compared for allocation/wall-clock d
 
 - `P7-004`'s long-running/stress tests can reuse these same markers to attribute where stress-test
   cost actually goes, rather than only reporting an aggregate pass/fail.
+
+## Outcome
+
+Done. `ProfilerMarker`s added to `NativeLifecycleMachineV1` (`TryAdvance` plus all five per-node-kind
+`Advance*` dispatch methods), `NativeSameFramePhaseControllerV1`/`NativePipelinedPhaseControllerV1`
+(`TryScheduleExecuteRound`), `NativeSharedContextOwnerV1.TryReduceUpdate` (the real blackboard-bridge
+call), and `ReferenceExecutionMachine.AdvanceOneStep` (the reference-backend mirror) -- every change
+a single `using var _ = marker.Auto();` line, `git diff --stat` confirming 40 insertions, 0
+deletions across all five touched files. Two deviations from this card's own text, both put to the
+owner before proceeding: command-bridge markers were dropped (the native command-merge subsystem has
+zero production callers, confirmed by grep -- instrumenting it would misrepresent test-only code as
+a hot path); the real Profiler capture required a Development Build (`BuildOptions.Development |
+ConnectWithProfiler`), not the "non-Development Player" the card's own text names, since Unity
+Profiler connectivity is impossible against a true Release build. A third deviation was found and
+resolved without needing owner input: `ProfilerRecorder`-based marker-presence unit tests (this
+card's own suggested example technique) do not work in this Unity version's EditMode environment
+(confirmed with an independent, non-AIBT control marker) -- replaced by two stronger verifications
+instead. Burst compatibility was verified by live reflection into the Editor's own Burst Inspector
+data model, forcing a real compile of `AdvanceJob` and reading its actual disassembly:
+`IsBurstError=False`, all six marker fields present via genuine `ProfilerUnsafeUtility.CreateMarker`
+calls, zero managed-fallback indicators. A real Windows x64 Development Player ran `P4-001`'s
+`deep-sequence-selector-traversal` scenario continuously for 150s (33,036 frames); the open Editor's
+Profiler connected live and captured a real `.data` file showing the markers' hierarchy and per-call
+cost. `P4-001`'s harness (`SchedulingPolicyDriver`) was re-run with and without the markers (a
+disposable, uncommitted spike): zero GC allocation delta in every sample; a real, disclosed +5.6%
+median wall-clock delta on a worst-case single-node-per-call Editor-Mono micro-benchmark (not the
+real Burst-compiled production path). Full regression: 601/601 (`AIBT.Runtime.Tests`, re-confirmed
+identical with and without markers via `git stash`), 470/470, 167/167, and 19/21 (2 pre-existing,
+unrelated host-embedded-layout failures). See `Planning~/Evidence/P7-003/README.md`.

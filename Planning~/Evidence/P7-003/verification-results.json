@@ -1,0 +1,25 @@
+{
+  "schema": "aibt-p7-003-verification-v1",
+  "passed": true,
+  "findings": [
+    "TEST_RESULT|AIBT.Runtime.Tests (markers present)|601/601 passed",
+    "TEST_RESULT|AIBT.Runtime.Tests (markers absent, git-stashed baseline)|601/601 passed",
+    "TEST_RESULT|AIBT.Editor.Tests+AIBT.Integration.Tests+AIBT.BehaviorCases.Tests|470/470 passed",
+    "TEST_RESULT|AIBT.NativeSnapshot.Tests+AIBT.NativeCommandsAndAsync.Tests+AIBT.NativeTreeAgentBlackboard.Tests+AIBT.NativeSharedBlackboard.Tests+AIBT.NativeBurstDispatch.Tests|167/167 passed",
+    "TEST_RESULT|AIBT.CodeGen.ContractTests+AIBT.CodeGen.GenerationTests+AIBT.CodeGen.GenerationConsumerTests|19/21 passed, 2 pre-existing host-embedded-layout failures unrelated to this card (PackageManager.PackageInfo.FindForAssembly returning null)",
+    "BURST_VERIFICATION|AIBT.NativeBatchedLifecycleOwnerV1+AdvanceJob|IsBurstError=False, RawDisassembly length=286573, all 6 marker fields present via real ProfilerUnsafeUtility.CreateMarker calls, zero managed-fallback indicators",
+    "PROFILER_CAPTURE|Benchmarks~/Phase7/Profiler/, deep-sequence-selector-traversal scenario, 64 agents, 150s run, 33036 frames completed|Planning~/Evidence/P7-003/profiler-capture-deep-sequence-selector-traversal.data (31 frames, 22MB), build evidence Planning~/Evidence/P7-003/profiler-capture-build-evidence.json (Development=true, ConnectWithProfiler=true, Burst=true, IL2CPP)",
+    "OVERHEAD_COMPARISON|disposable EditMode spike, SchedulingPolicyDriver.TryRunImmediate, 64 agents, 500 measured calls, 3 samples per side|markers absent median 11539.97 ns/agent/call (0 bytes/call); markers present median 12190.55 ns/agent/call (0 bytes/call); +5.6% wall-clock (Editor Mono/JIT, not the real Burst path), 0 GC allocation delta in every sample",
+    "DECISION|command-bridge markers dropped from scope|NativeCommandMergeOwnerV1/NativeCommandAsyncOwnerV1 have zero production callers (grep-confirmed); owner-approved narrowing to blackboard-only",
+    "DECISION|real Profiler capture required Development Build + ConnectWithProfiler|deviates from the card's literal 'non-Development Player' wording; owner-approved as a necessary technical constraint, not a shortcut",
+    "DECISION|ProfilerRecorder-based marker-presence tests dropped|non-functional in this EditMode environment even for a non-AIBT, non-Burst control marker; replaced by the Burst disassembly inspection and the real Player Profiler capture",
+    "DELIVERABLE|Runtime/Execution/Native/Core/NativeLifecycleMachineV1.cs|modified (6 markers)",
+    "DELIVERABLE|Runtime/Scheduling/Native/NativeSameFramePhaseControllerV1.cs|modified (1 marker)",
+    "DELIVERABLE|Runtime/Scheduling/Native/NativePipelinedPhaseControllerV1.cs|modified (1 marker)",
+    "DELIVERABLE|Runtime/Blackboard/Native/Shared/NativeSharedContextOwnerV1.cs|modified (1 marker)",
+    "DELIVERABLE|Runtime/Execution/Reference/Core/ReferenceExecutionMachine.cs|modified (1 marker)",
+    "DELIVERABLE|Benchmarks~/Phase7/Profiler/|created (build+run harness for the real Profiler capture)",
+    "DELIVERABLE|Planning~/Evidence/P7-003/|created",
+    "WORK_ITEM_STATUS|P7-003|draft->done"
+  ]
+}

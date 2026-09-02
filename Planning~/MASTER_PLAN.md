@@ -780,3 +780,48 @@ full restart (the reference executor's own idle-only migration scope, a real pre
 distinct from `P7-012`'s native backend, which explicitly supports migrating an active instance).
 Corrected before shipping. No production file was touched; neither existing sample
 (`BurstNodes`/`SemanticSlice`) changed. See `Planning~/Evidence/P7-013/`.
+
+`P7-003` (profiler integration and validation) is **done**: `Unity.Profiling.ProfilerMarker`
+instrumentation was added to `NativeLifecycleMachineV1` (the Burst-compiled per-instance lifecycle
+tick, `TryAdvance`, and each of its five per-node-kind dispatch methods), the two same-frame-class
+scheduling controllers' `TryScheduleExecuteRound`, `NativeSharedContextOwnerV1.TryReduceUpdate` (the
+real production blackboard-bridge call), and `ReferenceExecutionMachine.AdvanceOneStep` (the
+reference-backend mirror) -- every change a single `using var _ = marker.Auto();` line, confirmed
+purely additive by `git diff --stat` (40 insertions, 0 deletions across all five touched files). Two
+deviations from the card's own text were put to the owner before proceeding, both approved:
+command-bridge markers were dropped from scope after a repo-wide grep found the native command-merge
+subsystem (`NativeCommandMergeOwnerV1`/`NativeCommandAsyncOwnerV1`, built by `P2-010`) has zero
+production callers anywhere, only its own test file -- instrumenting it would have misrepresented
+dead code as a hot path, the same class of built-but-unwired gap `P5-007`/`P6-015` already disclosed
+elsewhere; and the real Profiler capture required a Development Build with
+`BuildOptions.ConnectWithProfiler`, not the "non-Development Player" the card's own text names,
+since Unity's Profiler transport is compiled out of true Release builds entirely -- `P4-008`'s own
+non-Development precedent is right for wall-clock measurement but cannot be connected to. A third
+finding needed no escalation: `Unity.Profiling.ProfilerRecorder`-based marker-presence unit tests
+(the card's own suggested example technique) do not work in this Unity version's EditMode
+environment -- confirmed with a plain, independent, non-AIBT, non-Burst control marker fired
+directly against the live Editor, ruling out anything Burst- or AIBT-specific before dropping the
+approach. Burst compatibility was verified for real rather than assumed: live reflection into the
+open Editor's own Burst Inspector data model (`Unity.Burst.Editor.BurstInspectorGUI`) forced a fresh
+compile of the real `AdvanceJob` Burst target and read back `IsBurstError=False` plus 286,573
+characters of real x64 disassembly, confirming all six new marker fields are initialized via genuine
+`ProfilerUnsafeUtility.CreateMarker` calls with zero managed-fallback indicators anywhere in the
+compiled code. A real Windows x64 Development Player (`Benchmarks~/Phase7/Profiler/`, new) ran
+`P4-001`'s own `deep-sequence-selector-traversal` scenario continuously for 150 seconds (33,036
+frames, no failure); the open Editor's Profiler connected to it live and saved a real 31-frame `.data`
+capture showing the new markers' hierarchy and per-call cost, attached as evidence rather than
+described in prose. `P4-001`'s own harness (`SchedulingPolicyDriver`) was re-run with and without the
+markers via a disposable, uncommitted EditMode spike: zero GC allocation delta in every sample, and a
+real, disclosed +5.6% median wall-clock delta on a worst-case single-node-per-call Editor-Mono
+micro-benchmark (not the actual Burst-compiled production path, which `P4-008`'s own finding says
+runs roughly an order of magnitude faster and less noisily than anything Editor-measured) -- reported
+honestly, not smoothed away, and explicitly not turned into a threshold or default, per every Phase 4
+card's own precedent. Full regression across every AIBT test assembly: 601/601
+(`AIBT.Runtime.Tests`, re-confirmed identical with and without markers via `git stash`), 470/470,
+167/167, and 19/21 (2 pre-existing, host-embedded-layout failures unrelated to any file this card
+touched). The owner flagged the committed capture's own size (22 MB, larger than any prior binary
+evidence in this repository — the previous largest was `P4-008`'s own 8.3 MB WebGL build) during
+review and approved committing it as-is while asking for a dedicated look at evidence-artifact size
+discipline generally, rather than deciding unilaterally in the moment -- spun off as `P7-017`
+(`Draft`, depends only on `P7-003`, not required for the `P7-016` gate, mirroring `P6-013`-`P6-021`'s
+own cross-phase-debt pattern). See `Planning~/Evidence/P7-003/`.

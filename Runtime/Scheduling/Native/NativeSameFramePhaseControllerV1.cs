@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Profiling;
 
 namespace AIBT
 {
@@ -42,6 +43,9 @@ namespace AIBT
     // corresponding explicit boundary.
     internal sealed class NativeSameFramePhaseControllerV1
     {
+        private static readonly ProfilerMarker s_ScheduleExecuteRoundMarker =
+            new ProfilerMarker("AIBT.Native.Scheduling.SameFrame.ScheduleExecuteRound");
+
         private NativeBatchedLifecycleOwnerV1 _execution;
         private NativeSameFramePhaseV1 _phase;
         private JobHandle _dependency;
@@ -103,6 +107,7 @@ namespace AIBT
             out JobHandle scheduled,
             out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_ScheduleExecuteRoundMarker.Auto();
             scheduled = default;
             if (_phase != NativeSameFramePhaseV1.ExecuteReady)
                 return Fail(out failure);

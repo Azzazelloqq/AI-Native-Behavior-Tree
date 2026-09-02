@@ -1653,7 +1653,7 @@
       "id": "P7-003",
       "phase": 7,
       "title": "Profiler integration and validation",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-003-profiler-integration.md",
       "dependsOn": [
@@ -1661,7 +1661,8 @@
         "P4-009"
       ],
       "owns": [
-        "Planning~/Evidence/P7-003/"
+        "Planning~/Evidence/P7-003/",
+        "Benchmarks~/Phase7/Profiler/"
       ]
     },
     {
@@ -1855,6 +1856,20 @@
       "owns": [
         ".github/workflows/",
         "Planning~/Evidence/P7-015/"
+      ]
+    },
+    {
+      "id": "P7-017",
+      "phase": 7,
+      "title": "Evidence-artifact size discipline",
+      "status": "draft",
+      "kind": "spike",
+      "card": "Planning~/Tasks/P7/P7-017-evidence-artifact-size-discipline.md",
+      "dependsOn": [
+        "P7-003"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-017/"
       ]
     },
     {

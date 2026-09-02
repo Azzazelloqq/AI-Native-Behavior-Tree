@@ -1,0 +1,15 @@
+{
+    "schema": "aibt-p7-003-profiler-windows-build-v1",
+    "unityVersion": "6000.5.8f1",
+    "target": "StandaloneWindows64",
+    "architecture": "x86_64",
+    "result": "Succeeded",
+    "totalErrors": 0,
+    "totalWarnings": 0,
+    "outputBytes": 863880468,
+    "scriptingBackend": "IL2CPP",
+    "burstEnabled": true,
+    "developmentBuild": true,
+    "connectWithProfiler": true,
+    "output": "C:\\Users\\User\\AppData\\Local\\Temp\\aibt-p7-003-profiler-windows-bec8d09bf5c54fae815a48be54a7cb28\\Build\\Windows-x64\\AIBTP7003ProfilerCapture.exe"
+}

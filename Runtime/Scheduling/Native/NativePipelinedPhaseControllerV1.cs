@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Profiling;
 
 namespace AIBT
 {
@@ -65,6 +66,9 @@ namespace AIBT
     /// </summary>
     internal sealed class NativePipelinedPhaseControllerV1
     {
+        private static readonly ProfilerMarker s_ScheduleExecuteRoundMarker =
+            new ProfilerMarker("AIBT.Native.Scheduling.Pipelined.ScheduleExecuteRound");
+
         private NativeBatchedLifecycleOwnerV1 _execution;
         private NativePipelinedPhaseV1 _phase;
         private JobHandle _dependency;
@@ -157,6 +161,7 @@ namespace AIBT
             out JobHandle scheduled,
             out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_ScheduleExecuteRoundMarker.Auto();
             scheduled = default;
             if (_phase != NativePipelinedPhaseV1.ExecuteReady)
                 return Fail(out failure);

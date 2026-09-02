@@ -3,6 +3,7 @@ using System.Threading;
 using AIBT.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Profiling;
 
 namespace AIBT
 {
@@ -16,6 +17,9 @@ namespace AIBT
             internal NativeProgramReadLeaseV2 ProgramLease;
             internal NativeInstanceArenaOwnerV1 Instance;
         }
+
+        private static readonly ProfilerMarker s_ReduceUpdateMarker =
+            new ProfilerMarker("AIBT.Native.Blackboard.Shared.ReduceUpdate");
 
         private static long s_nextOwnerId;
         private NativeArray<byte> _values;
@@ -655,6 +659,7 @@ namespace AIBT
             out NativeSharedCommitReportV1 report,
             out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_ReduceUpdateMarker.Auto();
             report = default;
             if (!TryAcquireReductionLease(update, out var lease, out failure)) return false;
             NativeSharedReductionV1.TryReduce(lease.View);

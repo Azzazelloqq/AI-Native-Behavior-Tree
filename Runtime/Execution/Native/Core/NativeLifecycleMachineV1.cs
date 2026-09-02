@@ -1,6 +1,7 @@
 using System;
 using AIBT.Burst;
 using Unity.Collections;
+using Unity.Profiling;
 
 namespace AIBT
 {
@@ -124,6 +125,19 @@ namespace AIBT
         private const ulong MemorySequenceTypeId = 0x5b7ceab8e6ee5d73UL;
         private const ulong MemorySelectorTypeId = 0x728850afcebac87fUL;
         private const ulong ParallelTypeId = 0xc178d10e173662cfUL;
+
+        private static readonly ProfilerMarker s_TryAdvanceMarker =
+            new ProfilerMarker("AIBT.Native.LifecycleTick");
+        private static readonly ProfilerMarker s_AdvanceLeafMarker =
+            new ProfilerMarker("AIBT.Native.Dispatch.Leaf");
+        private static readonly ProfilerMarker s_AdvanceAbortMarker =
+            new ProfilerMarker("AIBT.Native.Dispatch.Abort");
+        private static readonly ProfilerMarker s_AdvanceParallelMarker =
+            new ProfilerMarker("AIBT.Native.Dispatch.Parallel");
+        private static readonly ProfilerMarker s_AdvanceCompositeMarker =
+            new ProfilerMarker("AIBT.Native.Dispatch.Composite");
+        private static readonly ProfilerMarker s_AdvanceDecoratorMarker =
+            new ProfilerMarker("AIBT.Native.Dispatch.Decorator");
 
         private NativeArray<NativeCompiledNodeRecordV1> _nodes;
         private NativeArray<uint> _children;
@@ -327,6 +341,7 @@ namespace AIBT
 
         internal bool TryAdvance(out NativeLifecycleStepResultV1 result, out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_TryAdvanceMarker.Auto();
             result = default;
             if (!IsCreated)
             {
@@ -785,6 +800,7 @@ namespace AIBT
             out NativeLifecycleStepResultV1 result,
             out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_AdvanceLeafMarker.Auto();
             if (frame.LifecycleState == NativeFrameLifecycleStateV1.Running)
             {
                 if (frame.LastUpdateId == control.UpdateId)
@@ -825,6 +841,7 @@ namespace AIBT
             out NativeLifecycleStepResultV1 result,
             out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_AdvanceAbortMarker.Auto();
             if (kind == NativeLifecycleNodeKindV1.Parallel
                 && frame.LifecycleState != NativeFrameLifecycleStateV1.Exiting
                 && HasRunningParallelBranch(frame, node))
@@ -894,6 +911,7 @@ namespace AIBT
             out NativeLifecycleStepResultV1 result,
             out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_AdvanceParallelMarker.Auto();
             if (frame.LifecycleState == NativeFrameLifecycleStateV1.Exiting)
             {
                 control.SemanticSteps++;
@@ -1049,6 +1067,7 @@ namespace AIBT
             out NativeLifecycleStepResultV1 result,
             out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_AdvanceCompositeMarker.Auto();
             if (kind == NativeLifecycleNodeKindV1.Parallel)
                 return AdvanceParallel(frameIndex, ref frame, node, ref control, out result, out failure);
             if (IsDecorator(kind))
@@ -1150,6 +1169,7 @@ namespace AIBT
             out NativeLifecycleStepResultV1 result,
             out NativeRuntimeFailureV1 failure)
         {
+            using var _ = s_AdvanceDecoratorMarker.Auto();
             if (frame.LifecycleState == NativeFrameLifecycleStateV1.Exiting)
             {
                 control.SemanticSteps++;

@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 
 namespace AIBT
 {
     internal sealed class ReferenceExecutionMachine
     {
+        private static readonly ProfilerMarker s_AdvanceOneStepMarker =
+            new ProfilerMarker("AIBT.Reference.LifecycleTick");
+
         private readonly CompiledProgram _program;
         private readonly TreeInstanceId _treeInstanceId;
         private readonly ReferenceLeafRegistry _leafRegistry;
@@ -361,6 +365,7 @@ namespace AIBT
 
         internal ReferenceExecutionEnvelope AdvanceOneStep()
         {
+            using var _ = s_AdvanceOneStepMarker.Auto();
             if (!TryEnterApi(out var rejected)) return rejected;
             try
             {
