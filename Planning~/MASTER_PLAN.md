@@ -712,3 +712,24 @@ deliverable, `Planning~/Evidence/P7-001/stability-review-proposal.md`, recommend
 raises 5 explicit open questions for the owner. No production file was touched; no freeze was
 decided -- that remains the owner's own decision per `DECISION_BOUNDARIES.md`. See
 `Planning~/Evidence/P7-001/`.
+
+`P7-002` (supported-platform matrix and regression-threshold proposal) is **done and accepted**:
+`Documentation~/compatibility-matrix.md` (new) consolidates every platform benchmark gathered since
+Phase 2 (`P2-022`/`P2-023`/`P2-024`/`P0-003`/`P4-002`/`P4-006`/`P4-008`/`P4-004`'s own
+2026-08-26 addendum/`P6-021`) into one matrix, every measured cell cited to its exact evidence file
+re-opened live during planning, not recalled -- catching a real attribution error along the way
+(`CalibratedNanosecondsPerNodeStep`/its tolerance figure live in `P4-004`'s own addendum, not
+`P4-008` as prior-session memory had it). The regression-threshold proposal is grounded in real
+spread pulled directly from the raw Windows Player JSON: `Immediate`/`Budgeted` show single-digit-%
+max-over-median spread even on real hardware, while `BatchedJobsSameFrame` shows **+313.7%
+max-over-median at the smallest tested population** -- reproducing `P4-002`'s own Editor-side
+"batch overhead doesn't amortize with population" finding at the Player level too, not an
+Editor-only artifact. This directly grounded the proposal's central structural call: a per-policy
+threshold (20% for `Immediate`/`Budgeted`, multi-run median comparison proposed instead of a
+single-run percentage for the batched policies), not one uniform number that would be meaningless
+either way. Unlike `P7-001`, this card's own acceptance criteria required the owner's actual
+decision recorded, not just a proposal left pending -- put directly via `AskUserQuestion` (approve
+as-is / approve with changes / reject pending more data), and **the owner approved as-is**
+(2026-09-02). `compatibility-matrix.md`'s own status banner moved from "DRAFT PROPOSAL" to
+"ACCEPTED" accordingly; it is now the reference every later platform claim should point at. No
+production file, test, or benchmark script was touched. See `Planning~/Evidence/P7-002/`.

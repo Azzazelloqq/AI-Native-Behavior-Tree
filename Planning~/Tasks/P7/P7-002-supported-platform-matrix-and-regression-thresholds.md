@@ -1,6 +1,6 @@
 # P7-002 — Supported-platform matrix and regression-threshold proposal
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -74,3 +74,22 @@ cross-check every cited number against its source evidence file (re-open and con
   should point at it rather than restating numbers inline.
 - `P7-016` (Phase 7 gate) requires this card's proposal to have an owner decision recorded, one way
   or another, before Phase 7 can close.
+
+## Outcome
+
+Done, **accepted**. `Documentation~/compatibility-matrix.md` (new) consolidates every platform
+benchmark gathered since Phase 2 into one matrix, every measured cell cited to its exact evidence
+file (re-opened live during planning, not recalled — catching a real attribution error along the
+way: `CalibratedNanosecondsPerNodeStep`/its tolerance figure live in `P4-004`'s own addendum, not
+`P4-008` as prior-session memory had it). The regression-threshold proposal is grounded in real
+spread pulled directly from the raw Windows Player JSON: `Immediate`/`Budgeted` show single-digit-%
+max spread even on real hardware, while `BatchedJobsSameFrame` shows **+313.7% max-over-median at
+the smallest tested population** — reproducing `P4-002`'s own Editor-side finding at the Player
+level. This grounded the proposal's central structural call: a per-policy threshold (20% for
+`Immediate`/`Budgeted`), not one uniform number that would be meaningless for the batched policies.
+
+Put to the owner directly via `AskUserQuestion` (approve as-is / approve with changes / reject
+pending more data). **The owner approved as-is** (2026-09-02) — recorded in
+`Planning~/Evidence/P7-002/README.md`. `compatibility-matrix.md`'s own status banner moved from
+"DRAFT PROPOSAL" to "ACCEPTED" accordingly. No production file, test, or benchmark script was
+touched.

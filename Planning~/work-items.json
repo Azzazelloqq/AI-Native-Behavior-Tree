@@ -1637,7 +1637,7 @@
       "id": "P7-002",
       "phase": 7,
       "title": "Supported-platform matrix and regression-threshold proposal",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P7/P7-002-supported-platform-matrix-and-regression-thresholds.md",
       "dependsOn": [
@@ -1645,6 +1645,7 @@
         "P6-021"
       ],
       "owns": [
+        "Documentation~/compatibility-matrix.md",
         "Planning~/Evidence/P7-002/"
       ]
     },
