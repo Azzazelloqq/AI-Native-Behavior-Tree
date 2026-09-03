@@ -1006,7 +1006,22 @@ captured bug evidence, committed as one of the schema's own two validated docume
 malformed third copy (uncommitted) correctly fails validation, naming its exact injected defects. See
 `Planning~/Evidence/P7-019/README.md`.
 
-Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion), `P7-020` (CI-enforced public-API
-diff), and `P7-022` (`get_project_manifest` policy-path fix) — all `Draft`, all independently
-assignable, none required for the already-accepted `P7-016` gate. `1.0.0` itself remains the owner's
-own separate release decision.
+Same day, `P7-022` (`get_project_manifest` policy-path fix) is also **done** — but not as a code fix.
+Live re-verification of the card's own claim found it wrong: `MCP/McpToolDispatcher.cs`'s
+`ProjectRootParent(Application.dataPath)` resolution always finds the true Unity project root
+regardless of AIBT's install topology (unlike `P7-021`'s bug, this one is not topology-dependent,
+since `Application.dataPath` is always `<ProjectRoot>/Assets`), and that resolution is the
+documented, intentional convention — independently confirmed in `Planning~/Evidence/P6-005/
+README.md` and `Planning~/Evidence/P6-007/README.md`, both predating this card, neither checked
+before it was written. The real defect was that `C:\UnityProjects\Modules\.aibt\policy.json` (this
+host project's own real project root) never existed; `Assets/AIBT/.aibt/policy.json`, the file the
+card pointed to, is AIBT's own internal self-hosting policy, not a policy belonging to the `Modules`
+host project. Put to the owner rather than assumed: a real `.aibt/policy.json` was added at the
+`Modules` project root (in the parent repository, outside the AIBT submodule — no line of
+`MCP/McpToolDispatcher.cs` changed). `get_project_manifest`, called live with the real production
+`projectRoot` against the real, open project, now returns the real success shape. See
+`Planning~/Evidence/P7-022/README.md`.
+
+Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion) and `P7-020` (CI-enforced public-API
+diff) — both `Draft`, independently assignable, neither required for the already-accepted `P7-016`
+gate. `1.0.0` itself remains the owner's own separate release decision.

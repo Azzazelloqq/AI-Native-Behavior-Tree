@@ -1,6 +1,6 @@
 # P7-022 — `get_project_manifest` policy-path resolution fix
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -96,3 +96,35 @@ live get_project_manifest call against the real, open project with the real prod
   not fixed inside that card per its own Allowed-changes fence (schema/`Verify-Schemas.ps1`/evidence
   only). This is a real, currently-live production defect affecting a core discovery tool in every
   real MCP session against this project — worth prioritizing, not just filed away.
+
+## Outcome
+
+**The card's own premise was wrong.** Live re-verification (2026-09-03) found
+`MCP/McpToolDispatcher.cs`'s `GetProjectManifest`/`ProjectRootParent` path resolution is not a bug:
+
+- `ProjectRootParent(Application.dataPath)` always resolves to the true Unity project root
+  (`<ProjectRoot>/Assets` -> `<ProjectRoot>`), **regardless** of whether AIBT is embedded under
+  `Assets/AIBT` or registered via `Packages/` -- unlike `P7-021`'s bug, this resolution is not
+  topology-dependent, because `Application.dataPath` is always `<ProjectRoot>/Assets` in every Unity
+  project no matter where the AIBT package itself lives.
+- This is the **documented, intentional** convention, confirmed independently in two earlier,
+  unrelated evidence records this card did not originally check: `Planning~/Evidence/P6-005/
+  README.md` ("`.aibt/policy.json`, which is a per-consuming-project file expected at the project
+  root") and `Planning~/Evidence/P6-007/README.md` ("`validate`'s project-policy support only reads
+  `.aibt/policy.json` at the project root (sibling to `Assets/`), same resolution
+  `get_project_manifest` already uses").
+- `Tests/Editor/Mcp/Discovery/McpToolDispatcherTests.cs`'s own fixture already models exactly this
+  convention (`.aibt/policy.json` as a sibling of a synthetic `Assets/`, at the fake project root) --
+  it was not a mismatched/outdated assumption as the card speculated.
+- `C:\UnityProjects\Modules\.aibt\policy.json` (the real project root of this host repository)
+  simply did not exist. The file the card pointed to, `Assets/AIBT/.aibt/policy.json`, is AIBT's own
+  internal self-hosting/dev policy (present since the AIBT repository's very first commit,
+  `768636e`) -- a file belonging to the AIBT package's own repo, not a policy for the `Modules` host
+  project that embeds it.
+
+**Real fix applied, put to the owner and approved rather than assumed:** a real
+`.aibt/policy.json` was added at `C:\UnityProjects\Modules\.aibt\policy.json` (the parent `Modules`
+repository, outside the AIBT submodule entirely -- not a change owned or committed by this card/
+submodule). No line of `MCP/McpToolDispatcher.cs` changed. `get_project_manifest`, called with the
+real production `projectRoot` against the real, open project, now returns the real success shape
+instead of the degraded error shape. See `Planning~/Evidence/P7-022/README.md` for the live proof.

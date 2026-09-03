@@ -1,0 +1,23 @@
+{
+  "schema": "aibt-p7-022-verification-v1",
+  "passed": true,
+  "findings": [
+    "CARD_PREMISE_CORRECTED|MCP/McpToolDispatcher.cs GetProjectManifest/ProjectRootParent|not a path-resolution bug -- Application.dataPath is always <ProjectRoot>/Assets regardless of AIBT install topology (embedded vs Packages/), unlike P7-021's genuinely topology-dependent bug",
+    "EVIDENCE_CROSS_CHECK|Planning~/Evidence/P6-005/README.md and Planning~/Evidence/P6-007/README.md|both independently confirm '.aibt/policy.json expected at the project root, sibling to Assets/' as the documented, intentional convention -- predate this card, not checked before it was written",
+    "FIXTURE_CROSS_CHECK|Tests/Editor/Mcp/Discovery/McpToolDispatcherTests.cs|existing fixture already models the correct convention (.aibt/policy.json sibling to a synthetic Assets/); not a stale assumption as the card speculated",
+    "REAL_DEFECT|C:\\UnityProjects\\Modules\\.aibt\\policy.json|did not exist before this card; Assets/AIBT/.aibt/policy.json (the file the card pointed to) is AIBT's own internal self-hosting dev policy (present since the AIBT repo's first commit 768636e), not a Modules project policy",
+    "FIX_APPLIED|C:\\UnityProjects\\Modules\\.aibt\\policy.json|created (parent Modules repository, outside the AIBT submodule) -- no MCP/McpToolDispatcher.cs change",
+    "SCHEMA_VALIDATION|uvx check-jsonschema==0.38.0 against Schemas~/policy.schema.json|ok -- validation done",
+    "LIVE_PROOF|mcp__unityMCP__execute_code: McpToolDispatcher.Dispatch(\"get_project_manifest\", ...) with real production projectRoot (Application.dataPath = C:/UnityProjects/Modules/Assets) against the real, open Modules@783f0d4fd8687b7b Unity instance|real success shape returned: capabilities, nodeRegistryHash=6c8a5da9c88b677981a9bec5b714cbb20bc34f69d32440ea8f7efa830535bd66, nodeCount=11, policy (matches the new Modules/.aibt/policy.json), trees (63 entries) -- no error field, replacing the previously-always-returned degraded error shape",
+    "TEST_RESULT|AIBT.Editor.Tests -> AIBT.Tests.Editor.Mcp.Discovery.McpToolDispatcherTests (live Unity run_tests)|7/7 passed, unchanged",
+    "TEST_RESULT|AIBT.Editor.Tests (full assembly, live Unity run_tests)|386/386 passed, 0 failed, 0 skipped -- confirms no regression from the new policy.json or the bookkeeping-only card closure",
+    "STATIC_VERIFICATION|Tools~/Verification/Verify-Static.ps1|AIBT JSON Schema verification passed (Schemas: 7); AIBT static verification passed (Work items: 127)",
+    "DELIVERABLE|C:\\UnityProjects\\Modules\\.aibt\\policy.json|created (parent repository, not owned by this card's Planning~/Evidence/P7-022/ scope)",
+    "DELIVERABLE|Planning~/Tasks/P7/P7-022-get-project-manifest-policy-path-fix.md|modified (Status: Done, ## Outcome added)",
+    "DELIVERABLE|Planning~/work-items.json|modified (P7-022 status draft->done)",
+    "DELIVERABLE|Planning~/MASTER_PLAN.md|modified (new closing paragraph)",
+    "DELIVERABLE|Planning~/Evidence/P7-022/|created",
+    "NO_SOURCE_CHANGE|MCP/McpToolDispatcher.cs|untouched -- code confirmed correct-by-design",
+    "WORK_ITEM_STATUS|P7-022|draft->done"
+  ]
+}
