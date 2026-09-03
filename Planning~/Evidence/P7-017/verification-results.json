@@ -1,0 +1,15 @@
+{
+  "schema": "aibt-p7-017-verification-v1",
+  "passed": true,
+  "findings": [
+    "CORRECTION|card's own cited baseline (P4-008 WebGL build, 8.3MB committed)|does not exist -- P4-008's real build binaries (21MB apk, 6.1MB wasm.unityweb) are excluded from git entirely via pre-existing per-directory .gitignore files, only small JSON/log summaries (<10KB each) are tracked",
+    "REPO_SWEEP|git ls-files -z | xargs -0 du -b, whole repository|P7-003's 22.2MB capture is the largest tracked file by ~18x; next largest is 1.2MB (Benchmarks~/Phase4/CostCurves/Results/cost-curves-windows-editor-20260820.json); no growth trend across phases",
+    "GITATTRIBUTES_CHECK|AIBT/.gitattributes|exists (ordinary Unity line-ending/merge-driver config), zero LFS/binary-tracking rules; no LFS configured anywhere in AIBT or parent Modules repo",
+    "PACK_COMPRESSION|git verify-pack -v on P7-003's blob (9a6c6d56c5c5fbafc3a2c8788b31f0d8e362de59)|22162000 bytes raw, 3252690 bytes compressed in pack (6.8x ratio); git count-objects -v shows entire AIBT packed history is ~6.19MB, this blob is ~52% of it",
+    "RECOMMENDATION|no hard threshold / no CI gate / no Git LFS|short addition to AGENTS.md's Quality gates section instead, stating the already-implicit build-intermediate-exclusion + evidence-is-committed-even-if-large + flag-double-digit-MB-to-owner principle",
+    "DELIVERABLE|AGENTS.md|modified (Quality gates section, one new bullet)",
+    "DELIVERABLE|Planning~/Evidence/P7-017/|created",
+    "NOT_TOUCHED|Planning~/Evidence/P7-003/profiler-capture-deep-sequence-selector-traversal.data|unchanged, per this card's own Forbidden-changes clause",
+    "WORK_ITEM_STATUS|P7-017|draft->done"
+  ]
+}

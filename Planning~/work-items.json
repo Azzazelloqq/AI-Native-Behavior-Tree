@@ -1867,13 +1867,14 @@
       "id": "P7-017",
       "phase": 7,
       "title": "Evidence-artifact size discipline",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P7/P7-017-evidence-artifact-size-discipline.md",
       "dependsOn": [
         "P7-003"
       ],
       "owns": [
+        "AGENTS.md",
         "Planning~/Evidence/P7-017/"
       ]
     },

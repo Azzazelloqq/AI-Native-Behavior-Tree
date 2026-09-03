@@ -969,7 +969,23 @@ layout for the identical underlying reason — a different, untouched file. No c
 changed (the fix reproduces byte-identical host-project output, as designed). See
 `Planning~/Evidence/P7-021/README.md`.
 
-Remaining Phase 7 work: `P7-017` (evidence-artifact size discipline), `P7-018` (tree-format `v2`
-promotion), `P7-019` (aggregate manifest schema), and `P7-020` (CI-enforced public-API diff) — all
-`Draft`, all independently assignable, none required for the already-accepted `P7-016` gate. `1.0.0`
-itself remains the owner's own separate release decision.
+Same day, `P7-017` (evidence-artifact size discipline) is also **done**. Its own cited baseline
+("`P4-008`'s WebGL build, 8.3 MB committed") turned out not to exist — a fresh `git ls-files` sweep
+found `P4-008`'s real build binaries (a 21 MB Android APK, a 6.1 MB WebGL `.wasm.unityweb`) were
+never committed at all, excluded by pre-existing, targeted `.gitignore` files already living in
+their own `Results/` folders (`Benchmarks~/Phase4/Platform/{Android,Web}/Results/.gitignore`) — a
+real, already-established precedent nobody invented for this card. The same sweep found `P7-003`'s
+22 MB Profiler capture is the single largest tracked file in the whole repository by roughly 18x
+(next largest: 1.2 MB), a one-off outlier with no growth trend, and that its real cost inside git's
+own pack compression is only 3.25 MB (6.8x ratio) — a materially smaller practical concern than the
+raw file size suggests. Recommendation, put to the owner via the plan itself rather than adopted
+unilaterally: no hard size threshold, CI gate, or Git LFS — instead a short addition to `AGENTS.md`'s
+"Quality gates" section states the principle this project already followed implicitly (regeneratable
+build intermediates are `.gitignore`d; genuine evidence artifacts are committed even when large;
+anything approaching double-digit MB gets flagged to the owner at commit time, exactly what `P7-003`
+already did). `P7-003`'s own file was not touched. See `Planning~/Evidence/P7-017/README.md`.
+
+Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion), `P7-019` (aggregate manifest schema),
+and `P7-020` (CI-enforced public-API diff) — all `Draft`, all independently assignable, none required
+for the already-accepted `P7-016` gate. `1.0.0` itself remains the owner's own separate release
+decision.

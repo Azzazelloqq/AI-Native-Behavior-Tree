@@ -1,6 +1,6 @@
 # P7-017 — Evidence-artifact size discipline
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -83,3 +83,19 @@ If a trimming recipe is produced: a real re-capture demonstrating it, compared a
 - Not required for the Phase 7 integration gate (`P7-016`) — a cross-cutting housekeeping question
   discovered during `P7-003`'s own review, mirroring `P6-013`-`P6-021`'s own pattern of deferring
   cross-phase debt to its own card rather than deciding it mid-session.
+
+## Outcome
+
+Done. Recommendation, grounded in real evidence rather than the card's own (found-wrong) framing:
+**no hard size threshold, no CI gate, no Git LFS adoption.** The card's own cited baseline
+("`P4-008`'s WebGL build, 8.3 MB committed") does not exist — `P4-008`'s real build binaries (21 MB
+APK, 6.1 MB WASM) are excluded from git entirely via pre-existing, targeted `.gitignore` files
+already living in their own `Results/` folders, a real precedent that predates this card. A fresh
+repository-wide sweep found `P7-003`'s 22 MB capture is the largest tracked file by ~18x (next
+largest: 1.2 MB), a one-off outlier with no growth trend — and that its real, compressed cost inside
+git's pack is only 3.25 MB (6.8x compression), a materially smaller practical concern than the raw
+file size suggests. A short addition to `AGENTS.md`'s "Quality gates" section now states the
+principle this project already followed implicitly: regeneratable build intermediates are
+`.gitignore`d, genuine evidence artifacts are committed even when large, and anything approaching
+double-digit MB gets flagged to the owner at commit time. `P7-003`'s own file was not touched. See
+`Planning~/Evidence/P7-017/README.md`.
