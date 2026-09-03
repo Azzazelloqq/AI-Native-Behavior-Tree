@@ -1950,6 +1950,65 @@
       ]
     },
     {
+      "id": "P7-025",
+      "phase": 7,
+      "title": "Graph editor interactivity and readability",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-025-graph-editor-interactivity.md",
+      "dependsOn": [
+        "P3-003",
+        "P3-005"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-025/"
+      ]
+    },
+    {
+      "id": "P7-026",
+      "phase": 7,
+      "title": "Validate Player build size does not scale materially with tree count",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-026-build-size-scaling-validation.md",
+      "dependsOn": [
+        "P4-008",
+        "P7-002"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-026/"
+      ]
+    },
+    {
+      "id": "P7-027",
+      "phase": 7,
+      "title": "Production Play-mode host and live visual debugger",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-027-production-debugger.md",
+      "dependsOn": [
+        "P7-010",
+        "P3-010",
+        "P3-011",
+        "P7-007"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-027/"
+      ]
+    },
+    {
+      "id": "P7-028",
+      "phase": 7,
+      "title": "Production-ready built-in node library",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-028-production-node-library.md",
+      "dependsOn": [],
+      "owns": [
+        "Planning~/Evidence/P7-028/"
+      ]
+    },
+    {
       "id": "P7-020",
       "phase": 7,
       "title": "CI-enforced public API diff check",

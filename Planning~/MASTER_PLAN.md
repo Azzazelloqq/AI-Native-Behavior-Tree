@@ -1052,6 +1052,23 @@ built from already-existing, already-validated Job-system-vs-non-Job scheduling 
 already measure exactly this, just never packaged as something readable at a glance). Both
 explicitly scoped as reusing/repackaging real existing capability and data, not new research.
 
+Same day, a live usability review of `P7-023`'s own demo (the owner watching a real tree render in
+`AIBT Graph` for the first time) surfaced four more real, verified gaps, each spun off as its own new
+`Draft` card, all confirmed in `1.0` scope: `P7-025` (the graph editor has no pan/zoom/selection
+anywhere — confirmed by grep, no `GraphView` in the whole codebase ever calls `AddManipulator` with
+the standard `ContentZoomer`/`ContentDragger`/etc.; node titles render the raw dotted `TypeId` since
+`NodeManifest` has no display-title field; and `.aibt.layout.json` is never actually read despite
+`P3-005`'s own persistence subsystem, `LayoutPersistenceController.Load`, already existing and simply
+never being called), `P7-026` (validate, with a real Player build-size diff, the architectural claim
+that trees are cheap data and build size scales with node *types* not tree *count* — never actually
+measured; explicitly not the same concern as `P7-017`, confirmed with the owner), `P7-027` (a real
+production Play-mode debugger with live animated visual state — this is exactly `ADR-P7-010`'s own
+already-accepted "future, not-yet-numbered implementation card," the single most-repeated disclosed
+gap in the whole project's history, now finally numbered), and `P7-028` (the built-in node catalog is
+only 11 structural composites/decorators, zero condition/utility/action leaves — confirmed by reading
+`BuiltInNodeManifests.cs` directly).
+
 Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion, dependent on re-reading `P6-014`'s own
-disclosed blocker before scoping), `P7-023`, `P7-024` — all `Draft`. `1.0.0` itself remains the
-owner's own separate release decision.
+disclosed blocker before scoping), `P7-023`, `P7-024`, `P7-025`, `P7-026`, `P7-027`, `P7-028` — all
+`Draft`. `P7-027` is recommended priority among these given how many independent prior cards already
+deferred exactly that gap. `1.0.0` itself remains the owner's own separate release decision.
