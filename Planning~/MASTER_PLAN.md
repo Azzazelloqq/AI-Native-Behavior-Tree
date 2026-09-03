@@ -952,8 +952,24 @@ required for `P7-016`'s own verdict; all are required before a clean `1.0.0` rel
 updated, checked against a fresh claims inventory. **Phase 7 is complete**: `P7-001` through `P7-016`
 are all `Done`. See `Planning~/Evidence/P7-GATE/README.md`.
 
+Same day, `P7-021` (API-reference generator package-root resolution fix) is also **done**.
+`MCP/Documentation/McpApiReferenceGenerator.cs`'s `CollectTypeSummaries()` no longer hardcodes
+`Application.dataPath + "/AIBT"` — it now mirrors `McpDocumentationGeneratorsTests
+.FindGeneratedDocumentationDirectory()`'s own already-correct `UnityEditor.PackageManager
+.PackageInfo.FindForAssembly` resolution, falling back to the old assumption only when Package
+Manager genuinely doesn't know about the assembly (this repo's own host-embedded dev layout) — the
+summary-matching logic itself is unchanged. A new pinning test proves the fallback branch locally;
+the real-UPM-consumer branch (unfakeable in a plain EditMode test) was proven live via a fresh
+detached harness whose `file:` package pointed directly at the host project's own `Assets/AIBT` —
+full regression there: **1271/1271 passed, 0 failed**, including the exact test `P7-016`'s gate
+found failing, now passing. A related, out-of-scope finding was disclosed rather than fixed:
+`Tests/Editor/CodeGen/Generation/GeneratedArtifactContractTests.cs` has its own, independent,
+pre-existing `PackageInfo.FindForAssembly`-non-null assertion that fails in this same host-embedded
+layout for the identical underlying reason — a different, untouched file. No committed generated doc
+changed (the fix reproduces byte-identical host-project output, as designed). See
+`Planning~/Evidence/P7-021/README.md`.
+
 Remaining Phase 7 work: `P7-017` (evidence-artifact size discipline), `P7-018` (tree-format `v2`
-promotion), `P7-019` (aggregate manifest schema), `P7-020` (CI-enforced public-API diff), and
-`P7-021` (API-reference generator package-root fix) — all `Draft`, all independently assignable, none
-required for the now-accepted `P7-016` gate. `1.0.0` itself remains the owner's own separate release
-decision.
+promotion), `P7-019` (aggregate manifest schema), and `P7-020` (CI-enforced public-API diff) — all
+`Draft`, all independently assignable, none required for the already-accepted `P7-016` gate. `1.0.0`
+itself remains the owner's own separate release decision.

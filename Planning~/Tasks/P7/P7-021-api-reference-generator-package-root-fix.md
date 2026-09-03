@@ -1,6 +1,6 @@
 # P7-021 — API-reference generator package-root resolution fix
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -77,3 +77,22 @@ Run-UnityTests.ps1 -Mode EditMode -Scope Full, run inside a detached UPM harness
   regression, not fixed inside the gate task per its own Forbidden-changes clause. Not required for
   `P7-016`'s own verdict; the gate discloses the exact failing assertion and this card's number
   rather than silently patching around it or hiding the one real test failure.
+
+## Outcome
+
+Done. `CollectTypeSummaries()` now mirrors `FindGeneratedDocumentationDirectory()`'s own
+already-correct `UnityEditor.PackageManager.PackageInfo.FindForAssembly` resolution, falling back to
+`Application.dataPath` only when Package Manager doesn't know about the assembly (this repo's own
+host-embedded layout) — no change to the summary-matching logic itself. A new pinning test
+(`CollectTypeSummariesFindsARealKnownSummaryInThisHostEmbeddedLayout`) proves the fallback branch
+locally; the `PackageInfo`-non-null branch (unfakeable in a plain EditMode test) was proven live via
+a fresh detached harness whose `file:` package pointed at the real host `Assets/AIBT` — full
+regression there: **1271/1271 passed, 0 failed**, including the exact test `P7-016`'s gate found
+failing (`GeneratedDocumentationRegeneratesToExactlyTheCommittedFiles`), now passing. In the host
+project, scoped to AIBT's own 12 test assemblies: 1271 total, 1269 passed, 2 pre-existing failures
+unrelated to this card (`AIBT.CodeGen.GenerationTests.GeneratedArtifactContractTests` — the exact
+same class of `PackageInfo`-resolution environment-dependence, in a different, untouched file;
+confirmed pre-existing via `git log` and confirmed to pass in the detached harness, disclosed as a
+related-but-out-of-scope finding, not fixed here). No committed generated doc changed — the fix
+produces byte-identical output in the host project, as designed. See
+`Planning~/Evidence/P7-021/README.md`.

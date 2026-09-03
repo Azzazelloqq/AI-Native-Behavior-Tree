@@ -1,0 +1,16 @@
+{
+  "schema": "aibt-p7-021-verification-v1",
+  "passed": true,
+  "findings": [
+    "TEST_RESULT|AIBT.Tests.Editor.Documentation.McpDocumentationGeneratorsTests (host project)|12/12 passed, including new CollectTypeSummariesFindsARealKnownSummaryInThisHostEmbeddedLayout",
+    "TEST_RESULT|All 12 AIBT test assemblies (host project, scoped, excludes unrelated host-Modules-project tests)|1271 total, 1269 passed, 2 pre-existing unrelated failures (AIBT.CodeGen.GenerationTests.GeneratedArtifactContractTests, environment-dependent, not caused by this card)",
+    "DETACHED_HARNESS_COMPILE|fresh harness, file: package pointed at live host Assets/AIBT|exit 0, clean",
+    "DETACHED_HARNESS_REGRESSION|Run-UnityTests.ps1 -Mode EditMode -Scope Full|1271/1271 passed, 0 failed, 0 skipped -- includes the previously-failing GeneratedDocumentationRegeneratesToExactlyTheCommittedFiles AND the 2 CodeGen tests that fail only in the host-embedded layout",
+    "GENERATED_DOCS_UNCHANGED|Documentation~/generated/api-reference-*.md|zero diff from this card, confirmed by git status -- fix produces byte-identical host-project output as predicted",
+    "DELIVERABLE|MCP/Documentation/McpApiReferenceGenerator.cs|modified (PackageInfo-based root resolution, CollectTypeSummaries widened to internal)",
+    "DELIVERABLE|Tests/Editor/Documentation/McpDocumentationGeneratorsTests.cs|modified (new pinning test)",
+    "DELIVERABLE|Planning~/Evidence/P7-021/|created",
+    "RELATED_FINDING|Tests/Editor/CodeGen/Generation/GeneratedArtifactContractTests.cs|same class of PackageInfo-resolution environment-dependence, pre-existing, unrelated file, disclosed not fixed (out of this card's own scope)",
+    "WORK_ITEM_STATUS|P7-021|draft->done"
+  ]
+}

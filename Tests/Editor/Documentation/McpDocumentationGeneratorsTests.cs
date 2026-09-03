@@ -252,6 +252,25 @@ namespace AIBT.Tests.Editor.Documentation
             }
         }
 
+        // P7-021: pins CollectTypeSummaries()'s fallback (Application.dataPath) branch, the one
+        // exercised in this host-embedded repository layout, so a future accidental revert of the
+        // PackageInfo-based resolution this card added is still caught locally without needing a
+        // detached UPM harness. The PackageInfo-non-null (real UPM consumer) branch cannot be
+        // cheaply faked here -- Unity's PackageInfo can't be constructed for a synthetic package
+        // without actually registering one -- so that branch is proven live via a detached harness
+        // instead (see Planning~/Evidence/P7-021/README.md), matching this card's own Required
+        // Verification.
+        [Test]
+        public void CollectTypeSummariesFindsARealKnownSummaryInThisHostEmbeddedLayout()
+        {
+            var summaries = McpApiReferenceGenerator.CollectTypeSummaries();
+
+            Assert.That(summaries.TryGetValue("AIBT.HotReloadClassificationResult", out var summary), Is.True,
+                "CollectTypeSummaries() did not find AIBT.HotReloadClassificationResult's own <summary> -- " +
+                "the exact type P7-016's gate found missing when its root-resolution regressed.");
+            Assert.That(summary, Is.EqualTo("The full result of classifying one compiled-program transition, per <c>ADR-P5-001</c>."));
+        }
+
         // Mirrors McpApiReferenceGenerator's own private formatting helpers exactly -- kept as an
         // independent copy (not a shared internal) so this test proves the COMMITTED FILE actually
         // matches what a real, correct reflection pass expects, not merely what the generator's own

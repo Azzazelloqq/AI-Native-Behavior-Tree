@@ -137,10 +137,18 @@ namespace AIBT.Mcp.Documentation
         // declaration in source. Never attempted for members (overload/generic-argument matching
         // against reflected MethodInfo would be materially more fragile than this exact-FullName
         // type lookup).
-        private static Dictionary<string, string> CollectTypeSummaries()
+        internal static Dictionary<string, string> CollectTypeSummaries()
         {
             var result = new Dictionary<string, string>(StringComparer.Ordinal);
-            var aibtRoot = Path.Combine(Application.dataPath, "AIBT");
+            // P7-021: mirrors Tests/Editor/Documentation/McpDocumentationGeneratorsTests.cs's own
+            // already-correct FindGeneratedDocumentationDirectory() pattern. Application.dataPath +
+            // "AIBT" only resolves when this package is embedded directly under a host project's
+            // Assets/ (this repo's own dev setup) -- for any real file:/registry UPM consumer the
+            // package lives under Packages/ instead, so that path silently doesn't exist and this
+            // method used to return nothing with zero error (found live by P7-016's own
+            // detached-harness gate regression).
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(McpApiReferenceGenerator).Assembly);
+            var aibtRoot = packageInfo != null ? packageInfo.resolvedPath : Path.Combine(Application.dataPath, "AIBT");
             var namespacePattern = new Regex(@"namespace\s+([\w.]+)", RegexOptions.Compiled);
             var summaryPattern = new Regex(
                 @"((?:^[ \t]*///.*\r?\n)+)[ \t]*(?:\[[^\]]*\]\s*\r?\n[ \t]*)*public\s+(?:sealed\s+|abstract\s+|static\s+|readonly\s+|partial\s+)*(?:class|struct|interface|enum|record)\s+(\w+)",
