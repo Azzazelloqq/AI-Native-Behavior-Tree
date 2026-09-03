@@ -1042,6 +1042,16 @@ against a temporary, uncommitted synthetic baseline line (failed loudly, exact l
 1) — no production symbol was touched to prove the negative case. See `Planning~/Evidence/P7-020/
 README.md`.
 
-Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion) — `Draft`, the last card, dependent on
-re-reading `P6-014`'s own disclosed blocker before scoping. `1.0.0` itself remains the owner's own
-separate release decision.
+Same day, two new `Draft` cards were added to `1.0` scope on direct owner request, not spun off from
+a gate finding: `P7-023` (showcase example behavior trees — live-demoed this session that the
+existing `AIBT Graph` editor already renders a real tree, `tree.golden.parallel-decorator`, cleanly
+with zero diagnostics; the owner had never actually looked at one, and no illustrative example
+exists anywhere in the repo, only tiny test/golden fixtures) and `P7-024` (a showcase report/chart
+built from already-existing, already-validated Job-system-vs-non-Job scheduling benchmark data —
+`Benchmarks~/Phase4/Scheduling`/`CostCurves`/`AutoComparison` plus `P7-002`'s own Windows Player run
+already measure exactly this, just never packaged as something readable at a glance). Both
+explicitly scoped as reusing/repackaging real existing capability and data, not new research.
+
+Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion, dependent on re-reading `P6-014`'s own
+disclosed blocker before scoping), `P7-023`, `P7-024` — all `Draft`. `1.0.0` itself remains the
+owner's own separate release decision.

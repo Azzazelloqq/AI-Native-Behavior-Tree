@@ -1923,6 +1923,33 @@
       ]
     },
     {
+      "id": "P7-023",
+      "phase": 7,
+      "title": "Showcase example behavior trees",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-023-showcase-example-trees.md",
+      "dependsOn": [],
+      "owns": [
+        "Planning~/Evidence/P7-023/"
+      ]
+    },
+    {
+      "id": "P7-024",
+      "phase": 7,
+      "title": "Showcase Job-system vs. non-Job scheduling benchmark report",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-024-showcase-scheduling-benchmark.md",
+      "dependsOn": [
+        "P4-001",
+        "P7-002"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-024/"
+      ]
+    },
+    {
       "id": "P7-020",
       "phase": 7,
       "title": "CI-enforced public API diff check",
