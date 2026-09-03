@@ -1851,7 +1851,7 @@
       "id": "P7-015",
       "phase": 7,
       "title": "Release automation",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-015-release-automation.md",
       "dependsOn": [
@@ -1859,6 +1859,7 @@
       ],
       "owns": [
         ".github/workflows/",
+        "Tools~/Verification/P7/Release/",
         "Planning~/Evidence/P7-015/"
       ]
     },

@@ -1,0 +1,147 @@
+# P7-015: manual release automation.
+#
+# This workflow does NOT run a full Unity compile/EditMode suite. P0-005's self-hosted
+# `unity-6000.5.8f1` runner has never picked up a queued job (reconfirmed live via the GitHub API
+# on 2026-09-03) -- gating a release on a job that has never actually run would block every
+# release indefinitely. Until P0-005 closes, a human must run the full suite locally
+# (`Run-UnityTests.ps1 -Mode EditMode -Scope Full`, or the equivalent live Unity MCP check) before
+# dispatching this workflow, and must explicitly acknowledge that via `confirm_local_editmode_passed`
+# below -- this input exists so that step can never be silently skipped. Widen this workflow to a
+# real Unity job once P0-005 closes; do not leave it scoped around the gap permanently.
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semver to release (X.Y.Z), strictly greater than package.json''s current version.'
+        required: true
+        type: string
+      confirm_local_editmode_passed:
+        description: 'I ran the full Unity EditMode suite locally (or via live Unity MCP) and it passed.'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    name: Release readiness
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Confirm local Unity EditMode suite was run
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ('${{ inputs.confirm_local_editmode_passed }}' -ne 'true') {
+            throw 'This workflow does not run the Unity EditMode suite itself (P0-005''s self-hosted runner has never picked up a job). Re-dispatch with confirm_local_editmode_passed checked only after running Run-UnityTests.ps1 -Mode EditMode -Scope Full (or the live Unity MCP equivalent) locally.'
+          }
+
+      - name: Run release-readiness checks
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & './Tools~/Verification/P7/Release/Verify-ReleaseReadiness.ps1' -TargetVersion '${{ inputs.version }}'
+
+  static:
+    name: Static and schemas
+    needs: readiness
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install pinned uv
+        shell: pwsh
+        run: python -m pip install --disable-pip-version-check uv==0.6.17
+
+      - name: Run repository static verification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & './Tools~/Verification/Verify-Static.ps1' *>&1 |
+            Tee-Object -FilePath static-verification.log
+
+      - name: Upload static log
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: release-static-verification
+          path: static-verification.log
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish release
+    needs: static
+    runs-on: windows-2022
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Bump version, move CHANGELOG.md's Unreleased section, tag, and push
+        id: release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ inputs.version }}'
+
+          $packagePath = 'package.json'
+          $package = Get-Content -LiteralPath $packagePath -Raw -Encoding UTF8 | ConvertFrom-Json
+          $package.version = $version
+          (($package | ConvertTo-Json -Depth 10) + "`n") |
+            Set-Content -LiteralPath $packagePath -Encoding UTF8 -NoNewline
+
+          $changelogPath = 'CHANGELOG.md'
+          $changelog = Get-Content -LiteralPath $changelogPath -Raw -Encoding UTF8
+          $headingPattern = [regex]'(?m)^## \[([^\]]+)\]'
+          $headingMatches = $headingPattern.Matches($changelog)
+          $unreleasedHeadingEnd = $headingMatches[0].Index + $headingMatches[0].Length
+          $unreleasedBodyEnd = if ($headingMatches.Count -gt 1) { $headingMatches[1].Index } else { $changelog.Length }
+          $unreleasedBody = $changelog.Substring($unreleasedHeadingEnd, $unreleasedBodyEnd - $unreleasedHeadingEnd).Trim()
+
+          $date = Get-Date -Format 'yyyy-MM-dd'
+          $releasedSection = "## [$version] - $date`n`n$unreleasedBody`n`n"
+          $newChangelog = $changelog.Substring(0, $unreleasedHeadingEnd) + "`n`n" + $releasedSection +
+            $changelog.Substring($unreleasedBodyEnd).TrimStart()
+          Set-Content -LiteralPath $changelogPath -Value $newChangelog -Encoding UTF8 -NoNewline
+
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add $packagePath $changelogPath
+          git commit -m "Release v$version"
+          git tag "v$version"
+          git push origin "HEAD:${{ github.ref_name }}"
+          git push origin "v$version"
+
+          $notesPath = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          Set-Content -LiteralPath $notesPath -Value $unreleasedBody -Encoding UTF8
+          "notes-path=$notesPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8 -Append
+          "tag=v$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding UTF8 -Append
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh release create '${{ steps.release.outputs.tag }}' `
+            --title '${{ steps.release.outputs.tag }}' `
+            --notes-file '${{ steps.release.outputs.notes-path }}'

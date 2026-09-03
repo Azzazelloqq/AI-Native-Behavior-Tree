@@ -1,0 +1,16 @@
+{
+  "schema": "aibt-p7-015-verification-v1",
+  "passed": true,
+  "findings": [
+    "STATIC_VERIFICATION|Verify-Static.ps1|passed (3x 'ok -- validation done', 6 schemas, 122 work items)",
+    "LIVE_VERIFICATION|Verify-ReleaseReadiness.ps1 -TargetVersion 0.2.0 (positive case)|'Release readiness OK: 0.1.0 -> 0.2.0.' plus dry-run summary, exit 0",
+    "LIVE_VERIFICATION|Verify-ReleaseReadiness.ps1 -TargetVersion 0.0.1 (negative: not strictly greater than current)|\"TargetVersion '0.0.1' must be strictly greater than package.json's current version '0.1.0'.\", exit 1",
+    "LIVE_VERIFICATION|Verify-ReleaseReadiness.ps1 -TargetVersion not-a-semver (negative: invalid semver)|\"TargetVersion ('not-a-semver') is not a valid semver X.Y.Z version.\", exit 1",
+    "SYNTAX_CHECK|.github/workflows/release.yml|parsed successfully via 'uv run --with pyyaml python -c yaml.safe_load(...)'",
+    "NOT_PERFORMED|release.yml real workflow_dispatch|deliberately not dispatched this session -- would push a real tag and create a real public GitHub Release; requires a separate explicit ask",
+    "DELIVERABLE|Tools~/Verification/P7/Release/Verify-ReleaseReadiness.ps1|created",
+    "DELIVERABLE|.github/workflows/release.yml|created",
+    "DELIVERABLE|Planning~/Evidence/P7-015/|created",
+    "WORK_ITEM_STATUS|P7-015|draft->done"
+  ]
+}

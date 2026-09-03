@@ -1,6 +1,6 @@
 # P7-015 — Release automation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -78,3 +78,26 @@ version-consistency failure case proven (deliberately mismatched CHANGELOG/packa
 
 - If `P0-005` closes before or during this card, its release gate should be widened to include the
   real Unity compile/EditMode job rather than left permanently scoped around the gap.
+
+## Outcome
+
+Done, local-first. `P0-005`'s self-hosted runner was reconfirmed genuinely blocked live (GitHub
+REST API, 2026-09-03) before any code was written, so `release.yml` never depends on it — its own
+header comment and a required, no-default `confirm_local_editmode_passed` `workflow_dispatch` input
+disclose this plainly and fail the workflow loudly if a human has not run the full EditMode suite
+locally first, per the card's own Forbidden-changes clause. `Tools~/Verification/P7/Release/
+Verify-ReleaseReadiness.ps1` (new) does the real readiness validation — semver parsing, strictly-
+greater-than-current check, no duplicate `CHANGELOG.md` heading, non-empty `[Unreleased]`, no
+existing git tag — usable identically by a human and by the workflow's own `readiness` job, mirroring
+`Verify-Static.ps1`/`validation.yml`'s own relationship. `.github/workflows/release.yml` (new) chains
+`readiness` → `static` (reusing `Verify-Static.ps1`) → `publish` (`contents: write` scoped to that
+one job only; bumps `package.json`, moves `CHANGELOG.md`'s `[Unreleased]` under a new dated version
+heading, tags, pushes, creates a GitHub Release via the runner-preinstalled `gh` CLI and
+`${{ secrets.GITHUB_TOKEN }}` — no embedded credential). All three required-verification items ran
+live: `Verify-Static.ps1` passed; the positive case (`-TargetVersion 0.2.0`) printed the correct
+dry-run summary; the version-consistency negative case (`-TargetVersion 0.0.1`, not greater than
+`package.json`'s real `0.1.0`) failed loudly as required, alongside an invalid-semver negative case.
+`release.yml` itself was never dispatched for real this session (would push a real tag and create a
+real public GitHub Release — a separate explicit ask), matching the card's own acceptance criteria
+that a local-equivalent script suffices for the dry-run requirement. `package.json` stays `0.1.0`;
+no real release has been cut. See `Planning~/Evidence/P7-015/README.md`.

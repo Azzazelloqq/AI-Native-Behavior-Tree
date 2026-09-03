@@ -883,3 +883,30 @@ dispatcher (dry-run/persist/permission-negative), and the Editor window's scan/l
 synthetic in-memory reimplementation. Full regression: `AIBT.Runtime.Tests` 601/601;
 `AIBT.Editor.Tests`+`AIBT.Integration.Tests`+`AIBT.BehaviorCases.Tests` 481/481 (470 pre-existing + 11
 new), identical baseline pass count, zero new failures. See `Planning~/Evidence/P7-006/`.
+
+`P7-015` (release automation) is also **done**, the last directly-assignable Phase 7 card before the
+`P7-016` gate. `P0-005`'s self-hosted `unity-6000.5.8f1` runner was reconfirmed genuinely blocked
+live (GitHub REST API, 2026-09-03, before any code was written): the most recent `Validation` run's
+Unity job sat `queued, runner_id: 0` since dispatch, matching every prior run. Built local-first,
+mirroring `Verify-Static.ps1`/`validation.yml`'s own existing relationship rather than trusting an
+untested workflow: `Tools~/Verification/P7/Release/Verify-ReleaseReadiness.ps1` (new) validates
+semver parsing, that the target version is strictly greater than `package.json`'s current version,
+that `CHANGELOG.md` has no duplicate release heading and a non-empty `[Unreleased]` section, and
+that no matching git tag already exists — throwing on the first failure, never mutating either file
+itself. `.github/workflows/release.yml` (new) is `workflow_dispatch`-only with a required
+`confirm_local_editmode_passed` input carrying no default, so the workflow fails loudly rather than
+silently skipping the Unity EditMode gate it cannot yet run; its three `windows-2022` jobs
+(`readiness` → `static` → `publish`, the last scoped to `contents: write` alone) reuse
+`validation.yml`'s own pinned action SHAs verbatim and publish via the runner-preinstalled `gh` CLI
+with `secrets.GITHUB_TOKEN` — no credential embedded anywhere. All three required-verification
+commands ran live: `Verify-Static.ps1` passed; the positive case (`0.1.0 -> 0.2.0`) printed the
+correct dry-run summary; the version-consistency negative case (`-TargetVersion 0.0.1`, not greater
+than the real current version) and an invalid-semver negative case both failed loudly as required.
+A PowerShell-specific bug was found and fixed during this work: a local variable differing from a
+mandatory parameter only by case (`$targetVersion` vs. `$TargetVersion`) silently collided in
+PowerShell's case-insensitive variable resolution, producing an empty value — renamed throughout to
+`$targetSemVer`/`$currentSemVer` and re-verified live. `release.yml` itself was never dispatched for
+real this session — doing so would push a real tag and create a real public GitHub Release, a
+separate explicit ask distinct from building the automation — matching the card's own acceptance
+criteria that a local-equivalent script satisfies the dry-run requirement. `package.json` remains
+`0.1.0`; no real release has been cut. See `Planning~/Evidence/P7-015/`.
