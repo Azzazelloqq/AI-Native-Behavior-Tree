@@ -1896,7 +1896,7 @@
       "id": "P7-019",
       "phase": 7,
       "title": "Aggregate project-manifest JSON Schema",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-019-project-manifest-schema.md",
       "dependsOn": [
@@ -1904,7 +1904,22 @@
       ],
       "owns": [
         "Schemas~/project-manifest.schema.json",
+        "Tools~/Verification/Verify-Schemas.ps1",
         "Planning~/Evidence/P7-019/"
+      ]
+    },
+    {
+      "id": "P7-022",
+      "phase": 7,
+      "title": "get_project_manifest policy-path resolution fix",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-022-get-project-manifest-policy-path-fix.md",
+      "dependsOn": [
+        "P6-005"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-022/"
       ]
     },
     {

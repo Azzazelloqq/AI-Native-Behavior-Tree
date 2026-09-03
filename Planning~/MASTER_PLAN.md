@@ -985,7 +985,28 @@ build intermediates are `.gitignore`d; genuine evidence artifacts are committed 
 anything approaching double-digit MB gets flagged to the owner at commit time, exactly what `P7-003`
 already did). `P7-003`'s own file was not touched. See `Planning~/Evidence/P7-017/README.md`.
 
-Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion), `P7-019` (aggregate manifest schema),
-and `P7-020` (CI-enforced public-API diff) — all `Draft`, all independently assignable, none required
-for the already-accepted `P7-016` gate. `1.0.0` itself remains the owner's own separate release
-decision.
+Same day, `P7-019` (aggregate project-manifest JSON Schema) is also **done**. `Schemas~/
+project-manifest.schema.json` (new) is a `oneOf` over the two real response shapes
+`MCP/McpToolDispatcher.GetProjectManifest` actually produces — discovered by reading the real
+wrapper, not assumed from `ProjectManifestQuery.Build()` alone (which never emits the
+`skippedTreeFiles` field the wrapper always injects, nor the completely different minimal shape
+returned when `.aibt/policy.json` can't be read). `Verify-Schemas.ps1` gained two new real-document
+validation pairs — a fresh finding corrected the card's own claim that the script "currently
+validates 6 schemas": only 2 were actually wired before this card (`work-item-index`, `policy`); the
+other 4 pre-existing schemas, including `node-manifest.schema.json`, were never permanently wired
+despite `P7-001`'s own one-time manual check. **A real, previously-undiscovered production bug was
+found live while generating the schema's own example, not fixed inside this card (out of its own
+Allowed-changes fence), and spun off as `P7-022`**: `get_project_manifest`, called with the real
+production `projectRoot` value every real caller actually uses, has never successfully found
+`.aibt/policy.json` in this repository's real host-embedded layout — confirmed reproducibly, twice,
+live — always returning the degraded error shape instead of real capabilities/policy/tree data. The
+real success example was produced by calling `ProjectManifestQuery.Build()` directly against real
+project data, bypassing only the buggy path-derivation step; the real error example is the genuine
+captured bug evidence, committed as one of the schema's own two validated documents. A deliberately
+malformed third copy (uncommitted) correctly fails validation, naming its exact injected defects. See
+`Planning~/Evidence/P7-019/README.md`.
+
+Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion), `P7-020` (CI-enforced public-API
+diff), and `P7-022` (`get_project_manifest` policy-path fix) — all `Draft`, all independently
+assignable, none required for the already-accepted `P7-016` gate. `1.0.0` itself remains the owner's
+own separate release decision.

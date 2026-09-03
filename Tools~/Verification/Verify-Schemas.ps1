@@ -49,7 +49,9 @@ if ($LASTEXITCODE -ne 0) {
 
 $validationPairs = @(
     @{ Schema = 'work-item-index.schema.json'; Document = 'Planning~/work-items.json' },
-    @{ Schema = 'policy.schema.json'; Document = '.aibt/policy.json' }
+    @{ Schema = 'policy.schema.json'; Document = '.aibt/policy.json' },
+    @{ Schema = 'project-manifest.schema.json'; Document = 'Planning~/Evidence/P7-019/example-project-manifest.json' },
+    @{ Schema = 'project-manifest.schema.json'; Document = 'Planning~/Evidence/P7-019/example-project-manifest-policy-error.json' }
 )
 
 foreach ($pair in $validationPairs) {

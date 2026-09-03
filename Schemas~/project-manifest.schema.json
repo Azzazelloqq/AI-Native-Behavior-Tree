@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aibt.dev/schemas/0.1/project-manifest.schema.json",
+  "title": "AIBT aggregate project manifest (get_project_manifest response)",
+  "oneOf": [
+    { "$ref": "#/$defs/success" },
+    { "$ref": "#/$defs/policyError" }
+  ],
+  "$defs": {
+    "success": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "formatVersion",
+        "capabilities",
+        "nodeRegistryHash",
+        "nodeCount",
+        "policy",
+        "trees",
+        "skippedTreeFiles"
+      ],
+      "properties": {
+        "format": { "const": "aibt-project-manifest" },
+        "formatVersion": { "type": "integer", "const": 1 },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["burst", "managed", "mainThread", "nonDeterministic", "sideEffects", "userExtensions"],
+          "properties": {
+            "burst": { "type": "boolean" },
+            "managed": { "type": "boolean" },
+            "mainThread": { "type": "boolean" },
+            "nonDeterministic": { "type": "boolean" },
+            "sideEffects": { "type": "boolean" },
+            "userExtensions": { "type": "boolean" }
+          }
+        },
+        "nodeRegistryHash": { "type": "string", "minLength": 1 },
+        "nodeCount": { "type": "integer", "minimum": 0 },
+        "policy": { "$ref": "#/$defs/policySummary" },
+        "trees": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["treeId", "name", "revision"],
+            "properties": {
+              "treeId": { "type": "string", "minLength": 1 },
+              "name": { "type": "string" },
+              "revision": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "skippedTreeFiles": { "$ref": "#/$defs/skippedTreeFiles" }
+      }
+    },
+    "policyError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "formatVersion", "error", "skippedTreeFiles"],
+      "properties": {
+        "format": { "const": "aibt-project-manifest" },
+        "formatVersion": { "type": "integer", "const": 1 },
+        "error": { "type": "string", "minLength": 1 },
+        "skippedTreeFiles": { "$ref": "#/$defs/skippedTreeFiles" }
+      }
+    },
+    "skippedTreeFiles": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "policySummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowManagedNodes",
+        "allowMainThreadNodes",
+        "requireTreeDescription",
+        "requireNodeDescriptions",
+        "blackboardNaming",
+        "requireDeterministicNodes",
+        "allowSideEffects",
+        "unreachableNodes",
+        "supportsAgentScope",
+        "supportsSharedScope",
+        "forbiddenNodeTypes",
+        "warningsAsErrors",
+        "performance"
+      ],
+      "properties": {
+        "allowManagedNodes": { "type": "boolean" },
+        "allowMainThreadNodes": { "type": "boolean" },
+        "requireTreeDescription": { "type": "boolean" },
+        "requireNodeDescriptions": { "type": "boolean" },
+        "blackboardNaming": { "enum": ["snake_case", "camelCase", "PascalCase", "any"] },
+        "requireDeterministicNodes": { "type": "boolean" },
+        "allowSideEffects": { "type": "boolean" },
+        "unreachableNodes": { "enum": ["error", "warning", "allow"] },
+        "supportsAgentScope": { "type": "boolean" },
+        "supportsSharedScope": { "type": "boolean" },
+        "maxTreeDepth": { "type": "integer", "minimum": 1 },
+        "maxNodesPerTree": { "type": "integer", "minimum": 1 },
+        "forbiddenNodeTypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "warningsAsErrors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "performance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["forbidUnboundedRepeaters", "requireEventDrivenServices"],
+          "properties": {
+            "maxEstimatedCost": { "type": "number", "minimum": 0 },
+            "forbidUnboundedRepeaters": { "type": "boolean" },
+            "requireEventDrivenServices": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "aibt-p7-019-verification-v1",
+  "passed": true,
+  "findings": [
+    "CORRECTION|card's own claim (Verify-Schemas.ps1 validates 6 schemas against a real example each)|inaccurate -- only 2 real-document pairs existed before this card (work-item-index, policy); the other 4 pre-existing schemas were never wired into a real-document check",
+    "STATIC_VERIFICATION|Verify-Static.ps1|passed",
+    "SCHEMA_VERIFICATION|Verify-Schemas.ps1|passed: 7 schema files pass metaschema check, 4 real-document pairs validate (work-item-index, policy, project-manifest x2)",
+    "REAL_EXAMPLE|example-project-manifest.json|produced via real, unmodified ProjectManifestQuery.Build() + AibtTreeDiscovery.Scan + ProjectPolicySnapshot.TryReadFile against the real, correct policy path; trimmed to 4 of 68 real captured tree entries for readability",
+    "REAL_EXAMPLE|example-project-manifest-policy-error.json|a genuine, live-captured error response from McpToolDispatcher.Dispatch(get_project_manifest) with the real production projectRoot value -- also serves as evidence for the P7-022 bug finding",
+    "NEGATIVE_CASE|deliberately malformed copy (capabilities.burst removed, policy.unreachableNodes set to an invalid value), uncommitted|check-jsonschema correctly failed, exit 1, naming both injected defects",
+    "BUG_FOUND|MCP/McpToolDispatcher.cs GetProjectManifest/ProjectRootParent|get_project_manifest never successfully resolves .aibt/policy.json with the real production projectRoot value in this repository's host-embedded layout -- confirmed live twice, disclosed, spun off as P7-022, not fixed inside this card",
+    "DELIVERABLE|Schemas~/project-manifest.schema.json|created (oneOf: success shape, policy-error shape)",
+    "DELIVERABLE|Tools~/Verification/Verify-Schemas.ps1|modified (2 new validation pairs)",
+    "DELIVERABLE|Planning~/Evidence/P7-019/|created",
+    "NEW_FOLLOWUP_CARD|P7-022|get_project_manifest policy-path resolution fix",
+    "WORK_ITEM_STATUS|P7-019|draft->done"
+  ]
+}

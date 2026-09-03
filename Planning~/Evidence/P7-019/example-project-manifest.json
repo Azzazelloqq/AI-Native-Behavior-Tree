@@ -1,0 +1,63 @@
+{
+  "format": "aibt-project-manifest",
+  "formatVersion": 1,
+  "capabilities": {
+    "burst": true,
+    "managed": false,
+    "mainThread": false,
+    "nonDeterministic": false,
+    "sideEffects": false,
+    "userExtensions": false
+  },
+  "nodeRegistryHash": "6c8a5da9c88b677981a9bec5b714cbb20bc34f69d32440ea8f7efa830535bd66",
+  "nodeCount": 11,
+  "policy": {
+    "allowManagedNodes": true,
+    "allowMainThreadNodes": true,
+    "requireTreeDescription": true,
+    "requireNodeDescriptions": true,
+    "blackboardNaming": "snake_case",
+    "requireDeterministicNodes": true,
+    "allowSideEffects": true,
+    "unreachableNodes": "error",
+    "supportsAgentScope": false,
+    "supportsSharedScope": false,
+    "forbiddenNodeTypes": [],
+    "warningsAsErrors": [
+      "unbounded_repeater",
+      "unreachable_node"
+    ],
+    "performance": {
+      "forbidUnboundedRepeaters": true,
+      "requireEventDrivenServices": false
+    },
+    "maxTreeDepth": 64,
+    "maxNodesPerTree": 4096
+  },
+  "trees": [
+    {
+      "treeId": "tests.generated.v2",
+      "name": "Generated v2",
+      "revision": 1
+    },
+    {
+      "treeId": "tree.golden.async-action",
+      "name": "Async Action",
+      "revision": 1
+    },
+    {
+      "treeId": "tree.mcp-testing.success-then-running",
+      "name": "MCP run-tests fixture: success then running",
+      "revision": 1
+    },
+    {
+      "treeId": "tree.minimal",
+      "name": "Minimal",
+      "revision": 1
+    }
+  ],
+  "skippedTreeFiles": [
+    "Assets/AIBT/Spikes~/BlackboardScopes/Fixtures/tree-v2.valid.aibt.json",
+    "Assets/AIBT/Tests/Fixtures/Trees/Serialization/invalid-unknown-field.aibt.json"
+  ]
+}

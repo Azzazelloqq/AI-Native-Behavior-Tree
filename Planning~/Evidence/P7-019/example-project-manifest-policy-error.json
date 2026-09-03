@@ -1,0 +1,9 @@
+{
+  "format": "aibt-project-manifest",
+  "formatVersion": 1,
+  "error": "Project policy could not be read: C:\\UnityProjects\\Modules\\.aibt\\policy.json",
+  "skippedTreeFiles": [
+    "Assets/AIBT/Spikes~/BlackboardScopes/Fixtures/tree-v2.valid.aibt.json",
+    "Assets/AIBT/Tests/Fixtures/Trees/Serialization/invalid-unknown-field.aibt.json"
+  ]
+}

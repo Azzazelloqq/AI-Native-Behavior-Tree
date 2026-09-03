@@ -1,6 +1,6 @@
 # P7-019 — Aggregate project-manifest JSON Schema
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -63,3 +63,21 @@ a real get_project_manifest response validated live, plus one deliberate negativ
   `Planning~/Evidence/P7-GATE/p7-001-stability-decision.md` — not required for `P7-016`'s own
   verdict, but required before the aggregate manifest response can honestly be called
   schema-governed for `1.0`.
+
+## Outcome
+
+Done. `Schemas~/project-manifest.schema.json` (new) is a `oneOf` over the two real, already-shipped
+response shapes `MCP/McpToolDispatcher.GetProjectManifest` actually produces — a success shape
+(`ProjectManifestQuery.Build()` plus an injected `skippedTreeFiles` array) and a minimal error shape
+returned whenever `.aibt/policy.json` cannot be read — both discovered by reading the real production
+wrapper, not assumed from `ProjectManifestQuery` alone. `Verify-Schemas.ps1` gained two new
+real-document validation pairs. The card's own claim that the script "currently validates 6 schemas"
+was found inaccurate (only 2 were wired before this card); corrected in evidence rather than
+repeated. **Real, previously-undiscovered bug found while generating the example, disclosed and spun
+off, not fixed here**: `get_project_manifest`, called with the real production `projectRoot` value,
+has never successfully found `.aibt/policy.json` in this repository's actual host-embedded layout —
+confirmed live twice, always returning the degraded error shape. Spun off as `P7-022`. The real
+success example was produced by calling `ProjectManifestQuery.Build()` directly against real project
+data (bypassing only the buggy path step); the real error example is the genuine captured bug
+evidence. Both validate; a deliberately malformed third copy (uncommitted) correctly fails, naming
+its exact injected defects. See `Planning~/Evidence/P7-019/README.md`.
