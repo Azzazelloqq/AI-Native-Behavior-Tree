@@ -2,7 +2,8 @@
 param(
     [string] $UnityPath = 'C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Unity.exe',
     [string] $OutputPath,
-    [string] $IsolatedProjectPath
+    [string] $IsolatedProjectPath,
+    [string] $BaselinePath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -89,3 +90,34 @@ Require (Test-Path -LiteralPath $shaPath) "Public API dump did not produce a dig
 Write-Output "Public API dump: $finalOutput"
 Write-Output "Digest: $shaPath"
 Write-Output ((Select-String -Path $dumpLog -Pattern 'AIBT_PUBLIC_API_OK\|.*').Matches[0].Value)
+
+if (-not [string]::IsNullOrWhiteSpace($BaselinePath)) {
+    $baselineFile = [IO.Path]::GetFullPath($BaselinePath)
+    Require (Test-Path -LiteralPath $baselineFile -PathType Leaf) "Baseline file was not found: $baselineFile"
+
+    # Content-based set difference only -- never a positional/textual line diff. The dump's own
+    # member-line block is a single global, deduplicated, sorted set of signature strings with no
+    # per-type association (see PublicApiDump.cs.txt), so a positional diff can misreport an
+    # unrelated later line as "removed" merely because new sorted lines were inserted earlier in
+    # the file -- exactly the false "5 removed members" signal P7-016's own gate diagnosed and
+    # disclosed (Planning~/Evidence/P7-GATE/README.md). Compare-Object's default behavior is a set
+    # comparison keyed on content, not position, so it is immune to that trap: only a line that
+    # exists in the baseline and is genuinely absent from the fresh dump is ever flagged. Purely
+    # additive changes (new lines only) can never fail this check.
+    $baselineLines = Get-Content -LiteralPath $baselineFile
+    $freshLines = Get-Content -LiteralPath $finalOutput
+    $comparison = Compare-Object -ReferenceObject $baselineLines -DifferenceObject $freshLines
+    $missing = @($comparison | Where-Object { $_.SideIndicator -eq '<=' } | ForEach-Object { $_.InputObject })
+    $added = @($comparison | Where-Object { $_.SideIndicator -eq '=>' } | ForEach-Object { $_.InputObject })
+
+    Write-Output "Public API baseline: $baselineFile"
+    Write-Output ("Public API added since baseline (informational only): {0}" -f $added.Count)
+
+    if ($missing.Count -gt 0) {
+        Write-Output "Public API REMOVED or RENAMED since baseline ($($missing.Count)):"
+        $missing | ForEach-Object { Write-Output "  - $_" }
+        throw "Public API check failed: $($missing.Count) line(s) present in the baseline are missing from the fresh dump (a removal or rename). See the list above."
+    }
+
+    Write-Output 'Public API check passed: no removals or renames vs baseline.'
+}

@@ -107,6 +107,15 @@ jobs:
             -Mode EditMode `
             -Scope Full
 
+      - name: Check public API for accidental removals or renames
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Join-Path $env:GITHUB_WORKSPACE 'project/Packages/com.azzazello.aibt'
+          & (Join-Path $package 'Tools~/Verification/P7/Audit/Get-FullPublicApi.ps1') `
+            -UnityPath $env:UNITY_EDITOR_PATH `
+            -BaselinePath (Join-Path $package 'Tools~/Verification/P7/Audit/Baseline/public-api-baseline.txt')
+
       - name: Prove verification failures return nonzero
         shell: pwsh
         run: |

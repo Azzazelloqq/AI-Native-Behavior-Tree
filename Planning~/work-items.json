@@ -1926,7 +1926,7 @@
       "id": "P7-020",
       "phase": 7,
       "title": "CI-enforced public API diff check",
-      "status": "draft",
+      "status": "done",
       "kind": "infrastructure",
       "card": "Planning~/Tasks/P7/P7-020-public-api-ci-enforcement.md",
       "dependsOn": [

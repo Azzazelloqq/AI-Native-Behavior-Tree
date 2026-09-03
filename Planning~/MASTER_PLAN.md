@@ -1022,6 +1022,26 @@ host project. Put to the owner rather than assumed: a real `.aibt/policy.json` w
 `projectRoot` against the real, open project, now returns the real success shape. See
 `Planning~/Evidence/P7-022/README.md`.
 
-Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion) and `P7-020` (CI-enforced public-API
-diff) — both `Draft`, independently assignable, neither required for the already-accepted `P7-016`
-gate. `1.0.0` itself remains the owner's own separate release decision.
+Same day, `P7-020` (CI-enforced public API diff check) is also **done**. One part of the card's own
+text didn't hold up: its claim that the headless dump technique "already uses" `windows-2022` is
+wrong — `Get-FullPublicApi.ps1` only works via a real, licensed Unity Editor in batch mode, and
+`validation.yml`'s `windows-2022` `static` job has no Unity installed anywhere (no `game-ci`/
+`unity-builder` step exists in this repo's CI); only the `unity` job (self-hosted, still blocked by
+`P0-005`) has Unity access. Resolved by adding the new check as a step *inside* that existing job
+rather than a second one — no new runner dependency, and like the rest of that job, unproven in real
+GitHub Actions until `P0-005` closes (disclosed, matching `P7-015`'s own precedent). `Get-
+FullPublicApi.ps1` gained a `-BaselinePath` parameter using a content-based set difference
+(`Compare-Object`), deliberately avoiding the positional-diff trap that produced `P7-016`'s own false
+"5 removed members" signal (`Planning~/Evidence/P7-GATE/README.md`) — only a baseline line genuinely
+absent from the fresh dump ever fails the check; additions never do. New stable baseline
+`Tools~/Verification/P7/Audit/Baseline/public-api-baseline.txt`, seeded from `Planning~/Evidence/
+P7-GATE/public-api.txt` and confirmed live to still match today's real compiled surface (425
+types/2130 members, unchanged since `P7-016`). Both acceptance criteria proven through the real
+isolated-Unity-harness mechanism: a real positive run (passed cleanly) and a real negative run
+against a temporary, uncommitted synthetic baseline line (failed loudly, exact line named, exit code
+1) — no production symbol was touched to prove the negative case. See `Planning~/Evidence/P7-020/
+README.md`.
+
+Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion) — `Draft`, the last card, dependent on
+re-reading `P6-014`'s own disclosed blocker before scoping. `1.0.0` itself remains the owner's own
+separate release decision.

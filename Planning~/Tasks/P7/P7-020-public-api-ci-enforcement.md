@@ -1,6 +1,6 @@
 # P7-020 — CI-enforced public API diff check
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -74,3 +74,49 @@ CI job dry run: additive change passes, deliberate removal/rename fails loudly
   `Planning~/Evidence/P7-GATE/p7-001-stability-decision.md` — not required for `P7-016`'s own
   verdict, but required before an accidental breaking public-API change can be caught automatically
   before `1.0`.
+
+## Outcome
+
+**One part of the card's own text did not hold up to re-verification**, found before implementing:
+its Forbidden-changes clause said not to require a Unity job "if it can run from the same headless
+dump technique `Get-FullPublicApi.ps1` already uses on `windows-2022`." That's not actually true —
+`Get-FullPublicApi.ps1` only works by launching a real, licensed Unity Editor in batch mode inside a
+disposable isolated project (its own code comment explains plain-host reflection was abandoned
+because it "cannot reliably resolve netstandard/Unity BCL dependencies"). `.github/workflows/
+validation.yml`'s `static` job (`windows-2022`, GitHub-hosted) has no Unity installed anywhere —
+confirmed by grep, no `game-ci`/`unity-builder`/license-activation step exists in this repo's CI. The
+only job with Unity access is `unity` (`[self-hosted, Windows, X64, unity-6000.5.8f1]`), gated on
+`P0-005`'s still-unresolved self-hosted runner, which has never once picked up a queued job.
+
+**Resolution, matching `P7-015`'s own precedent of disclosing rather than faking a Unity CI gate**:
+the new check was added as a step **inside the existing `unity` job**, not a second separate job —
+this adds no *new* dependency on the blocked runner (that job already needs it for compile +
+EditMode), and until `P0-005` resolves, this step is exactly as unproven in real GitHub Actions as
+the rest of that job already is.
+
+**Implementation**: `Get-FullPublicApi.ps1` gained an optional `-BaselinePath` parameter. When
+supplied, it computes a **content-based set difference** (PowerShell `Compare-Object`, keyed on line
+content, not position) between the baseline and the fresh dump, and throws (with the exact missing
+lines listed) if any baseline line is genuinely absent from the fresh dump; new lines are logged only,
+never fail. This deliberately avoids a known trap: `Planning~/Evidence/P7-GATE/README.md` records
+that a *positional/textual* diff of this exact dump format previously produced a false "5 removed
+members" signal, root-caused to the dump's own type-agnostic, globally-deduplicated member-line block
+(`PublicApiDump.cs.txt`) — a content-based set diff cannot reproduce that failure mode, since
+inserting new sorted lines elsewhere never makes an unrelated existing line look "removed."
+
+New stable baseline: `Tools~/Verification/P7/Audit/Baseline/public-api-baseline.txt`, seeded from
+`Planning~/Evidence/P7-GATE/public-api.txt` — confirmed live first (via `mcp__unityMCP__execute_code`
+reflecting the real open `Modules@783f0d4fd8687b7b` Editor instance with `PublicApiDump.cs.txt`'s own
+exact algorithm) to still be byte-identical to today's real compiled surface (425 types / 2130
+members, unchanged since `P7-016`, since none of `P7-017`/`P7-019`/`P7-021`/`P7-022` touched a public
+C# member).
+
+Both Acceptance Criteria were proven through the **real, full mechanism** (not a shortcut): a real
+end-to-end run of the modified script through its actual isolated-Unity-harness path, once with the
+real baseline (additive/no-op case — passed cleanly, `Public API check passed: no removals or
+renames vs baseline.`), and once against a temporary, uncommitted copy of the baseline with one
+synthetic extra line (`TYPE AIBT.SyntheticProbe.ThisTypeCannotExist`, never a real symbol) — failed
+loudly with that exact line named, exit code 1. The synthetic-baseline-line technique was chosen over
+temporarily renaming a real production symbol: it exercises the identical detection logic (a missing
+baseline line is a missing baseline line, regardless of why) without any risk of an accidental
+leftover rename in the codebase. See `Planning~/Evidence/P7-020/README.md`.

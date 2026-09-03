@@ -1,0 +1,22 @@
+{
+  "schema": "aibt-p7-020-verification-v1",
+  "passed": true,
+  "findings": [
+    "CARD_TEXT_CORRECTED|Forbidden-changes clause claiming Get-FullPublicApi.ps1 'already uses' the windows-2022 headless technique|wrong -- the dump requires a real, licensed Unity Editor batch-mode process; validation.yml's windows-2022 static job has no Unity installed (grepped .github/ and Tools~/ for unity-builder/game-ci/UNITY_LICENSE/GameCI: no matches)",
+    "DESIGN_DECISION|new check wired as a step inside the existing self-hosted unity job (validation.yml), not a second job|adds no new dependency on P0-005's blocked self-hosted runner; unproven in real CI until P0-005 closes, same as the rest of that job -- matches P7-015's own disclosed-gap precedent",
+    "KNOWN_TRAP_AVOIDED|Planning~/Evidence/P7-GATE/README.md's disclosed false '5 removed members' signal|root-caused to a positional/textual diff of the dump's type-agnostic, globally-deduplicated member-line block; new -BaselinePath logic uses PowerShell Compare-Object (content-based set difference), immune to that failure mode",
+    "DELIVERABLE|Tools~/Verification/P7/Audit/Get-FullPublicApi.ps1|modified, new -BaselinePath parameter",
+    "DELIVERABLE|Tools~/Verification/P7/Audit/Baseline/public-api-baseline.txt|created, seeded from Planning~/Evidence/P7-GATE/public-api.txt",
+    "DELIVERABLE|.github/workflows/validation.yml|modified, new 'Check public API for accidental removals or renames' step in the unity job",
+    "LIVE_BASELINE_CONFIRMATION|mcp__unityMCP__execute_code reflecting AIBT.Runtime/AIBT.Authoring/AIBT.Editor/AIBT.Mcp in the real open Modules@783f0d4fd8687b7b instance, mirroring PublicApiDump.cs.txt's own algorithm|425 types, 2130 members -- byte-identical (unsorted diff) to Planning~/Evidence/P7-GATE/public-api.txt, confirming no public API drift since P7-016",
+    "DRY_RUN_POSITIVE|Compare-Object, live current dump vs public-api-baseline.txt|missing=0 added=0",
+    "DRY_RUN_ADDITIVE|Compare-Object, live current dump plus one synthetic new line vs baseline|missing=0 added=1 -- does not fail",
+    "DRY_RUN_NEGATIVE|Compare-Object, live current dump vs temporary baseline copy plus one synthetic extra line|missing=1, exactly 'TYPE AIBT.SyntheticProbe.ThisTypeCannotExist'",
+    "E2E_POSITIVE|real Get-FullPublicApi.ps1 -BaselinePath <real baseline>, full isolated-Unity-harness run|'Public API check passed: no removals or renames vs baseline.' -- clean exit, assemblies=4 types=425 members=2130",
+    "E2E_NEGATIVE|real Get-FullPublicApi.ps1 -BaselinePath <temporary uncommitted synthetic-baseline copy>, full isolated-Unity-harness run|threw 'Public API check failed: 1 line(s)...', named 'TYPE AIBT.SyntheticProbe.ThisTypeCannotExist', exit code 1 -- temp file deleted immediately after, no production symbol touched",
+    "STATIC_VERIFICATION|Tools~/Verification/Verify-Static.ps1|passed after Planning~ edits",
+    "SCOPE_LIMITATION|new validation.yml step|not exercised by real GitHub Actions -- blocked on P0-005's self-hosted runner never picking up a job, identical to the rest of the unity job; disclosed, not claimed as proven",
+    "CLEANUP|Tools~/Verification/P7/Audit/Results/|transient verification artifacts deleted, not committed (regeneratable, not evidence)",
+    "WORK_ITEM_STATUS|P7-020|draft->done"
+  ]
+}
