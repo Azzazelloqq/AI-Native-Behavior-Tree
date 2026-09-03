@@ -1701,13 +1701,17 @@
       "id": "P7-006",
       "phase": 7,
       "title": "Migration tooling implementation",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-006-migration-tooling-implementation.md",
       "dependsOn": [
         "P7-005"
       ],
       "owns": [
+        "Authoring/Migration/",
+        "MCP/Migration/",
+        "Editor/Migration/",
+        "MCP~/Server/MigrationTools.cs",
         "Planning~/Evidence/P7-006/"
       ]
     },

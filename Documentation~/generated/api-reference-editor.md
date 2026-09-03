@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Editor`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-47 public type(s).
+48 public type(s).
 
 ---
 
@@ -278,6 +278,17 @@ One entry of editor-layout-v1.md's "reroutes" map.
 
 - `METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<AIBT.Editor.Layout.LayoutPoint>)`
 - `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Editor.Layout.LayoutPoint> Waypoints`
+
+---
+
+### `AIBT.Editor.Migration.MigrationNotificationWindow`
+
+P7-006 (ADR-P7-005): a non-blocking notification listing every project document with a node the migration engine could rewrite in memory, and a per-document button to persist that same migration to disk. A plain <see cref="EditorWindow"/> -- never <c>ShowModalUtility</c> -- so it never gates anything, including the MCP/AI-agent path, which already gets the same in-memory migration transparently on every <c>validate</c>/<c>compile</c> call regardless of whether this window is ever opened.
+
+- `METHOD AIBT.Editor.Migration.MigrationNotificationWindow ShowWindow()`
+- `METHOD System.Void .ctor()`
+- `METHOD System.Void Scan(AIBT.Authoring.Migration.NodeMigrationRegistry,System.String,AIBT.Authoring.NodeRegistry)`
+- `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.TreeId> LastScanMigratableTreeIds`
 
 ---
 

@@ -37,6 +37,14 @@ namespace AIBT.Authoring
         public static readonly DiagnosticCode UnsupportedExecutionDomain = new DiagnosticCode("AIBT2039");
         public static readonly DiagnosticCode UnsupportedNodeCapability = new DiagnosticCode("AIBT2040");
         public static readonly DiagnosticCode MultipleParents = new DiagnosticCode("AIBT2041");
+
+        /// <summary>
+        /// P7-006 (ADR-P7-005): a node's authored parameters were rewritten in memory by a
+        /// registered migration rule chain to reach the currently-registered manifest version.
+        /// Info severity -- the document already compiles/validates successfully; this is a
+        /// heads-up for review, never a blocking failure.
+        /// </summary>
+        public static readonly DiagnosticCode MigrationApplied = new DiagnosticCode("AIBT2042");
     }
 
     public static class TreeValidationDiagnosticCatalog
@@ -81,6 +89,7 @@ namespace AIBT.Authoring
             TreeValidationDiagnosticCodes.UnsupportedExecutionDomain,
             TreeValidationDiagnosticCodes.UnsupportedNodeCapability,
             TreeValidationDiagnosticCodes.MultipleParents,
+            TreeValidationDiagnosticCodes.MigrationApplied,
         };
 
         public static DiagnosticCatalog Catalog { get; } = CreateCatalog();
@@ -105,10 +114,16 @@ namespace AIBT.Authoring
             var descriptors = new DiagnosticDescriptor[Codes.Length];
             for (var index = 0; index < Codes.Length; index++)
             {
+                // Every code defaults to Error except MigrationApplied: a migration having been
+                // applied means the document already compiles/validates successfully, so it is
+                // never a blocking failure -- only Info, a review heads-up (ADR-P7-005).
+                var defaultSeverity = Codes[index] == TreeValidationDiagnosticCodes.MigrationApplied
+                    ? DiagnosticSeverity.Info
+                    : DiagnosticSeverity.Error;
                 descriptors[index] = new DiagnosticDescriptor(
                     Codes[index],
                     DiagnosticSubsystem.SemanticValidation,
-                    DiagnosticSeverity.Error,
+                    defaultSeverity,
                     RequiredFields,
                     OptionalFields);
             }

@@ -1,0 +1,27 @@
+{
+  "schema": "aibt-p7-006-verification-v1",
+  "passed": true,
+  "findings": [
+    "TEST_RESULT|Tests/Editor/Migration/ (DocumentMigratorTests, McpMigrationHookTests, McpMigrationToolDispatcherTests, MigrationNotificationWindowTests)|11/11 passed",
+    "TEST_RESULT|AIBT.Runtime.Tests|601/601 passed",
+    "TEST_RESULT|AIBT.Editor.Tests+AIBT.Integration.Tests+AIBT.BehaviorCases.Tests|481/481 passed (470 pre-existing + 11 new, identical baseline pass count)",
+    "TEST_RESULT|McpDocumentationGeneratorsTests (drift check)|passed as part of the 481/481 run above",
+    "BUILD|MCP~/Server/AibtMcpServer.csproj (dotnet build)|Succeeded, 0 warnings, 0 errors",
+    "LIVE_VERIFICATION|AIBT/Migration Notifications window, real open 6000.5.8f1 Editor, real Assets/ (72 documents)|'Scanned 72 document(s). Nothing to migrate.', 0 rows -- correct, no production migration rule exists yet",
+    "DELIVERABLE|Authoring/Migration/NodeMigrationRule.cs|created",
+    "DELIVERABLE|Authoring/Migration/NodeMigrationRegistry.cs|created",
+    "DELIVERABLE|Authoring/Migration/NodeMigrationOutcome.cs|created",
+    "DELIVERABLE|Authoring/Migration/DocumentMigrator.cs|created",
+    "DELIVERABLE|Authoring/Validation/TreeValidationDiagnostics.cs|modified (AIBT2042 MigrationApplied, Info-severity catalog default)",
+    "DELIVERABLE|MCP/Verification/McpVerificationToolDispatcher.cs|modified (validate/compile in-memory migration hook)",
+    "DELIVERABLE|MCP/Migration/McpMigrationDiagnostics.cs|created",
+    "DELIVERABLE|MCP/Migration/McpMigrationToolDispatcher.cs|created (aibt_migrate_document)",
+    "DELIVERABLE|MCP/McpToolDispatcher.cs|modified (migrate_document case, SemanticEdit)",
+    "DELIVERABLE|MCP~/Server/MigrationTools.cs|created (aibt_migrate_document relay)",
+    "DELIVERABLE|Editor/Migration/MigrationNotificationWindow.cs|created",
+    "DELIVERABLE|MCP/Documentation/McpMigrationsDocumentGenerator.cs|modified (Node-contract migrations section)",
+    "DELIVERABLE|Documentation~/generated/migrations.md, api-reference-authoring.md, api-reference-editor.md|regenerated, diff-clean",
+    "DELIVERABLE|Planning~/Evidence/P7-006/|created",
+    "WORK_ITEM_STATUS|P7-006|draft->done"
+  ]
+}

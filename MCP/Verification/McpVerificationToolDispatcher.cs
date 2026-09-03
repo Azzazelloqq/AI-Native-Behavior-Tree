@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Authoring.Migration;
 using AIBT.Editor.Layout;
 using AIBT.Mcp.Authoring;
 using Newtonsoft.Json.Linq;
@@ -23,8 +24,9 @@ namespace AIBT.Mcp.Verification
 
         internal static JObject Validate(string projectRoot, JObject args)
         {
-            var (document, path) = LoadTreeOrThrow(projectRoot, args);
+            var (loadedDocument, path) = LoadTreeOrThrow(projectRoot, args);
             var registry = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
+            var document = ApplyMigrations(loadedDocument, registry, out var migrationDiagnostics);
 
             var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
             var policyApplied = ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out _);
@@ -37,7 +39,7 @@ namespace AIBT.Mcp.Verification
                     McpVerificationJson.ToValidationPolicy(snapshot))
                 : new ValidationOptions(ToLogicalSourceId(projectRoot, path));
 
-            var diagnostics = TreeValidator.Validate(document, registry, options);
+            var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options).Concat(migrationDiagnostics));
 
             return new JObject
             {
@@ -51,18 +53,56 @@ namespace AIBT.Mcp.Verification
 
         internal static JObject Compile(string projectRoot, JObject args)
         {
-            var (document, path) = LoadTreeOrThrow(projectRoot, args);
+            var (loadedDocument, path) = LoadTreeOrThrow(projectRoot, args);
             var registry = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
+            var document = ApplyMigrations(loadedDocument, registry, out var migrationDiagnostics);
             var options = new ReferenceCompilerOptions(ToLogicalSourceId(projectRoot, path), ReferenceCompilationPolicy.Phase1, CompilerVersion);
 
             var result = ReferenceCompiler.Compile(document, registry, options);
+            var diagnostics = new DiagnosticCollection(result.Diagnostics.Concat(migrationDiagnostics));
 
             return new JObject
             {
                 ["success"] = result.Success,
                 ["contentHash"] = result.Success ? result.Program.Header.CompiledContentHash.HexadecimalValue : null,
-                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(result.Diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(diagnostics),
             };
+        }
+
+        // ---- migration hook (ADR-P7-005 / P7-006) --------------------------------------------
+
+        /// <summary>
+        /// Applies every registered migration rule to <paramref name="document"/> in memory only
+        /// (per ADR-P7-005 -- the on-disk file is never touched here) and returns the migrated
+        /// document plus one AIBT2042 Info diagnostic per migrated node. <paramref name="rules"/>
+        /// defaults to <see cref="NodeMigrationRegistry.Empty"/> -- no real production migration
+        /// rules exist yet (no node type has ever been version-bumped in this project); the
+        /// parameter exists so a test can inject a populated registry and prove this exact hook is
+        /// wired correctly, not only the standalone <see cref="DocumentMigrator"/> engine.
+        /// </summary>
+        internal static TreeDocument ApplyMigrations(TreeDocument document, NodeRegistry registry, out IReadOnlyList<Diagnostic> diagnostics, NodeMigrationRegistry rules = null)
+        {
+            var migrated = DocumentMigrator.TryMigrate(document, registry, rules ?? NodeMigrationRegistry.Empty, out var outcomes);
+            if (outcomes.Count == 0)
+            {
+                diagnostics = Array.Empty<Diagnostic>();
+                return migrated;
+            }
+
+            var list = new List<Diagnostic>(outcomes.Count);
+            foreach (var outcome in outcomes)
+            {
+                var changeText = string.Join("; ", outcome.Changes.Select(c => c.Description));
+                list.Add(TreeValidationDiagnosticCatalog.Create(
+                    TreeValidationDiagnosticCodes.MigrationApplied,
+                    "Node '" + outcome.NodeId.Value + "' (" + outcome.TypeId + ") migrated in memory from version "
+                        + outcome.FromVersion + " to " + outcome.ToVersion + ": " + changeText,
+                    new DiagnosticLocation(jsonPointer: "/nodes/" + outcome.NodeId.Value, treeId: outcome.TreeId, nodeId: outcome.NodeId),
+                    severity: DiagnosticSeverity.Info));
+            }
+
+            diagnostics = list;
+            return migrated;
         }
 
         // ---- simulate ------------------------------------------------------------------------

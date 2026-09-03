@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Authoring`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-109 public type(s).
+116 public type(s).
 
 ---
 
@@ -601,6 +601,79 @@ What one <see cref="HotReloadPreviewDriver.TryReload"/> call actually did -- the
 
 - `METHOD AIBT.IReferenceLeafBehavior CreateBehavior()`
 - `PROPERTY AIBT.Authoring.NodeManifest Manifest`
+
+---
+
+### `AIBT.Authoring.Migration.DocumentMigrator`
+
+Applies <see cref="NodeMigrationRule"/>s to a <see cref="TreeDocument"/> in memory, per <c>ADR-P7-005</c>: never mutates the source document or any file on disk, never touches the Burst-compiled node's own execution contract, and never skips a hop in a rule chain. A node with no rule for its exact version gap is left completely untouched -- the caller's own downstream validation (<see cref="TreeValidator"/>) reports it exactly as it does today, never silently guessed or partially migrated.
+
+- `METHOD AIBT.Authoring.TreeDocument TryMigrate(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry,AIBT.Authoring.Migration.NodeMigrationRegistry,System.Collections.Generic.IReadOnlyList`1[[AIBT.Authoring.Migration.NodeMigrationOutcome, AIBT.Authoring, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]&)`
+
+---
+
+### `AIBT.Authoring.Migration.NodeFieldAddition`
+
+A field addition applied by a <see cref="NodeMigrationRule"/>: a new field with a fixed default.
+
+- `METHOD System.Void .ctor(System.String,AIBT.Authoring.SemanticValue)`
+- `PROPERTY AIBT.Authoring.SemanticValue DefaultValue`
+- `PROPERTY System.String Name`
+
+---
+
+### `AIBT.Authoring.Migration.NodeFieldRename`
+
+A field rename applied by a <see cref="NodeMigrationRule"/>: same value, new JSON key.
+
+- `METHOD System.Void .ctor(System.String,System.String)`
+- `PROPERTY System.String From`
+- `PROPERTY System.String To`
+
+---
+
+### `AIBT.Authoring.Migration.NodeMigrationChange`
+
+One field-level change a migration rule hop applied, for diagnostic reporting.
+
+- `METHOD System.Void .ctor(System.String)`
+- `PROPERTY System.String Description`
+
+---
+
+### `AIBT.Authoring.Migration.NodeMigrationOutcome`
+
+Records that one node in a document was migrated from <see cref="FromVersion"/> to <see cref="ToVersion"/>, and exactly what changed -- the shape <c>ADR-P7-005</c>'s proposed <c>AIBT2042</c> diagnostic and the Editor/MCP persist surfaces both consume.
+
+- `METHOD System.Void .ctor(AIBT.TreeId,AIBT.NodeId,System.String,System.UInt32,System.UInt32,System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.Migration.NodeMigrationChange>)`
+- `PROPERTY AIBT.NodeId NodeId`
+- `PROPERTY AIBT.TreeId TreeId`
+- `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.Migration.NodeMigrationChange> Changes`
+- `PROPERTY System.String TypeId`
+- `PROPERTY System.UInt32 FromVersion`
+- `PROPERTY System.UInt32 ToVersion`
+
+---
+
+### `AIBT.Authoring.Migration.NodeMigrationRegistry`
+
+A lookup table of <see cref="NodeMigrationRule"/>s keyed by (type, source version), per <c>ADR-P7-005</c>. Mirrors <see cref="NodeRegistryBuilder"/>'s own builder shape. <see cref="Empty"/> is what every real production call site uses today -- no node type has ever been version-bumped in this project, so no real rule exists yet; tests build their own populated instance via <see cref="WithRule"/>.
+
+- `METHOD AIBT.Authoring.Migration.NodeMigrationRegistry WithRule(AIBT.Authoring.Migration.NodeMigrationRule)`
+- `METHOD System.Boolean TryGetRule(System.String,System.UInt32,AIBT.Authoring.Migration.NodeMigrationRule&)`
+- `PROPERTY AIBT.Authoring.Migration.NodeMigrationRegistry Empty`
+
+---
+
+### `AIBT.Authoring.Migration.NodeMigrationRule`
+
+Declarative migration for one node type from <see cref="SourceVersion"/> to <see cref="SourceVersion"/> + 1, per <c>ADR-P7-005</c>: field rename and field added-with-default only, pure JSON-parameter transform, never Burst/execution-layer code.
+
+- `METHOD System.Void .ctor(System.String,System.UInt32,System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.Migration.NodeFieldRename>,System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.Migration.NodeFieldAddition>)`
+- `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.Migration.NodeFieldAddition> Additions`
+- `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.Migration.NodeFieldRename> Renames`
+- `PROPERTY System.String TypeId`
+- `PROPERTY System.UInt32 SourceVersion`
 
 ---
 
@@ -1301,6 +1374,7 @@ Mirrors <c>ReferenceTraceEventKind</c> (internal, Runtime) across the assembly b
 - `FIELD AIBT.DiagnosticCode InvalidRoot`
 - `FIELD AIBT.DiagnosticCode InvalidTreeIdentity`
 - `FIELD AIBT.DiagnosticCode InvalidWatchedKey`
+- `FIELD AIBT.DiagnosticCode MigrationApplied`
 - `FIELD AIBT.DiagnosticCode MissingBlackboardAccess`
 - `FIELD AIBT.DiagnosticCode MissingChild`
 - `FIELD AIBT.DiagnosticCode MissingParameter`

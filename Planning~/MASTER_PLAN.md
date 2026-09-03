@@ -852,3 +852,34 @@ real `ReferenceCompiler`, and a negative case (an unregistered v2→v3 gap) stil
 the existing `UnsupportedNodeVersion` diagnostic, unchanged — the recorded diff shows exactly
 `"moveSpeed": 10` → `"speed": 10, "acceleration": 5`. No production code shipped; `P7-006` applies
 this ADR to production. See `Planning~/Evidence/P7-005/`.
+
+`P7-006` (migration tooling implementation) is also **done**, applying `ADR-P7-005` as real
+production code in one pass — its own Allowed-changes list, written before the ADR existed, was
+corrected before implementation (owner-confirmed) to match the ADR's full Consequences section
+rather than silently narrowing or expanding scope. `Authoring/Migration/` (new) implements the
+declarative rename/add-with-default rule engine (`NodeMigrationRule`/`NodeMigrationRegistry`/
+`DocumentMigrator`); a new `AIBT2042 MigrationApplied` diagnostic (`Info` severity — the diagnostic
+catalog's per-code default was widened from a single hardcoded `Error` for every code to a real
+per-code default, so `explain_diagnostic` reports it correctly) is hooked into
+`McpVerificationToolDispatcher.Validate`/`Compile` immediately after document load, migrating in
+memory before validation/compilation ever run — the on-disk file is never touched by this path. A
+new `aibt_migrate_document` MCP tool (`MCP/Migration/`, tagged `SemanticEdit` mirroring `add_node`'s
+own tag, `MCP~/Server/MigrationTools.cs` relay, a real `dotnet build` of the external server project
+confirmed 0 errors) persists that same migration to disk on explicit request, dry-run by default,
+mirroring `McpAuthoringToolDispatcher`'s own accept-then-persist shape. A new non-blocking
+`Editor/Migration/MigrationNotificationWindow.cs` lists every project document with a migratable
+node and a per-row persist button — verified live against the real, currently-open Editor scanning
+the real project's actual 72 `.aibt.json` documents, correctly reporting "Nothing to migrate" since
+no node type has ever had its contract version bumped in this project. `McpMigrationsDocumentGenerator.cs`
+gained a real "Node-contract migrations" section alongside its pre-existing, genuinely unrelated "MCP
+surface migrations" one (tool renames, not node-contract versioning — the two concepts share one
+generated file by this card's own deliberate choice, not conflated). 11 new tests
+(`Tests/Editor/Migration/`) pass live, each proving a real production entry point — the standalone
+engine against a real `NodeManifest`/`TreeDocument` compiled through the real `ReferenceCompiler`
+(including a chained two-hop migration proving rule hops never skip ahead, and the unhandled-category
+negative case still hard-failing through the existing `UnsupportedNodeVersion` diagnostic unchanged),
+the exact `ApplyMigrations` hook inside the verification dispatcher, the `aibt_migrate_document`
+dispatcher (dry-run/persist/permission-negative), and the Editor window's scan/list logic — never a
+synthetic in-memory reimplementation. Full regression: `AIBT.Runtime.Tests` 601/601;
+`AIBT.Editor.Tests`+`AIBT.Integration.Tests`+`AIBT.BehaviorCases.Tests` 481/481 (470 pre-existing + 11
+new), identical baseline pass count, zero new failures. See `Planning~/Evidence/P7-006/`.

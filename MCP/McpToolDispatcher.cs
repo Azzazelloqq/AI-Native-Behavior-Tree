@@ -4,6 +4,7 @@ using System.Linq;
 using AIBT.Authoring;
 using AIBT.Mcp.Authoring;
 using AIBT.Mcp.CustomTools;
+using AIBT.Mcp.Migration;
 using AIBT.Mcp.NodeDevelopment;
 using AIBT.Mcp.Testing;
 using AIBT.Mcp.Verification;
@@ -83,6 +84,13 @@ namespace AIBT.Mcp
                     return WithPermission(granted, McpPermissionCategory.TestExecution, () => McpVerificationToolDispatcher.Simulate(projectRoot, args));
                 case "explain_diagnostic":
                     return WithPermission(granted, McpPermissionCategory.Read, () => McpVerificationToolDispatcher.ExplainDiagnostic(projectRoot, args));
+
+                // P7-006 (ADR-P7-005) -- persists a document's in-memory migration (the same
+                // migration validate/compile already apply transparently) to disk. Tagged
+                // SemanticEdit, not Compilation, since it writes to the project like every other
+                // authoring tool above, mirroring add_node's own tag.
+                case "migrate_document":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpMigrationToolDispatcher.MigrateDocument(projectRoot, args));
 
                 // P6-008 test/benchmark tools (narrowed 2026-08-29 -- trace/compare-trace deferred
                 // to P6-015) -- run_tests wraps the promoted P1-017 behavior-case runner, run_benchmark
