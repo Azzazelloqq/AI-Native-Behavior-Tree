@@ -910,3 +910,50 @@ real this session — doing so would push a real tag and create a real public Gi
 separate explicit ask distinct from building the automation — matching the card's own acceptance
 criteria that a local-equivalent script satisfies the dry-run requirement. `package.json` remains
 `0.1.0`; no real release has been cut. See `Planning~/Evidence/P7-015/`.
+
+`P7-016` (the Phase 7 integration gate) is **done: Accepted, with disclosed gaps — 2026-09-03,
+against commit `eedeb3c8408714ed5e5b3ee773a7a76c258e9864`**, explicitly not declaring `1.0.0` (a
+separate owner decision per `USER_ACTIONS.md`). A clean detached-UPM-harness compile (exit 0) and
+full EditMode regression **1269/1270**, 0 skipped (up from `P6-GATE`'s 1224/1224) — one real,
+pre-existing failure, not caused by this gate and not fixed inside it per its own Forbidden-changes
+clause: `McpApiReferenceGenerator`'s type-`<summary>` correlator hardcodes
+`Application.dataPath + "/AIBT"`, silently returning nothing for any real `file:`/registry UPM
+consumer — the first time this generator was ever exercised outside the host project, spun off as
+`P7-021`. Public API surface: **425 types/2130 members, +13 types/+34 members versus `P6-GATE`'s own
+combined baseline, confirmed purely additive by direct type-set comparison** (a separate, apparent
+"5 removed member" signal from a naive flat-sorted diff was investigated and traced to the dump
+tool's own file format — types listed in one block, unique member *signatures* in a second,
+type-agnostic block — not a real change; the earlier P6/P7 split-file baseline versus this gate's
+single combined 4-assembly dump explained the artifact fully). Assembly-dependency audit: all 4
+production `.asmdef` files byte-identical to `P6-GATE`'s own recorded references — zero drift across
+all of Phase 7. `Documentation~/scope.md`'s 7-item "Release criteria for 1.0" checked item-by-item
+against real evidence: 5 fully met, 2 partially met (stable contracts, blocked on tree-format `v2`
+promotion; production-ready editor/debugger, blocked on a still-undecided-but-unbuilt production
+Play-mode host). This gate's own review, before any mechanical verification ran, found and fixed
+real task-card bookkeeping drift on 4 cards (`P6-012`, `P7-007`, `P7-010`, `P7-011` all had real,
+accepted evidence but a task-card file still reading `Status: Draft` with no `## Outcome` — a "mark
+the card done" step silently skipped at least 4 times across two gates) and closed a literal,
+unmet acceptance criterion of its own: `P7-001`'s public-API/persisted-format stability proposal had
+never received a recorded owner decision. One was gathered live during this gate's own session —
+`AIBT.Runtime`/`AIBT.Authoring` stable for `1.0` (uncontested, additive-only since
+`P2-GATE`/`P3-GATE`); `AIBT.Editor`/`AIBT.Mcp` stay explicitly experimental, the latter partly
+*because* diffing `MCP/` against the `P6-GATE` candidate commit found a real, previously-undocumented
+breaking change (`test-node`'s `scopeNote` output field silently removed by `P7-009`, never logged in
+`Documentation~/generated/migrations.md`'s own "MCP surface migrations" section despite existing
+specifically to record exactly this) — retroactively logged as part of this gate's own
+documentation-consistency pass, live-verified (`McpDocumentationGeneratorsTests`, 11/11) before being
+folded into the gate's own commit. Three of `P7-001`'s five open questions produced new,
+required-before-`1.0` follow-up cards, not left as prose: `P7-018` (promote tree-format `v2` to the
+production default, unblocking `ReferenceCompilationPolicy.Phase1`'s Agent/Shared capability flags),
+`P7-019` (a JSON Schema for the aggregate `get_project_manifest` response), `P7-020` (a CI-enforced
+public-API diff check) — plus `P7-021` from the regression failure above. None of these four are
+required for `P7-016`'s own verdict; all are required before a clean `1.0.0` release. `README.md`/
+`CHANGELOG.md` had no Phase 7 section at all (both stopped at the Phase 6 paragraph/bullet) and were
+updated, checked against a fresh claims inventory. **Phase 7 is complete**: `P7-001` through `P7-016`
+are all `Done`. See `Planning~/Evidence/P7-GATE/README.md`.
+
+Remaining Phase 7 work: `P7-017` (evidence-artifact size discipline), `P7-018` (tree-format `v2`
+promotion), `P7-019` (aggregate manifest schema), `P7-020` (CI-enforced public-API diff), and
+`P7-021` (API-reference generator package-root fix) — all `Draft`, all independently assignable, none
+required for the now-accepted `P7-016` gate. `1.0.0` itself remains the owner's own separate release
+decision.

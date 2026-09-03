@@ -1878,10 +1878,68 @@
       ]
     },
     {
+      "id": "P7-018",
+      "phase": 7,
+      "title": "Tree-format v2 promotion to default",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-018-tree-format-v2-promotion.md",
+      "dependsOn": [
+        "P7-001"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-018/"
+      ]
+    },
+    {
+      "id": "P7-019",
+      "phase": 7,
+      "title": "Aggregate project-manifest JSON Schema",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-019-project-manifest-schema.md",
+      "dependsOn": [
+        "P7-001"
+      ],
+      "owns": [
+        "Schemas~/project-manifest.schema.json",
+        "Planning~/Evidence/P7-019/"
+      ]
+    },
+    {
+      "id": "P7-020",
+      "phase": 7,
+      "title": "CI-enforced public API diff check",
+      "status": "draft",
+      "kind": "infrastructure",
+      "card": "Planning~/Tasks/P7/P7-020-public-api-ci-enforcement.md",
+      "dependsOn": [
+        "P7-001",
+        "P7-015"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-020/"
+      ]
+    },
+    {
+      "id": "P7-021",
+      "phase": 7,
+      "title": "API-reference generator package-root resolution fix",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-021-api-reference-generator-package-root-fix.md",
+      "dependsOn": [
+        "P7-014"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-021/"
+      ]
+    },
+    {
       "id": "P7-016",
       "phase": 7,
       "title": "Phase 7 integration gate",
-      "status": "blocked",
+      "status": "done",
       "kind": "review",
       "card": "Planning~/Tasks/P7/P7-016-phase7-integration-gate.md",
       "dependsOn": [

@@ -27,8 +27,18 @@ namespace AIBT.Mcp.Documentation
                 "- **Migration:** <the concrete steps an existing agent/integration must take>\n" +
                 "```\n\n" +
                 "### Entries\n\n" +
-                "None yet -- the MCP surface (`P6-005` through `P6-010`) has had no breaking change since its " +
-                "first release.\n\n" +
+                "## Unreleased (shipped in `P7-009`)\n\n" +
+                "- **What changed:** `test-node`'s response dropped its always-present `scopeNote` field.\n" +
+                "- **Why:** `P7-009` widened the tool to actually drive generated dispatch (in its own proven " +
+                "scope) instead of only proving compiled metadata is structurally valid, replacing the static " +
+                "`scopeNote` text with real per-call fields (`dispatchProven`, and on success " +
+                "`enteredSuccessfully`/`tickStatus`/`tickCallbackFailure`, or on failure `dispatchReason`).\n" +
+                "- **Migration:** an existing agent/integration must stop reading `scopeNote` and instead branch " +
+                "on `dispatchProven` (a node outside the translator's proven scope -- a `Registered` field, or an " +
+                "`AsyncOperation`/`Completion` binding -- reports `dispatchProven: false` with a `dispatchReason`, " +
+                "never a false pass).\n\n" +
+                "Found retroactively during `P7-016`'s gate review (a real change that was never logged here when " +
+                "it shipped) -- no other MCP-surface-breaking change exists before or since.\n\n" +
                 "## Node-contract migrations\n\n" +
                 "When a node type's own authored-parameter contract changes (a field renamed, or added with a " +
                 "default) and its manifest `Version` increments, `Authoring/Migration/DocumentMigrator` rewrites " +

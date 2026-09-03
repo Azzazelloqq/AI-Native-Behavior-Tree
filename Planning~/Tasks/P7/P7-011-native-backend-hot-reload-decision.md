@@ -1,6 +1,6 @@
 # P7-011 — Native-backend hot reload decision
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -89,3 +89,29 @@ disposable spike: real compiled native program pair, live via Unity MCP, at leas
 - If accepted, `P7-012` applies the ADR to production and unblocks `P5-007`'s own remaining,
   currently-blocked acceptance criteria (golden-equivalence re-run, batch isolation, `Auto`
   determinism, all for a hot-reloaded native instance) for the first time.
+
+## Outcome
+
+Done, accepted. `ADR-P7-011` (`AIBT-035`) decides how `ADR-P5-001`'s construct-fresh-and-
+selectively-copy model applies to the native backend: fresh construction reuses
+`NativeProgramImageOwnerV1`/`NativeInstanceArenaOwnerV1.TryCreate` unchanged; state capture/seeding
+needs zero new internal engine methods (unlike the reference executor, which needed
+`CaptureNodeState`/`SeedNodeState`); native migration is **not** idle-only — proven live migrating a
+genuinely active instance, since `NativeFrameStateV1` is one uniform blittable struct; full restart
+must reopen an update on the active old instance before requesting abort (the opposite precondition
+from the reference executor's own `Abort`, confirmed by a real first-attempt failure); the
+composite-cursor-reset rule (`ADR-P5-001` item 2) applies unchanged to native's own `ChildCursor`
+field. A disposable spike (`Spikes~/NativeHotReloadModel/`, 2/2 tests passing live via Unity MCP)
+proved full restart and a reordered-children migration using only the public
+execution-lease/View API. **Real finding, disclosed as load-bearing follow-up scope, not silently
+smoothed over**: the spike's own capture/seed loop copies `ChildCursor` verbatim, which is wrong
+after a reorder — identified by reasoning through the spike's own captured values, not caught by a
+dedicated assertion; flagged explicitly for `P7-012` to fix, which it did (see `P7-012`'s own
+Outcome — `TryMigrate` remaps each frame's `NodeIndex` field rather than copying position-for-
+position). No production file under `Runtime/Execution/Native/` etc. was touched — decision-only.
+`P7-012` (native-backend hot reload implementation) applied this ADR to production and is `Done`.
+See `Planning~/Evidence/P7-011/README.md`.
+
+**Bookkeeping note (found and fixed during `P7-016`'s gate review):** this card's own `Status`/
+`Outcome` were never updated after its real, accepted completion — evidence existed, work-items.json
+already said `done`, but this file stayed `Draft` with no Outcome until now.

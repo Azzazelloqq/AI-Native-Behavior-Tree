@@ -66,3 +66,25 @@ All notable changes to this project will be documented here. The project follows
   real running native tree into a trace channel yet), and a just-generated
   custom node is not yet discoverable through the same discovery tools —
   both disclosed, not silently assumed.
+- Production hardening: real Burst-confirmed Profiler instrumentation on
+  every native/reference hot path; a long-running/stress test suite (20,000
+  -tick soak, 10,240-agent stress, repeated reload under load); a real
+  node-contract migration mechanism (declarative rename/add-with-default
+  rules, an MCP tool, and a non-blocking Editor notification window); real
+  production trace wiring (closing the trace-inspection gap above) and
+  per-project leaf-registration/discovery (closing the node-discoverability
+  gap above); a generic native-dispatch translator; native-backend hot
+  reload, including active-instance migration (not idle-only, unlike the
+  reference executor); two new samples; a generated API reference covering
+  100% of public member signatures across all 4 assemblies; and local-first
+  release automation. The Phase 7 integration gate independently
+  re-verified all of this against a clean detached snapshot and accepted it,
+  with real gaps disclosed rather than smoothed over: a production
+  Play-mode host remains a fully-decided but unbuilt design; the tree
+  format's `v2` (Agent/Shared blackboard) is not yet the production
+  default; `AIBT.Editor`/`AIBT.Mcp` stay explicitly experimental (a real,
+  previously-undocumented breaking change was found in `AIBT.Mcp`'s own
+  tool-surface history); and the generated API reference's type-summary
+  inlining silently no-ops for a real UPM (`file:`/registry) consumer,
+  found for the first time by the gate's own detached-harness technique.
+  `1.0.0` has not been declared.

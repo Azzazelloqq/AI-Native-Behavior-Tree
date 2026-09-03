@@ -1,6 +1,6 @@
 # P6-012 — Phase 6 integration gate
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -87,3 +87,27 @@ git status / git rev-parse HEAD clean at every checkpoint
 - `phase7-inputs.md` must state plainly whether native-backend hot reload
   and a production Play-mode host remain open before Phase 7 (production
   hardening) begins, since both affect what "production" can honestly mean.
+
+## Outcome
+
+**Accepted, with two exit-criterion gaps explicitly disclosed** — 2026-08-31, against commit
+`97e3501e71534f8de2e063cf74cdf52a36a43d04`. Clean detached-UPM-harness compile (exit 0) and full
+EditMode regression **1224/1224**, 0 failed, 0 skipped (up from `P5-GATE`'s 1089). Public API surface
+**405 types/2067 members (+14/+43 vs. `P5-GATE`), confirmed purely additive by diff**;
+`AIBT.Mcp`'s own surface recorded for the first time (7 types/29 members). A real, live end-to-end
+MCP client session (official Inspector CLI against the real `MCP~/Server/`) proved discover → create
+→ atomic add/connect → configure → validate → compile → simulate → the complete
+generate/preview/test/apply gate for a genuinely new custom node → run a benchmark — every operation
+the roadmap's own Phase 6 exit criterion names, except one. **Two gaps disclosed, not smoothed
+over**: (1) trace inspection does not exist anywhere in production (deferred to `P6-015`); (2) a
+custom node just generated/applied in the same live session was not discoverable via
+`aibt_search_nodes`/`aibt_get_node_contract` (deferred to `P6-017`) — found live, for the first time,
+by this gate's own end-to-end proof. A third, smaller finding (`generate_node`'s condition template
+does not compile for a `Bool`-typed blackboard read) is recorded in `known-limitations.md`.
+`README.md`/`CHANGELOG.md` were found stale and updated. **Phase 6 is complete**: `P6-001` through
+`P6-012` are all `Done`. See `Planning~/Evidence/P6-GATE/README.md`.
+
+**Bookkeeping note (found and fixed during `P7-016`'s gate review):** this card's own `Status`/
+`Outcome` were never updated after its real, accepted completion — evidence existed, work-items.json
+already said `done`, but this file stayed `Draft` with no Outcome until now. The same drift recurred
+on 3 later Phase 7 cards (`P7-007`, `P7-010`, `P7-011`), all fixed in the same pass.

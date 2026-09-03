@@ -1,6 +1,6 @@
 # P7-010 — Production Play-mode host decision
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -89,3 +89,30 @@ debugger-attachment proof using P3-010's own unmodified AttachSession API
 - A future implementation card builds the host into production per this ADR.
 - `P7-011` (native-backend hot reload decision) should read this ADR before deciding whether native
   fresh-instance construction needs host cooperation or can remain self-contained.
+
+## Outcome
+
+Done, accepted. `ADR-P7-010` (`AIBT-034`) decides the shape (one `MonoBehaviour` per tree instance,
+never a `ScriptableObject` singleton), location (`Runtime/Integration/`, inside `AIBT.Runtime` —
+`AIBT.Editor`/any `*.Tests` assembly structurally ruled out, see below), initial scheduling-policy
+scope (`Immediate`/`Budgeted` only; `BatchedJobsSameFrame`/`PipelinedJobs` disclosed follow-up
+needing a population-level coordinator), attach/trace shape (host owns its own
+`NativeTraceChannelOwnerV1`, zero changes needed to `P3-010`'s debugger session or `ADR-P6-015`'s
+recorder shape), update timing (`Update()`, not `FixedUpdate()`), and lifecycle
+(`Awake()`→`OnDestroy()`, proven leak-free). A real, reproduced Unity restriction was found and is
+load-bearing for the location decision: Unity refuses `AddComponent` for any script in an
+`"includePlatforms": ["Editor"]` or `"optionalUnityReferences": ["TestAssemblies"]` assembly,
+independent of each other — isolated across two asmdef revisions before the spike could even run. A
+disposable spike (`Spikes~/ProductionPlayModeHost/`) ticked a real compiled tree in real Play mode
+(via Unity MCP) to **32,295 real `Update()` calls** with zero errors, and proved `P3-010`'s own
+unmodified `NativeExecutionDebuggerSession.Attach`/`TryReadTrace` correctly reads the host's live
+trace channel mid-session with zero perturbation (`TotalUpdates` identical before/after), including
+correctly reporting a real, expected capacity-driven fault. No production file under `Runtime/`,
+`Authoring/`, or `Editor/` was touched — decision-only, per this card's own Forbidden-changes clause.
+**No implementation card exists yet** — this remains a real, disclosed gap against `scope.md`'s
+"Production-ready editor and debugger" 1.0 criterion (see `P7-016`'s own gate evidence). See
+`Planning~/Evidence/P7-010/README.md`.
+
+**Bookkeeping note (found and fixed during `P7-016`'s gate review):** this card's own `Status`/
+`Outcome` were never updated after its real, accepted completion — evidence existed, work-items.json
+already said `done`, but this file stayed `Draft` with no Outcome until now.

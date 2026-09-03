@@ -1,0 +1,56 @@
+{
+  "schema": "aibt-p7-gate-assembly-dependencies-v1",
+  "candidateCommit": "eedeb3c8408714ed5e5b3ee773a7a76c258e9864",
+  "asmdefs": {
+    "AIBT.Runtime": {
+      "path": "Runtime/AIBT.Runtime.asmdef",
+      "references": ["Unity.Burst", "Unity.Collections"],
+      "includePlatforms": [],
+      "changedSinceP6Gate": false
+    },
+    "AIBT.Authoring": {
+      "path": "Authoring/AIBT.Authoring.asmdef",
+      "references": ["AIBT.Runtime", "Newtonsoft.Json"],
+      "includePlatforms": [],
+      "changedSinceP6Gate": false
+    },
+    "AIBT.Editor": {
+      "path": "Editor/AIBT.Editor.asmdef",
+      "references": ["AIBT.Runtime", "AIBT.Authoring", "Newtonsoft.Json", "Unity.Collections"],
+      "includePlatforms": ["Editor"],
+      "changedSinceP6Gate": false
+    },
+    "AIBT.Mcp": {
+      "path": "MCP/AIBT.Mcp.asmdef",
+      "references": ["AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "Newtonsoft.Json", "Unity.Collections"],
+      "includePlatforms": ["Editor"],
+      "changedSinceP6Gate": false
+    }
+  },
+  "dependencyDirectionCheck": {
+    "rule": "AIBT.Mcp depends on AIBT.Editor/AIBT.Authoring/AIBT.Runtime; none of the lower three depends back on AIBT.Mcp, and AIBT.Editor still depends only on AIBT.Authoring/AIBT.Runtime, never the reverse",
+    "result": "PASSED",
+    "evidence": "All 4 asmdefs' references/includePlatforms are byte-identical to P6-GATE's own recorded baseline, confirmed by direct read against the clean clone -- zero drift across all of Phase 7. No new production assembly was introduced. A grep for the literal string 'AIBT.Mcp' across every Runtime/Authoring/Editor .asmdef returned zero matches."
+  },
+  "forbiddenTokenAudit": {
+    "tokens": ["using UnityEditor", "Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "scannedPaths": ["Runtime/", "Authoring/"],
+    "command": "grep -rlE \"using UnityEditor|Unity\\.Entities|UnityMCP|OpenAI|Anthropic\" Runtime/ Authoring/",
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "editorScopedForbiddenTokenAudit": {
+    "tokens": ["Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "note": "using UnityEditor is expected and allowed in Editor/ and MCP/",
+    "scannedPaths": ["Editor/"],
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "mcpScopedForbiddenTokenAudit": {
+    "tokens": ["Unity.Entities", "UnityMCP", "OpenAI", "Anthropic"],
+    "scannedPaths": ["MCP/"],
+    "matches": 0,
+    "result": "PASSED"
+  },
+  "note": "Run against the clean detached clone (candidateCommit above), not the live host project, per this gate's own runbook. MCP~/Server/ (the external dotnet process) is intentionally excluded, matching every prior gate's tilde-hidden-folder convention."
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "aibt-p7-gate-verification-v1",
+  "candidateCommit": "eedeb3c8408714ed5e5b3ee773a7a76c258e9864",
+  "verdict": "ACCEPTED_WITH_DISCLOSED_GAPS",
+  "passed": true,
+  "findings": [
+    "STATIC_VERIFICATION|Verify-Static.ps1 (clean clone)|passed, 6 schemas, 122 work items",
+    "SCHEMA_VERIFICATION|Verify-Schemas.ps1 (clean clone)|passed, 6 schemas",
+    "DETACHED_COMPILE|Run-UnityCompile.ps1|exit 0, clean",
+    "DETACHED_REGRESSION|Run-UnityTests.ps1 -Mode EditMode -Scope Full|1269/1270 passed, 1 failed, 0 skipped (P6-GATE baseline: 1224/1224)",
+    "KNOWN_FAILURE|McpDocumentationGeneratorsTests.GeneratedDocumentationRegeneratesToExactlyTheCommittedFiles|real, pre-existing, root-caused (McpApiReferenceGenerator package-root resolution), not fixed inside this gate, spun off as P7-021",
+    "PUBLIC_API|Get-FullPublicApi.ps1|assemblies=4 types=425 members=2130 sha256=03344454eeed509027b0d52d1855c9731f60ec4cd3e2d59bc516c2ef3e89a460",
+    "PUBLIC_API_DIFF|vs P6-GATE combined baseline (412 types/2096 members)|+13 types, +34 members, zero removals, confirmed by direct type-set comparison",
+    "ASSEMBLY_AUDIT|4 production asmdefs vs P6-GATE baseline|byte-identical references/includePlatforms, zero drift",
+    "FORBIDDEN_TOKEN_AUDIT|Runtime/Authoring/Editor/MCP|zero matches for UnityEditor(outside Editor/MCP)/Unity.Entities/UnityMCP/OpenAI/Anthropic",
+    "OWNER_DECISION|P7-001 stability proposal|recorded live this gate session, see p7-001-stability-decision.md",
+    "SCOPE_CRITERIA|scope.md Release criteria for 1.0, 7 items|5 fully met, 2 partially met (tree-format v2 promotion; production Play-mode host) -- see scope-release-criteria-checklist.md",
+    "BOOKKEEPING_FIX|P6-012, P7-007, P7-010, P7-011 task cards|Status/Outcome corrected to match already-accepted evidence",
+    "DOCUMENTATION_FIX|Documentation~/generated/migrations.md|retroactively logged a real, previously-undocumented MCP-surface breaking change (test-node scopeNote removal, P7-009); 11/11 McpDocumentationGeneratorsTests passed live in host project before folding into this commit",
+    "README_CHANGELOG|staleness check|both lacked any Phase 7 section; updated, checked against claims-inventory.md",
+    "NEW_FOLLOWUP_CARDS|P7-018, P7-019, P7-020, P7-021|spun off, not built inside this gate per its own Forbidden-changes clause",
+    "GATE_VERDICT|1.0.0 declaration|NOT made by this gate -- owner's own separate decision per USER_ACTIONS.md"
+  ]
+}

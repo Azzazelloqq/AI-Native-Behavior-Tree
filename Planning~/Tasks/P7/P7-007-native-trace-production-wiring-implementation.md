@@ -1,6 +1,6 @@
 # P7-007 — Native trace production-wiring implementation
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -79,3 +79,25 @@ trace read-back proof through NativeExecutionDebuggerSession/TraceTimelineModel
 - Once this exists, `P6-008`'s originally-narrowed `trace`/`compare-trace` MCP tools (spun off
   because this exact gap made them unbuildable) become assignable — a future card, not folded in
   here.
+
+## Outcome
+
+Done. `ADR-P6-015` applied to production: `Runtime/Scheduling/NativeTraceRecorderV1.cs` (new,
+`internal`) is a real external recorder — no change inside `NativeLifecycleMachineV1` itself — wired
+additively into a new 6-argument `SchedulingPolicyDriver.TryRunImmediate` overload
+(`NativeTraceRecorderV1[] recorders`, parallel to `agents`; `null` skips recording), translating
+real `NativeLifecycleStepKindV1`/dispatch-completion-phase events into real `NativeTraceEventKindV1`
+records on a real `NativeTraceChannelOwnerV1`, per the ADR's own fixed mapping table. The original
+5-argument `TryRunImmediate` is now a one-line delegation, proven bit-identical for `recorders: null`
+and proven bit-identical to a non-recorder run when a real recorder is attached. Deliberately scoped
+to `TryRunImmediate` only (not `TryRunBudgeted`/`TryRunBatchedJobsSameFrame`) — `TryRunBudgeted`'s
+own mid-tick resume semantics raised a real unresolved question outside this card's own acceptance
+criteria, disclosed rather than guessed at. Trace read-back proven unmodified through
+`NativeExecutionDebuggerSession`/`TraceTimelineModel`. Full regression: `AIBT.Runtime.Tests` 588/588,
+`Verify-Static.ps1` passed (121 work items). This closes the trace-production gap `P6-008`/`P6-012`
+disclosed; `P6-008`'s own narrowed `trace`/`compare-trace` MCP tools become assignable as a future
+card. See `Planning~/Evidence/P7-007/README.md`.
+
+**Bookkeeping note (found and fixed during `P7-016`'s gate review):** this card's own `Status`/
+`Outcome` were never updated after its real, accepted completion — evidence existed, work-items.json
+already said `done`, but this file stayed `Draft` with no Outcome until now.

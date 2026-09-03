@@ -1,6 +1,6 @@
 # P7-016 — Phase 7 integration gate
 
-Status: `Blocked`
+Status: `Done`
 
 ## Objective
 
@@ -57,3 +57,25 @@ Independently verify all Phase 7 evidence against `Documentation~/scope.md`'s "R
 Blocked — Phase 7 was only decomposed, not yet implemented, as of this card's own creation
 (`Planning~/MASTER_PLAN.md`'s Phase 7 decomposition entry). Assignable once `P7-001` through
 `P7-015` are all `Done`.
+
+## Outcome
+
+**Accepted, with disclosed gaps — does not declare `1.0.0`** — 2026-09-03, against commit
+`eedeb3c8408714ed5e5b3ee773a7a76c258e9864`. Clean detached-UPM-harness compile (exit 0) and full
+EditMode regression **1269/1270**, 0 skipped (up from `P6-GATE`'s 1224/1224) — one real,
+pre-existing, disclosed failure (`McpApiReferenceGenerator`'s package-root resolution silently
+breaks for a real UPM consumer, first surfaced by this gate's own detached-harness technique; spun
+off as `P7-021`, not fixed inside this gate). Public API: **425 types/2130 members, +13/+34 versus
+`P6-GATE`'s own combined baseline, confirmed purely additive by direct type-set comparison, zero
+removals**. Assembly dependency audit: zero drift since `P6-GATE`. `scope.md`'s 7 release criteria
+checked item-by-item: 5 fully met, 2 partially met (stable contracts — blocked on tree-format `v2`
+promotion; production-ready editor/debugger — blocked on a still-undecided-but-unbuilt production
+Play-mode host). This gate's own review found and fixed real bookkeeping drift (4 task cards with
+accepted evidence but a stale `Status: Draft`) and closed a genuinely open acceptance criterion —
+`P7-001`'s stability proposal had no recorded owner decision; one was gathered live this session
+(`Runtime`/`Authoring` stable, `Editor`/`Mcp` experimental — the latter partly *because* this gate
+found a real, previously-undocumented breaking change in `AIBT.Mcp`'s own tool-surface history),
+producing three new required-before-`1.0` follow-up cards (`P7-018`, `P7-019`, `P7-020`) plus a
+fourth from the regression failure above (`P7-021`) — none required for this gate's own verdict.
+`README.md`/`CHANGELOG.md` had no Phase 7 section at all; both updated. **Phase 7 is complete**:
+`P7-001` through `P7-016` are all `Done`. See `Planning~/Evidence/P7-GATE/README.md`.
