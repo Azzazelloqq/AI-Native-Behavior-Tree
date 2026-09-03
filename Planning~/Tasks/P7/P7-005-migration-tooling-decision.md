@@ -1,6 +1,6 @@
 # P7-005 — Migration-tooling design decision
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -82,3 +82,24 @@ disposable spike: a real authored document run through the recommended mechanism
 ## Handoff notes
 
 - If accepted, `P7-006` applies the ADR to production.
+
+## Outcome
+
+Done. `ADR-P7-005` (`AIBT-036`, Accepted 2026-09-02): migration tooling covers only field-added-with-
+default and field-renamed (removal/type-change disclosed as unhandled), via a declarative, ordered
+`(NodeTypeId, sourceVersion)` rule registry at the authoring-tooling layer only (never inside the
+Burst-compiled node, so ABI v1's ban on node-execution migration callbacks does not apply).
+`validate`/`compile` apply migrations to an in-memory copy only — the on-disk document is never
+mutated as a side effect. Every applied migration emits a structured, non-blocking `Info`-severity
+diagnostic reachable through `explain_diagnostic`, so an MCP-driving AI agent sees exactly what
+changed without being blocked — persisting the fix is a separate explicit action (Editor
+notification, never gating the MCP path; and an MCP tool), both deferred to `P7-006`. Diff preview
+reuses the existing `CanonicalTreeJsonWriter`. Decided through direct discussion with the owner
+(this is an AI-first library — diagnostics must be structurally reachable by an agent, not only
+readable by a human), not decided unilaterally. A disposable spike
+(`Spikes~/MigrationToolingDecision/SpikeMigrationTooling.cs`, run live via Unity MCP, 2/2 passed)
+proved the mechanism against a real fixture node type bumped v1→v2 (rename + add-with-default),
+compiled through the real `ReferenceCompiler`, plus a negative case (unregistered v2→v3 gap) still
+hard-failing through the existing `UnsupportedNodeVersion` diagnostic, unchanged. Full regression
+(`AIBT.Editor.Tests`, 376/376) passed with no production file touched. See
+`Planning~/Evidence/P7-005/README.md`.

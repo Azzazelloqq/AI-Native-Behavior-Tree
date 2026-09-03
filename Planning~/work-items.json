@@ -1685,7 +1685,7 @@
       "id": "P7-005",
       "phase": 7,
       "title": "Migration-tooling design decision",
-      "status": "draft",
+      "status": "done",
       "kind": "spike",
       "card": "Planning~/Tasks/P7/P7-005-migration-tooling-decision.md",
       "dependsOn": [

@@ -1,0 +1,18 @@
+{
+  "schema": "aibt-p7-005-verification-v1",
+  "passed": true,
+  "findings": [
+    "TEST_RESULT|SpikeMigrationTooling.RealVersionBump_MigratesInMemoryAndCompilesAgainstV2Manifest|Passed",
+    "TEST_RESULT|SpikeMigrationTooling.UnregisteredVersionGap_StillHardFailsThroughTheExistingValidator|Passed",
+    "TEST_RESULT|AIBT.Editor.Tests (full regression after spike archived out)|376/376 passed",
+    "INVESTIGATION|TreeValidator.cs:487|hard equality check confirmed, zero compatibility path",
+    "INVESTIGATION|repo-wide grep for migration execution machinery|none exists for node types; BlackboardTypeDescriptor's MigrationSourceVersion/MigrationContractId is declared metadata with zero consumers",
+    "INVESTIGATION|burst-node-abi-v1.md:429-430|custom migration callbacks forbidden inside Burst nodes",
+    "INVESTIGATION|repo-wide search for node version bumps|none found; every fixture/sample stays at version 1",
+    "DECISION|ADR-P7-005 (AIBT-036), Status: Proposed|scope=rename+add-with-default only; mechanism=declarative authoring-layer rule registry; in-memory-only auto-fix; structured non-blocking Info diagnostics; explicit separate persist; diff via existing CanonicalTreeJsonWriter",
+    "DELIVERABLE|Documentation~/decisions/ADR-P7-005-migration-tooling.md|created",
+    "DELIVERABLE|Spikes~/MigrationToolingDecision/SpikeMigrationTooling.cs|created (disposable, archived from Tests/Editor/)",
+    "DELIVERABLE|Planning~/Evidence/P7-005/|created",
+    "WORK_ITEM_STATUS|P7-005|draft->done (ADR-P7-005 accepted 2026-09-02)"
+  ]
+}

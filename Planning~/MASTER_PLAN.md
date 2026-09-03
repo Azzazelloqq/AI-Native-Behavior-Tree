@@ -825,3 +825,30 @@ review and approved committing it as-is while asking for a dedicated look at evi
 discipline generally, rather than deciding unilaterally in the moment -- spun off as `P7-017`
 (`Draft`, depends only on `P7-003`, not required for the `P7-016` gate, mirroring `P6-013`-`P6-021`'s
 own cross-phase-debt pattern). See `Planning~/Evidence/P7-003/`.
+
+`P7-005` (migration-tooling design decision) is also **done: `ADR-P7-005` (`AIBT-036`) accepted
+2026-09-02**. Investigation before deciding anything found the real gap: `TreeValidator.cs:487`
+today does a hard equality check on a node's `TypeVersion` with zero compatibility path — any
+version bump instantly invalidates every existing authored document referencing that node type, no
+automated or documented recovery exists; zero migration execution machinery exists anywhere for
+node types (the closest precedent, `BlackboardTypeDescriptor`'s own `MigrationSourceVersion`/
+`MigrationContractId`, is declared metadata for a different kind of type with zero consumers
+anywhere); `burst-node-abi-v1.md` forbids custom migration callbacks inside a Burst-compiled node;
+and no node type has ever actually been version-bumped in this project's history — a genuinely
+greenfield decision with zero real precedent to validate scope against. Discussed directly with the
+owner rather than decided unilaterally, grounded in this being an AI-first library (the primary
+consumer of a diagnostic is often an MCP-driving agent, not only a human): the decision covers only
+field-added-with-default and field-renamed (removal/type-change stay disclosed hard failures); the
+mechanism is a declarative, ordered `(NodeTypeId, sourceVersion)` rule registry at the
+authoring-tooling layer only, never inside the node itself, so ABI v1's ban does not apply;
+`validate`/`compile` apply it to an in-memory copy only, the on-disk document is never mutated as a
+side effect; every applied migration emits a structured, non-blocking `Info`-severity diagnostic
+reachable through `explain_diagnostic`; persisting to disk is a separate explicit action (an Editor
+notification that must never block the MCP/AI-agent path, and an MCP tool), both deferred to
+`P7-006`; diff preview reuses the existing `CanonicalTreeJsonWriter`. A disposable spike
+(`Spikes~/MigrationToolingDecision/`, run live via Unity MCP, 2/2 passed) proved the mechanism
+against a real fixture node type bumped v1→v2 (rename + add-with-default), compiled through the
+real `ReferenceCompiler`, and a negative case (an unregistered v2→v3 gap) still hard-failing through
+the existing `UnsupportedNodeVersion` diagnostic, unchanged — the recorded diff shows exactly
+`"moveSpeed": 10` → `"speed": 10, "acceleration": 5`. No production code shipped; `P7-006` applies
+this ADR to production. See `Planning~/Evidence/P7-005/`.
