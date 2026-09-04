@@ -1171,8 +1171,8 @@ control-flow findings. Concurrent P7-028 work remains outside this review's chan
 | --- | --- | --- | --- |
 | Document/native state migration | [P7-029](Tasks/P7/P7-029-migration-and-hot-reload-data-loss-fixes.md) | Data preservation, active stack/cursor reconciliation, cooldown state | Done 2026-09-04; owner-approved active-child lifecycle |
 | Production host execution | [P7-030](Tasks/P7/P7-030-production-host-execution-contract.md) | Terminal handling, clock, Action lifecycle, Budgeted integration | Done 2026-09-04; owner-approved implementation |
-| MCP node development | [P7-031](Tasks/P7/P7-031-mcp-node-development-boundaries.md) | Assets containment, actual compile log, compile observation ordering | Draft |
-| Native scheduler recovery | [P7-032](Tasks/P7/P7-032-native-scheduler-error-recovery.md) | Rejected completion buffers in SameFrame and Pipelined | Draft |
+| MCP node development | [P7-031](Tasks/P7/P7-031-mcp-node-development-boundaries.md) | Assets containment, attempt-bound compilation, complete TCP recipe | Done 2026-09-04; 46/46 focused and live post-apply compile |
+| Native scheduler recovery | [P7-032](Tasks/P7/P7-032-native-scheduler-error-recovery.md) | Rejected completion buffers in SameFrame and Pipelined | Done 2026-09-04; 126/126 scheduling tests |
 
 Formulation corrections: host terminal handling is P2 (the terminal result is not itself lost);
 automatic restart is not an assumed requirement. The Tick-only delegate's documented contract

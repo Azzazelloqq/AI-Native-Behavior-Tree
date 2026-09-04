@@ -1,6 +1,6 @@
 # P7-031 — Correct MCP node-development compile tracking and apply boundaries
 
-Status: `InProgress`
+Status: `Done`
 
 Owner approved the attemptId-bound protocol and narrow helper scope on 2026-09-04.
 See `Planning~/Evidence/P7-031/implementation-proposal.md`.
@@ -113,7 +113,8 @@ implemented and verified: 43/43 focused, 1709/1712 full EditMode with the three 
 failures, server build and static checks passed. Live TCP compile/check/error recovery and path
 refusal are verified. P6-009's stale header was reconciled with its existing completion evidence.
 
-The complete recipe is not passing: existing test-node dispatch uses Allocator.Temp from the
-background bridge thread, and successful apply leaves a staging catalog referencing the moved
-shard. See Evidence/P7-031/README.md and follow-up-proposal.md for evidence and a bounded scope
-extension. Keep InProgress until these required integration gates pass; no commit or push.
+The owner subsequently approved the scope extension and commits. Both recipe blockers are fixed:
+background test dispatch uses owned native storage and successful apply clears its temporary
+catalog source after path validation. The complete TCP recipe and post-apply compilation passed.
+Final verification: 46/46 focused; 1726/1729 full, with the same three baseline failures.
+See Evidence/P7-031/README.md and live-final.json. No push.

@@ -1,0 +1,44 @@
+{
+  "start": {
+    "result": {
+      "status": "pending",
+      "attemptId": "201b161f3d114425b1451d85a9db4c3b"
+    }
+  },
+  "check": {
+    "result": {
+      "attemptId": "201b161f3d114425b1451d85a9db4c3b",
+      "status": "compiled",
+      "contentHash": "3797d51e4b16d5507e665eb58310ae8fd9df53640899850df0dc3de6b694510b"
+    }
+  },
+  "test": {
+    "result": {
+      "valid": true,
+      "shardId": "aibt.p731.live-condition-shard",
+      "contentHash": "3797d51e4b16d5507e665eb58310ae8fd9df53640899850df0dc3de6b694510b",
+      "dispatchProven": true,
+      "enteredSuccessfully": true,
+      "tickStatus": "Success",
+      "tickCallbackFailure": "Success"
+    }
+  },
+  "apply": {
+    "result": {
+      "applied": true,
+      "destination": "P731-LiveVerification",
+      "shardId": "aibt.p731.live-condition-shard",
+      "files": [
+        "LiveConditionNode.cs",
+        "LiveConditionNodeTests.cs",
+        "AIBT.Generated.P731-LiveVerification.asmdef"
+      ]
+    }
+  },
+  "postApply": {
+    "compiling": false,
+    "appliedAssemblyLoaded": true,
+    "compilerErrors": 0,
+    "stagedSourceCount": 0
+  }
+}

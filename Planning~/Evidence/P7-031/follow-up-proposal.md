@@ -1,6 +1,6 @@
 # P7-031 remaining recipe blockers: proposed scope extension
 
-Status: Proposed, requires owner approval. These are pre-existing P7-009 integration defects
+Status: Accepted by owner on 2026-09-04, including commits and autonomous continuation. These are pre-existing P7-009 integration defects
 found by P7-031's required real TCP recipe, not failures of the new compile-attempt tracker.
 
 ## Evidence

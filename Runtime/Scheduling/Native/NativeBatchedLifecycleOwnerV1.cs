@@ -13,6 +13,9 @@ namespace AIBT
 
         private NativeBatchedLifecycleOwnerV1() { }
 
+        // Completion can reject its inputs without consuming the scheduled operation.
+        internal bool HasOutstandingOperation => _state == 2;
+
         internal static bool TryCreate(
             NativeLifecycleMachineV1[] machines,
             Allocator allocator,

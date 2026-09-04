@@ -135,6 +135,10 @@ namespace AIBT.Mcp.NodeDevelopment
             var destination = ValidateDestination(projectRoot, destinationRelativePath);
             RejectLinkedPath(projectRoot, root);
             foreach (var file in Directory.GetFiles(root, "*.cs")) RejectLinkedPath(projectRoot, file);
+            var catalogRoot = CatalogRootPath(projectRoot);
+            RejectLinkedPath(projectRoot, catalogRoot);
+            if (Directory.Exists(catalogRoot))
+                foreach (var file in Directory.GetFiles(catalogRoot, "*.cs")) RejectLinkedPath(projectRoot, file);
 
             Directory.CreateDirectory(destination);
             var moved = new List<string>();
@@ -151,6 +155,9 @@ namespace AIBT.Mcp.NodeDevelopment
                 moved.Add(asmdefPath);
             }
 
+            // This companion verifies the staging assembly only; after moving its shard the
+            // reference would be invalid. Keep the existing assembly layout, clear its source.
+            ClearCatalogSet(projectRoot);
             return moved;
         }
 

@@ -59,7 +59,9 @@ namespace AIBT.Mcp.NodeDevelopment
             GenericNativeDispatchTranslatorV1.BuiltShape built;
             try
             {
-                built = GenericNativeDispatchTranslatorV1.Build(artifact, targetTypeId, handshake, Allocator.Temp);
+                // The TCP bridge invokes this on a managed worker thread. Storage is explicitly
+                // disposed below; Temp allocations are only valid on Unity's supported threads.
+                built = GenericNativeDispatchTranslatorV1.Build(artifact, targetTypeId, handshake, Allocator.Persistent);
             }
             catch (NotSupportedException ex)
             {

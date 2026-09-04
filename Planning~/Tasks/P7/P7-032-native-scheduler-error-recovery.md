@@ -1,6 +1,8 @@
 # P7-032 — Preserve native scheduler ownership after rejected completion
 
-Status: `Draft`
+Status: `Done`
+
+Owner authorized autonomous continuation on 2026-09-04. See Evidence/P7-032/implementation-plan.md.
 
 ## Objective
 
@@ -87,5 +89,6 @@ does not support or require a new performance claim.
 
 ## Handoff notes
 
-Draft only; no production fix is authorized by creating this card. P7-030 separately owns
-production-host integration and must not absorb this controller-level recovery issue.
+Owner authorized continuation and commits on 2026-09-04. Completed with 14 added real-job
+regressions; 126/126 scheduling tests passed. Full EditMode: 1726/1729, the same three baseline
+failures. See Evidence/P7-032/README.md. No policy, latency or normal-round work changed.

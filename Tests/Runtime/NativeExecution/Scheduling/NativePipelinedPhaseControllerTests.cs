@@ -205,6 +205,92 @@ namespace AIBT.Tests.Runtime.NativeExecution.Scheduling
             }
         }
 
+
+        [TestCase(-1, 1)]
+        [TestCase(0, 1)]
+        [TestCase(2, 1)]
+        [TestCase(1, -1)]
+        [TestCase(1, 0)]
+        [TestCase(1, 2)]
+        public void RejectedCompletionBuffersPreserveRoundForRetry(int resultLength, int failureLength)
+        {
+            using var scenario = new Scenario();
+            Assert.That(NativePipelinedPhaseControllerV1.TryCreate(new[] { scenario.Machine },
+                Allocator.Persistent, out var controller, out var failure), Is.True);
+            using var results = new NativeArray<NativeLifecycleStepResultV1>(1, Allocator.Persistent);
+            using var failures = new NativeArray<NativeRuntimeFailureV1>(1, Allocator.Persistent);
+            using var rejectedResults = resultLength < 0 ? default : new NativeArray<NativeLifecycleStepResultV1>(resultLength, Allocator.Persistent);
+            using var rejectedFailures = failureLength < 0 ? default : new NativeArray<NativeRuntimeFailureV1>(failureLength, Allocator.Persistent);
+            if (rejectedResults.IsCreated && rejectedResults.Length > 0)
+            {
+                var writableResults = rejectedResults;
+                writableResults[0] = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.Completed, 777u);
+            }
+            try
+            {
+                Assert.That(controller.TryBeginSnapshot(1, out failure), Is.True);
+                Assert.That(controller.TryCompleteSnapshot(1, out failure), Is.True);
+                Assert.That(controller.TryScheduleExecuteRound(1, default, out _, out failure), Is.True);
+                Assert.That(controller.TryAdvanceStage(out failure), Is.True);
+                Assert.That(controller.TryCompleteExecuteRound(rejectedResults, rejectedFailures, out failure), Is.False);
+                Assert.That(failure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid));
+                Assert.That(controller.Phase, Is.EqualTo(NativePipelinedPhaseV1.ExecuteScheduled));
+                if (rejectedResults.IsCreated && rejectedResults.Length > 0)
+                    Assert.That(rejectedResults[0].NodeIndex, Is.EqualTo(777u), "Rejected buffers must not receive output.");
+                Assert.That(controller.TryAbortUpdate(out failure), Is.False);
+                Assert.That(controller.TryDispose(out failure), Is.False);
+                Assert.That(controller.TryCompleteExecuteRound(results, failures, out failure), Is.True);
+                Assert.That(results[0].Kind, Is.EqualTo(NativeLifecycleStepKindV1.CompositeEntered));
+                Assert.That(scenario.Control[0].SemanticSteps, Is.EqualTo(1), "Retry consumes the same job, without rescheduling.");
+
+                Assert.That(controller.TryScheduleExecuteRound(1, default, out _, out failure), Is.True);
+                Assert.That(controller.TryAdvanceStage(out failure), Is.True);
+                Assert.That(controller.TryCompleteExecuteRound(results, failures, out failure), Is.True);
+                Assert.That(scenario.Control[0].SemanticSteps, Is.EqualTo(2));
+                Assert.That(controller.TrySealExecute(out failure), Is.True);
+                Assert.That(controller.TryCompleteReduce(out failure), Is.True);
+                Assert.That(controller.TryCompletePublish(out var metrics, out failure), Is.True);
+                Assert.That(metrics.ExecuteRounds, Is.EqualTo(2));
+                Assert.That(metrics.ExecutedAtomicSteps, Is.EqualTo(2));
+                Assert.That(controller.TryBeginSnapshot(2, out failure), Is.True);
+                Assert.That(controller.TryAbortUpdate(out failure), Is.True);
+            }
+            finally
+            {
+                if (controller.Phase == NativePipelinedPhaseV1.ExecuteScheduled)
+                    controller.TryCompleteExecuteRound(results, failures, out _);
+                if (controller.Phase != NativePipelinedPhaseV1.Idle) controller.TryAbortUpdate(out _);
+                Assert.That(controller.TryDispose(out failure), Is.True, failure.Code.ToString());
+            }
+        }
+
+        [Test]
+        public void CompletedLaneFailureReleasesRoundAndPreservesDiagnostic()
+        {
+            using var scenario = new Scenario();
+            var controlStorage = scenario.Control;
+            var control = controlStorage[0];
+            control.UpdateOpen = 0; // The actual job must reject Advance outside an update.
+            controlStorage[0] = control;
+            Assert.That(NativePipelinedPhaseControllerV1.TryCreate(new[] { scenario.Machine },
+                Allocator.Persistent, out var controller, out var failure), Is.True);
+            using var results = new NativeArray<NativeLifecycleStepResultV1>(1, Allocator.Persistent);
+            using var failures = new NativeArray<NativeRuntimeFailureV1>(1, Allocator.Persistent);
+            try
+            {
+                Assert.That(controller.TryBeginSnapshot(1, out failure), Is.True);
+                Assert.That(controller.TryCompleteSnapshot(1, out failure), Is.True);
+                Assert.That(controller.TryScheduleExecuteRound(1, default, out _, out failure), Is.True);
+                Assert.That(controller.TryAdvanceStage(out failure), Is.True);
+                Assert.That(controller.TryCompleteExecuteRound(results, failures, out failure), Is.False);
+                Assert.That(failure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid));
+                Assert.That(failures[0].Code, Is.EqualTo(failure.Code));
+                Assert.That(controller.Phase, Is.EqualTo(NativePipelinedPhaseV1.ExecuteReady));
+                Assert.That(controller.TryAbortUpdate(out failure), Is.True);
+            }
+            finally { Assert.That(controller.TryDispose(out failure), Is.True, failure.Code.ToString()); }
+        }
+
         private sealed class Scenario : System.IDisposable
         {
             internal readonly NativeArray<NativeCompiledNodeRecordV1> Nodes;

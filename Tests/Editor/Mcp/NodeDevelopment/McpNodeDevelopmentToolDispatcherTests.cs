@@ -68,6 +68,52 @@ namespace AIBT.Tests.Editor.Mcp.NodeDevelopment
             Directory.CreateDirectory(_assetsDir);
         }
 
+        [Test]
+        public void SuccessfulMoveClearsVerificationCatalogWithoutShippingIt()
+        {
+            StagingSlot.WriteNode(_assetsDir, "Node.cs", "node");
+            StagingSlot.WriteCatalogSet(_assetsDir, "Catalog.cs", "verification only");
+            var moved = StagingSlot.MoveTo(_assetsDir, "Generated/Applied");
+            Assert.That(StagingSlot.ListStagedFiles(_assetsDir), Is.Empty);
+            Assert.That(moved.Select(Path.GetFileName), Does.Not.Contain("Catalog.cs"));
+            Assert.That(File.ReadAllText(Path.Combine(_assetsDir, "Generated/Applied/Node.cs")), Is.EqualTo("node"));
+        }
+
+        [Test]
+        public void RejectedMovePreservesNodeAndVerificationCatalog()
+        {
+            StagingSlot.WriteNode(_assetsDir, "Node.cs", "node");
+            StagingSlot.WriteCatalogSet(_assetsDir, "Catalog.cs", "verification only");
+            var hash = StagingSlot.ComputeContentHash(_assetsDir);
+            Assert.Throws<System.ArgumentException>(() => StagingSlot.MoveTo(_assetsDir, "../Outside"));
+            Assert.That(StagingSlot.ComputeContentHash(_assetsDir), Is.EqualTo(hash));
+            Assert.That(StagingSlot.ListStagedFiles(_assetsDir).Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void GeneratedDispatchRunsOnBackgroundThreadWithOwnedNativeStorage()
+        {
+            Assert.That(GeneratedNodeReflectionHarness.TryFindShardType("AIBT.NodeDevelopment.ShardFixture", out var shard, out var reason), Is.True, reason);
+            Assert.That(GeneratedNodeReflectionHarness.TryReflectMetadata(shard, out var metadata, out reason), Is.True, reason);
+            Assert.That(GeneratedNodeReflectionHarness.TryMaterializeArtifact(metadata, out var artifact, out reason), Is.True, reason);
+            Assert.That(GeneratedNodeReflectionHarness.TryFindCatalogSetType("AIBT.NodeDevelopment.CatalogFixture", out var catalog, out reason), Is.True, reason);
+            Assert.That(artifact.Nodes[0].Manifest.TypeId, Is.EqualTo("aibt.tests.node-development-condition"));
+            GenericNodeDispatchRunner.RunResult result = default;
+            System.Exception failure = null;
+            var worker = new System.Threading.Thread(() =>
+            {
+                try { result = GenericNodeDispatchRunner.Run(artifact, catalog); }
+                catch (System.Exception exception) { failure = exception; }
+            }) { IsBackground = true };
+            worker.Start();
+            Assert.That(worker.Join(10000), Is.True, "Native dispatch must finish on the requesting thread.");
+            Assert.That(failure, Is.Null, failure?.ToString());
+            Assert.That(result.DispatchProven, Is.True, result.Reason);
+            Assert.That(result.EnteredSuccessfully, Is.True);
+            Assert.That(result.TickStatus, Is.EqualTo("Success"));
+            Assert.That(result.CallbackFailure, Is.EqualTo("Success"));
+        }
+
         [TearDown]
         public void RemoveTempProject()
         {

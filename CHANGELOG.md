@@ -8,8 +8,10 @@ All notable changes to this project will be documented here. The project follows
 
 - MCP node compilation now uses an explicit, domain-reload-persistent `attemptId` and an Editor
   compilation request. Legacy log-offset checks require a new start/check sequence. Apply validates
-  Assets containment and rejects link/reparse ancestry. P7-031 remains pending the complete TCP
-  recipe: existing dispatch allocator and staging companion cleanup blockers are documented.
+  Assets containment and rejects link/reparse ancestry. Background TCP test dispatch uses owned
+  native storage; successful apply clears its staging-only catalog so subsequent compilation works.
+- SameFrame and Pipelined controllers retain scheduled ownership after rejected completion buffers,
+  allowing a valid retry without replay. Completed lane failures preserve their cleanup path.
 
 - Document migration preserves blackboard, description, revision, scope contracts and bindings.
   Native hot reload preserves compatible cooldown state and cancels the previous active child

@@ -190,8 +190,11 @@ namespace AIBT
             _dependency.Complete();
             if (!_execution.TryComplete(results, failures, out failure))
             {
-                _dependency = default;
-                _phase = NativePipelinedPhaseV1.ExecuteReady;
+                if (!_execution.HasOutstandingOperation)
+                {
+                    _dependency = default;
+                    _phase = NativePipelinedPhaseV1.ExecuteReady;
+                }
                 return false;
             }
             if (_rounds == uint.MaxValue || ulong.MaxValue - _steps < _laneCount)

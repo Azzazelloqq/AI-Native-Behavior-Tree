@@ -14,6 +14,7 @@ $assets = Join-Path $fixture 'Assets'
 $outside = Join-Path $fixture 'Outside'
 $junction = Join-Path $assets 'Link'
 $sourceJunction = $null
+$catalogJunction = $null
 $checks = [System.Collections.Generic.List[string]]::new()
 try {
     $node = Invoke-Slot 'WriteNode' @($assets, 'Node.cs', 'original')
@@ -45,6 +46,18 @@ try {
     if (!$rejected -or ![IO.File]::Exists($node)) { throw 'Existing destination changed' }
     $checks.Add('existing destination rejected')
     $stagingRoot = Invoke-Slot 'RootPath' @($assets)
+    $catalogTarget = Join-Path $outside 'CatalogTarget'
+    New-Item -ItemType Directory -Path $catalogTarget | Out-Null
+    [IO.File]::WriteAllText((Join-Path $catalogTarget 'Catalog.cs'), 'keep catalog')
+    $catalogJunction = Join-Path $stagingRoot 'Catalog'
+    New-Item -ItemType Junction -Path $catalogJunction -Target $catalogTarget | Out-Null
+    $rejected = $false
+    try { Invoke-Slot 'MoveTo' @($assets, 'Generated/CatalogLink') | Out-Null }
+    catch { if ($_.Exception.InnerException -is [ArgumentException]) { $rejected = $true } else { throw } }
+    if (!$rejected -or ![IO.File]::Exists($node) -or [IO.File]::ReadAllText((Join-Path $catalogTarget 'Catalog.cs')) -ne 'keep catalog') { throw 'Catalog cleanup followed a junction' }
+    $checks.Add('catalog junction rejected before move or cleanup')
+    Remove-Item -LiteralPath $catalogJunction
+    $catalogJunction = $null
     $sourceTarget = Join-Path $outside 'StagedSource'
     $resolvedFixture = [IO.Path]::GetFullPath($fixture) + [IO.Path]::DirectorySeparatorChar
     foreach ($candidate in @($stagingRoot, $sourceTarget)) {
@@ -65,6 +78,7 @@ finally {
     $resolved = [IO.Path]::GetFullPath($fixture)
     if (!$resolved.StartsWith($expectedParent, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe fixture cleanup path' }
     if (Test-Path -LiteralPath $junction) { Remove-Item -LiteralPath $junction }
+    if ($catalogJunction -and (Test-Path -LiteralPath $catalogJunction)) { Remove-Item -LiteralPath $catalogJunction }
     if ($sourceJunction -and (Test-Path -LiteralPath $sourceJunction)) { Remove-Item -LiteralPath $sourceJunction }
     if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force }
 }

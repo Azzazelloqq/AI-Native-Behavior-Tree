@@ -1,68 +1,52 @@
-# P7-031 verification checkpoint
+# P7-031 verification
 
-Status: **InProgress**, 2026-09-04. No commit or push. Existing P7-029/P7-030 and unrelated
-host-project changes are preserved. The compile/path fixes are verified; the complete TCP recipe
-has two pre-existing integration blockers requiring the proposed scope extension below.
+Status: **Done**, 2026-09-04. The owner approved the initial protocol, subsequent recipe repairs
+and commits. Earlier review fixes were committed in 1ff1b2a; this evidence covers the completed
+follow-up. Unrelated host-project changes are preserved. No push.
 
-## Implemented
+## Implemented behavior
 
-- Assets-relative canonical destination validation before mutation; rooted/drive-relative paths,
-  escapes, ambiguous components, existing destinations and link/reparse ancestry are rejected.
+- Assets-relative canonical destination validation before mutation, including rooted/drive-relative
+  paths, escapes, ambiguous components, existing destinations and link/reparse ancestry.
 - One Library-backed attemptId bound to staged relative paths and contents. The main-thread hook
   imports and explicitly requests compilation after any current compile. Both staging assemblies
-  must be verified by compiler events. assemblyCompilationNotRequired is valid up-to-date evidence
-  for that requested attempt; any rebuilt assembly requires reload before success is exposed.
-- The actual Editor log supplies diagnostics only. Unknown/superseded/restarted or changed-content
-  attempts cannot claim success. Test/apply retain hash and registry checks.
-- Server check arguments, recipe source/generated output and contract documentation updated.
+  must be verified by compiler events. assemblyCompilationNotRequired is up-to-date evidence for
+  that attempt; any rebuilt assembly requires reload before success is exposed.
+- Actual Editor log diagnostics only; no success from raw log markers. Unknown, superseded,
+  restarted or changed-content attempts are rejected. Server and recipes use attemptId.
+- Background TCP test dispatch owns Persistent native storage and disposes it after the request.
+  Successful apply removes the staging-only catalog source after validating its ancestry, preserving
+  the existing assembly layout. Rejected requests retain staging content.
 
 ## Verification
 
-- Unity compilation succeeds after fixing missing exception namespace imports. Initial errors
-  were in this implementation; the cause of the owner's Editor crash was not established.
-- Initial focused run: 40/41, one NUnit Count-constraint misuse; corrected without changing the
-  expected count. After the fix: 41/41. Live up-to-date compiler events exposed a tracker omission;
-  two regression cases were added and both event paths are now handled.
-- Final focused EditMode: **43/43 passed**, zero failed/skipped, job
-  fccf43ebd210466ebee499ae11c4175c.
-- Full EditMode: **1709/1712 passed, 3 failed, 0 skipped**; AIBT: **1342/1344**.
-  Fresh Unity TestResults.xml covers 14:10:22–14:11:45 UTC. MCP lost callback state on domain
-  reload and reported initialization failure; the completed XML is the result authority.
-  The same two CodeGen PackageInfo assertions and LocalSaveSystem autosave assertion failed
-  as in P7-029. Exact names/messages and job identity are in verification-results.json.
-- Server build: dotnet build Assets/AIBT/MCP~/Server --no-restore, 0 warnings/errors.
-- Static verification: Verify-Static.ps1 passed, 7 schemas and 137 work items.
-- Production C# path probe through PowerShell .NET: **15/15**, including actual Windows destination
-  and staging junctions and unchanged source/target on refusal. See path-verification.json.
-  This is additional filesystem proof, not part of the Unity test count.
-- Full generated documentation regenerated in Unity with McpDocumentationRegenerateCommand.
-- git diff --check passed.
+- Focused EditMode: **46/46 passed**, job 1acf994e9aaa42c79c88bbcd86ab2c90.
+- Full host EditMode with P7-032: **1726/1729 passed, 3 failed, 0 skipped**, job
+  b38994b8ba4e472087dbfbde0834563b. The same two CodeGen PackageInfo assertions and LocalSaveSystem
+  autosave assertion fail as before. Exact names/messages/counts are in verification-results.json.
+- Real Windows filesystem probes against the production C# code: **16/16**, including destination,
+  staging-root and companion-catalog junction rejection without source/target mutation.
+- Server build: 0 errors/warnings. Static checks: 7 schemas and 137 work items passed.
+- Full generated documentation regenerated in Unity. git diff --check passed.
+- The first regressions reproduced both recipe blockers. The worker-thread fixture was corrected
+  to use a real single-node catalog with the supported typed binding/configuration; generic
+  multi-node and empty-configuration fixtures were not substituted for the staging contract.
+  The final fixture executes the generated Enter/Tick callbacks on a real managed worker thread.
 
-## Live recipe
+## Live TCP recipe
 
-See live-verification.json. An initially absent staging slot was used for a disposable UInt32
-condition. Generate, preview and scaffold calls went through the real background TCP bridge.
+The final run used an initially absent staging slot and a disposable UInt32 condition. All calls
+went through the actual background TCP bridge: generate, preview, scaffold, start/check, test, apply.
+See live-final.json for responses. test returned valid=true, dispatchProven=true, Enter success,
+Tick Success and callback Success. Apply moved node/test/asmdef under Assets/P731-LiveVerification.
+Without manual intervention, the subsequent Unity compilation had zero errors, loaded the applied
+shard and found zero remaining staged .cs files. All owned probe sources were then removed.
 
-- start/check returned pending and then compiled, including when both assemblies were already
-  compiled before start. The attempt persisted through import/domain reload and repeated checks.
-- A deliberate #error returned failed with CS1029 diagnostics. Restoring the source and starting
-  again recovered to compiled. Changed staging and a stale apply hash were refused with AIBT9032.
-- Without a loaded staging assembly, apply refused with AIBT9035.
-- TCP test_node failed with AIBT9013 because GenericNodeDispatchRunner uses Allocator.Temp on the
-  background bridge thread. The same request on the main thread returned valid=true,
-  dispatchProven=true, Enter success and Tick Success. This is not a passing TCP test_node.
-- TCP apply moved the expected node/test/asmdef into Assets/P731-LiveVerification. The next compile
-  failed AIBT5011/CS0246 because the staging-only companion catalog still referenced the moved
-  shard. After removing the owned staging fixture, the applied assembly compiled and loaded
-  both the generated node and shard. This does not make the unmodified full recipe pass.
-- All created staging/applied source fixtures were removed. The Editor returned to compiling
-  without errors before automated regression tests. No user staging files were overwritten.
+Earlier negative/ordering probes in live-verification.json remain historical evidence: completed
+Auto Refresh before start, import/domain reload, repeated checks, intentional CS1029 compilation
+failure and recovery, changed-content/stale-hash AIBT9032, and absent-registry AIBT9035. Its earlier
+test/apply failures are fixed by this follow-up; they are not the final recipe outcome.
 
-## Remaining acceptance gate
-
-The agreed compile/path implementation does not fix GenericNodeDispatchRunner's allocator or
-the pre-existing staging companion cleanup. The current card's file/packaging scope was not
-silently broadened. See [follow-up-proposal.md](follow-up-proposal.md) for a bounded extension:
-background-compatible owned allocation, successful-apply-only companion cleanup, behavior
-regressions and a fresh complete TCP/post-apply verification. P7-031 must stay InProgress until
-that required recipe passes. P7-032 remains subsequent work.
+No Player build or new performance claim is made for this Editor-only workflow. The generated
+paired NUnit scaffold remains explicitly inconclusive; real native dispatch proof comes from
+test_node and the committed regression fixture. No general task queue or transport rewrite.

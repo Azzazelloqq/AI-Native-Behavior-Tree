@@ -1,0 +1,7 @@
+{
+  "name": "AIBT.NodeDevelopment.CatalogFixture",
+  "references": ["AIBT.Runtime", "AIBT.NodeDevelopment.ShardFixture", "Unity.Burst"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false,
+  "analyzers": ["GUID:31a3f09584684895a0a72916d3ad4de0"]
+}

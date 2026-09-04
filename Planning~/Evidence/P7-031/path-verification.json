@@ -1,6 +1,6 @@
 {
   "environment": "PowerShell .NET; production C# path implementation, not Unity tests",
-  "passed": 15,
+  "passed": 16,
   "checks": [
     "rejected: ../Escape",
     "rejected: ..\\AssetsSibling\\Node",
@@ -16,6 +16,7 @@
     "accepted: Generated/One/Node",
     "accepted: Generated\\Two\\Node",
     "existing destination rejected",
+    "catalog junction rejected before move or cleanup",
     "staging junction rejected without source/target mutation"
   ]
 }
