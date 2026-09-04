@@ -1,0 +1,12 @@
+{
+  "format": "aibt.layout",
+  "formatVersion": 1,
+  "treeId": "tree.samples.showcase-timed-sequence",
+  "direction": "topToBottom",
+  "nodes": {
+    "root": { "position": { "x": 360, "y": 40 }, "pinned": true },
+    "prepare": { "position": { "x": 40, "y": 260 } },
+    "act": { "position": { "x": 360, "y": 260 } },
+    "settle": { "position": { "x": 680, "y": 260 } }
+  }
+}

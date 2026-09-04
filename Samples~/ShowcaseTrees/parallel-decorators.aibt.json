@@ -1,0 +1,54 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.samples.showcase-parallel-decorators",
+  "name": "Parallel and Decorators",
+  "description": "Requires three deterministic branches to succeed while demonstrating nested decorators.",
+  "root": "parallel",
+  "nodes": {
+    "parallel": {
+      "type": "aibt.core.parallel",
+      "typeVersion": 1,
+      "displayName": "Complete every branch",
+      "parameters": { "policy": "require-all-success" },
+      "children": ["repeat", "recover", "long-wait"]
+    },
+    "repeat": {
+      "type": "aibt.core.repeater",
+      "typeVersion": 1,
+      "displayName": "Repeat twice",
+      "parameters": { "count": 2, "stopOnFailure": true },
+      "children": ["short-wait"]
+    },
+    "short-wait": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "displayName": "Short work — 1 tick",
+      "parameters": { "ticks": 1 }
+    },
+    "recover": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "displayName": "Invert expected failure",
+      "children": ["expected-failure"]
+    },
+    "expected-failure": {
+      "type": "aibt.core.failer",
+      "typeVersion": 1,
+      "displayName": "Return failure after wait",
+      "children": ["failure-wait"]
+    },
+    "failure-wait": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "displayName": "Failure delay — 1 tick",
+      "parameters": { "ticks": 1 }
+    },
+    "long-wait": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "displayName": "Long branch — 3 ticks",
+      "parameters": { "ticks": 3 }
+    }
+  }
+}

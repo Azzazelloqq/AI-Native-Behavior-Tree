@@ -80,6 +80,10 @@ Additional platforms and Unity versions are supported only after validation by t
 
 ## Documentation
 
+To inspect complete production-node examples, import **Showcase Trees** from Unity Package Manager,
+open **AIBT > Graph Editor**, and pass either imported `.aibt.json` path to the window's public
+`OpenFromPath` API (or an MCP/editor integration that calls it). Each tree includes a saved layout.
+
 - [Scope](Documentation~/scope.md)
 - [Architecture](Documentation~/architecture.md)
 - [Execution and scheduling](Documentation~/execution-and-scheduling.md)

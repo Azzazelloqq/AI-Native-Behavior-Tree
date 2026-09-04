@@ -1926,7 +1926,7 @@
       "id": "P7-023",
       "phase": 7,
       "title": "Showcase example behavior trees",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-023-showcase-example-trees.md",
       "dependsOn": [],

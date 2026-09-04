@@ -1,6 +1,6 @@
 # P7-023 — Showcase example behavior trees
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -73,6 +73,14 @@ live open via AIBT/Graph Editor against the real project, screenshot proof
 ```
 
 ## Handoff notes
+
+- Completed 2026-09-04: `Samples~/ShowcaseTrees` adds a timed memory-sequence and a deterministic
+  parallel/decorator example, using only production built-ins. Both parse, validate, compile,
+  execute to their documented Success, and open with zero graph diagnostics, authored complete
+  layouts, and no overlaps. Static verification passed (7 schemas, 137 items). The fixed public
+  preview driver still omits stdlib leaf behavior registration and faults at execution; direct
+  reference-machine behavior and this existing preview limitation are recorded in
+  [evidence](../../Evidence/P7-023/README.md).
 
 - Spun off from a direct owner request this session (2026-09-03) — "I have never actually looked at
   a graph with my own eyes" — after live-demoing the existing `parallel-decorator` golden fixture in

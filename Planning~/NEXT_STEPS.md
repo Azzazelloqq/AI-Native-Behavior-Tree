@@ -14,6 +14,10 @@ Update after step 2 (2026-09-04): P7-025 is Done. The graph viewer supports norm
 selection, loads stored layouts, keeps movement transient, and presents readable titles. See
 [evidence](Evidence/P7-025/README.md). P7-023 is the next planned scope.
 
+Update after step 3 (2026-09-04): P7-023 is Done. Two production-node examples parse, validate,
+compile, execute to Success, and open with zero diagnostics in authored layouts. See
+[evidence](Evidence/P7-023/README.md). P7-024 is the next planned scope.
+
 - P7-028 and review scopes P7-029 through P7-032 are Done. The package working tree was clean.
 - Latest completed full host EditMode run: 1726/1729 passed. Two CodeGen PackageInfo assertions
   and one LocalSaveSystem autosave test remain failed; do not describe this as an all-green suite.

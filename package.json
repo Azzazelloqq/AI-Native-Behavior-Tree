@@ -21,6 +21,11 @@
       "displayName": "Public Burst Nodes",
       "description": "Condition and asynchronous Action nodes using only the public generated Burst API.",
       "path": "Samples~/BurstNodes"
+    },
+    {
+      "displayName": "Showcase Trees",
+      "description": "Readable production-node trees with saved graph layouts.",
+      "path": "Samples~/ShowcaseTrees"
     }
   ],
   "author": {

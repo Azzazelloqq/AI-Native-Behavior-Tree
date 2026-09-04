@@ -11,6 +11,10 @@ positions and derives readable titles without changing semantic identity. See
 [evidence](Evidence/P7-025/README.md). The next approved-plan scope is P7-023; see
 [next steps](NEXT_STEPS.md).
 
+2026-09-04 update: **P7-023 is Done**. Two production-node showcase trees ship with readable
+layouts and verified reference outcomes; both opened live in AIBT Graph with zero diagnostics and
+no overlaps. See [evidence](Evidence/P7-023/README.md). P7-024 is next.
+
 ## Required reading order
 
 1. Repository `AGENTS.md`.

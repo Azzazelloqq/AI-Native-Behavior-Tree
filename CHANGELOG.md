@@ -6,6 +6,9 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- Two readable production-node showcase trees demonstrate timed sequence and deterministic
+  parallel/decorator behavior, each with a committed graph layout and verified execution outcome.
+
 - `AIBT Graph` now supports pan, zoom, node dragging, click and box selection; it reads existing
   layout positions and shows readable titles while keeping semantic editing disabled.
 

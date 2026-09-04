@@ -1,0 +1,15 @@
+{
+  "format": "aibt.layout",
+  "formatVersion": 1,
+  "treeId": "tree.samples.showcase-parallel-decorators",
+  "direction": "topToBottom",
+  "nodes": {
+    "parallel": { "position": { "x": 420, "y": 30 }, "pinned": true },
+    "repeat": { "position": { "x": 40, "y": 230 } },
+    "short-wait": { "position": { "x": 40, "y": 450 } },
+    "recover": { "position": { "x": 420, "y": 230 } },
+    "expected-failure": { "position": { "x": 420, "y": 450 } },
+    "failure-wait": { "position": { "x": 420, "y": 670 } },
+    "long-wait": { "position": { "x": 800, "y": 230 } }
+  }
+}
