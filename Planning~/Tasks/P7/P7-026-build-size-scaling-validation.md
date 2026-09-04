@@ -1,6 +1,6 @@
 # P7-026 — Validate Player build size does not scale materially with tree count
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -78,6 +78,20 @@ two real Player builds, real file-size diff, root-caused
 ```
 
 ## Handoff notes
+
+- Completed 2026-09-04: two real Windows x64 IL2CPP release builds, 1/100 Resources trees,
+  both Player validation probes passed. Raw shipped delta +36,028 bytes; code binaries and
+  IL2CPP metadata byte-identical. Growth is serialized tree data and resource index metadata.
+  Static verification passed (7 schemas, 137 work items). See
+  [evidence](../../Evidence/P7-026/README.md) and
+  [harness](../../../Benchmarks~/Phase7/BuildSize/README.md).
+  Authored-JSON packaging includes a fixed Authoring/compiler probe; runtime-only/precompiled,
+  other-platform and catalog-size scaling claims remain unmeasured.
+
+- 2026-09-04: owner authorized step 1 of `Planning~/NEXT_STEPS.md`. Implementation uses the
+  established isolated Windows IL2CPP harness pattern, with two current-source builds (1 and 100
+  trees), fixed node catalog, BuildReport attribution and actual Player payload validation.
+  Historical P4 scheduling build sizes are context, not a controlled one-tree baseline.
 
 - Owner request this session (2026-09-03), explicitly distinguished from `P7-017` (repo
   evidence-artifact size, a different concern) after the owner clarified they meant runtime build

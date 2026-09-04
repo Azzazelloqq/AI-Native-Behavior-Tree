@@ -18,6 +18,19 @@
 | Web — mobile browsers (any) | **Unmeasured** | **Unmeasured** | **Explicitly unsupported** — disclosed in both `P2-WEB` and `P0-003`'s own evidence, not silently omitted. |
 | Console (any) | **Unmeasured** | **Unmeasured** | **Explicitly unsupported** — `USER_ACTIONS.md`: "Provide console platform access before any console support claim." |
 
+## Player size versus tree count — measured Windows scope
+
+P7-026 measured two Windows x64 IL2CPP release Players on Unity 6000.5.8f1 with the same node
+catalog: 1 versus 100 authored JSON trees. Raw shipped files grew from **87,958,367 to 87,994,395
+bytes** (+36,028, about 0.041%). All code binaries and IL2CPP metadata were byte-identical; growth
+was confined to serialized Resources data and its index. Both Players loaded and compiled every
+expected tree and matched input hashes and catalog fingerprint.
+
+This supports absence of per-tree code growth in this fixed-catalog comparison, not constant
+total Player size. The probe ships Authoring plus JSON; runtime-only precompiled packaging,
+catalog-size scaling, archive/download size and Android/Web size are unmeasured. Reproduction,
+inventories and exact attribution: [P7-026 evidence](../Planning~/Evidence/P7-026/README.md).
+
 ## Regression-threshold proposal
 
 Real spread from the Windows Player results (`windows-player-scheduling-20260821.json`,

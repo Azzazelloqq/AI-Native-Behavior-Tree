@@ -6,6 +6,10 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- Reproducible Windows IL2CPP tree-count size comparison: 1/100 authored trees, actual Player
+  payload verification and file inventories. The measured +36,028-byte delta is serialized data
+  and resource metadata; code is byte-identical. See `Planning~/Evidence/P7-026/` for scope limits.
+
 - MCP node compilation now uses an explicit, domain-reload-persistent `attemptId` and an Editor
   compilation request. Legacy log-offset checks require a new start/check sequence. Apply validates
   Assets containment and rejects link/reparse ancestry. Background TCP test dispatch uses owned

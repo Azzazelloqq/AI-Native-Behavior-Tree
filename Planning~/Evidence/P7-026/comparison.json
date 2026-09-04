@@ -1,0 +1,50 @@
+{
+  "sourceCommit": "8a874a4aac5cd4aa43a939919a09805b735eb529",
+  "target": "StandaloneWindows64",
+  "backend": "IL2CPP",
+  "unityVersion": "6000.5.8f1",
+  "treeCounts": [
+    1,
+    100
+  ],
+  "sourceBytes": [
+    265,
+    26500
+  ],
+  "packedTreeBytes": [
+    292.0,
+    29200.0
+  ],
+  "shippedBytes": [
+    87958367,
+    87994395
+  ],
+  "deltaBytes": 36028,
+  "catalogFingerprint": "04964054223a169375feece15d76bc9d84ebd7efa2e20a8b6a8891266dd62b89",
+  "differences": [
+    {
+      "path": "AIBTSizeProbe_Data/boot.config",
+      "beforeBytes": 156,
+      "afterBytes": 156,
+      "deltaBytes": 0,
+      "beforeHash": "8cc095fc9a33fc83bcf7103c652e4521a1425f6bbf72b716a6e8687834b7e04b",
+      "afterHash": "d8039ea60aef6b3e24422a73253010548d2955b28d89ec1ed5428e5160c46cd3"
+    },
+    {
+      "path": "AIBTSizeProbe_Data/globalgamemanagers",
+      "beforeBytes": 40868,
+      "afterBytes": 44436,
+      "deltaBytes": 3568,
+      "beforeHash": "68df7b94946bac0c8b51690703dd2267a5f9b145045ac597bb268b2a89c5d169",
+      "afterHash": "bf86938308f7c821b2acbf342a24f91c23fecc3445d9599ed58d99381bb6b8c2"
+    },
+    {
+      "path": "AIBTSizeProbe_Data/resources.assets",
+      "beforeBytes": 1752,
+      "afterBytes": 34212,
+      "deltaBytes": 32460,
+      "beforeHash": "b2bdf74ff583eba45e8eb9d529bd4dd4749902323239aab88f6e1c810082979d",
+      "afterHash": "b2a8fea7ef4b92db6a1bc5f2b20466f919994adf77265362178fc5a2fd484a64"
+    }
+  ]
+}

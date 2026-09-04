@@ -1,0 +1,1 @@
+{"name":"AIBT.BuildSize.Probe","references":["AIBT.Runtime","AIBT.Authoring","AIBT.Authoring.BuiltInLeaves.Catalog"],"autoReferenced":true}

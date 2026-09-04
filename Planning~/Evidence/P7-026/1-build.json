@@ -1,0 +1,150 @@
+{
+    "trees": 1,
+    "unityVersion": "6000.5.8f1",
+    "backend": "IL2CPP",
+    "target": "StandaloneWindows64",
+    "contentHash": "1d7de9c778e1a653545f18e52e71c3e01bd9516273c6bea506c475af459bda38",
+    "development": false,
+    "burst": true,
+    "sourceBytes": 265,
+    "summaryBytes": 657136188,
+    "shippedBytes": 87958367,
+    "files": [
+        {
+            "path": "AIBTSizeProbe.exe",
+            "sha256": "922bca676cca2fb4fd06b9e5938dee6f665a1d9f8ba73491fb7b476fbee0260e",
+            "bytes": 667648
+        },
+        {
+            "path": "AIBTSizeProbe_Data/Plugins/x86_64/lib_burst_generated.dll",
+            "sha256": "1ae425adeead0e8d14be2ff6bd29f11fccc6391dc06b8ff2bfdb5e23afc5a2f4",
+            "bytes": 229376
+        },
+        {
+            "path": "AIBTSizeProbe_Data/Resources/unity default resources",
+            "sha256": "1fbaff511bdec6cf276529de02215fee9fdcf7298ea9d7c49dc6b984ee73a7f5",
+            "bytes": 5881648
+        },
+        {
+            "path": "AIBTSizeProbe_Data/Resources/unity_builtin_extra",
+            "sha256": "e9d3ec70109221b2b4a01b0b1b4682eb81d25ff19709430a072c6e6384738572",
+            "bytes": 407608
+        },
+        {
+            "path": "AIBTSizeProbe_Data/RuntimeInitializeOnLoads.json",
+            "sha256": "8486c8c19230aea8964d048976d8f75c155afee370ca07fdc255056f405f2ae7",
+            "bytes": 833
+        },
+        {
+            "path": "AIBTSizeProbe_Data/ScriptingAssemblies.json",
+            "sha256": "9a239d927157bc1f4fe73f004ca987bf69bb5b84556e9491828b3913a30da684",
+            "bytes": 3578
+        },
+        {
+            "path": "AIBTSizeProbe_Data/app.info",
+            "sha256": "e89d82d4564c23a03d1819c7d22f6415bae524116a5e41f14eac5537fa0be850",
+            "bytes": 30
+        },
+        {
+            "path": "AIBTSizeProbe_Data/boot.config",
+            "sha256": "8cc095fc9a33fc83bcf7103c652e4521a1425f6bbf72b716a6e8687834b7e04b",
+            "bytes": 156
+        },
+        {
+            "path": "AIBTSizeProbe_Data/globalgamemanagers",
+            "sha256": "68df7b94946bac0c8b51690703dd2267a5f9b145045ac597bb268b2a89c5d169",
+            "bytes": 40868
+        },
+        {
+            "path": "AIBTSizeProbe_Data/globalgamemanagers.assets",
+            "sha256": "f282d0bbe47a656e3cd7f315bcd4225a6df85f6dd8a9e35b7a78ec68670f795c",
+            "bytes": 44144
+        },
+        {
+            "path": "AIBTSizeProbe_Data/globalgamemanagers.assets.resS",
+            "sha256": "39dd38fcd8dd95d41d6d55fe16a448d29fe2c31d9a162c825c24c6d99a893d7a",
+            "bytes": 2796240
+        },
+        {
+            "path": "AIBTSizeProbe_Data/il2cpp_data/Metadata/global-metadata.dat",
+            "sha256": "8c9b42b6e30261a0316f056feaf2bdcbc22aaf25056f322714501447472d3805",
+            "bytes": 5365484
+        },
+        {
+            "path": "AIBTSizeProbe_Data/il2cpp_data/Resources/System.Data.dll-resources.dat",
+            "sha256": "98a7950ec6de3242c2e190dfa630188dfa32511a125542b94baa952d1c757d49",
+            "bytes": 93718
+        },
+        {
+            "path": "AIBTSizeProbe_Data/il2cpp_data/Resources/System.Drawing.dll-resources.dat",
+            "sha256": "7c33aa707bc3fdc83991b81a97d6fc622b140762a767300f08f616c2c0a91255",
+            "bytes": 25453
+        },
+        {
+            "path": "AIBTSizeProbe_Data/il2cpp_data/Resources/mscorlib.dll-resources.dat",
+            "sha256": "c5baa176a5b72cd545266340e42102d393a5e43d38c95796bc828918bb95277f",
+            "bytes": 337563
+        },
+        {
+            "path": "AIBTSizeProbe_Data/level0",
+            "sha256": "4b32c1267157b8c4683a327b61dc4f0440f8e0fea372a8d6257533bd3353d258",
+            "bytes": 764
+        },
+        {
+            "path": "AIBTSizeProbe_Data/resources.assets",
+            "sha256": "b2bdf74ff583eba45e8eb9d529bd4dd4749902323239aab88f6e1c810082979d",
+            "bytes": 1752
+        },
+        {
+            "path": "AIBTSizeProbe_Data/sharedassets0.assets",
+            "sha256": "8c5b426df0c21788c637c3014a1edc3eba5b1f5addc3279339876752bd60bed5",
+            "bytes": 7856
+        },
+        {
+            "path": "AIBTSizeProbe_Data/sharedassets0.assets.resS",
+            "sha256": "393efe6399536384aa91bdfc4e64f244b4d3e1fbb6a4ff145c483ffee64ccb36",
+            "bytes": 524288
+        },
+        {
+            "path": "D3D12/D3D12Core.dll",
+            "sha256": "625bd40005b1c3708695d5256ecf230d278e6b8edba5a88af70f3d91324f3052",
+            "bytes": 4725304
+        },
+        {
+            "path": "GameAssembly.dll",
+            "sha256": "1d885cc65c19100737742829ac8d24527218733bc76d0bf0ef60ba3bd1543422",
+            "bytes": 25767424
+        },
+        {
+            "path": "UnityCrashHandler64.exe",
+            "sha256": "75fd85565d9a7efec8930bbd80d19686c8fc2c85731153f22f2ca6daee609976",
+            "bytes": 1736616
+        },
+        {
+            "path": "UnityPlayer.dll",
+            "sha256": "277953a7035b1633c239904853bfbea7b2948937ef5567e70c1911c260dd1414",
+            "bytes": 37370792
+        },
+        {
+            "path": "baselib.dll",
+            "sha256": "5b4ac89349c0b57e2a78f3378a727a6f6110ca7a458bde3004600d57911a82fa",
+            "bytes": 239536
+        },
+        {
+            "path": "dstorage.dll",
+            "sha256": "cae65787f61514bec6f012f44546e68b19e39d8854a9ab52af813370d44b272a",
+            "bytes": 206904
+        },
+        {
+            "path": "dstoragecore.dll",
+            "sha256": "cf85b19a92a8276f8baca0db9bbcd60735bad50768deb303d310e84d5f4fdd11",
+            "bytes": 1482784
+        }
+    ],
+    "packedTrees": [
+        {
+            "path": "Assets/Resources/Trees/tree-0000.aibt.json",
+            "bytes": 292
+        }
+    ]
+}

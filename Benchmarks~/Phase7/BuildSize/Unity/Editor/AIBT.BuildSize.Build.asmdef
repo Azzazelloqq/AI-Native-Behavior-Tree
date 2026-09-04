@@ -1,0 +1,1 @@
+{"name":"AIBT.BuildSize.Build","references":["AIBT.BuildSize.Probe","Unity.Burst"],"includePlatforms":["Editor"],"autoReferenced":true}

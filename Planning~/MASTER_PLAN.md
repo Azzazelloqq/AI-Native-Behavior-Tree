@@ -2,6 +2,12 @@
 
 This plan is the coordination entry point for human and AI contributors.
 
+2026-09-04 update: **P7-026 is Done**. The controlled Windows IL2CPP comparison (1/100 authored
+trees) added 36,028 shipped bytes, wholly in serialized Resources data/index files; code and
+IL2CPP metadata are byte-identical. Both actual Player payload probes and static verification
+passed. See [evidence](Evidence/P7-026/README.md) for packaging limits and reproduction.
+The next approved-plan scope is P7-025; see [next steps](NEXT_STEPS.md).
+
 ## Required reading order
 
 1. Repository `AGENTS.md`.
