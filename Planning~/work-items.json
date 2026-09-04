@@ -2000,7 +2000,7 @@
       "id": "P7-028",
       "phase": 7,
       "title": "Production-ready built-in node library",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-028-production-node-library.md",
       "dependsOn": [],
@@ -2017,10 +2017,57 @@
       "card": "Planning~/Tasks/P7/P7-029-migration-and-hot-reload-data-loss-fixes.md",
       "dependsOn": [
         "P7-006",
-        "P7-012"
+        "P7-012",
+        "P7-018"
       ],
       "owns": [
         "Planning~/Evidence/P7-029/"
+      ]
+    },
+    {
+      "id": "P7-030",
+      "phase": 7,
+      "title": "Complete the production host execution contract",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-030-production-host-execution-contract.md",
+      "dependsOn": ["P7-027", "P7-010"],
+      "owns": [
+        "Runtime/Integration/ProductionTreeHost.cs",
+        "Tests/Runtime/Integration/ProductionTreeHostTests.cs",
+        "Planning~/Evidence/P7-030/"
+      ]
+    },
+    {
+      "id": "P7-031",
+      "phase": 7,
+      "title": "Correct MCP node-development compile tracking and apply boundaries",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-031-mcp-node-development-boundaries.md",
+      "dependsOn": ["P6-009", "P7-009"],
+      "owns": [
+        "MCP/NodeDevelopment/StagingSlot.cs",
+        "MCP/NodeDevelopment/EditorLogCompileWatcher.cs",
+        "MCP/NodeDevelopment/McpNodeDevelopmentToolDispatcher.cs",
+        "Tests/Editor/Mcp/NodeDevelopment/",
+        "Planning~/Evidence/P7-031/"
+      ]
+    },
+    {
+      "id": "P7-032",
+      "phase": 7,
+      "title": "Preserve native scheduler ownership after rejected completion",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-032-native-scheduler-error-recovery.md",
+      "dependsOn": ["P2-019", "P4-003"],
+      "owns": [
+        "Runtime/Scheduling/Native/NativeBatchedLifecycleOwnerV1.cs",
+        "Runtime/Scheduling/Native/NativeSameFramePhaseControllerV1.cs",
+        "Runtime/Scheduling/Native/NativePipelinedPhaseControllerV1.cs",
+        "Tests/Runtime/NativeExecution/Scheduling/",
+        "Planning~/Evidence/P7-032/"
       ]
     },
     {

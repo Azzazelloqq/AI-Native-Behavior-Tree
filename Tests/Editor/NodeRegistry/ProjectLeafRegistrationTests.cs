@@ -121,7 +121,7 @@ namespace AIBT.Tests.Editor.NodeRegistry
 
             var query = new NodeCatalogQuery(result.Registry);
             Assert.That(query.TryGetContract(CustomLeafTypeId, out _), Is.True);
-            Assert.That(result.Registry.Count, Is.EqualTo(BuiltInNodeManifests.All.Count + 1));
+            Assert.That(result.Registry.Count, Is.EqualTo(BuiltInNodeManifests.All.Count + BuiltInLeafManifests.All.Count + 1));
         }
 
         private static TreeDocument SingleLeafTree()

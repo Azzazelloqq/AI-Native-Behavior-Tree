@@ -1,0 +1,30 @@
+{
+  "schema": "aibt-p7-028-verification-v1",
+  "passed": true,
+  "findings": [
+    "OWNER_DECISION|both native Burst and reference-executor mechanisms at once|owner's explicit choice, not assumed",
+    "SCOPE_NARROWED_BY_INVESTIGATION|three parallel node-authoring mechanisms found, not one|manual NodeManifest builder (11 composites, hardcoded native kinds) / IReferenceLeafBehaviorProvider (managed-only, P7-008) / [AibtBurstNode] codegen (real native execution, leaf-only -- BurstNodeKind has no Decorator/Composite value)",
+    "ARCHITECTURAL_WALL_1|native [AibtBurstNode] blackboard access requires a GeneratedHandle config field, ReferenceCompiler.BuildBlackboardSlots has no support for it at all, only literal NodeManifest.Reads key names|a manifest satisfying the native side's own canonical-JSON parity requirement would have empty Reads, so its reference behavior could never actually read the value -- confirmed live via the shard's own generated JSON for a trial aibt.core.blackboard-bool-condition node",
+    "OWNER_DECISION|drop aibt.core.blackboard-bool-condition from scope|put to the owner rather than shipping a non-functional-on-one-backend node or silently making it reference-only",
+    "ARCHITECTURAL_WALL_2|AIBT.CodeGen's BurstNodeGenerator (AIBT5012) permanently freezes aibt.core. against any live [AibtCatalogSet] shard|leaving RuntimeBuiltInCatalogAuthority unchanged rejects the shard's claim as unauthorized; amending it to include the new nodes makes the generator's own registry merge (authority + shard) find a duplicate -- no way through for a new aibt.core.* Burst-declared node, confirmed by trying both directions live",
+    "OWNER_DECISION|new always-on namespace aibt.stdlib.* for built-in leaves with a real native declaration|outside the aibt.core. generator gate entirely",
+    "DELIVERABLE|Authoring/Registry/Generated/BuiltInLeaves/Runtime/BuiltInLeafNodes.cs|new, aibt.stdlib.wait (Action) and aibt.stdlib.random-condition (Condition), real [AibtBurstNode] structs",
+    "DELIVERABLE|Authoring/Registry/Generated/BuiltInLeaves/Catalog/BuiltInLeafCatalog.cs|new, [AibtCatalogSet]; its asmdef references Unity.Burst directly, mirroring Samples~/BurstNodes/Catalog/'s own established pattern (the generated facade needs [BurstCompile])",
+    "DELIVERABLE|Authoring/Model/Nodes/BuiltInLeafManifests.cs|new, the two reference-side IReferenceLeafBehaviorProvider implementations",
+    "DELIVERABLE|Authoring/Registry/NodeRegistryBuilder.cs|new AddBuiltInLeaf (source BuiltIn, real reference handler binding); CreateWithBuiltIns() folds in BuiltInLeafManifests.All; ValidateSource's BuiltIn case now accepts aibt.stdlib. alongside aibt.core.",
+    "DELIVERABLE|Authoring/Registry/Generated/RuntimeBuiltInCatalogAuthorityVerifier.cs|narrowed to rebuild only the aibt.core. subset of the live registry, matching what the frozen authority now represents",
+    "COMPILE_TIME_INVARIANT_DISCOVERED|reference NodeManifest and native [AibtBurstNode]-derived manifest must serialize to byte-identical canonical JSON, not merely describe the same observable contract|drove exact text/parameter-name/memory-size/example corrections during implementation, verified against the shard's own generator-emitted AibtGeneratedMetadata read live via reflection",
+    "TEST_RESULT|Tests/Editor/NodeRegistry/BuiltInLeafManifestsTests.cs (new, 4 tests)|4/4 passed: both leaves registered as BuiltIn with a real reference handler binding and an executable behavior; reference manifests byte-match the native shard's own generated JSON (regression-proofed via reflection, not hand re-typed); wait runs for the configured tick count then succeeds through the real unmodified ReferenceExecutionMachine; random-condition is 0%-always-fails/100%-always-succeeds deterministic at the boundary",
+    "GOLDEN_FIXTURE_UPDATES|NodeRegistryHashTests/NodeRegistryBuilderTests/ProjectLeafRegistrationTests/McpToolDispatcherTests/minimal-compiled-v1.golden.json|updated for the now-13-entry built-in registry's new canonical hash and count -- mechanical, not behavioral changes",
+    "DOC_REGEN|Documentation~/generated/|regenerated via the real AIBT/MCP/Regenerate Documentation menu command",
+    "STATIC_VERIFICATION|Tools~/Verification/Verify-Static.ps1|passed, 7 schemas, 137 work items",
+    "TEST_RESULT|AIBT.Editor.Tests (live run_tests, full assembly)|396/396 passed, 0 failed (392 baseline + 4 new)",
+    "TEST_RESULT|whole host-project regression (live run_tests, no assembly filter, ~1653 tests)|3 pre-existing unrelated failures only (same 3 disclosed in P7-018's own evidence) -- zero regressions attributable to this card",
+    "PUBLIC_API|Get-FullPublicApi.ps1 -BaselinePath Tools~/Verification/P7/Audit/Baseline/public-api-baseline.txt|passed, purely additive: 10 new public members, zero removals or renames",
+    "LIVE_PROOF|real McpVerificationToolDispatcher.Validate/.Compile (reflection, exact production tool bodies) against a real tree file scanned from the actual project, using aibt.stdlib.wait, validated against the project's own real .aibt/policy.json|valid=true, success=true, zero diagnostics",
+    "LIVE_PROOF|BuiltInLeafCatalog.IsUsable via reflection|true -- the [AibtCatalogSet] compiled and the generator accepted both aibt.stdlib.* declarations as real, usable native output",
+    "SCOPE_LIMITATION|random-condition's live end-to-end MCP proof|the project's own adopted policy forbids non-deterministic nodes by default, so the same live-MCP proof used for wait was not repeated for random-condition (would require a policy change out of scope here) -- proven instead deterministically (0%/100% boundary) through the real unmodified ReferenceExecutionMachine in BuiltInLeafManifestsTests",
+    "SCOPE_LIMITATION|aibt.core.blackboard-bool-condition|dropped from this card per owner decision; a real fix requires either extending ReferenceCompiler to resolve GeneratedHandle blackboard bindings (a new feature) or accepting a reference-only leaf -- future work, not attempted here",
+    "WORK_ITEM_STATUS|P7-028|draft->done"
+  ]
+}

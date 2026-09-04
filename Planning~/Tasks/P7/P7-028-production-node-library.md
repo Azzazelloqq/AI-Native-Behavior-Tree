@@ -1,6 +1,6 @@
 # P7-028 — Production-ready built-in node library
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -85,3 +85,47 @@ Get-FullPublicApi.ps1 -BaselinePath Tools~/Verification/P7/Audit/Baseline/public
 - Owner request this session (2026-09-03) — confirmed in scope for `1.0`. The concrete node list is
   deliberately left open for the implementing session's own planning pass, grounded in real recurring
   patterns (existing golden/sample fixtures) rather than picked here.
+
+## Outcome
+
+Investigation before planning found the codebase actually has **three** parallel node-authoring
+mechanisms, not the one this card's own "same location/pattern as the existing 11" framing implied:
+the manual `NodeManifest` builder the 11 composites use (execution hardcoded into
+`NativeLifecycleMachineV1`), `IReferenceLeafBehaviorProvider` (managed, reference-executor-only,
+P7-008), and `[AibtBurstNode]` attribute + codegen (real native Burst execution, `BurstNodeKind` is
+leaf-only — no Decorator/Composite value exists). Owner chose both mechanisms at once for the new
+nodes, which scoped this card to leaf nodes only (Condition/Action).
+
+Two genuinely new architectural facts surfaced mid-implementation, each resolved with the owner:
+
+1. A node that reads the blackboard from a native `[AibtBurstNode]` struct can only do so through a
+   `GeneratedHandle` config field + `[AibtBlackboardBinding]`, which the reference compiler
+   (`ReferenceCompiler.BuildBlackboardSlots`) has no support for at all — it only resolves blackboard
+   access through literal `NodeManifest.Reads` key names. A manifest shaped to satisfy the native side
+   would have empty `Reads`, meaning the reference behavior could never actually observe the value.
+   Owner dropped the planned `aibt.core.blackboard-bool-condition` node from scope rather than either
+   building the reference-compiler feature this would require or making the node reference-only.
+2. `AIBT.CodeGen`'s `BurstNodeGenerator` permanently freezes the `aibt.core.` namespace against any
+   live `[AibtCatalogSet]` shard (AIBT5012) — its authority-merge step treats a shard's own declared
+   identity as a duplicate the moment it also appears in `RuntimeBuiltInCatalogAuthority` (the frozen
+   11-composite snapshot), and as unauthorized the moment it doesn't. There is no way to add a new
+   natively-executed `aibt.core.*` node through this pathway; that namespace is permanently reserved
+   for the original 11 hardcoded structural composites/decorators. Owner chose a new always-on
+   namespace, `aibt.stdlib.*`, for built-in leaves that do carry a real native declaration.
+
+Delivered: two production nodes, each shipping both a real native Burst execution path and a real
+reference-executor path, byte-identity-checked against each other where the compile-time ABI
+enforcement requires it:
+
+- `aibt.stdlib.wait` (Action) — runs for a configured `ticks` count, then succeeds.
+- `aibt.stdlib.random-condition` (Condition) — succeeds with a configured `success-chance-percent`
+  probability, drawn from the native side's real per-instance deterministic Burst random stream on
+  native, and a `System.Random` instance on reference (disclosed, not bit-identical between the two
+  backends — the manifest's own `whenNotToUse` text says so).
+
+`NodeRegistryBuilder.CreateWithBuiltIns()` now also folds these in via a new `AddBuiltInLeaf` (source
+`BuiltIn`, a real reference handler binding, distinct from `AddProjectExtension`'s `UserExtension`
+source since `aibt.core.`/`aibt.stdlib.` are reserved, project-extension namespaces are not).
+`RuntimeBuiltInCatalogAuthorityVerifier`'s rebuild was narrowed to the `aibt.core.` subset of the
+registry only, matching what the frozen authority actually represents now that "built-in" and
+"aibt.core." are no longer the same set.

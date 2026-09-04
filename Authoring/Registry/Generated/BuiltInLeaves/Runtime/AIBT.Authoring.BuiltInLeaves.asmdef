@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.Authoring.BuiltInLeaves",
+  "rootNamespace": "AIBT.Authoring.BuiltInLeaves",
+  "references": [
+    "AIBT.Runtime"
+  ],
+  "analyzers": [
+    "GUID:31a3f09584684895a0a72916d3ad4de0"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

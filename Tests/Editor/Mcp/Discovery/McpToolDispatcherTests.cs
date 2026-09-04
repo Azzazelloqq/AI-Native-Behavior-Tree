@@ -58,6 +58,7 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
 
             var expectedTypeIds = AIBT.Authoring.BuiltInNodeManifests.All
                 .Select(m => m.TypeId)
+                .Concat(AIBT.Authoring.BuiltInLeafManifests.All.Select(p => p.Manifest.TypeId))
                 .OrderBy(id => id, System.StringComparer.Ordinal)
                 .ToArray();
             Assert.That(typeIds, Is.EqualTo(expectedTypeIds),

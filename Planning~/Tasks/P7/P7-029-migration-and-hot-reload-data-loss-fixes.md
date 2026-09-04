@@ -4,8 +4,9 @@ Status: `Draft`
 
 ## Objective
 
-Three real, independently confirmed bugs (live-reproduced by the owner, then re-confirmed here by
-direct code reading, not assumption) in already-shipped Phase 7 functionality:
+Preserve document data and consistent native execution state during migration. This card groups
+three review findings in existing Phase 7 functionality. Revalidated against `66fa058` on
+2026-09-04; evidence and remaining semantic decisions are distinguished below.
 
 1. **`DocumentMigrator.TryMigrate` silently drops document- and node-level data.**
    `Authoring/Migration/DocumentMigrator.cs:59-61` reconstructs the migrated `TreeDocument` with
@@ -19,7 +20,8 @@ direct code reading, not assumption) in already-shipped Phase 7 functionality:
    overload with no `bindings` argument, silently dropping every migrated node's generated-binding
    map. Reproduced live: a valid document with one blackboard key has zero keys after migration and
    still compiles "successfully" — a false-positive that hides real data loss from both a human and
-   an MCP-driving agent.
+   an MCP-driving agent. The omitted document `Revision` also falls back to 1; preserve it unless
+   an accepted migration contract explicitly calls for changing it.
 2. **Native hot reload after a structural child reorder can corrupt an active `Sequence`'s
    execution**, running the wrong child or skipping one entirely. `Runtime/Execution/Native/
    HotReload/NativeHotReloadStateMigration.cs:154-158` resets a reordered composite's structural
@@ -49,6 +51,24 @@ direct code reading, not assumption) in already-shipped Phase 7 functionality:
 - `P7-006` (migration tooling implementation — the card that shipped `DocumentMigrator`).
 - `P7-012` (native-backend hot reload implementation — the card that shipped
   `NativeHotReloadStateMigration`).
+- `P7-018` (current v2 Agent/Shared document contracts that must survive migration).
+
+## Revalidation and formulation corrections
+
+- Findings 1 and 2 remain P1; finding 3 remains P2. In this re-review, the canonical migration
+  probe again changed one blackboard key to zero and still compiled, and the active reorder probe
+  again produced `a:Tick, a:Exit, a:Enter, a:Tick, a:Exit, Completed`, skipping `b`.
+- The earlier cooldown probe reported initialized flag 1 -> 0, retained deadline 110, and Success
+  at time 20 where the configured blocked result was Failure. This probe was not rerun in the
+  re-review; current code inspection again confirms that the separate flag array is not copied.
+- Data preservation means semantic/model-field preservation, not byte-for-byte retention of JSON
+  whitespace/property order: this migrator operates on a document model, not source text.
+- ADR-P5-001 explicitly resets a reordered Memory composite's cursor to not-yet-started.
+  Consequently, an unconditional "no child may ever repeat" criterion is incorrect: a reset may
+  legitimately re-enter a child. Require a coherent stack/cursor and the accepted reset semantics.
+- Before implementation, agree the precise callback sequence for reconciling a still-active child
+  with that reset, including any required Abort/Exit. Do not silently invent lifecycle behavior or
+  remove active-instance migration support. Keep this card Draft until that decision is resolved.
 
 ## Required reading
 
@@ -90,36 +110,47 @@ direct code reading, not assumption) in already-shipped Phase 7 functionality:
 
 ## Deliverables
 
-- `DocumentMigrator`-migrated documents/nodes are byte-for-byte faithful except for the fields a
-  rule chain actually changed.
-- A reordered, actively-running `Sequence` (or other composite) resumes correctly after native hot
-  reload — the exact right child runs next, none skipped or repeated.
+- Migrated documents/nodes preserve all semantic fields except those explicitly changed by the
+  rule chain: include blackboard, description, revision, Agent/Shared contracts and node bindings.
+- A reordered, actively-running `Sequence` resumes with a stack/cursor consistent with the accepted
+  reset policy; no child is skipped or duplicated as an artifact of conflicting state. Legitimate
+  re-entry caused by the agreed reset is tested explicitly rather than prohibited.
 - A migrated Cooldown node's `CooldownInitialized` state survives native hot reload correctly.
 
 ## Acceptance criteria
 
-- Live proof, each bug's own exact reported scenario, now passing: a document with a blackboard key
-  (and, separately, a real Agent/Shared v2 document) keeps its data through migration; `Sequence(a,b)`
-  with `a` `Running` reordered to `(b,a)` resumes correctly; a Cooldown with deadline `110` correctly
-  still reports `Failure` at time `20` after hot reload.
-- Full regression, zero new failures beyond the two already-disclosed pre-existing host-layout ones.
+- Live proof of each reported scenario after the fix: a document with a blackboard key and a real
+  Agent/Shared v2 document retain their data through migration. Also cover bindings, non-default
+  revision, no-rule/no-change paths and source-document immutability.
+- For `Sequence(a,b)` with `a` Running reordered to `(b,a)`, verify the full agreed callback order
+  through root completion, including `b` at the correct position, not just a DispatchRequired flag.
+  Include the complementary active-child position and unchanged-order preservation.
+- With the configured Failure blocked result and deadline 110, the migrated Cooldown blocks at
+  time 20 and permits execution at the deadline. Incompatible/reset nodes must not inherit stale
+  cooldown flags; an unchanged compatible node must preserve them.
+- Full regression with exact counts; identify baseline failures from the actual run rather than
+  treating a historical number of unrelated failures as an allowed failure budget.
 
 ## Required verification
 
-```text
-Verify-Static.ps1
-Run-UnityTests.ps1 -Mode EditMode -Scope Full
-live proof of each of the three exact reported scenarios via Unity MCP
+From the package root, with verification environment variables set:
+
+```powershell
+& './Tools~/Verification/Verify-Static.ps1'
+& './Tools~/Verification/Run-UnityTests.ps1' -UnityPath $UnityPath -ProjectPath $ProjectPath -OutputPath $OutputPath -Mode EditMode -Scope Full
+git diff --check
 ```
+
+Run focused migration/hot-reload tests first and live proof of the three reported scenarios.
+Use Unity MCP tests for an already-open project rather than launching a second Editor.
 
 ## Handoff notes
 
-- Found by the owner (live Unity reproduction) during the same session as `P7-018`, immediately
-  after it landed — reported with exact file/line references, independently re-confirmed here by
-  direct code reading before this card was written (not taken on faith). All three are severity-real:
+- Reported in the code review with live Unity probes and exact file/line references, then checked
+  against the source when this card was created. The revalidation above distinguishes fresh probes
+  from earlier evidence. All three remain actionable:
   #1 and #2 are silent data loss / silently wrong execution, #3 is a silent wrong-status regression.
   None of the three were introduced by `P7-018`; #1 does directly affect `P7-018`'s own new v2/
   Agent-Shared documents once a version-migrated node is involved, worth keeping in mind when
-  scheduling. Recommended for prioritization alongside/before the owner's own "functionality before
-  polish" queue (`P7-027` next) given these are correctness regressions in already-shipped
-  functionality, not new capability — final sequencing is the owner's call.
+  scheduling. P7-030/P7-031/P7-032 track the separate host, MCP workflow and scheduler recovery
+  scopes. Final sequencing and implementation authorization remain the owner's decision.

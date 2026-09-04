@@ -2,7 +2,7 @@
   "format": "aibt.compiled-program-golden",
   "formatVersion": 1,
   "sourceId": "trees/minimal.aibt.json",
-  "compiledContentHash": "8dfd848ff76637ea04469643707e561e905db88fdb7d3cc37c1079a735719f40",
+  "compiledContentHash": "809e8e488f35efc3f76bd536159c05cb9dd383cad9b3ad7531151f80b605a396",
   "nodeOrder": ["root"],
   "childIndices": [],
   "configHex": "",

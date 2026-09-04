@@ -27,6 +27,12 @@ namespace AIBT.Authoring
                 builder.AddBuiltIn(BuiltInNodeManifests.All[index]);
             }
 
+            for (var index = 0; index < BuiltInLeafManifests.All.Count; index++)
+            {
+                var provider = BuiltInLeafManifests.All[index];
+                builder.AddBuiltInLeaf(provider.Manifest, provider.CreateBehavior());
+            }
+
             return builder;
         }
 
@@ -63,11 +69,36 @@ namespace AIBT.Authoring
             return this;
         }
 
-        // Only populated by AddProjectExtension. Lets a registry consumer (e.g. a test or the MCP
-        // discovery-tool wiring) obtain the actual executable behavior for a project-registered
-        // leaf, to fold into a ReferenceLeafRegistry alongside the built-in/fixture bindings.
+        // Populated by AddProjectExtension and AddBuiltInLeaf. Lets a registry consumer (e.g. a test
+        // or the MCP discovery-tool wiring) obtain the actual executable behavior for a
+        // project-registered or built-in leaf, to fold into a ReferenceLeafRegistry alongside the
+        // fixture bindings.
         public bool TryGetProjectLeafBehavior(string typeId, out IReferenceLeafBehavior behavior)
             => _projectBehaviors.TryGetValue(typeId, out behavior);
+
+        // Built-in leaf counterpart of AddProjectExtension (P7-028): unlike a project extension, a
+        // built-in leaf's type ID must use a reserved built-in namespace (aibt.core or
+        // aibt.stdlib -- see ValidateSource), so it is registered with NodeManifestSource.BuiltIn
+        // and a synthesized reference handler binding, exactly like the structural built-ins
+        // AddBuiltIn registers -- the only difference is this source also carries a real,
+        // executable IReferenceLeafBehavior (the structural built-ins are interpreted directly by
+        // ReferenceExecutionMachine and need none).
+        public NodeRegistryBuilder AddBuiltInLeaf(NodeManifest manifest, IReferenceLeafBehavior behavior)
+        {
+            if (manifest == null)
+            {
+                throw new ArgumentNullException(nameof(manifest));
+            }
+
+            if (behavior == null)
+            {
+                throw new ArgumentNullException(nameof(behavior));
+            }
+
+            _registrations.Add(new Registration(manifest, NodeManifestSource.BuiltIn, CreateReferenceBinding(manifest)));
+            _projectBehaviors[manifest.TypeId] = behavior;
+            return this;
+        }
 
         public NodeRegistryBuildResult Build()
         {
@@ -182,9 +213,16 @@ namespace AIBT.Authoring
             switch (registration.Source)
             {
                 case NodeManifestSource.BuiltIn:
-                    if (!typeId.StartsWith("aibt.core.", StringComparison.Ordinal))
+                    // aibt.core. is reserved for the original structural composites/decorators,
+                    // whose execution is hardcoded directly into NativeLifecycleMachineV1
+                    // (NativeLifecycleNodeKindV1) -- AIBT.CodeGen's BurstNodeGenerator permanently
+                    // freezes that namespace against any [AibtCatalogSet]-declared shard (AIBT5012,
+                    // discovered implementing P7-028). aibt.stdlib. is the always-on built-in
+                    // namespace for leaf nodes that DO carry a real [AibtBurstNode] declaration.
+                    if (!typeId.StartsWith("aibt.core.", StringComparison.Ordinal)
+                        && !typeId.StartsWith("aibt.stdlib.", StringComparison.Ordinal))
                     {
-                        diagnostics.Add(NodeRegistryDiagnostics.InvalidSource(typeId, "Built-in node IDs must use the aibt.core namespace."));
+                        diagnostics.Add(NodeRegistryDiagnostics.InvalidSource(typeId, "Built-in node IDs must use the aibt.core or aibt.stdlib namespace."));
                     }
 
                     break;

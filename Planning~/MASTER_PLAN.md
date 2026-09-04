@@ -1158,3 +1158,52 @@ Remaining Phase 7 work, per the owner's own priority ("functionality before poli
 fixes, filed after `P7-018`) alongside this queue, not yet sequenced ahead of it; `P7-023`/`P7-024`/
 `P7-025` (editor/showcase cards) last. `1.0.0` itself remains the owner's own separate release
 decision.
+
+### Review follow-up scopes (2026-09-04)
+
+The owner requested a fresh validation of eleven review findings and scoped cards, not code fixes.
+Current source was rechecked against `66fa058`; fresh Unity probes reconfirmed document data loss,
+the active Sequence reorder failure, terminal-instance rejection and the host's zero clock, plus
+the actual Editor log path mismatch. The cards distinguish these from earlier probes and static
+control-flow findings. Concurrent P7-028 work remains outside this review's changes.
+
+| Scope | Card | Findings | State |
+| --- | --- | --- | --- |
+| Document/native state migration | [P7-029](Tasks/P7/P7-029-migration-and-hot-reload-data-loss-fixes.md) | Data preservation, active stack/cursor reconciliation, cooldown state | Draft, existing card clarified |
+| Production host execution | [P7-030](Tasks/P7/P7-030-production-host-execution-contract.md) | Terminal handling, clock, Action lifecycle, Budgeted integration | Draft |
+| MCP node development | [P7-031](Tasks/P7/P7-031-mcp-node-development-boundaries.md) | Assets containment, actual compile log, compile observation ordering | Draft |
+| Native scheduler recovery | [P7-032](Tasks/P7/P7-032-native-scheduler-error-recovery.md) | Rejected completion buffers in SameFrame and Pipelined | Draft |
+
+Formulation corrections: host terminal handling is P2 (the terminal result is not itself lost);
+automatic restart is not an assumed requirement. The Tick-only delegate's documented contract
+is accurately described, but it cannot connect the general Action lifecycle. Migration preserves
+semantic fields rather than raw JSON formatting; a legitimate composite reset may repeat a child,
+so P7-029 must resolve the precise active-child lifecycle before implementation. P7-027's historical
+completion evidence does not close these newly identified host gaps. The new cards do not reorder
+the owner's queue or authorize implementation, and no runtime fix or new release readiness is claimed.
+
+`P7-028` (production-ready built-in node library) is **done**. Investigation before planning found
+three parallel node-authoring mechanisms, not one — the manual `NodeManifest` builder the existing
+11 composites use, `IReferenceLeafBehaviorProvider` (managed, reference-only, `P7-008`), and
+`[AibtBurstNode]` attribute codegen (real native Burst execution, leaf-only since `BurstNodeKind` has
+no Decorator/Composite value). Owner chose both mechanisms at once, scoping the card to leaves.
+Two further architectural walls surfaced mid-implementation, each put to the owner rather than
+guessed past: a native `[AibtBurstNode]`'s only blackboard-access mechanism (`GeneratedHandle` config
+fields) is unsupported by the reference compiler at all, so the planned `aibt.core.blackboard-bool-
+condition` node was dropped from scope rather than shipped non-functional on one backend; and
+`AIBT.CodeGen`'s `BurstNodeGenerator` (`AIBT5012`) permanently freezes the `aibt.core.` namespace
+against any live `[AibtCatalogSet]` shard — its authority-merge treats a shard's own declared
+identity as either unauthorized (authority unchanged) or a duplicate (authority amended to match),
+with no way through — so the owner chose a new always-on namespace, `aibt.stdlib.*`, for built-in
+leaves that carry a real native declaration. Delivered: `aibt.stdlib.wait` (Action, ticks-based delay)
+and `aibt.stdlib.random-condition` (Condition, percentage gate off the native side's real per-instance
+Burst random stream, a disclosed non-bit-identical `System.Random` on the reference side). Each
+ships both a real native Burst execution path and a real reference-executor path; where the compile-
+time ABI enforcement requires exact canonical-JSON parity between the two, a new regression test
+(`BuiltInLeafManifestsTests`) reads the shard's own generator-emitted metadata back via reflection so
+future drift fails at the unit-test level, not only a full Editor domain reload. Full regression
+396/396 (`AIBT.Editor.Tests`, 392 baseline + 4 new), only the same 3 pre-existing unrelated failures
+across the whole ~1653-test host-project run; public API diff purely additive (10 new members, zero
+removals). Live proof: a real tree using `aibt.stdlib.wait`, validated and compiled through the real
+`McpVerificationToolDispatcher` against the project's own adopted `.aibt/policy.json`, came back
+`valid: true` / `success: true` with zero diagnostics. See `Planning~/Evidence/P7-028/README.md`.

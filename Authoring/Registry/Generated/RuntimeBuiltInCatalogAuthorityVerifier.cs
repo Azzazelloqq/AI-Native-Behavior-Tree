@@ -1,25 +1,35 @@
 using System;
+using System.Linq;
 using System.Text;
 
 namespace AIBT.Authoring
 {
+    // The authority this verifier checks against (Runtime/Nodes/Contracts/
+    // RuntimeBuiltInCatalogAuthority.cs) is a permanently frozen snapshot of only the original
+    // aibt.core.* structural composites/decorators -- the ones with no [AibtBurstNode] shard at
+    // all, interpreted directly via NativeLifecycleNodeKindV1. AIBT.CodeGen's BurstNodeGenerator
+    // (AIBT5012) never allows a live [AibtCatalogSet] shard to ALSO claim an aibt.core.* identity
+    // already present here (or any identity present here at all -- its merge step treats any
+    // repeat as a duplicate), so this rebuild deliberately excludes every other built-in
+    // (aibt.stdlib.* leaves, P7-028) even though NodeRegistryBuilder.CreateWithBuiltIns() itself
+    // returns the full, larger built-in set.
     internal static class RuntimeBuiltInCatalogAuthorityVerifier
     {
         internal static string RebuildManifestRegistryJson()
         {
-            return SerializeRegistry(RebuildRegistry());
+            return NodeManifestCanonicalJson.SerializeRegistry(RebuildAuthorityEntries());
         }
 
         internal static string RebuildNodeRegistryHash()
         {
-            return RebuildRegistry().Hash;
+            return StableHash.Sha256Hex(NodeManifestCanonicalJson.SerializeRegistryUtf8(RebuildAuthorityEntries()));
         }
 
         internal static void Validate(string manifestRegistryJson, string nodeRegistryHash)
         {
-            var registry = RebuildRegistry();
-            var canonicalJson = SerializeRegistry(registry);
-            var canonicalHash = registry.Hash;
+            var entries = RebuildAuthorityEntries();
+            var canonicalJson = NodeManifestCanonicalJson.SerializeRegistry(entries);
+            var canonicalHash = StableHash.Sha256Hex(NodeManifestCanonicalJson.SerializeRegistryUtf8(entries));
             if (!string.Equals(manifestRegistryJson, canonicalJson, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
@@ -37,18 +47,7 @@ namespace AIBT.Authoring
             }
         }
 
-        private static string SerializeRegistry(NodeRegistry registry)
-        {
-            var entries = new NodeRegistryEntry[registry.Count];
-            for (var index = 0; index < registry.Count; index++)
-            {
-                entries[index] = registry[index];
-            }
-
-            return NodeManifestCanonicalJson.SerializeRegistry(entries);
-        }
-
-        private static NodeRegistry RebuildRegistry()
+        private static NodeRegistryEntry[] RebuildAuthorityEntries()
         {
             var result = NodeRegistryBuilder.CreateWithBuiltIns().Build();
             if (!result.Success)
@@ -57,7 +56,9 @@ namespace AIBT.Authoring
                     "Canonical built-in node registry could not be built; inspect registry collision diagnostics.");
             }
 
-            return result.Registry;
+            return result.Registry
+                .Where(entry => entry.Manifest.TypeId.StartsWith("aibt.core.", StringComparison.Ordinal))
+                .ToArray();
         }
     }
 }

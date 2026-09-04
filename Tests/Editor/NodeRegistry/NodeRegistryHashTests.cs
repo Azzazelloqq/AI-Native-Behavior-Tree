@@ -101,7 +101,7 @@ namespace AIBT.Tests.Editor.NodeRegistry
             var result = Authoring.NodeRegistryBuilder.CreateWithBuiltIns().Build();
 
             Assert.That(result.Success, Is.True);
-            Assert.That(result.Registry.Hash, Is.EqualTo("6c8a5da9c88b677981a9bec5b714cbb20bc34f69d32440ea8f7efa830535bd66"));
+            Assert.That(result.Registry.Hash, Is.EqualTo("d10147e9bdad70aaefeb3cde15df78d601a553262673fb067a8aeffe4d0fccf1"));
             var bytes = Authoring.NodeManifestCanonicalJson.SerializeRegistryUtf8(result.Registry.ToArray());
             Assert.That(result.Registry.Hash, Is.EqualTo(StableHash.Sha256Hex(bytes)));
             Assert.That(bytes[bytes.Length - 1], Is.EqualTo((byte)'\n'));

@@ -13,7 +13,7 @@ namespace AIBT.Tests.Editor.NodeRegistry
 
             Assert.That(result.Success, Is.True);
             Assert.That(result.Diagnostics, Is.Empty);
-            Assert.That(result.Registry.Count, Is.EqualTo(11));
+            Assert.That(result.Registry.Count, Is.EqualTo(13));
             var actualIds = result.Registry.Select(item => item.Manifest.TypeId).ToArray();
             var expectedIds = actualIds.OrderBy(item => item, StringComparer.Ordinal).ToArray();
             Assert.That(actualIds, Is.EqualTo(expectedIds));

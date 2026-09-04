@@ -2,7 +2,7 @@
 
 Source: the real AIBT node registry, via `AIBT.Authoring.NodeCatalogQuery` (P6-003). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
-11 registered node type(s).
+13 registered node type(s).
 
 ---
 
@@ -844,6 +844,152 @@ Full contract (verbatim `get_node_contract` output):
         "terminalResult": "failure"
       },
       "expectedBehavior": "After one second the running child is aborted and the decorator fails."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.stdlib.random-condition` (v1)
+
+- **Summary:** Succeeds with a configured percentage probability, drawn from the per-instance random stream.
+- **Category:** Core/Conditions
+- **Kind:** Condition
+- **When to use:** Use for a lightweight probabilistic gate.
+- **When not to use:** Do not use when the same tree instance must reproduce an identical outcome sequence on the reference executor -- its managed System.Random draw is not bit-identical to this native stream.
+- **Execution domain:** Burst
+- **Deterministic:** False
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.stdlib.random-condition",
+  "version": 1,
+  "summary": "Succeeds with a configured percentage probability, drawn from the per-instance random stream.",
+  "category": "Core/Conditions",
+  "kind": "condition",
+  "whenToUse": "Use for a lightweight probabilistic gate.",
+  "whenNotToUse": "Do not use when the same tree instance must reproduce an identical outcome sequence on the reference executor -- its managed System.Random draw is not bit-identical to this native stream.",
+  "parameters": {
+    "success-chance-percent": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 4,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": false,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "stdlib-random-condition",
+      "parameters": {
+        "success-chance-percent": 0
+      },
+      "expectedBehavior": "Succeeds with a configured percentage probability, drawn from the per-instance random stream."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.stdlib.wait` (v1)
+
+- **Summary:** Remains running for a configured number of ticks, then succeeds.
+- **Category:** Core/Actions
+- **Kind:** Action
+- **When to use:** Use for a simple tick-counted delay that does not depend on wall-clock time.
+- **When not to use:** Do not use when a wall-clock duration is required -- use aibt.core.timeout/aibt.core.cooldown instead.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.stdlib.wait",
+  "version": 1,
+  "summary": "Remains running for a configured number of ticks, then succeeds.",
+  "category": "Core/Actions",
+  "kind": "action",
+  "whenToUse": "Use for a simple tick-counted delay that does not depend on wall-clock time.",
+  "whenNotToUse": "Do not use when a wall-clock duration is required -- use aibt.core.timeout/aibt.core.cooldown instead.",
+  "parameters": {
+    "ticks": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "running",
+    "success"
+  ],
+  "memory": {
+    "size": 4,
+    "alignment": 4,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 4,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "stdlib-wait",
+      "parameters": {
+        "ticks": 0
+      },
+      "expectedBehavior": "Remains running for a configured number of ticks, then succeeds."
     }
   ]
 }

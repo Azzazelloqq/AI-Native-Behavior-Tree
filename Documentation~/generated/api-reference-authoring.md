@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Authoring`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-116 public type(s).
+117 public type(s).
 
 ---
 
@@ -152,6 +152,14 @@ A type's own summary line is shown where an XML-doc `<summary>` exists in source
 - `PROPERTY System.String CanonicalTypeId`
 - `PROPERTY System.String EnumContract`
 - `PROPERTY System.UInt64 EnumContractId`
+
+---
+
+### `AIBT.Authoring.BuiltInLeafManifests`
+
+- `FIELD System.String RandomConditionTypeId`
+- `FIELD System.String WaitTypeId`
+- `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.IReferenceLeafBehaviorProvider> All`
 
 ---
 
@@ -932,6 +940,7 @@ Declarative migration for one node type from <see cref="SourceVersion"/> to <see
 ### `AIBT.Authoring.NodeRegistryBuilder`
 
 - `METHOD AIBT.Authoring.NodeRegistryBuildResult Build()`
+- `METHOD AIBT.Authoring.NodeRegistryBuilder AddBuiltInLeaf(AIBT.Authoring.NodeManifest,AIBT.IReferenceLeafBehavior)`
 - `METHOD AIBT.Authoring.NodeRegistryBuilder AddProjectExtension(AIBT.Authoring.NodeManifest,AIBT.IReferenceLeafBehavior)`
 - `METHOD AIBT.Authoring.NodeRegistryBuilder AddUserExtension(AIBT.Authoring.NodeManifest)`
 - `METHOD AIBT.Authoring.NodeRegistryBuilder CreateWithBuiltIns()`
