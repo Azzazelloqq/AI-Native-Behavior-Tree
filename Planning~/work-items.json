@@ -2009,6 +2009,21 @@
       ]
     },
     {
+      "id": "P7-029",
+      "phase": 7,
+      "title": "Fix real data-loss/state bugs in document migration and native hot reload",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-029-migration-and-hot-reload-data-loss-fixes.md",
+      "dependsOn": [
+        "P7-006",
+        "P7-012"
+      ],
+      "owns": [
+        "Planning~/Evidence/P7-029/"
+      ]
+    },
+    {
       "id": "P7-020",
       "phase": 7,
       "title": "CI-enforced public API diff check",

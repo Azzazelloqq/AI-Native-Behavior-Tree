@@ -1116,7 +1116,22 @@ marked `Status: Draft` despite its evidence being accepted and `work-items.json`
 recording it `done` since 2026-08-31 — the same class of drift `P7-016`'s gate fixed on four other
 cards, now fixed on this one too. See `Planning~/Evidence/P7-018/README.md`.
 
+Same day, the owner live-reproduced three real bugs in already-shipped Phase 7 functionality
+immediately after `P7-018` landed, filed together as new `Draft` card `P7-029`: `DocumentMigrator
+.TryMigrate` (`P7-006`) silently drops a migrated document's `blackboard`/`description`/Agent-Shared
+scope contracts and a migrated node's `bindings` (confirmed by reading the exact constructor calls —
+both default the omitted fields to `null`); native hot reload (`P7-012`) can corrupt an actively
+running `Sequence` after a child reorder, since the active call-stack frames are migrated
+independently of the freshly-reset structural cursor with no reconciliation (the reference-executor
+equivalent has no analogous bug only because `ADR-P7-011`'s own decision 3 uniquely widened the
+*native* backend to migrate active instances at all — there is no existing correct pattern to
+mirror); and native hot reload never copies `NativeHotReloadInstance.CooldownInitialized` at all
+(confirmed by grep — zero references in the migration file), silently resetting cooldown state.
+None were introduced by `P7-018`, though the first directly affects `P7-018`'s own new v2/Agent-Shared
+documents once a migrated node is involved.
+
 Remaining Phase 7 work, per the owner's own priority ("functionality before polish"): `P7-027`
 (production debugger) next, then `P7-028` (node library), then `P7-026` (build-size validation);
+`P7-029` (the three bug fixes above) filed alongside this queue, not yet sequenced ahead of it;
 `P7-023`/`P7-024`/`P7-025` (editor/showcase cards) last. `1.0.0` itself remains the owner's own
 separate release decision.
