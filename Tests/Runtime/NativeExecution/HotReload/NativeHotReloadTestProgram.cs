@@ -72,7 +72,7 @@ namespace AIBT.Tests.Runtime.NativeExecution.HotReload
                 1, 1, new CompiledCompilerVersion(1, 0, 0, 0),
                 Hash('a'), Hash('b'), Hash('c'), 1, contentHash,
                 0, (uint)nodes.Length, (uint)children.Length, 0, (uint)debug.Length,
-                0, TotalMemorySize, 4, 0, true);
+                0, (uint)nodes.Length * PerNodeMemorySize, 4, 0, true);
             return new CompiledProgram(
                 header, nodes, children,
                 System.Array.Empty<uint>(), System.Array.Empty<uint>(),
@@ -81,5 +81,40 @@ namespace AIBT.Tests.Runtime.NativeExecution.HotReload
         }
 
         private static CompiledHash Hash(char value) => new CompiledHash(new string(value, 64));
+
+        internal static CompiledProgram NestedSequence(bool reversed, bool reverseOuter = false)
+        {
+            var nodes = new[] { NodeAt(RootTypeId, 0, new CompiledRange(0, 2)), NodeAt(RootTypeId, 1, new CompiledRange(2, 2)),
+                NodeAt(reversed ? LeafBTypeId : LeafATypeId, 2, default), NodeAt(reversed ? LeafATypeId : LeafBTypeId, 3, default),
+                NodeAt(LeafATypeId, 4, default) };
+            var children = reverseOuter ? new uint[] { 4, 1, 2, 3 } : new uint[] { 1, 4, 2, 3 };
+            var debug = new[] { new CompiledDebugMapEntry(0, new NodeId("outer"), "test/outer"),
+                new CompiledDebugMapEntry(1, RootNodeId, "test/root"),
+                new CompiledDebugMapEntry(2, reversed ? LeafBNodeId : LeafANodeId, "test/first"),
+                new CompiledDebugMapEntry(3, reversed ? LeafANodeId : LeafBNodeId, "test/second"),
+                new CompiledDebugMapEntry(4, new NodeId("c"), "test/c") };
+            return Build(CompiledProgramContentHashV1.Compute(Build(Hash('d'), nodes, children, debug)), nodes, children, debug);
+        }
+
+        internal static CompiledProgram Cooldown(bool replaceWithTimeout = false)
+        {
+            var nodes = new[]
+            {
+                new CompiledNodeRecord(StableHash.Fnv1A64(replaceWithTimeout ? "aibt.core.timeout" : "aibt.core.cooldown"), 1, 0, 16, 8,
+                    0, 8, 8, replaceWithTimeout ? NodeMemoryLifetime.Activation : NodeMemoryLifetime.Instance,
+                    new CompiledRange(0, 1), CompiledNodeFlags.BurstDomain, 0, default, default),
+                new CompiledNodeRecord(LeafATypeId, 1, 0, 0, 1, 8, 4, 4, NodeMemoryLifetime.Activation,
+                    default, CompiledNodeFlags.BurstDomain, 1, default, default)
+            };
+            var debug = new[] { new CompiledDebugMapEntry(0, RootNodeId, "test/root"), new CompiledDebugMapEntry(1, LeafANodeId, "test/a") };
+            // Duration 100, OnEnter, blocked Failure. Leaf owns bytes 8..11.
+            var config = new byte[] { 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            CompiledProgram BuildCooldown(CompiledHash hash) => new CompiledProgram(
+                new CompiledProgramHeader(1, 1, new CompiledCompilerVersion(1, 0, 0, 0), Hash('a'), Hash('b'), Hash('c'), 1,
+                    hash, 0, 2, 1, 0, 2, 16, 16, 8, 0, true), nodes, new uint[] { 1 },
+                System.Array.Empty<uint>(), System.Array.Empty<uint>(), System.Array.Empty<CompiledBlackboardSlotRecord>(),
+                System.Array.Empty<CompiledObserverRecord>(), System.Array.Empty<uint>(), config, System.Array.Empty<byte>(), debug);
+            return BuildCooldown(CompiledProgramContentHashV1.Compute(BuildCooldown(Hash('d'))));
+        }
     }
 }

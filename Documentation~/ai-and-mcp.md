@@ -107,4 +107,25 @@ Full rationale: [ADR P6-002](decisions/ADR-P6-002-domain-patch-revision-and-diff
 
 ## Transport and hosting
 
+### Staged node compilation
+
+`analyze_and_compile_node(start)` captures the staged `.cs` files (relative paths and contents)
+and returns `attemptId`. An Editor main-thread hook imports them, waits for an existing compile,
+then requests a fresh compilation. `check` requires that identity; a legacy `logPositionBefore`
+alone receives AIBT9030 and must be replaced with a new start/check sequence.
+
+The single attempt record lives in `Library/AIBT/node-compile-attempt.json`. Compilation events
+verify both staging assemblies; rebuilt assemblies additionally require domain reload.
+Unity's `assemblyCompilationNotRequired` event confirms an up-to-date assembly for the requested
+compilation and needs no artificial reload. `Application.consoleLogPath` supplies
+supporting diagnostics only. Pending checks survive domain reload. Changed staging, superseded
+attempts and an Editor restart require a fresh start. A successful check returns its captured
+content hash; test/apply retain their own hash and registry verification.
+
+`apply_node` accepts a new Assets-relative directory only. It rejects escapes, rooted paths and
+existing link/reparse ancestry before moving files. This is the single-client write boundary;
+it does not promise protection against concurrent filesystem replacement by another process.
+
+Approved protocol decision: `Planning~/Evidence/P7-031/implementation-proposal.md`.
+
 The MCP server is an external `dotnet` process built on the official C# MCP SDK (stdio transport), launched by the AI client's own MCP configuration, never code loaded into Unity's Editor assembly graph. A thin, dependency-free Editor-side listener bridges it to a running Unity Editor instance over a discovery file. This requires the .NET SDK installed on the user's machine; no server binary is vendored inside the AIBT package. Full rationale and rejected alternatives: [ADR P6-001](decisions/ADR-P6-001-mcp-transport-and-permission-model.md).

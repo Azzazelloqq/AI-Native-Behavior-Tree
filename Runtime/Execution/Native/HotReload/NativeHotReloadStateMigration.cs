@@ -35,6 +35,9 @@ namespace AIBT
     //      NodeIndex" approach Spikes~/ActiveInstanceHotReloadMigration/
     //      SpikeActiveInstanceHotReloadMigration.cs already proved out for the reference executor
     //      (P6-018), generalized here to the native backend's own Depth-indexed _frames.
+    // P7-029: copied active descendants under a structurally changed composite are queued for
+    // HotReload cancellation on the fresh machine. Their old result must never advance the new
+    // cursor. The outermost changed active owner handles nested changes in one traversal.
     internal static class NativeHotReloadStateMigration
     {
         /// <param name="excludedNodeIds">
@@ -150,6 +153,8 @@ namespace AIBT
                 var oldRecord = oldInstance.Nodes[(int)oldIndex];
                 var newRecord = freshInstance.Nodes[(int)newIndex];
                 CopyNodeMemory(oldMemory, oldRecord, newMemory, newRecord);
+                if (NativeHotReloadInstance.ClassifyKind(newRecord.NodeTypeId) == NativeLifecycleNodeKindV1.Cooldown)
+                    freshInstance.CooldownInitialized[(int)newIndex] = oldInstance.CooldownInitialized[(int)oldIndex];
 
                 if (classification.StructuralChildChangeNodeIds.Contains(pair.Key) && IsCompositeKind(newRecord.NodeTypeId))
                 {
@@ -180,6 +185,7 @@ namespace AIBT
                 return false;
             }
 
+            uint resetOwnerDepth = 0;
             for (var depth = 0u; depth < oldControl.Depth; depth++)
             {
                 var frame = oldFrames[(int)depth];
@@ -206,6 +212,10 @@ namespace AIBT
 
                 frame.NodeIndex = frameNewIndex;
                 newFrames[(int)depth] = frame;
+                if (resetOwnerDepth == 0 && frame.LifecycleState == NativeFrameLifecycleStateV1.Running
+                    && classification.StructuralChildChangeNodeIds.Contains(frameNodeId)
+                    && IsCompositeKind(freshInstance.Nodes[(int)frameNewIndex].NodeTypeId))
+                    resetOwnerDepth = depth + 1;
             }
 
             var newControl = freshInstance.Control[0];
@@ -216,6 +226,14 @@ namespace AIBT
             freshInstance.ProgramOwner.TryReleaseReadLease(newProgramLease, out _);
             oldInstance.ArenaOwner.TryReleaseExecutionLease(oldExecLease, out _);
             oldInstance.ProgramOwner.TryReleaseReadLease(oldProgramLease, out _);
+
+            // Cancellation is dispatched by the fresh machine before new-order traversal;
+            // migration itself neither calls application code nor mutates the old instance.
+            if (resetOwnerDepth != 0 && !freshInstance.Machine.TryQueueHotReloadChildReset(resetOwnerDepth, out failure))
+            {
+                freshInstance.Dispose();
+                return false;
+            }
 
             report = NativeHotReloadMigrationReport.Migrated(migratedCount, resetCount, droppedCount, cursorResetCount);
             failure = default;

@@ -1,6 +1,17 @@
 # P7-030 — Complete the production host execution contract
 
-Status: `Draft`
+Status: `Done`
+
+Implemented and verified on 2026-09-04. [Evidence](../../Evidence/P7-030/README.md):
+55/55 focused tests; full EditMode 1666/1669 passed with the same three unrelated baseline
+failures; actual Play-mode budget/lifecycle/debugger/scene teardown; warmed host GC measurement.
+Standalone/Android/Web builds were not run.
+
+Owner approved the behavior and additive API/scope proposal on 2026-09-04; see
+[accepted implementation plan](../../Evidence/P7-030/implementation-proposal.md).
+The additional allowed paths are `Runtime/Execution/Native/Core/NativeLifecycleMachineV1.cs`
+(dispatch reasons and the narrow TreeStopped teardown integration described in the ADR), `Runtime/Scheduling/NativeTraceRecorderV1.cs` (accurate lifecycle and
+budget trace hooks), their focused tests, and the corresponding decision/API documentation.
 
 ## Objective
 

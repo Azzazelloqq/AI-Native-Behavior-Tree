@@ -1,0 +1,130 @@
+{
+  "schema": "aibt-p7-029-verification-v1",
+  "date": "2026-09-04",
+  "baseCommit": "fa14161",
+  "scopePassed": true,
+  "unity": "6000.5.8f1",
+  "project": "C:/UnityProjects/Modules",
+  "acceptedDecision": "Cancel active descendants with HotReload before traversing reordered children; preserve terminal-pending Exit reason.",
+  "newTests": 19,
+  "focused": {
+    "jobId": "8ce840e08de644c59d066d6e7697b772",
+    "total": 90,
+    "passed": 90,
+    "failed": 0
+  },
+  "fullEditMode": {
+    "jobId": "6ba39022dbeb4847a56fa2724bbc2957",
+    "total": 1688,
+    "passed": 1685,
+    "failed": 3,
+    "skipped": 0,
+    "aibtTotal": 1320,
+    "aibtPassed": 1318,
+    "aibtFailed": 2,
+    "startUtc": "2026-09-04T13:05:38Z",
+    "endUtc": "2026-09-04T13:06:19Z",
+    "resultSource": "Fresh Unity TestResults.xml; MCP lost callbacks during domain reload.",
+    "failures": [
+      {
+        "test": "AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests.EmittedMetadata_MaterializesConsumerDescriptorAndCompilesCanonicalV2Artifact",
+        "message": "The CodeGen test assembly must belong to the AIBT package. Expected not null, actual null."
+      },
+      {
+        "test": "AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests.RegisteredCatalog_DrivesJsonValidationAndCompiledDefaultCodec",
+        "message": "The CodeGen test assembly must belong to the AIBT package. Expected not null, actual null."
+      },
+      {
+        "test": "LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk",
+        "message": "Expected 9, actual 0."
+      }
+    ],
+    "baselineEvidence": "Planning~/Evidence/P7-030/verification-results.json"
+  },
+  "live": {
+    "native": [
+      {
+        "scenario": "Sequence reorder",
+        "initial": [
+          "a:Enter",
+          "a:Tick"
+        ],
+        "continuation": [
+          "a:Abort:HotReload",
+          "a:Exit:Aborted",
+          "b:Enter",
+          "b:Tick",
+          "b:Exit:Success",
+          "a:Enter",
+          "a:Tick",
+          "a:Exit:Success"
+        ],
+        "root": "Success",
+        "terminal": 1
+      },
+      {
+        "scenario": "Cooldown migration",
+        "time": 20,
+        "flagBefore": 1,
+        "calls": [],
+        "root": "Failure"
+      },
+      {
+        "scenario": "Cooldown migration",
+        "time": 110,
+        "flagBefore": 1,
+        "calls": [
+          "a:Enter",
+          "a:Tick",
+          "a:Exit:Success"
+        ],
+        "root": "Success"
+      }
+    ],
+    "documents": [
+      {
+        "format": 1,
+        "keysBefore": 1,
+        "keysAfter": 1,
+        "description": "Preserve tree description",
+        "revision": "23",
+        "agentContract": null,
+        "sharedContract": null,
+        "bindingsPreserved": true,
+        "nodeVersion": 2,
+        "roundTrip": true,
+        "sourceUnchanged": true,
+        "compiled": true
+      },
+      {
+        "format": 2,
+        "keysBefore": 3,
+        "keysAfter": 3,
+        "description": "Preserve tree description",
+        "revision": "23",
+        "agentContract": "agent.contract",
+        "sharedContract": "shared.contract",
+        "bindingsPreserved": true,
+        "nodeVersion": 2,
+        "roundTrip": true,
+        "sourceUnchanged": true,
+        "compiled": null
+      }
+    ]
+  },
+  "static": {
+    "passed": true,
+    "schemas": 7,
+    "workItems": 137
+  },
+  "compile": {
+    "passed": true
+  },
+  "limits": [
+    "Live probes ran in WindowsEditor through execute_code, not standalone Player.",
+    "V2 live proof covers canonical model preservation and serialization, not generated-binding compilation.",
+    "Parallel/suspended-branch migration remains a disclosed separate gap.",
+    "No new runtime allocation/performance claim; helper runs only while preparing migration, not each Tick."
+  ],
+  "commitOrPush": false
+}

@@ -1,0 +1,21 @@
+var flags=System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Instance;
+var test=AppDomain.CurrentDomain.GetAssemblies().Select(a=>a.GetType("AIBT.Tests.Runtime.Integration.ProductionTreeHostTests")).First(t=>t!=null);
+var fixture=test.GetNestedType("Fixture",System.Reflection.BindingFlags.NonPublic);
+var program=(AIBT.CompiledProgram)fixture.GetMethod("CreateSingleLeafProgram",flags).Invoke(null,null);
+var results=new System.Collections.Generic.List<object>();
+foreach (uint? budget in new uint?[]{null,1}) {
+ var go=new GameObject("AIBT.P7-030.GC"){hideFlags=HideFlags.HideAndDontSave};
+ var host=go.AddComponent<AIBT.ProductionTreeHost>();host.StepBudget=budget;
+ AIBT.Burst.BurstContextResult Dispatch(in AIBT.ProductionTreeHost.DispatchRequest request,out AIBT.NodeStatus status){status=AIBT.NodeStatus.Running;return AIBT.Burst.BurstContextResult.Success;}
+ if(!host.TryBootstrap(program,Dispatch,new AIBT.NativeTraceChannelCapacityV1(20000,0,0,40000),()=>10,out var fail))throw new Exception(fail.Code.ToString());
+ var update=(Action)Delegate.CreateDelegate(typeof(Action),host,typeof(AIBT.ProductionTreeHost).GetMethod("Update",flags));
+ for(int i=0;i<128;i++)update();
+ var before=GC.GetAllocatedBytesForCurrentThread();
+ for(int i=0;i<1000;i++)update();
+ var bytes=GC.GetAllocatedBytesForCurrentThread()-before;
+ var session=new AIBT.Editor.Debugger.NativeExecutionDebuggerSession();session.Attach(host.TraceChannelOwner);
+ if(!session.TryReadTrace(out var view,out var traceFailure))throw new Exception(traceFailure.Code.ToString());
+ results.Add(new {budget=budget.HasValue?"1":"Immediate",frames=1000,warmup=128,bytes,logicalUpdates=host.TotalUpdates,traceFaulted=view.IsFaulted,dropped=view.DroppedCount,lastFailure=host.LastFailure.Code.ToString()});
+ session.Detach();typeof(AIBT.ProductionTreeHost).GetMethod("OnDestroy",flags).Invoke(host,null);UnityEngine.Object.DestroyImmediate(go);
+}
+return results;

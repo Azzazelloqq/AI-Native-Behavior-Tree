@@ -1,0 +1,36 @@
+{
+  "full": {
+    "total": "1712",
+    "passed": "1709",
+    "failed": "3",
+    "skipped": "0",
+    "start": "2026-09-04 14:10:22Z",
+    "end": "2026-09-04 14:11:45Z",
+    "job": "444948dc208d4c7ba430a764ef8544cd",
+    "source": "Unity TestResults.xml; MCP callback state lost on reload"
+  },
+  "aibt": {
+    "total": 1344,
+    "passed": 1342
+  },
+  "focused": {
+    "total": 43,
+    "passed": 43,
+    "failed": 0,
+    "job": "fccf43ebd210466ebee499ae11c4175c"
+  },
+  "failures": [
+    {
+      "name": "AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests.EmittedMetadata_MaterializesConsumerDescriptorAndCompilesCanonicalV2Artifact",
+      "message": "  The CodeGen test assembly must belong to the AIBT package.\n  Expected: not null\n  But was:  null\n"
+    },
+    {
+      "name": "AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests.RegisteredCatalog_DrivesJsonValidationAndCompiledDefaultCodec",
+      "message": "  The CodeGen test assembly must belong to the AIBT package.\n  Expected: not null\n  But was:  null\n"
+    },
+    {
+      "name": "LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk",
+      "message": "  Expected: 9\n  But was:  0\n"
+    }
+  ]
+}

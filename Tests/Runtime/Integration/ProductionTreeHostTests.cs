@@ -1,4 +1,8 @@
 using System.Reflection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using AIBT.Burst;
 using NUnit.Framework;
 using Unity.Collections;
 using UnityEngine;
@@ -26,7 +30,10 @@ namespace AIBT.Tests.Runtime.Integration
         {
             if (_gameObject != null)
             {
-                Object.DestroyImmediate(_gameObject);
+                var host = _gameObject.GetComponent<ProductionTreeHost>();
+                if (host != null)
+                    typeof(ProductionTreeHost).GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(host, null);
+                UnityEngine.Object.DestroyImmediate(_gameObject);
             }
         }
 
@@ -99,10 +106,189 @@ namespace AIBT.Tests.Runtime.Integration
             Assert.That(owner.State, Is.EqualTo(NativeOwnerStateV1.Disposed));
         }
 
+        [TestCase(NodeStatus.Success)]
+        [TestCase(NodeStatus.Failure)]
+        public void TerminalRoot_RemainsObservableWithoutExecutingMoreFrames(NodeStatus terminal)
+        {
+            var host = CreateHost();
+            var ticks = 0;
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), _ =>
+            {
+                ticks++;
+                return terminal;
+            }, Fixture.TraceCapacity, out _), Is.True);
+
+            InvokeUpdate(host);
+            InvokeUpdate(host);
+            InvokeUpdate(host);
+
+            Assert.That(host.LastRootResult, Is.EqualTo(terminal));
+            Assert.That(ticks, Is.EqualTo(1));
+            Assert.That(host.TotalUpdates, Is.EqualTo(1UL));
+        }
+
         private ProductionTreeHost CreateHost()
         {
             _gameObject = new GameObject("AIBT.Tests.ProductionTreeHost");
             return _gameObject.AddComponent<ProductionTreeHost>();
+        }
+
+        [TestCase(NodeStatus.Success)]
+        [TestCase(NodeStatus.Failure)]
+        public void Lifecycle_InitializesBeforeTickAndExitsWithActualReason(NodeStatus terminal)
+        {
+            var host = CreateHost();
+            var calls = new List<BurstCallbackPhase>();
+            var initialized = false;
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                calls.Add(request.Phase);
+                if (request.Phase == BurstCallbackPhase.Enter) initialized = true;
+                if (request.Phase == BurstCallbackPhase.Tick) Assert.That(initialized, Is.True);
+                if (request.Phase == BurstCallbackPhase.Exit)
+                {
+                    Assert.That(request.ExitReason, Is.EqualTo(terminal == NodeStatus.Success ? BurstNodeExitReason.Success : BurstNodeExitReason.Failure));
+                    initialized = false;
+                }
+                status = terminal;
+                return BurstContextResult.Success;
+            }
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), Dispatch, Fixture.TraceCapacity, () => 10, out _), Is.True);
+            InvokeUpdate(host);
+            Assert.That(calls, Is.EqualTo(new[] { BurstCallbackPhase.Enter, BurstCallbackPhase.Tick, BurstCallbackPhase.Exit }));
+            Assert.That(initialized, Is.False);
+            Assert.That(host.LastRootResult, Is.EqualTo(terminal));
+            Assert.That(host.TraceChannelOwner.TryGetSnapshot(out var snapshot, out _), Is.True);
+            Assert.That(Enumerable.Range(0, (int)snapshot.RecordCount).Select(i => snapshot.Records[i])
+                .Single(r => r.Kind == NativeTraceEventKindV1.NodeExited && r.RuntimeNodeIndex == 1).ExitReason,
+                Is.EqualTo(terminal == NodeStatus.Success ? NativeTraceNodeExitReasonV1.Success : NativeTraceNodeExitReasonV1.Failure));
+        }
+
+        [Test]
+        public void Timeout_UsesClockAndCancelsAtDeadlineBeforeRetick()
+        {
+            var host = CreateHost();
+            long now = 10;
+            var calls = new List<ProductionTreeHost.DispatchRequest>();
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                calls.Add(request);
+                status = NodeStatus.Running;
+                return BurstContextResult.Success;
+            }
+            Assert.That(host.TryBootstrap(Fixture.Timeout(), Dispatch, Fixture.TraceCapacity, () => now, out _), Is.True);
+            InvokeUpdate(host);
+            now = 109;
+            InvokeUpdate(host);
+            Assert.That(host.LastRootResult, Is.Null);
+            now = 110;
+            InvokeUpdate(host);
+            Assert.That(calls.Select(c => c.Phase), Is.EqualTo(new[] { BurstCallbackPhase.Enter, BurstCallbackPhase.Tick, BurstCallbackPhase.Tick, BurstCallbackPhase.Abort, BurstCallbackPhase.Exit }));
+            Assert.That(calls[3].AbortReason, Is.EqualTo(BurstNodeAbortReason.Timeout));
+            Assert.That(calls[4].ExitReason, Is.EqualTo(BurstNodeExitReason.Aborted));
+            Assert.That(host.LastRootResult, Is.EqualTo(NodeStatus.Failure));
+        }
+
+        [TestCase(20, 1)]
+        [TestCase(110, 2)]
+        public void Cooldown_RevisitedWithinLiveTreeHonorsDeadline(long revisitTime, int expectedEntries)
+        {
+            var host = CreateHost();
+            long now = 10;
+            var entries = 0;
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                if (request.NodeIndex == 3 && request.Phase == BurstCallbackPhase.Enter) entries++;
+                status = request.NodeIndex == 3 ? NodeStatus.Success : NodeStatus.Running;
+                return BurstContextResult.Success;
+            }
+            Assert.That(host.TryBootstrap(Fixture.ReactiveCooldown(), Dispatch, Fixture.TraceCapacity, () => now, out _), Is.True);
+            InvokeUpdate(host);
+            now = revisitTime;
+            InvokeUpdate(host);
+            Assert.That(entries, Is.EqualTo(expectedEntries));
+            Assert.That(host.LastRootResult, revisitTime < 110 ? Is.EqualTo(NodeStatus.Failure) : Is.Null);
+        }
+
+        [Test]
+        public void Budget_ZeroAndSingleStepsPreserveUpdateTimeAndCallbackOrder()
+        {
+            var host = CreateHost();
+            var calls = new List<ProductionTreeHost.DispatchRequest>();
+            long now = 10;
+            var clockReads = 0;
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                calls.Add(request);
+                status = NodeStatus.Success;
+                return BurstContextResult.Success;
+            }
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), Dispatch, Fixture.TraceCapacity, () => { clockReads++; return now; }, out _), Is.True);
+            host.StepBudget = 0;
+            InvokeUpdate(host);
+            Assert.That(calls, Is.Empty);
+            host.StepBudget = 1;
+            for (var frame = 0; frame < 24 && !host.LastRootResult.HasValue; frame++)
+            {
+                now++;
+                InvokeUpdate(host);
+                Assert.That(host.TraceChannelOwner.TryGetSnapshot(out _, out _), Is.True, "A yielded segment must release its writer lease.");
+            }
+            Assert.That(host.LastRootResult, Is.EqualTo(NodeStatus.Success));
+            Assert.That(calls.Select(c => c.Phase), Is.EqualTo(new[] { BurstCallbackPhase.Enter, BurstCallbackPhase.Tick, BurstCallbackPhase.Exit }));
+            Assert.That(calls.All(c => c.UpdateId == 1 && c.TimeMicroseconds == 10), Is.True);
+            Assert.That(clockReads, Is.EqualTo(1));
+            Assert.That(host.TraceChannelOwner.TryGetSnapshot(out var snapshot, out _), Is.True);
+            var events = Enumerable.Range(0, (int)snapshot.RecordCount).Select(i => snapshot.Records[i].Kind).ToArray();
+            Assert.That(events.Count(e => e == NativeTraceEventKindV1.UpdateStarted), Is.EqualTo(1));
+            Assert.That(events.Count(e => e == NativeTraceEventKindV1.UpdateCompleted), Is.EqualTo(1));
+            Assert.That(events.Count(e => e == NativeTraceEventKindV1.BudgetYielded), Is.GreaterThan(0));
+            Assert.That(events.Count(e => e == NativeTraceEventKindV1.ExecutionResumed), Is.EqualTo(events.Count(e => e == NativeTraceEventKindV1.BudgetYielded)));
+        }
+
+        [Test]
+        public void DisablePauses_DestroyCancelsAndDisposesExactlyOnce()
+        {
+            var host = CreateHost();
+            var calls = new List<ProductionTreeHost.DispatchRequest>();
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                calls.Add(request);
+                status = NodeStatus.Running;
+                return BurstContextResult.Success;
+            }
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), Dispatch, Fixture.TraceCapacity, () => 10, out _), Is.True);
+            InvokeUpdate(host);
+            host.enabled = false;
+            InvokeUpdate(host);
+            Assert.That(calls.Count, Is.EqualTo(2));
+            host.enabled = true;
+            InvokeUpdate(host);
+            Assert.That(calls.Count, Is.EqualTo(3));
+            host.StepBudget = 0;
+            typeof(ProductionTreeHost).GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(host, null);
+            Assert.That(calls.Select(c => c.Phase), Is.EqualTo(new[] { BurstCallbackPhase.Enter, BurstCallbackPhase.Tick, BurstCallbackPhase.Tick, BurstCallbackPhase.Abort, BurstCallbackPhase.Exit }));
+            Assert.That(calls[3].AbortReason, Is.EqualTo(BurstNodeAbortReason.TreeStopped));
+            Assert.That(calls[4].ExitReason, Is.EqualTo(BurstNodeExitReason.Aborted));
+            Assert.That(host.TraceChannelOwner.State, Is.EqualTo(NativeOwnerStateV1.Disposed));
+        }
+
+        [Test]
+        public void CallbackException_StopsOnceAndDisposesWithoutReinvokingUserCode()
+        {
+            var host = CreateHost();
+            var calls = 0;
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                calls++;
+                throw new InvalidOperationException("host-test-failure");
+            }
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), Dispatch, Fixture.TraceCapacity, () => 10, out _), Is.True);
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("AIBT ProductionTreeHost:.*host-test-failure"));
+            InvokeUpdate(host);
+            InvokeUpdate(host);
+            Assert.That(calls, Is.EqualTo(1));
+            Assert.That(host.LastFailure.Code, Is.Not.EqualTo(NativeRuntimeDiagnosticCodeV1.None));
         }
 
         private static void InvokeUpdate(ProductionTreeHost host)
@@ -111,8 +297,126 @@ namespace AIBT.Tests.Runtime.Integration
             method.Invoke(host, null);
         }
 
+        [TestCase(-1)]
+        [TestCase(9)]
+        public void InvalidClock_StopsBeforeAnotherCallback(long invalidTime)
+        {
+            var host = CreateHost();
+            long now = 10;
+            var calls = 0;
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                calls++;
+                status = NodeStatus.Running;
+                return BurstContextResult.Success;
+            }
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), Dispatch, Fixture.TraceCapacity, () => now, out _), Is.True);
+            InvokeUpdate(host);
+            now = invalidTime;
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("AIBT ProductionTreeHost:.*Clock"));
+            InvokeUpdate(host);
+            InvokeUpdate(host);
+            Assert.That(calls, Is.EqualTo(2));
+            Assert.That(host.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid));
+        }
+
+        [Test]
+        public void BootstrapTwice_RejectsWithoutReplacingLiveInstance()
+        {
+            var host = CreateHost();
+            var ticks = 0;
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), _ => { ticks++; return NodeStatus.Running; }, Fixture.TraceCapacity, out _), Is.True);
+            var owner = host.TraceChannelOwner;
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), _ => NodeStatus.Success, Fixture.TraceCapacity, out var failure), Is.False);
+            Assert.That(failure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid));
+            InvokeUpdate(host);
+            Assert.That(ticks, Is.EqualTo(1));
+            Assert.That(host.TraceChannelOwner, Is.SameAs(owner));
+        }
+
+        [Test]
+        public void DestroyAfterTerminalTick_PreservesPendingExitReason()
+        {
+            var host = CreateHost();
+            var calls = new List<ProductionTreeHost.DispatchRequest>();
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                calls.Add(request);
+                status = NodeStatus.Success;
+                return BurstContextResult.Success;
+            }
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), Dispatch, Fixture.TraceCapacity, () => 10, out _), Is.True);
+            host.StepBudget = 1;
+            for (var i = 0; i < 20 && !calls.Any(c => c.Phase == BurstCallbackPhase.Tick); i++) InvokeUpdate(host);
+            Assert.That(calls.Select(c => c.Phase), Is.EqualTo(new[] { BurstCallbackPhase.Enter, BurstCallbackPhase.Tick }));
+            // EditMode does not guarantee OnDestroy for a component that never received Awake.
+            // Invoke the callback boundary here; real Unity teardown is separately verified in Play mode.
+            typeof(ProductionTreeHost).GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(host, null);
+            Assert.That(calls.Select(c => c.Phase), Is.EqualTo(new[] { BurstCallbackPhase.Enter, BurstCallbackPhase.Tick, BurstCallbackPhase.Exit }));
+            Assert.That(calls[2].ExitReason, Is.EqualTo(BurstNodeExitReason.Success));
+        }
+
+        [Test]
+        public void RootLeaf_RecordsOneExit()
+        {
+            var host = CreateHost();
+            Assert.That(host.TryBootstrap(Fixture.RootLeaf(), _ => NodeStatus.Success, Fixture.TraceCapacity, out _), Is.True);
+            InvokeUpdate(host);
+            Assert.That(host.TraceChannelOwner.TryGetSnapshot(out var snapshot, out _), Is.True);
+            Assert.That(Enumerable.Range(0, (int)snapshot.RecordCount).Count(i => snapshot.Records[i].Kind == NativeTraceEventKindV1.NodeExited), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DestructionInsideCallback_CompletesCallbackBeforeDisposingStorage()
+        {
+            var host = CreateHost();
+            var calls = new List<BurstCallbackPhase>();
+            BurstContextResult Dispatch(in ProductionTreeHost.DispatchRequest request, out NodeStatus status)
+            {
+                calls.Add(request.Phase);
+                if (request.Phase == BurstCallbackPhase.Tick)
+                    typeof(ProductionTreeHost).GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(host, null);
+                status = NodeStatus.Running;
+                return BurstContextResult.Success;
+            }
+            Assert.That(host.TryBootstrap(Fixture.CreateSingleLeafProgram(), Dispatch, Fixture.TraceCapacity, () => 10, out _), Is.True);
+            InvokeUpdate(host);
+            Assert.That(calls, Is.EqualTo(new[] { BurstCallbackPhase.Enter, BurstCallbackPhase.Tick, BurstCallbackPhase.Abort, BurstCallbackPhase.Exit }));
+            Assert.That(host.TraceChannelOwner.State, Is.EqualTo(NativeOwnerStateV1.Disposed));
+        }
+
         private static class Fixture
         {
+            internal static CompiledProgram RootLeaf() => CreateConfigured(
+                new[] { Node("test.leaf", 0, 0, 0, 0, 0, 0, 0) }, Array.Empty<uint>(), Array.Empty<byte>(), 0);
+            internal static CompiledProgram Timeout() => CreateConfigured(
+                new[] { Node("aibt.core.timeout", 0, 16, 0, 8, 0, 1, 0), Node("test.leaf", 0, 0, 0, 0, 0, 0, 1) },
+                new uint[] { 1 }, new byte[] { 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 8);
+
+            internal static CompiledProgram ReactiveCooldown() => CreateConfigured(
+                new[] { Node("aibt.core.reactive-sequence", 0, 0, 0, 4, 0, 2, 0),
+                    Node("aibt.core.cooldown", 0, 16, 8, 8, 2, 1, 1, NodeMemoryLifetime.Instance),
+                    Node("test.gate", 0, 0, 0, 0, 0, 0, 2), Node("test.action", 0, 0, 0, 0, 0, 0, 3) },
+                new uint[] { 1, 2, 3 }, new byte[] { 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 16);
+
+            private static CompiledNodeRecord Node(string type, uint configOffset, uint configSize, uint memoryOffset, uint memorySize,
+                uint childOffset, uint childCount, uint index, NodeMemoryLifetime lifetime = NodeMemoryLifetime.Activation)
+                => new CompiledNodeRecord(StableHash.Fnv1A64(type), 1, configOffset, configSize, configSize == 0 ? 1u : 8u,
+                    memoryOffset, memorySize, memorySize == 0 ? 1u : memorySize, lifetime,
+                    new CompiledRange(childOffset, childCount), CompiledNodeFlags.BurstDomain, index, default, default);
+
+            private static CompiledProgram CreateConfigured(CompiledNodeRecord[] nodes, uint[] children, byte[] config, uint memorySize)
+            {
+                var debug = nodes.Select((n, i) => new CompiledDebugMapEntry((uint)i, new NodeId("node" + i), "/tree/nodes/" + i)).ToArray();
+                CompiledProgram Build(CompiledHash hash) => new CompiledProgram(
+                    new CompiledProgramHeader(1, 1, new CompiledCompilerVersion(1, 0, 0, 1), Hash('a'), Hash('b'), Hash('c'), 1, hash,
+                        0, (uint)nodes.Length, (uint)children.Length, 0, (uint)debug.Length, (uint)config.Length, memorySize,
+                        nodes.Max(n => Math.Max(n.ConfigAlignment, n.InstanceMemoryAlignment)), 1, true),
+                    nodes, children, Array.Empty<uint>(), Array.Empty<uint>(), Array.Empty<CompiledBlackboardSlotRecord>(),
+                    Array.Empty<CompiledObserverRecord>(), Array.Empty<uint>(), config, Array.Empty<byte>(), debug);
+                return Build(CompiledProgramContentHashV1.Compute(Build(Hash('d'))));
+            }
+
             internal static NativeTraceChannelCapacityV1 TraceCapacity =>
                 new NativeTraceChannelCapacityV1(recordCapacity: 65, payloadCapacity: 0, maximumPayloadBytes: 0, emissionCapacity: 256);
 

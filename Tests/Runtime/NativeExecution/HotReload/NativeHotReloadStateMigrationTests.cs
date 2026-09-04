@@ -8,6 +8,155 @@ namespace AIBT.Tests.Runtime.NativeExecution.HotReload
 {
     public sealed class NativeHotReloadStateMigrationTests
     {
+        [TestCase(20, false, false, NodeStatus.Failure)]
+        [TestCase(110, false, false, NodeStatus.Success)]
+        [TestCase(20, true, false, NodeStatus.Success)]
+        [TestCase(20, false, true, NodeStatus.Success)]
+        public void Cooldown_PreservesDeadlineOnlyForMigratingNodes(long now, bool excluded, bool incompatible, NodeStatus expected)
+        {
+            var program = NativeHotReloadTestProgram.Cooldown();
+            var next = NativeHotReloadTestProgram.Cooldown(replaceWithTimeout: incompatible);
+            Assert.That(NativeHotReloadInstance.TryBuild(program, Allocator.Persistent, out var old, out var failure), Is.True, failure.Code.ToString());
+            var fresh = default(NativeHotReloadInstance);
+            try
+            {
+                Assert.That(old.Machine.TryBeginUpdate(1, 10, out _), Is.True);
+                DriveCallbacks(ref old.Machine, program, _ => NodeStatus.Success);
+                Assert.That(old.CooldownInitialized[0], Is.EqualTo(1));
+                Assert.That(NativeHotReloadStateMigration.TryMigrate(old, program, next,
+                    HotReloadCompatibilityClassifier.Classify(program, next),
+                    excluded ? new[] { NativeHotReloadTestProgram.RootNodeId } : NoExclusions, Allocator.Persistent,
+                    out fresh, out _, out failure), Is.True, failure.Code.ToString());
+                Assert.That(fresh.Machine.TryBeginUpdate(2, now, out _), Is.True);
+                var calls = DriveCallbacks(ref fresh.Machine, next, _ => NodeStatus.Success);
+                Assert.That(fresh.Control[0].RootStatus, Is.EqualTo(expected));
+                Assert.That(calls.Count, Is.EqualTo(expected == NodeStatus.Failure ? 0 : 3));
+                Assert.That(old.CooldownInitialized[0], Is.EqualTo(1));
+            }
+            finally { fresh.Dispose(); old.Dispose(); }
+        }
+        [TestCase(false, false, false)]
+        [TestCase(false, true, false)]
+        [TestCase(true, false, false)]
+        [TestCase(true, true, false)]
+        [TestCase(false, false, true)]
+        [TestCase(false, true, true)]
+        [TestCase(true, false, true)]
+        [TestCase(true, true, true)]
+        public void Migration_ResumesTheAgreedCallbackOrder(bool secondChildActive, bool reordered, bool nested)
+        {
+            var oldProgram = nested ? NativeHotReloadTestProgram.NestedSequence(false) : NativeHotReloadTestProgram.TwoLeafSequence(false);
+            var newProgram = nested ? NativeHotReloadTestProgram.NestedSequence(reordered) : NativeHotReloadTestProgram.TwoLeafSequence(reordered);
+            Assert.That(NativeHotReloadInstance.TryBuild(oldProgram, Allocator.Persistent, out var old, out _), Is.True);
+            var fresh = default(NativeHotReloadInstance);
+            try
+            {
+                Assert.That(old.Machine.TryBeginUpdate(1, 10, out _), Is.True);
+                DriveCallbacks(ref old.Machine, oldProgram, i => i == (secondChildActive ? 2u : 1u) + (nested ? 1u : 0u) ? NodeStatus.Running : NodeStatus.Success);
+                var oldDepth = old.Control[0].Depth;
+                Assert.That(NativeHotReloadStateMigration.TryMigrate(old, oldProgram, newProgram,
+                    HotReloadCompatibilityClassifier.Classify(oldProgram, newProgram), NoExclusions, Allocator.Persistent,
+                    out fresh, out _, out var failure), Is.True, failure.Code.ToString());
+                Assert.That(old.Control[0].Depth, Is.EqualTo(oldDepth));
+                Assert.That(fresh.Machine.TryBeginUpdate(2, 20, out _), Is.True);
+                var calls = DriveCallbacks(ref fresh.Machine, newProgram, _ => NodeStatus.Success);
+                var active = secondChildActive ? "b" : "a";
+                var expected = new System.Collections.Generic.List<string>();
+                if (reordered)
+                {
+                    expected.Add(active + ":Abort:HotReload"); expected.Add(active + ":Exit:Aborted");
+                    expected.AddRange(new[] { "b:Enter", "b:Tick", "b:Exit:Success", "a:Enter", "a:Tick", "a:Exit:Success" });
+                }
+                else
+                {
+                    expected.Add(active + ":Tick"); expected.Add(active + ":Exit:Success");
+                    if (!secondChildActive) expected.AddRange(new[] { "b:Enter", "b:Tick", "b:Exit:Success" });
+                }
+                if (nested) expected.AddRange(new[] { "c:Enter", "c:Tick", "c:Exit:Success" });
+                Assert.That(calls, Is.EqualTo(expected));
+                Assert.That(fresh.Control[0].RootStatus, Is.EqualTo(NodeStatus.Success));
+                Assert.That(fresh.Control[0].HasRootStatus, Is.EqualTo(1));
+            }
+            finally { fresh.Dispose(); old.Dispose(); }
+        }
+
+        [Test]
+        public void NestedStructuralChanges_CancelTheActivePathOnceAtTheOutermostOwner()
+        {
+            var program = NativeHotReloadTestProgram.NestedSequence(false);
+            var next = NativeHotReloadTestProgram.NestedSequence(true, reverseOuter: true);
+            Assert.That(NativeHotReloadInstance.TryBuild(program, Allocator.Persistent, out var old, out _), Is.True);
+            var fresh = default(NativeHotReloadInstance);
+            try
+            {
+                Assert.That(old.Machine.TryBeginUpdate(1, 10, out _), Is.True);
+                DriveCallbacks(ref old.Machine, program, _ => NodeStatus.Running);
+                var controlBefore = old.Control[0];
+                Assert.That(NativeHotReloadStateMigration.TryMigrate(old, program, next,
+                    HotReloadCompatibilityClassifier.Classify(program, next), NoExclusions, Allocator.Persistent,
+                    out fresh, out var report, out var failure), Is.True, failure.Code.ToString());
+                Assert.That(report.CursorResetNodeCount, Is.EqualTo(2));
+                Assert.That(old.Control[0], Is.EqualTo(controlBefore));
+                Assert.That(fresh.Machine.TryBeginUpdate(2, 20, out _), Is.True);
+                Assert.That(DriveCallbacks(ref fresh.Machine, next, _ => NodeStatus.Success), Is.EqualTo(new[] {
+                    "a:Abort:HotReload", "a:Exit:Aborted", "c:Enter", "c:Tick", "c:Exit:Success",
+                    "b:Enter", "b:Tick", "b:Exit:Success", "a:Enter", "a:Tick", "a:Exit:Success" }));
+                Assert.That(fresh.Control[0].HasRootStatus, Is.EqualTo(1));
+            }
+            finally { fresh.Dispose(); old.Dispose(); }
+        }
+
+        [TestCase(NodeStatus.Success)]
+        [TestCase(NodeStatus.Failure)]
+        public void Reorder_AfterTerminalTick_PreservesPendingExitReason(NodeStatus terminal)
+        {
+            var program = NativeHotReloadTestProgram.TwoLeafSequence(false);
+            var next = NativeHotReloadTestProgram.TwoLeafSequence(true);
+            Assert.That(NativeHotReloadInstance.TryBuild(program, Allocator.Persistent, out var old, out _), Is.True);
+            var fresh = default(NativeHotReloadInstance);
+            try
+            {
+                Assert.That(old.Machine.TryBeginUpdate(1, 10, out _), Is.True);
+                var tickReached = false;
+                for (var guard = 0; guard < 32 && !tickReached; guard++)
+                {
+                    Assert.That(old.Machine.TryAdvance(out var step, out _), Is.True);
+                    if (step.Kind != NativeLifecycleStepKindV1.DispatchRequired) continue;
+                    Assert.That(old.Machine.TryCompleteDispatch(step.DispatchToken, BurstContextResult.Success, terminal, out _), Is.True);
+                    tickReached = step.Phase == BurstCallbackPhase.Tick;
+                }
+                Assert.That(tickReached, Is.True);
+                Assert.That(NativeHotReloadStateMigration.TryMigrate(old, program, next,
+                    HotReloadCompatibilityClassifier.Classify(program, next), NoExclusions, Allocator.Persistent,
+                    out fresh, out _, out var failure), Is.True, failure.Code.ToString());
+                Assert.That(fresh.Machine.TryBeginUpdate(2, 20, out _), Is.True);
+                Assert.That(DriveCallbacks(ref fresh.Machine, next, _ => NodeStatus.Success), Is.EqualTo(new[] {
+                    "a:Exit:" + terminal, "b:Enter", "b:Tick", "b:Exit:Success", "a:Enter", "a:Tick", "a:Exit:Success" }));
+                Assert.That(fresh.Control[0].HasRootStatus, Is.EqualTo(1));
+            }
+            finally { fresh.Dispose(); old.Dispose(); }
+        }
+
+        private static System.Collections.Generic.List<string> DriveCallbacks(ref NativeLifecycleMachineV1 machine,
+            CompiledProgram program, System.Func<uint, NodeStatus> tick)
+        {
+            var calls = new System.Collections.Generic.List<string>();
+            for (var guard = 0; guard < 128; guard++)
+            {
+                Assert.That(machine.TryAdvance(out var step, out var failure), Is.True, failure.Code.ToString());
+                if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
+                {
+                    var id = program.DebugMap[(int)step.NodeIndex].AuthoringNodeId.ToString();
+                    var suffix = step.Phase == BurstCallbackPhase.Abort ? ":" + step.AbortReason
+                        : step.Phase == BurstCallbackPhase.Exit ? ":" + step.ExitReason : "";
+                    calls.Add(id + ":" + step.Phase + suffix);
+                    Assert.That(machine.TryCompleteDispatch(step.DispatchToken, BurstContextResult.Success,
+                        step.Phase == BurstCallbackPhase.Tick ? tick(step.NodeIndex) : NodeStatus.Running, out failure), Is.True, failure.Code.ToString());
+                }
+                else if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting) return calls;
+            }
+            Assert.Fail("No execution boundary reached."); return calls;
+        }
         private static readonly IReadOnlyCollection<NodeId> NoExclusions = new List<NodeId>();
 
         [Test]

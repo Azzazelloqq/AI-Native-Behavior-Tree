@@ -1,6 +1,6 @@
 # AIBT MCP recipes (generated)
 
-Every tool-call sequence below is live-verified against a real MCP client (see `Planning~/Evidence/P6-011/`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command.
+Verification evidence is recorded under `Planning~/Evidence/P6-011/` and, for the updated node-compilation protocol, `Planning~/Evidence/P7-031/`. Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command.
 
 ## Recipe: create and validate a tree
 
@@ -38,13 +38,13 @@ Goal: scaffold a new Burst condition node, compile it for real, and persist it i
    -> stages a paired test scaffold (an honest placeholder pending P6-022).
 
 4) aibt_analyze_and_compile_node {"mode": "start"}
-   -> {"logPositionBefore": <marker>}. Wait a few seconds (writing the staged node triggers a real domain reload).
+   -> {"status": "pending", "attemptId": "<id>"}; requests a new compilation of the captured staged content.
 
-5) aibt_analyze_and_compile_node {"mode": "check", "logPositionBefore": <marker from step 4>}
-   -> repeat until status is no longer 'not-yet-observed'/'still-compiling'; on 'compiled', returns a contentHash.
+5) aibt_analyze_and_compile_node {"mode": "check", "attemptId": "<id from step 4>"}
+   -> repeat while status is 'pending'/'still-compiling', including across domain reload; 'compiled' returns contentHash, 'failed' returns diagnostics. Changed staging or an expired attempt requires a fresh start.
 
 6) aibt_test_node {"expectedContentHash": "<contentHash from step 5>"}
-   -> proves the compiled shard is structurally valid and registry-materializable.
+   -> checks metadata and registry materialization; dispatchProven reports whether native dispatch was exercised for the supported binding types.
 
 7) aibt_apply_node {"expectedContentHash": "<contentHash from step 5>", "destinationPath": "MyProject/GeneratedNodes/MyCondition"}
    -> the only step that persists into the real project; re-verifies the hash and re-runs the checks itself first.

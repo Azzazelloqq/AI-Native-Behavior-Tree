@@ -1,0 +1,60 @@
+var flags=System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+Type Find(string name)=>AppDomain.CurrentDomain.GetAssemblies().Select(a=>a.GetType(name)).First(t=>t!=null);
+var fixture=Find("AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadTestProgram");
+var instanceType=Find("AIBT.NativeHotReloadInstance");
+var migration=Find("AIBT.NativeHotReloadStateMigration").GetMethod("TryMigrate",flags);
+object Build(AIBT.CompiledProgram p){
+ var args=new object[]{p,Unity.Collections.Allocator.Persistent,null,null};
+ if(!(bool)instanceType.GetMethod("TryBuild",flags).Invoke(null,args))throw new Exception("Build: "+args[3]);
+ return args[2];
+}
+object Migrate(object old,AIBT.CompiledProgram before,AIBT.CompiledProgram after){
+ var args=new object[]{old,before,after,AIBT.HotReloadCompatibilityClassifier.Classify(before,after),Array.Empty<AIBT.NodeId>(),Unity.Collections.Allocator.Persistent,null,null,null};
+ if(!(bool)migration.Invoke(null,args))throw new Exception("Migrate: "+args[8]);
+ return args[6];
+}
+object Field(object value,string name)=>value.GetType().GetField(name,flags).GetValue(value);
+object Property(object value,string name)=>value.GetType().GetProperty(name,flags).GetValue(value);
+object Control(object instance){var array=Field(instance,"Control");return array.GetType().GetProperty("Item").GetValue(array,new object[]{0});}
+void Dispose(object instance){if(instance!=null)instanceType.GetMethod("Dispose",flags).Invoke(instance,null);}
+System.Collections.Generic.List<string> Drive(object instance,AIBT.CompiledProgram program,ulong update,long time,Func<uint,AIBT.NodeStatus> status){
+ var machine=Field(instance,"Machine"); var mt=machine.GetType();
+ var begin=mt.GetMethods(flags).Single(m=>m.Name=="TryBeginUpdate"&&m.GetParameters().Length==3);
+ var beginArgs=new object[]{update,time,null};
+ if(!(bool)begin.Invoke(machine,beginArgs))throw new Exception("Begin: "+beginArgs[2]);
+ var calls=new System.Collections.Generic.List<string>();
+ for(int guard=0;guard<128;guard++){
+  var args=new object[]{null,null};
+  if(!(bool)mt.GetMethod("TryAdvance",flags).Invoke(machine,args))throw new Exception("Advance: "+args[1]);
+  var step=args[0];var kind=Property(step,"Kind").ToString();
+  if(kind=="Completed"||kind=="Waiting")return calls;
+  if(kind!="DispatchRequired")continue;
+  var index=(uint)Property(step,"NodeIndex");var phase=Property(step,"Phase").ToString();
+  string reason=phase=="Exit"?":"+Property(step,"ExitReason"):phase=="Abort"?":"+Property(step,"AbortReason"):"";
+  calls.Add(program.DebugMap[(int)index].AuthoringNodeId+":"+phase+reason);
+  var completeArgs=new object[]{Property(step,"DispatchToken"),AIBT.Burst.BurstContextResult.Success,phase=="Tick"?status(index):AIBT.NodeStatus.Running,null};
+  if(!(bool)mt.GetMethod("TryCompleteDispatch",flags).Invoke(machine,completeArgs))throw new Exception("Complete: "+completeArgs[3]);
+ }
+ throw new Exception("No boundary");
+}
+var output=new System.Collections.Generic.List<object>();
+var before=(AIBT.CompiledProgram)fixture.GetMethod("TwoLeafSequence",flags).Invoke(null,new object[]{false});
+var after=(AIBT.CompiledProgram)fixture.GetMethod("TwoLeafSequence",flags).Invoke(null,new object[]{true});
+object original=null,fresh=null;
+try{
+ original=Build(before);var initial=Drive(original,before,1,10,_=>AIBT.NodeStatus.Running);
+ fresh=Migrate(original,before,after);var continuation=Drive(fresh,after,2,20,_=>AIBT.NodeStatus.Success);
+ output.Add(new{scenario="Sequence reorder",initial,continuation,root=Field(Control(fresh),"RootStatus").ToString(),terminal=Field(Control(fresh),"HasRootStatus")});
+}finally{Dispose(fresh);Dispose(original);}
+var cooldown=(AIBT.CompiledProgram)fixture.GetMethod("Cooldown",flags).Invoke(null,new object[]{false});
+foreach(long time in new long[]{20,110}){
+ original=null;fresh=null;
+ try{
+  original=Build(cooldown);Drive(original,cooldown,1,10,_=>AIBT.NodeStatus.Success);fresh=Migrate(original,cooldown,cooldown);
+  var flagArray=(Unity.Collections.NativeArray<byte>)Field(fresh,"CooldownInitialized");
+  var flagBefore=flagArray[0];
+  var calls=Drive(fresh,cooldown,2,time,_=>AIBT.NodeStatus.Success);
+  output.Add(new{scenario="Cooldown migration",time,flagBefore,calls,root=Field(Control(fresh),"RootStatus").ToString()});
+ }finally{Dispose(fresh);Dispose(original);}
+}
+return output;

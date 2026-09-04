@@ -58,7 +58,8 @@ namespace AIBT.Authoring.Migration
 
             return new TreeDocument(
                 document.Format, document.FormatVersion, document.TreeId, document.Name,
-                document.Root, newNodes, tags: document.Tags, metadata: document.Metadata);
+                document.Root, newNodes, document.Blackboard, document.Description, document.Tags,
+                document.Metadata, document.Revision, document.AgentContract, document.SharedContract);
         }
 
         private static bool TryMigrateNode(
@@ -109,7 +110,7 @@ namespace AIBT.Authoring.Migration
 
             migrated = new NodeDocument(
                 node.Id, node.TypeId, (int)version, node.Children, parameters,
-                node.Observer, node.DisplayName, node.Description, node.Tags);
+                node.Observer, node.DisplayName, node.Description, node.Tags, node.Bindings);
             return true;
         }
 

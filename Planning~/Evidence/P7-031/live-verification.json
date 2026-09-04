@@ -1,0 +1,74 @@
+{
+  "success": {
+    "result": {
+      "attemptId": "614a5d2dae0f4d1590904d39857c99cf",
+      "status": "compiled",
+      "contentHash": "3797d51e4b16d5507e665eb58310ae8fd9df53640899850df0dc3de6b694510b"
+    }
+  },
+  "test": {
+    "error": {
+      "code": "AIBT9013",
+      "message": "Could not allocate native memory. If this allocation was made from a managed thread outside of a job, you must use Allocator.Persistent or Allocator.TempJob."
+    }
+  },
+  "stale": {
+    "error": {
+      "code": "AIBT9032",
+      "message": "The staged content has changed since the supplied content hash was produced (or there is no pending generation) -- re-run analyze-and-compile-node."
+    }
+  },
+  "changed": {
+    "error": {
+      "code": "AIBT9032",
+      "message": "Staged content changed after start. Call start again."
+    }
+  },
+  "error-result": {
+    "result": {
+      "attemptId": "bc272d2ab34b45e7951344cd1b8d2140",
+      "status": "failed",
+      "diagnostics": [
+        "Assets\\AIBT-Generated\\_Staging\\Pending\\LiveConditionNode.cs(63,8): error CS1029: #error: 'P731 intentional disposable compile failure'",
+        "Assets\\AIBT-Generated\\_Staging\\Pending\\LiveConditionNode.cs(63,8): error CS1029: #error: 'P731 intentional disposable compile failure'\r",
+        "Assets\\AIBT-Generated\\_Staging\\Pending\\LiveConditionNode.cs(63,8): error CS1029: #error: 'P731 intentional disposable compile failure'\r"
+      ]
+    }
+  },
+  "restored-result": {
+    "result": {
+      "attemptId": "6ab86d74eb2a4325a9ac442fdec22125",
+      "status": "compiled",
+      "contentHash": "3797d51e4b16d5507e665eb58310ae8fd9df53640899850df0dc3de6b694510b"
+    }
+  },
+  "mainthread-test": {
+    "result": {
+      "valid": true,
+      "shardId": "aibt.p731.live-condition-shard",
+      "contentHash": "3797d51e4b16d5507e665eb58310ae8fd9df53640899850df0dc3de6b694510b",
+      "dispatchProven": true,
+      "enteredSuccessfully": true,
+      "tickStatus": "Success",
+      "tickCallbackFailure": "Success"
+    }
+  },
+  "apply": {
+    "result": {
+      "applied": true,
+      "destination": "P731-LiveVerification",
+      "shardId": "aibt.p731.live-condition-shard",
+      "files": [
+        "LiveConditionNode.cs",
+        "LiveConditionNodeTests.cs",
+        "AIBT.Generated.P731-LiveVerification.asmdef"
+      ]
+    }
+  },
+  "registry-refusal": {
+    "error": {
+      "code": "AIBT9035",
+      "message": "Refusing to apply: the staged node is not currently compile-clean and registry-valid (Assembly 'AIBT.Generated.Staging' is not currently loaded.). Re-run analyze-and-compile-node/test-node."
+    }
+  }
+}

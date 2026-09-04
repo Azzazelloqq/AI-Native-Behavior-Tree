@@ -1,6 +1,10 @@
 # P6-009 — Node development tools
 
-Status: `Draft`
+Status: `Done`
+
+Header reconciled on 2026-09-04 with work-items.json and
+[the recorded implementation evidence](../../Evidence/P6-009/README.md).
+This preserves the original narrowed completion scope; remaining workflow defects are tracked by P7-031.
 
 ## Scope correction (2026-08-30)
 

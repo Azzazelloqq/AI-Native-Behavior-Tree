@@ -6,6 +6,23 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- MCP node compilation now uses an explicit, domain-reload-persistent `attemptId` and an Editor
+  compilation request. Legacy log-offset checks require a new start/check sequence. Apply validates
+  Assets containment and rejects link/reparse ancestry. P7-031 remains pending the complete TCP
+  recipe: existing dispatch allocator and staging companion cleanup blockers are documented.
+
+- Document migration preserves blackboard, description, revision, scope contracts and bindings.
+  Native hot reload preserves compatible cooldown state and cancels the previous active child
+  path before traversing reordered children. See `Planning~/Evidence/P7-029/`.
+- Full-lifecycle `ProductionTreeHost` dispatch with callback reasons and injected clock, retained
+  failure diagnostics, and a per-frame step budget. The original Tick-only overload remains supported.
+- Production-host regression coverage for terminal stopping, clock/decorator boundaries, budget
+  resume identity, cancellation/disposal and callback failure. See `Documentation~/production-host.md`.
+
+- Production host no longer starts updates after a terminal root or supplies a permanently zero
+  clock. Budgeted frames preserve logical-update inputs; destruction cancels active work before
+  releasing native storage. Trace records retain actual leaf exit/abort reasons and budget events.
+
 - Initial repository and Unity package structure.
 - Architecture, scope, editor, AI/MCP, benchmark, testing, and roadmap documentation.
 - Strict canonical JSON contracts and schemas for semantic trees, node manifests, policies, and behavior cases.

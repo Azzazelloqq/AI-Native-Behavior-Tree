@@ -2012,7 +2012,7 @@
       "id": "P7-029",
       "phase": 7,
       "title": "Fix real data-loss/state bugs in document migration and native hot reload",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-029-migration-and-hot-reload-data-loss-fixes.md",
       "dependsOn": [
@@ -2021,6 +2021,12 @@
         "P7-018"
       ],
       "owns": [
+        "Authoring/Migration/DocumentMigrator.cs",
+        "Runtime/Execution/Native/HotReload/NativeHotReloadStateMigration.cs",
+        "Runtime/Execution/Native/Core/NativeLifecycleMachineV1.cs",
+        "Tests/Editor/Migration/DocumentMigratorTests.cs",
+        "Tests/Runtime/NativeExecution/HotReload/NativeHotReloadStateMigrationTests.cs",
+        "Tests/Runtime/NativeExecution/HotReload/NativeHotReloadTestProgram.cs",
         "Planning~/Evidence/P7-029/"
       ]
     },
@@ -2028,12 +2034,14 @@
       "id": "P7-030",
       "phase": 7,
       "title": "Complete the production host execution contract",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-030-production-host-execution-contract.md",
       "dependsOn": ["P7-027", "P7-010"],
       "owns": [
         "Runtime/Integration/ProductionTreeHost.cs",
+        "Runtime/Execution/Native/Core/NativeLifecycleMachineV1.cs",
+        "Runtime/Scheduling/NativeTraceRecorderV1.cs",
         "Tests/Runtime/Integration/ProductionTreeHostTests.cs",
         "Planning~/Evidence/P7-030/"
       ]
@@ -2042,13 +2050,14 @@
       "id": "P7-031",
       "phase": 7,
       "title": "Correct MCP node-development compile tracking and apply boundaries",
-      "status": "draft",
+      "status": "in_progress",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-031-mcp-node-development-boundaries.md",
       "dependsOn": ["P6-009", "P7-009"],
       "owns": [
         "MCP/NodeDevelopment/StagingSlot.cs",
         "MCP/NodeDevelopment/EditorLogCompileWatcher.cs",
+        "MCP/NodeDevelopment/CompileAttemptStore.cs",
         "MCP/NodeDevelopment/McpNodeDevelopmentToolDispatcher.cs",
         "Tests/Editor/Mcp/NodeDevelopment/",
         "Planning~/Evidence/P7-031/"

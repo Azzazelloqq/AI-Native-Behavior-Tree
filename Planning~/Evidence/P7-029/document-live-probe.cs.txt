@@ -1,0 +1,39 @@
+var flags=System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+var test=AppDomain.CurrentDomain.GetAssemblies().Select(a=>a.GetType("AIBT.Tests.Editor.Migration.DocumentMigratorTests")).First(t=>t!=null);
+var manifest=test.GetMethod("ManifestVersion",flags).Invoke(null,new object[]{2u});
+var registry=(AIBT.Authoring.NodeRegistry)test.GetMethod("RegistryWithManifest",flags).Invoke(null,new object[]{manifest});
+var rules=AIBT.Authoring.Migration.NodeMigrationRegistry.Empty.WithRule(new AIBT.Authoring.Migration.NodeMigrationRule(
+ "aibt.core.migration-test-node",1,renames:new[]{new AIBT.Authoring.Migration.NodeFieldRename("moveSpeed","speed")},
+ additions:new[]{new AIBT.Authoring.Migration.NodeFieldAddition("acceleration",AIBT.Authoring.SemanticValue.FromUInt64(5))}));
+var results=new System.Collections.Generic.List<object>();
+foreach(int version in new[]{1,2}){
+ var keys=new System.Collections.Generic.List<AIBT.Authoring.BlackboardKeyDefinition>{
+  new AIBT.Authoring.BlackboardKeyDefinition("value","value",AIBT.Authoring.BlackboardTypeReference.BuiltIn(AIBT.BlackboardValueType.Bool),defaultValue:AIBT.Authoring.BlackboardDefaultValue.Bool(true))};
+ if(version==2){
+  keys.Add(new AIBT.Authoring.BlackboardKeyDefinition("agent.value","agent.value",AIBT.Authoring.BlackboardTypeReference.BuiltIn(AIBT.BlackboardValueType.Bool),AIBT.BlackboardScope.Agent,AIBT.Authoring.BlackboardDefaultValue.Bool(false)));
+  keys.Add(new AIBT.Authoring.BlackboardKeyDefinition("shared.value","shared.value",AIBT.Authoring.BlackboardTypeReference.BuiltIn(AIBT.BlackboardValueType.Bool),AIBT.BlackboardScope.Shared,AIBT.Authoring.BlackboardDefaultValue.Bool(true)));
+ }
+ var bindings=version==2?new AIBT.Authoring.NodeBindingMap(new[]{new System.Collections.Generic.KeyValuePair<string,string>("target","agent.value")}):null;
+ var node=new AIBT.Authoring.NodeDocument(new AIBT.NodeId("root"),"aibt.core.migration-test-node",1,null,
+  new AIBT.Authoring.SemanticObject(new[]{new AIBT.Authoring.SemanticProperty("moveSpeed",AIBT.Authoring.SemanticValue.FromUInt64(10))}),
+  null,"Action","Preserve node description",new AIBT.Authoring.TagSet(new[]{"node-tag"}),bindings);
+ var source=new AIBT.Authoring.TreeDocument("aibt.tree",version,new AIBT.TreeId("migration-live"),"Live",node.Id,new[]{node},keys,
+  "Preserve tree description",new AIBT.Authoring.TagSet(new[]{"tree-tag"}),AIBT.Authoring.SemanticObject.Empty,new AIBT.Revision(23),
+  version==2?new AIBT.Authoring.BlackboardScopeContract("agent.contract",2):null,
+  version==2?new AIBT.Authoring.BlackboardScopeContract("shared.contract",3):null);
+ var serialized=AIBT.Authoring.CanonicalTreeJson.Serialize(source);if(!serialized.Success)throw new Exception("Invalid source");
+ var migrated=AIBT.Authoring.Migration.DocumentMigrator.TryMigrate(source,registry,rules,out var outcomes);
+ var json=AIBT.Authoring.CanonicalTreeJson.Serialize(migrated);if(!json.Success)throw new Exception("Invalid migrated document");
+ bool? compiled=null;
+ if(version==1){
+  var compilation=AIBT.Authoring.ReferenceCompiler.Compile(migrated,registry,new AIBT.Authoring.ReferenceCompilerOptions("live.aibt.json",
+   AIBT.Authoring.ReferenceCompilationPolicy.Phase1,new AIBT.CompiledCompilerVersion(1,0,0,1)));
+  compiled=compilation.Success;if(!compilation.Success)throw new Exception(string.Join(" | ",compilation.Diagnostics.Select(d=>d.Message)));
+ }
+ results.Add(new{format=version,keysBefore=source.Blackboard.Count,keysAfter=migrated.Blackboard.Count,
+  description=migrated.Description,revision=migrated.Revision.ToString(),agentContract=migrated.AgentContract?.ContractId,
+  sharedContract=migrated.SharedContract?.ContractId,bindingsPreserved=object.ReferenceEquals(bindings,migrated.Nodes[0].Bindings),
+  nodeVersion=migrated.Nodes[0].TypeVersion,roundTrip=AIBT.Authoring.CanonicalTreeJson.Parse(json.Utf8).Success,
+  sourceUnchanged=serialized.Utf8.SequenceEqual(AIBT.Authoring.CanonicalTreeJson.Serialize(source).Utf8),compiled});
+}
+return results;

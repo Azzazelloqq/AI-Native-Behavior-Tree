@@ -6,6 +6,23 @@
 
 ## Context
 
+### P7-029 owner-approved active-child reconciliation (2026-09-04)
+
+When a structural child change resets an active Memory composite's cursor, cancel its old active
+descendant path before traversing the new order. The fresh instance dispatches
+`Abort(HotReload) -> Exit(Aborted)` deepest-first, then starts at child zero. Preserve the
+composite and unaffected ancestors. A child whose Tick already terminated receives its pending
+terminal Exit, without an additional Abort. Clear stale pending child results before new traversal.
+Nested changes on the same path reconcile once at the outermost affected composite.
+
+Thus `Sequence(a,b)` with a Running, reordered to `(b,a)`, cancels/exits a and then executes b,a;
+a's new activation is intentional. Unchanged order preserves active callbacks without extra Enter.
+The migrator remains read-only toward the old instance and never acknowledges callbacks on the
+application's behalf. A narrow internal machine helper queues the existing descendant-cancellation
+and cursor-reset transition on the freshly seeded instance. No public API or node ABI changes.
+Compatible instance memory and CooldownInitialized survive together; excluded/incompatible nodes
+retain fresh defaults. See `Planning~/Evidence/P7-029/implementation-proposal.md`.
+
 `ADR-P5-001` (`AIBT-023`) decided hot reload is never in-place mutation: it is always construct a
 fresh instance bound to the new `CompiledProgram`, then selectively copy surviving live state,
 keyed by stable authoring `NodeId`, never by compiled index. `P5-004`/`P5-005`/`P5-006` implemented

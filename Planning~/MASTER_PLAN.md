@@ -1169,8 +1169,8 @@ control-flow findings. Concurrent P7-028 work remains outside this review's chan
 
 | Scope | Card | Findings | State |
 | --- | --- | --- | --- |
-| Document/native state migration | [P7-029](Tasks/P7/P7-029-migration-and-hot-reload-data-loss-fixes.md) | Data preservation, active stack/cursor reconciliation, cooldown state | Draft, existing card clarified |
-| Production host execution | [P7-030](Tasks/P7/P7-030-production-host-execution-contract.md) | Terminal handling, clock, Action lifecycle, Budgeted integration | Draft |
+| Document/native state migration | [P7-029](Tasks/P7/P7-029-migration-and-hot-reload-data-loss-fixes.md) | Data preservation, active stack/cursor reconciliation, cooldown state | Done 2026-09-04; owner-approved active-child lifecycle |
+| Production host execution | [P7-030](Tasks/P7/P7-030-production-host-execution-contract.md) | Terminal handling, clock, Action lifecycle, Budgeted integration | Done 2026-09-04; owner-approved implementation |
 | MCP node development | [P7-031](Tasks/P7/P7-031-mcp-node-development-boundaries.md) | Assets containment, actual compile log, compile observation ordering | Draft |
 | Native scheduler recovery | [P7-032](Tasks/P7/P7-032-native-scheduler-error-recovery.md) | Rejected completion buffers in SameFrame and Pipelined | Draft |
 
@@ -1180,7 +1180,23 @@ is accurately described, but it cannot connect the general Action lifecycle. Mig
 semantic fields rather than raw JSON formatting; a legitimate composite reset may repeat a child,
 so P7-029 must resolve the precise active-child lifecycle before implementation. P7-027's historical
 completion evidence does not close these newly identified host gaps. The new cards do not reorder
-the owner's queue or authorize implementation, and no runtime fix or new release readiness is claimed.
+the owner's queue or authorize implementation. At that review stage no runtime fix or new release
+readiness was claimed.
+
+**P7-029 is done** after owner agreement on cancellation before new-order traversal. Document
+fields and compatible cooldown state are preserved; reordered active descendants receive their
+required Abort/Exit before the reset composite proceeds. Focused tests: 90/90; full EditMode:
+1685/1688 with the same three baseline failures. Separate live probes confirm document v1/v2
+preservation, exact Sequence callbacks and cooldown boundaries. Parallel/suspended-state migration
+remains a separate disclosed gap. See [P7-029 evidence](Evidence/P7-029/README.md).
+
+Following explicit owner approval, **P7-030 is done**. The host now stops after terminal results,
+supplies scaled Unity time or a controlled clock, invokes the complete Action lifecycle, and
+resumes budgeted execution across actual frames. Disable/enable and scene teardown were exercised
+in Play mode through the Unity player loop. Focused tests: 55/55; full host EditMode: 1666/1669,
+with the same three unrelated baseline failures. Warmed host measurement: 0 bytes across 1000
+calls in Immediate and budget 1; no Player/platform build claim. See
+[P7-030 evidence](Evidence/P7-030/README.md) and the [host guide](../Documentation~/production-host.md).
 
 `P7-028` (production-ready built-in node library) is **done**. Investigation before planning found
 three parallel node-authoring mechanisms, not one — the manual `NodeManifest` builder the existing

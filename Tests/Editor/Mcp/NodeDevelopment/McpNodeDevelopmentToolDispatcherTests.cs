@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using AIBT.Mcp;
+using AIBT.Mcp.NodeDevelopment;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -22,6 +23,42 @@ namespace AIBT.Tests.Editor.Mcp.NodeDevelopment
     {
         private string _projectRoot;
         private string _assetsDir;
+
+        [TestCase("../Outside")]
+        [TestCase("..\\AssetsSibling\\Node")]
+        [TestCase("/Rooted")]
+        [TestCase("\\Rooted")]
+        [TestCase("C:Relative")]
+        [TestCase("C:\\Absolute")]
+        [TestCase("\\\\server\\share")]
+        public void MoveRejectsEscapingPathsWithoutMutation(string destination)
+        {
+            StagingSlot.WriteNode(_assetsDir, "Node.cs", "original");
+            var before = Directory.GetFiles(_projectRoot, "*", SearchOption.AllDirectories).OrderBy(p => p).ToArray();
+            Assert.Throws<System.ArgumentException>(() => StagingSlot.MoveTo(_assetsDir, destination));
+            Assert.That(Directory.GetFiles(_projectRoot, "*", SearchOption.AllDirectories).OrderBy(p => p), Is.EqualTo(before));
+            Assert.That(File.ReadAllText(Path.Combine(StagingSlot.RootPath(_assetsDir), "Node.cs")), Is.EqualTo("original"));
+        }
+
+        [TestCase("Generated/Nested/Node")]
+        [TestCase("Generated\\Nested\\Node")]
+        public void MoveAcceptsNestedAssetsDestination(string destination)
+        {
+            StagingSlot.WriteNode(_assetsDir, "Node.cs", "original");
+            var moved = StagingSlot.MoveTo(_assetsDir, destination);
+            Assert.That(moved, Has.Count.EqualTo(2));
+            Assert.That(File.ReadAllText(Path.Combine(_assetsDir, "Generated", "Nested", "Node", "Node.cs")), Is.EqualTo("original"));
+            Assert.That(StagingSlot.ListStagedFiles(_assetsDir), Is.Empty);
+        }
+
+        [Test]
+        public void MoveRejectsExistingDestinationWithoutChangingStaging()
+        {
+            StagingSlot.WriteNode(_assetsDir, "Node.cs", "original");
+            Directory.CreateDirectory(Path.Combine(_assetsDir, "Existing"));
+            Assert.Throws<System.InvalidOperationException>(() => StagingSlot.MoveTo(_assetsDir, "Existing"));
+            Assert.That(StagingSlot.ListStagedFiles(_assetsDir).Count, Is.EqualTo(1));
+        }
 
         [SetUp]
         public void CreateTempProject()
@@ -176,14 +213,14 @@ namespace AIBT.Tests.Editor.Mcp.NodeDevelopment
         }
 
         [Test]
-        public void AnalyzeAndCompileNodeStartReturnsPendingWithLogPosition()
+        public void AnalyzeAndCompileNodeStartReturnsPendingWithAttemptIdentity()
         {
             Dispatch("generate_node", ConditionArgs(), "CodeGeneration");
             var response = Dispatch("analyze_and_compile_node", new JObject { ["mode"] = "start" }, "Compilation");
 
             Assert.That(response["error"], Is.Null, response.ToString());
             Assert.That((string)response["result"]["status"], Is.EqualTo("pending"));
-            Assert.That(response["result"]["logPositionBefore"], Is.Not.Null);
+            Assert.That(response["result"]["attemptId"], Is.Not.Null);
         }
 
         [Test]
@@ -196,6 +233,31 @@ namespace AIBT.Tests.Editor.Mcp.NodeDevelopment
         }
 
         // ---- test-node / apply-node stale-hash refusal ----------------------------------------------
+
+        [Test]
+        public void LegacyCompileCheckRequiresAttemptIdentity()
+        {
+            var response = Dispatch("analyze_and_compile_node", new JObject
+            {
+                ["mode"] = "check", ["logPositionBefore"] = 0,
+            }, "Compilation");
+            Assert.That((string)response["error"]["code"], Is.EqualTo("AIBT9030"));
+            Assert.That(response["error"].ToString(), Does.Contain("attemptId"));
+        }
+
+        [Test]
+        public void ApplyRejectsEscapeWithStructuredDiagnosticBeforeHashCheck()
+        {
+            Dispatch("generate_node", ConditionArgs(), "CodeGeneration");
+            var before = StagingSlot.ComputeContentHash(_assetsDir);
+            var response = Dispatch("apply_node", new JObject
+            {
+                ["expectedContentHash"] = "irrelevant", ["destinationPath"] = "../Outside",
+            }, "CodeGeneration");
+            Assert.That((string)response["error"]["code"], Is.EqualTo("AIBT9030"));
+            Assert.That(StagingSlot.ComputeContentHash(_assetsDir), Is.EqualTo(before));
+            Assert.That(Directory.Exists(Path.Combine(_projectRoot, "Outside")), Is.False);
+        }
 
         [Test]
         public void TestNodeWithStaleHashIsRejected()

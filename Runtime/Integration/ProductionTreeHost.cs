@@ -8,181 +8,292 @@ using UnityEngine;
 namespace AIBT
 {
     /// <summary>
-    /// Applies <c>ADR-P7-010</c> to production: a real component driving one compiled tree
-    /// instance's lifecycle every frame during actual Play mode -- the missing piece every prior
-    /// debugger/preview tool (<c>P3-009</c>, <c>P3-010</c>, <c>P3-011</c>, <c>P6-008</c>, <c>P6-012</c>)
-    /// disclosed and worked around with a self-driven or benchmark-driven substitute.
-    /// <para>
-    /// Reuses <see cref="SchedulingPolicyDriver"/>'s own already-tested agent construction
-    /// (<c>TryCreateAgents</c>) and disposal, but does not reuse its <c>TryRunImmediate</c>/
-    /// <c>TryRunBudgeted</c> driving loops -- those require every leaf's status to be supplied by
-    /// the caller *in advance* (a benchmark-only shape; see their own doc comments), which cannot
-    /// drive a real running tree whose leaves compute their own outcome. This host instead drives
-    /// <see cref="NativeLifecycleMachineV1.TryAdvance"/>/<c>TryCompleteDispatch</c> directly,
-    /// mirroring <c>SchedulingPolicyDriver.TryHandleStep</c>'s own exact per-step handling but
-    /// resolving a real Tick's status through <see cref="DispatchLeaf"/> -- a delegate supplied by
-    /// whoever builds this host, on demand, at the exact moment a dispatch is due. This keeps the
-    /// host itself free of any <c>AIBT.Authoring</c> dependency (matching the ADR's own reasoning
-    /// that a shipped game needs only <c>AIBT.Runtime</c> plus an already-compiled program): the
-    /// real per-project leaf dispatch table (a generated <c>GenericNativeDispatchTranslatorV1</c>,
-    /// <c>P7-009</c>) is resolved by the caller that constructs this host, never by the host itself.
-    /// </para>
-    /// <para>
-    /// Scope, per the ADR's own decision 3: <c>Immediate</c>/<c>Budgeted</c> only. A single
-    /// per-<see cref="GameObject"/> host cannot itself perform <c>BatchedJobsSameFrame</c>/
-    /// <c>PipelinedJobs</c>'s population-wide batch dispatch -- a population-level coordinator for
-    /// those policies is explicit, disclosed future work, not attempted here.
-    /// </para>
+    /// Drives one native tree in Unity Update with an optional per-frame step budget.
+    /// Completion stops execution; disabling pauses; destruction cancels active work.
+    /// Generated-node dispatch adapters remain caller-owned.
     /// </summary>
     public sealed class ProductionTreeHost : MonoBehaviour
     {
-        /// <summary>
-        /// Resolves one leaf's real Tick status. Called only when a real Tick is due
-        /// (<see cref="BurstCallbackPhase.Tick"/>), never for Enter/Exit/Abort callbacks, which this
-        /// host always answers with <see cref="NodeStatus.Running"/> -- matching
-        /// <c>SchedulingPolicyDriver.TryHandleStep</c>'s own exact behavior for those phases.
-        /// </summary>
+        /// <summary>Legacy Tick-only adapter. Use DispatchLifecycle for Actions with lifecycle effects.</summary>
         public delegate NodeStatus DispatchLeaf(uint runtimeNodeIndex);
+        /// <summary>Executes a complete callback; status is consumed only for Tick.</summary>
+        public delegate BurstContextResult DispatchLifecycle(in DispatchRequest request, out NodeStatus status);
+
+        /// <summary>Callback identity and frozen update inputs. Reasons apply to their matching phase.</summary>
+        public readonly struct DispatchRequest
+        {
+            internal DispatchRequest(NativeLifecycleStepResultV1 step, ulong updateId, long timeMicroseconds)
+            {
+                NodeIndex = step.NodeIndex;
+                Phase = step.Phase;
+                UpdateId = updateId;
+                TimeMicroseconds = timeMicroseconds;
+                ExitReason = step.ExitReason;
+                AbortReason = step.AbortReason;
+            }
+            public uint NodeIndex { get; }
+            public BurstCallbackPhase Phase { get; }
+            public ulong UpdateId { get; }
+            public long TimeMicroseconds { get; }
+            public BurstNodeExitReason ExitReason { get; }
+            public BurstNodeAbortReason AbortReason { get; }
+        }
 
         private static long s_nextTreeInstanceId;
-
         private SchedulingAgent[] _agents;
-        private DispatchLeaf _dispatch;
+        private DispatchLifecycle _dispatch;
+        private Func<long> _clock;
         private NativeTraceRecorderV1 _recorder;
         private ulong _updateId;
+        private long _timeMicroseconds;
         private bool _ready;
+        private bool _bootstrapped;
+        private bool _updateOpen;
+        private bool _suspended;
+        private bool _hasExecuted;
+        private bool _driving;
+        private bool _destroyRequested;
+        private bool _disposed;
 
-        /// <summary>The host's own trace channel, owned for this tree instance's whole lifetime -- the exact "caller-owned session" shape <c>NativeExecutionDebuggerSession.Attach</c> already expects, unmodified.</summary>
+        /// <summary>The instance-owned trace channel, available until destruction.</summary>
         public NativeTraceChannelOwnerV1 TraceChannelOwner { get; private set; }
-
-        /// <summary>The most recently observed root status, or <c>null</c> if the tree has never reached a terminal status.</summary>
+        /// <summary>Terminal root result, retained without automatic restart.</summary>
         public NodeStatus? LastRootResult { get; private set; }
-
+        /// <summary>The failure that stopped this host; None before any failure.</summary>
+        public NativeRuntimeFailureV1 LastFailure { get; private set; }
+        /// <summary>Logical updates started, excluding budget-resume frames.</summary>
         public ulong TotalUpdates => _updateId;
+        /// <summary>Null selects Immediate; otherwise limits native steps per frame. Zero pauses progress.</summary>
+        public uint? StepBudget { get; set; }
+
+        /// <summary>Bootstraps a Tick-only integration with scaled Unity time and no-op lifecycle callbacks.</summary>
+        public bool TryBootstrap(CompiledProgram program, DispatchLeaf dispatch,
+            NativeTraceChannelCapacityV1 traceCapacity, out NativeRuntimeFailureV1 failure)
+        {
+            if (dispatch == null) throw new ArgumentNullException(nameof(dispatch));
+            BurstContextResult Adapter(in DispatchRequest request, out NodeStatus status)
+            {
+                status = request.Phase == BurstCallbackPhase.Tick ? dispatch(request.NodeIndex) : NodeStatus.Running;
+                return BurstContextResult.Success;
+            }
+            return TryBootstrap(program, Adapter, traceCapacity, null, out failure);
+        }
 
         /// <summary>
-        /// Constructs the native agent and trace channel for <paramref name="program"/>. Must be
-        /// called once, before this component starts ticking (typically from <c>Awake()</c> on a
-        /// caller-owned subclass, or immediately after <c>AddComponent</c>) -- mirrors the ADR's own
-        /// spike-proven construct-in-<c>Awake</c>/dispose-in-<c>OnDestroy</c> lifecycle.
+        /// Bootstraps once with full lifecycle dispatch. A null clock uses scaled Unity time.
+        /// Custom clocks return nonnegative, nondecreasing microseconds, read once per logical
+        /// update. Clock and dispatch adapters execute synchronously on the main thread.
         /// </summary>
-        public bool TryBootstrap(
-            CompiledProgram program,
-            DispatchLeaf dispatch,
-            NativeTraceChannelCapacityV1 traceCapacity,
-            out NativeRuntimeFailureV1 failure)
+        public bool TryBootstrap(CompiledProgram program, DispatchLifecycle dispatch,
+            NativeTraceChannelCapacityV1 traceCapacity, Func<long> clock, out NativeRuntimeFailureV1 failure)
         {
             if (program == null) throw new ArgumentNullException(nameof(program));
-            _dispatch = dispatch ?? throw new ArgumentNullException(nameof(dispatch));
-
-            // NativeLifecycleNodeKindV1 is internal to AIBT.Runtime, so it cannot appear in this
-            // public method's own signature -- derived here instead, mirroring
-            // NativeHotReloadInstance.TryBuild's own exact pattern (ClassifyKind per compiled node).
-            var nodeKinds = new NativeLifecycleNodeKindV1[program.Nodes.Count];
-            for (var index = 0; index < nodeKinds.Length; index++)
+            if (dispatch == null) throw new ArgumentNullException(nameof(dispatch));
+            if (_bootstrapped || _disposed || _driving)
             {
-                nodeKinds[index] = NativeHotReloadInstance.ClassifyKind(program.Nodes[index].NodeTypeId);
-            }
-
-            if (!SchedulingPolicyDriver.TryCreateAgents(program, nodeKinds, agentCount: 1, Allocator.Persistent, out _agents, out failure))
-            {
+                failure = InvalidLifetime();
                 return false;
             }
-
-            var treeInstanceId = (ulong)Interlocked.Increment(ref s_nextTreeInstanceId);
-            if (!NativeTraceChannelOwnerV1.TryCreate(traceCapacity, NativeTraceLevelV1.Lifecycle, new TreeInstanceId(treeInstanceId), workerOrdinal: 0, Allocator.Persistent, out var owner, out var traceFailure))
+            var kinds = new NativeLifecycleNodeKindV1[program.Nodes.Count];
+            for (var index = 0; index < kinds.Length; index++)
+                kinds[index] = NativeHotReloadInstance.ClassifyKind(program.Nodes[index].NodeTypeId);
+            if (!SchedulingPolicyDriver.TryCreateAgents(program, kinds, 1, Allocator.Persistent, out _agents, out failure))
+                return false;
+            var instanceId = (ulong)Interlocked.Increment(ref s_nextTreeInstanceId);
+            // BudgetYielded/ExecutionResumed are Detailed events in the existing trace contract.
+            if (!NativeTraceChannelOwnerV1.TryCreate(traceCapacity, NativeTraceLevelV1.Detailed,
+                    new TreeInstanceId(instanceId), 0, Allocator.Persistent, out var owner, out var traceFailure))
             {
-                failure = new NativeRuntimeFailureV1(traceFailure.Code);
                 _agents[0].Dispose();
                 _agents = null;
+                failure = new NativeRuntimeFailureV1(traceFailure.Code);
                 return false;
             }
-
+            _dispatch = dispatch;
+            _clock = clock ?? ReadScaledTime;
             TraceChannelOwner = owner;
-            _recorder = new NativeTraceRecorderV1(owner, new NativeHash256V1(program.Header.CompiledContentHash), treeInstanceId);
+            _recorder = new NativeTraceRecorderV1(owner, new NativeHash256V1(program.Header.CompiledContentHash), instanceId);
+            _bootstrapped = true;
             _ready = true;
             failure = default;
             return true;
         }
 
+        private static long ReadScaledTime() => checked((long)(Time.timeAsDouble * 1000000.0));
+
         private void Update()
         {
-            if (!_ready)
+            if (!_ready || !isActiveAndEnabled || _disposed) return;
+            if (_driving)
             {
+                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
                 return;
             }
-
-            _updateId++;
-            var machine = _agents[0].Machine;
-            if (!machine.TryBeginUpdate(_updateId, out var failure))
+            _driving = true;
+            try
             {
-                Debug.LogError("AIBT ProductionTreeHost: TryBeginUpdate failed: " + failure.Code);
-                _agents[0].Machine = machine;
-                return;
+                if (!_updateOpen)
+                {
+                    var now = _clock();
+                    if (!_ready || _destroyRequested) return;
+                    if (now < 0 || (_updateId != 0 && now < _timeMicroseconds))
+                    {
+                        Fail(InvalidLifetime(), "Clock must return nonnegative, nondecreasing microseconds.");
+                        return;
+                    }
+                    if (!BeginUpdate(now)) return;
+                }
+                else if (_suspended)
+                {
+                    _recorder.RecordExecutionResumed(_updateId);
+                    _suspended = false;
+                }
+                RunSegment(StepBudget, false);
             }
+            catch (Exception exception)
+            {
+                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+            }
+            finally
+            {
+                _driving = false;
+                if (_destroyRequested) DisposeHost();
+            }
+        }
 
+        private bool BeginUpdate(long timeMicroseconds)
+        {
+            if (_updateId == ulong.MaxValue)
+            {
+                Fail(new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityArithmeticOverflow), "Update ID overflow.");
+                return false;
+            }
+            var nextId = _updateId + 1;
+            if (!_agents[0].Machine.TryBeginUpdate(nextId, timeMicroseconds, out var failure))
+            {
+                Fail(failure, "Cannot begin update.");
+                return false;
+            }
+            _updateId = nextId;
+            _timeMicroseconds = timeMicroseconds;
+            _updateOpen = true;
             _recorder.RecordUpdateStarted(_updateId);
-            var lastStep = default(NativeLifecycleStepResultV1);
-            var running = true;
-            while (running)
+            return true;
+        }
+
+        private void RunSegment(uint? limit, bool destroying)
+        {
+            // The machine owns persistent cursors. This budget counts just this frame segment.
+            // A callback and its acknowledgement always complete atomically.
+            var budget = default(NativeBudgetStateV1);
+            if (limit.HasValue) NativeLifecycleBudgetDriverV1.TryBeginSegment(limit.Value, ref budget);
+            while (_ready && (destroying || !_destroyRequested))
             {
-                if (!machine.TryAdvance(out var step, out failure))
+                NativeLifecycleStepResultV1 step;
+                NativeRuntimeFailureV1 failure;
+                bool advanced;
+                if (limit.HasValue)
                 {
-                    Debug.LogError("AIBT ProductionTreeHost: TryAdvance failed: " + failure.Code);
-                    break;
+                    advanced = NativeLifecycleBudgetDriverV1.TryAdvance(ref _agents[0].Machine, ref budget, out var kind, out step, out failure);
+                    if (advanced && kind == NativeBudgetAdvanceKindV1.Suspended)
+                    {
+                        _suspended = true;
+                        _recorder.RecordBudgetYielded(_updateId);
+                        return;
+                    }
                 }
-
+                else advanced = _agents[0].Machine.TryAdvance(out step, out failure);
+                if (!advanced)
+                {
+                    Fail(failure, "Cannot advance execution.");
+                    return;
+                }
+                _hasExecuted = true;
                 _recorder.RecordStep(_updateId, step);
-
-                switch (step.Kind)
+                if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
                 {
-                    case NativeLifecycleStepKindV1.DispatchRequired:
-                        var status = step.Phase == BurstCallbackPhase.Tick ? _dispatch(step.NodeIndex) : NodeStatus.Running;
-                        if (!machine.TryCompleteDispatch(step.DispatchToken, BurstContextResult.Success, status, out failure))
-                        {
-                            Debug.LogError("AIBT ProductionTreeHost: TryCompleteDispatch failed: " + failure.Code);
-                            running = false;
-                            break;
-                        }
-
-                        _recorder.RecordDispatchCompletion(_updateId, step, status);
-                        break;
-                    case NativeLifecycleStepKindV1.Completed:
-                        if (step.HasRootStatus)
-                        {
-                            LastRootResult = step.RootStatus;
-                        }
-
-                        running = false;
-                        break;
-                    case NativeLifecycleStepKindV1.Waiting:
-                        running = false;
-                        break;
+                    var request = new DispatchRequest(step, _updateId, _timeMicroseconds);
+                    var result = _dispatch(in request, out var status);
+                    if (!_ready) return; // A reentrant call may already have faulted the host.
+                    if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out failure))
+                    {
+                        Fail(failure, "Callback rejected: " + result);
+                        return;
+                    }
+                    _recorder.RecordDispatchCompletion(_updateId, step, status);
                 }
-
-                lastStep = step;
+                else if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting)
+                {
+                    _updateOpen = false;
+                    _recorder.RecordUpdateEnded(_updateId, step.HasRootStatus, step.RootStatus);
+                    if (step.Kind == NativeLifecycleStepKindV1.Completed)
+                    {
+                        if (step.HasRootStatus) LastRootResult = step.RootStatus;
+                        _ready = false;
+                    }
+                    return;
+                }
             }
+        }
 
-            _recorder.RecordUpdateEnded(
-                _updateId,
-                lastStep.Kind == NativeLifecycleStepKindV1.Completed && lastStep.HasRootStatus,
-                lastStep.HasRootStatus ? lastStep.RootStatus : default);
+        private static NativeRuntimeFailureV1 InvalidLifetime()
+            => new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid);
 
-            _agents[0].Machine = machine;
+        private void Fail(NativeRuntimeFailureV1 failure, string detail)
+        {
+            if (LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None) return;
+            LastFailure = failure;
+            _ready = false;
+            _recorder?.ReleaseWriter();
+            Debug.LogError("AIBT ProductionTreeHost: " + failure.Code + ": " + detail, this);
         }
 
         private void OnDestroy()
         {
-            _ready = false;
-            if (TraceChannelOwner != null && TraceChannelOwner.State != NativeOwnerStateV1.Disposed)
-            {
-                TraceChannelOwner.TryDispose(out _);
-            }
+            _destroyRequested = true;
+            if (!_driving) DisposeHost();
+        }
 
-            if (_agents != null)
+        private void DisposeHost()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _driving = true;
+            try
             {
-                _agents[0].Dispose();
-                _agents = null;
+                if (_ready && _hasExecuted)
+                {
+                    if (!_updateOpen && !BeginUpdate(_timeMicroseconds)) return;
+                    if (_suspended)
+                    {
+                        _recorder.RecordExecutionResumed(_updateId);
+                        _suspended = false;
+                    }
+                    // Beginning an eligible update can already queue reactive/timeout cancellation.
+                    // Teardown promotes that pending subtree cancellation to a whole-tree stop.
+                    if (_agents[0].Machine.TryRequestAbort(BurstNodeAbortReason.TreeStopped, out var failure, replacePendingForTreeStop: true))
+                        RunSegment(null, true);
+                    else Fail(failure, "Cannot cancel active work during destruction.");
+                }
+            }
+            catch (Exception exception)
+            {
+                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+            }
+            finally
+            {
+                _ready = false;
+                _driving = false;
+                _recorder?.ReleaseWriter();
+                if (TraceChannelOwner != null && TraceChannelOwner.State != NativeOwnerStateV1.Disposed)
+                    TraceChannelOwner.TryDispose(out _);
+                if (_agents != null)
+                {
+                    _agents[0].Dispose();
+                    _agents = null;
+                }
+                _dispatch = null;
+                _clock = null;
             }
         }
     }

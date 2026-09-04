@@ -1,6 +1,9 @@
 # P7-031 — Correct MCP node-development compile tracking and apply boundaries
 
-Status: `Draft`
+Status: `InProgress`
+
+Owner approved the attemptId-bound protocol and narrow helper scope on 2026-09-04.
+See `Planning~/Evidence/P7-031/implementation-proposal.md`.
 
 ## Objective
 
@@ -105,8 +108,12 @@ evidence and baseline failures separately. Build the MCP server if its code/sign
 
 ## Handoff notes
 
-This is a Draft implementation scope, not implementation authorization. Protocol/API changes
-need approval under the existing decision boundary. No new end-to-end compilation run was
-performed during this re-review; the current path mismatch and path resolution were checked live.
-P6-009 is marked done in `work-items.json` but its card header still says Draft; reconcile that
-existing dependency-status discrepancy before promoting this card to Ready.
+The owner approved the protocol and narrow helper scope on 2026-09-04. Compile/path fixes are
+implemented and verified: 43/43 focused, 1709/1712 full EditMode with the three existing baseline
+failures, server build and static checks passed. Live TCP compile/check/error recovery and path
+refusal are verified. P6-009's stale header was reconciled with its existing completion evidence.
+
+The complete recipe is not passing: existing test-node dispatch uses Allocator.Temp from the
+background bridge thread, and successful apply leaves a staging catalog referencing the moved
+shard. See Evidence/P7-031/README.md and follow-up-proposal.md for evidence and a bounded scope
+extension. Keep InProgress until these required integration gates pass; no commit or push.

@@ -1,0 +1,232 @@
+{
+  "date": "2026-09-04",
+  "unity": "6000.5.8f1",
+  "project": "C:/UnityProjects/Modules",
+  "baseCommit": "fa14161",
+  "scopePassed": true,
+  "compile": {
+    "passed": true
+  },
+  "static": {
+    "passed": true,
+    "schemas": 7,
+    "workItems": 137
+  },
+  "focused": {
+    "total": 55,
+    "passed": 55,
+    "failed": 0,
+    "hostTests": 20,
+    "jobId": "7dafb36420d24f7c8f2f178e3908e0f8",
+    "source": "Unity TestResults.xml; MCP job lost callbacks",
+    "startUtc": "2026-09-04T11:09:43Z",
+    "endUtc": "2026-09-04T11:09:46Z"
+  },
+  "fullEditMode": {
+    "total": 1669,
+    "passed": 1666,
+    "failed": 3,
+    "skipped": 0,
+    "aibtTotal": 1301,
+    "aibtPassed": 1299,
+    "aibtFailed": 2,
+    "jobId": "f7b28be098e94a04b7a8a29719db870b",
+    "startUtc": "2026-09-04T11:10:52Z",
+    "endUtc": "2026-09-04T11:12:14Z",
+    "baselineFailures": [
+      "AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests.EmittedMetadata_MaterializesConsumerDescriptorAndCompilesCanonicalV2Artifact",
+      "AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests.RegisteredCatalog_DrivesJsonValidationAndCompiledDefaultCodec",
+      "LocalSaveSystem.Tests.SaveStoreTests.SaveStore_AutoSave_WritesToDisk"
+    ],
+    "baselineEvidence": [
+      "Planning~/Evidence/P7-018/README.md",
+      "Planning~/Evidence/P7-028/README.md"
+    ]
+  },
+  "playMode": {
+    "driver": "Real Unity player loop; no reflected Update calls",
+    "terminalAndTimeline": {
+      "playing": true,
+      "frame": 219,
+      "startFrame": 2,
+      "updates": 3,
+      "root": "Success",
+      "failure": "None",
+      "calls": [
+        "5:1:39999:Enter:Success:Explicit",
+        "6:1:39999:Tick:Success:Explicit",
+        "8:2:98574:Tick:Success:Explicit",
+        "10:3:104503:Tick:Success:Explicit",
+        "11:3:104503:Exit:Success:Explicit"
+      ],
+      "traceFaulted": false,
+      "dropped": 0,
+      "events": [
+        {
+          "kind": "UpdateStarted",
+          "update": 1
+        },
+        {
+          "kind": "NodeEntered",
+          "update": 1
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 1
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 1
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 1
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 1
+        },
+        {
+          "kind": "NodeEntered",
+          "update": 1
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 1
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 1
+        },
+        {
+          "kind": "NodeTicked",
+          "update": 1
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 1
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 1
+        },
+        {
+          "kind": "UpdateCompleted",
+          "update": 1
+        },
+        {
+          "kind": "UpdateStarted",
+          "update": 2
+        },
+        {
+          "kind": "NodeTicked",
+          "update": 2
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 2
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 2
+        },
+        {
+          "kind": "UpdateCompleted",
+          "update": 2
+        },
+        {
+          "kind": "UpdateStarted",
+          "update": 3
+        },
+        {
+          "kind": "NodeTicked",
+          "update": 3
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 3
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 3
+        },
+        {
+          "kind": "NodeExited",
+          "update": 3
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 3
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 3
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 3
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 3
+        },
+        {
+          "kind": "BudgetYielded",
+          "update": 3
+        },
+        {
+          "kind": "ExecutionResumed",
+          "update": 3
+        },
+        {
+          "kind": "NodeExited",
+          "update": 3
+        },
+        {
+          "kind": "UpdateCompleted",
+          "update": 3
+        }
+      ],
+      "timelineSteps": 31
+    },
+    "budgetSnapshot": {
+      "frame": 11092,
+      "updates": 2495,
+      "calls": 2495,
+      "yields": 2001,
+      "resumes": 2001,
+      "faulted": false,
+      "dropped": 14243,
+      "failure": "None"
+    },
+    "sceneTeardown": {
+      "frame": 31118,
+      "sceneUnloaded": true,
+      "hostDestroyed": true,
+      "ownerState": "Disposed",
+      "cleanupCalls": [
+        "25466:Abort:Success:TreeStopped",
+        "25466:Exit:Aborted:TreeStopped"
+      ],
+      "pauseVerified": true,
+      "failure": "None"
+    },
+    "finalCleanup": {
+      "playing": false,
+      "sceneCount": 1,
+      "remainingHosts": 0,
+      "consoleErrors": 0
+    }
+  },
+  "allocations": {
+    "method": "GC.GetAllocatedBytesForCurrentThread around cached Update delegate, constant-clock Running fixture, EditMode",
+    "warmupCalls": 128,
+    "measuredCalls": 1000,
+    "immediateBytes": 0,
+    "budgetOneBytes": 0,
+    "traceFaulted": false,
+    "traceDropped": 0,
+    "includesUserGameplay": false
+  },
+  "playerBuilds": "Not run; no Standalone/Android/Web claim"
+}

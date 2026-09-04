@@ -71,18 +71,18 @@ public static class NodeDevelopmentTools
         => BridgeClient.SendRequest("generate_node_tests_and_manifest", new JsonObject());
 
     [McpServerTool(Name = "aibt_analyze_and_compile_node")]
-    [Description("Two-call, non-blocking compile check: call with mode='start' first (returns a logPositionBefore marker), wait a few seconds, then call repeatedly with mode='check' and that same marker until status is no longer 'not-yet-observed' or 'still-compiling'. A single call never blocks on compilation -- writing the staged node triggers a real Unity domain reload that can outlive any one request. On status='compiled', returns a contentHash required by aibt_test_node/aibt_apply_node.")]
+    [Description("Non-blocking compilation: mode='start' captures staged content and requests a new compilation, returning attemptId. Poll mode='check' with that attemptId while status is 'pending' or 'still-compiling'. The attempt survives domain reload; 'compiled' returns contentHash for test/apply, and 'failed' returns diagnostics. Changed staging, superseded attempts or an Editor restart require a fresh start. Log offsets are not accepted as compilation proof.")]
     public static string AnalyzeAndCompileNode(
         [Description("'start' or 'check'.")] string mode,
-        [Description("The logPositionBefore value 'start' returned (required for 'check').")] long? logPositionBefore = null)
+        [Description("The attemptId returned by start (required for check).")] string? attemptId = null)
     {
         var args = new JsonObject { ["mode"] = mode };
-        if (logPositionBefore.HasValue) args["logPositionBefore"] = logPositionBefore.Value;
+        if (attemptId != null) args["attemptId"] = attemptId;
         return BridgeClient.SendRequest("analyze_and_compile_node", args);
     }
 
     [McpServerTool(Name = "aibt_test_node")]
-    [Description("Proves the staged node's compiled metadata is structurally valid and registry-materializable (real GeneratedShardMetadataMaterializer/GeneratedNodeRegistry checks) -- not, for this card, genuine dispatch execution (see P6-022). Requires the exact contentHash aibt_analyze_and_compile_node's last 'compiled' check returned; rejected if the staged content has changed since.")]
+    [Description("Checks the staged node's compiled metadata and registry materialization. dispatchProven reports native dispatch verification for supported binding types; unsupported bindings return a reason. Requires the contentHash from a successful analyze-and-compile check; changed staged content is rejected.")]
     public static string TestNode(
         [Description("contentHash from the last successful aibt_analyze_and_compile_node check.")] string expectedContentHash)
         => BridgeClient.SendRequest("test_node", new JsonObject { ["expectedContentHash"] = expectedContentHash });
@@ -91,6 +91,6 @@ public static class NodeDevelopmentTools
     [Description("The only step that persists a generated node into the real project. Re-verifies the staged content's hash and re-runs the compile-clean/registry-valid check itself immediately before moving the files -- never trusts a prior claim or session state. Rejected with a structured diagnostic if the recheck fails.")]
     public static string ApplyNode(
         [Description("contentHash from the last successful aibt_analyze_and_compile_node check.")] string expectedContentHash,
-        [Description("Destination folder, relative to the project's Assets folder, e.g. 'MyProject/GeneratedNodes/MyCondition'. Must not already exist.")] string destinationPath)
+        [Description("Destination folder relative to Assets, e.g. 'MyProject/GeneratedNodes/MyCondition'. Must not already exist. Rooted paths, escapes outside Assets and link/reparse ancestry are rejected.")] string destinationPath)
         => BridgeClient.SendRequest("apply_node", new JsonObject { ["expectedContentHash"] = expectedContentHash, ["destinationPath"] = destinationPath });
 }

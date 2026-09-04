@@ -74,7 +74,10 @@ namespace AIBT
             BurstCallbackPhase phase = default,
             NativeLifecycleDispatchTokenV1 dispatchToken = default,
             bool hasRootStatus = false,
-            NodeStatus rootStatus = default)
+            NodeStatus rootStatus = default,
+            BurstNodeExitReason exitReason = default,
+            BurstNodeAbortReason abortReason = default,
+            bool hasDispatchReasons = false)
         {
             Kind = kind;
             NodeIndex = nodeIndex;
@@ -82,6 +85,9 @@ namespace AIBT
             DispatchToken = dispatchToken;
             HasRootStatus = hasRootStatus;
             RootStatus = rootStatus;
+            ExitReason = exitReason;
+            AbortReason = abortReason;
+            HasDispatchReasons = hasDispatchReasons;
         }
 
         internal NativeLifecycleStepKindV1 Kind { get; }
@@ -90,6 +96,9 @@ namespace AIBT
         internal NativeLifecycleDispatchTokenV1 DispatchToken { get; }
         internal bool HasRootStatus { get; }
         internal NodeStatus RootStatus { get; }
+        internal BurstNodeExitReason ExitReason { get; }
+        internal BurstNodeAbortReason AbortReason { get; }
+        internal bool HasDispatchReasons { get; }
     }
 
     internal struct NativeLifecycleControlV1
@@ -492,16 +501,43 @@ namespace AIBT
             return AdvanceComposite(frameIndex, ref frame, node, kind, ref control, out result, out failure);
         }
 
-        internal bool TryRequestAbort(BurstNodeAbortReason reason, out NativeRuntimeFailureV1 failure)
+        // Queues the same descendant-cancellation/cursor-reset transition used by reactive
+        // reevaluation, on a freshly seeded migration instance before its first update.
+        internal bool TryQueueHotReloadChildReset(uint ownerDepth, out NativeRuntimeFailureV1 failure)
         {
-            if (!IsCreated || (byte)reason > (byte)BurstNodeAbortReason.Timeout)
+            if (!IsCreated || ownerDepth == 0)
+            {
+                failure = LifetimeFailure();
+                return false;
+            }
+            var control = _control[0];
+            if (ownerDepth > control.Depth || control.UpdateOpen != 0 || control.ActiveDispatchId != 0
+                || control.AbortRequested != 0 || control.HasRootStatus != 0)
+            {
+                failure = LifetimeFailure(control);
+                return false;
+            }
+            control.AbortRequested = 1;
+            control.AbortReason = BurstNodeAbortReason.HotReload;
+            control.AbortTargetDepth = ownerDepth;
+            control.ReactiveResetPending = 1;
+            _control[0] = control;
+            failure = default;
+            return true;
+        }
+
+        internal bool TryRequestAbort(BurstNodeAbortReason reason, out NativeRuntimeFailureV1 failure,
+            bool replacePendingForTreeStop = false)
+        {
+            if (!IsCreated || (byte)reason > (byte)BurstNodeAbortReason.Timeout
+                || (replacePendingForTreeStop && reason != BurstNodeAbortReason.TreeStopped))
             {
                 failure = LifetimeFailure();
                 return false;
             }
             var control = _control[0];
             if (control.UpdateOpen == 0 || control.Depth == 0 || control.ActiveDispatchId != 0
-                || control.AbortRequested != 0 || control.HasRootStatus != 0)
+                || (control.AbortRequested != 0 && !replacePendingForTreeStop) || control.HasRootStatus != 0)
             {
                 failure = LifetimeFailure(control);
                 return false;
@@ -781,6 +817,9 @@ namespace AIBT
                         return false;
                     }
                     frame.LifecycleState = NativeFrameLifecycleStateV1.Exiting;
+                    // Distinguish an aborted Exit from a terminal Tick awaiting Exit when
+                    // cancellation arrives. The latter retains its original terminal reason.
+                    frame.PendingStatus = NodeStatus.Running;
                     break;
                 default:
                     failure = LifetimeFailure(control);
@@ -1370,8 +1409,13 @@ namespace AIBT
             control.SemanticSteps++;
             _control[0] = control;
             var token = new NativeLifecycleDispatchTokenV1(control.OwnerId, control.Generation, dispatchId);
+            var pendingStatus = _frames[checked((int)control.Depth - 1)].PendingStatus;
+            var exitReason = control.AbortRequested != 0 && pendingStatus == NodeStatus.Running
+                ? BurstNodeExitReason.Aborted
+                : pendingStatus == NodeStatus.Success ? BurstNodeExitReason.Success : BurstNodeExitReason.Failure;
             result = new NativeLifecycleStepResultV1(
-                NativeLifecycleStepKindV1.DispatchRequired, nodeIndex, phase, token);
+                NativeLifecycleStepKindV1.DispatchRequired, nodeIndex, phase, token,
+                exitReason: exitReason, abortReason: control.AbortReason, hasDispatchReasons: true);
             failure = default;
             return true;
         }

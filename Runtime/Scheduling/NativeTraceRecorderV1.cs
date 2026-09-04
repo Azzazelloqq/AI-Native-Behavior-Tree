@@ -27,6 +27,7 @@ namespace AIBT.Runtime.Scheduling
         private NativeTraceChannelLeaseV1 _lease;
         private bool _hasLease;
         private ulong _sequence;
+        private bool _rootExitRecorded;
 
         internal NativeTraceRecorderV1(NativeTraceChannelOwnerV1 owner, NativeHash256V1 semanticHash, ulong treeInstanceId)
         {
@@ -38,6 +39,7 @@ namespace AIBT.Runtime.Scheduling
         /// <summary>Acquires a writer lease and records the update boundary -- a recorder-level hook, not a step result, per the ADR's mapping table.</summary>
         internal void RecordUpdateStarted(ulong updateId)
         {
+            _rootExitRecorded = false;
             _hasLease = _owner.TryAcquireWriter(out _lease, out _);
             if (_hasLease) Append(updateId, NativeTraceEventKindV1.UpdateStarted, CompiledIndex.Invalid);
         }
@@ -73,7 +75,7 @@ namespace AIBT.Runtime.Scheduling
                     AppendNode(updateId, NativeTraceEventKindV1.NodeAbortStarted, step.NodeIndex, default, includeStatus: false);
                     break;
                 case NativeLifecycleStepKindV1.Completed:
-                    if (step.HasRootStatus)
+                    if (step.HasRootStatus && !_rootExitRecorded)
                     {
                         AppendExit(updateId, 0, step.RootStatus);
                     }
@@ -102,10 +104,19 @@ namespace AIBT.Runtime.Scheduling
                     AppendNode(updateId, NativeTraceEventKindV1.NodeTicked, dispatchStep.NodeIndex, status, includeStatus: true);
                     break;
                 case BurstCallbackPhase.Exit:
-                    AppendExit(updateId, dispatchStep.NodeIndex, status);
+                    if (dispatchStep.NodeIndex == 0) _rootExitRecorded = true;
+                    if (dispatchStep.HasDispatchReasons)
+                        AppendExitReason(updateId, dispatchStep.NodeIndex, (NativeTraceNodeExitReasonV1)(byte)dispatchStep.ExitReason);
+                    else AppendExit(updateId, dispatchStep.NodeIndex, status);
                     break;
                 case BurstCallbackPhase.Abort:
-                    AppendNode(updateId, NativeTraceEventKindV1.NodeAbortStarted, dispatchStep.NodeIndex, default, includeStatus: false);
+                    var record = BaseRecord(updateId, NativeTraceEventKindV1.NodeAbortStarted, dispatchStep.NodeIndex);
+                    if (dispatchStep.HasDispatchReasons)
+                    {
+                        record.OptionalFields |= NativeTraceOptionalFieldsV1.AbortReason;
+                        record.AbortReason = (NativeTraceNodeAbortReasonV1)(byte)dispatchStep.AbortReason;
+                    }
+                    _lease.Writer.TryAppend(record);
                     break;
             }
         }
@@ -115,15 +126,36 @@ namespace AIBT.Runtime.Scheduling
         {
             if (!_hasLease) return;
             AppendNode(updateId, NativeTraceEventKindV1.UpdateCompleted, CompiledIndex.Invalid, rootStatus, includeStatus: hasRootStatus);
+            ReleaseWriter();
+        }
+
+        internal void RecordBudgetYielded(ulong updateId)
+        {
+            if (_hasLease) Append(updateId, NativeTraceEventKindV1.BudgetYielded, CompiledIndex.Invalid);
+            ReleaseWriter();
+        }
+
+        internal void RecordExecutionResumed(ulong updateId)
+        {
+            _hasLease = _owner.TryAcquireWriter(out _lease, out _);
+            if (_hasLease) Append(updateId, NativeTraceEventKindV1.ExecutionResumed, CompiledIndex.Invalid);
+        }
+
+        internal void ReleaseWriter()
+        {
+            if (!_hasLease) return;
             _owner.TryReleaseWriter(_lease, out _);
             _hasLease = false;
         }
 
         private void AppendExit(ulong updateId, uint nodeIndex, NodeStatus status)
+            => AppendExitReason(updateId, nodeIndex, status == NodeStatus.Success ? NativeTraceNodeExitReasonV1.Success : NativeTraceNodeExitReasonV1.Failure);
+
+        private void AppendExitReason(ulong updateId, uint nodeIndex, NativeTraceNodeExitReasonV1 reason)
         {
             var record = BaseRecord(updateId, NativeTraceEventKindV1.NodeExited, nodeIndex);
             record.OptionalFields |= NativeTraceOptionalFieldsV1.ExitReason;
-            record.ExitReason = status == NodeStatus.Success ? NativeTraceNodeExitReasonV1.Success : NativeTraceNodeExitReasonV1.Failure;
+            record.ExitReason = reason;
             _lease.Writer.TryAppend(record);
         }
 

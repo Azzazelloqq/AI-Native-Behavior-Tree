@@ -155,29 +155,12 @@ namespace AIBT.Mcp.NodeDevelopment
                         throw new McpToolException(McpNodeDevelopmentDiagnostics.NoPendingGeneration, "No pending node generation -- call generate-node first.");
                     }
 
-                    var logPosition = EditorLogCompileWatcher.CurrentLogPosition(projectRoot);
-                    return new JObject { ["status"] = "pending", ["logPositionBefore"] = logPosition };
+                    return new CompileAttemptStore(projectRoot, CompileAttemptStore.EditorSession).Start();
                 }
                 case "check":
                 {
-                    var logPositionBefore = RequireLong(args, "logPositionBefore");
-                    var result = EditorLogCompileWatcher.Check(projectRoot, logPositionBefore);
-                    switch (result.Status)
-                    {
-                        case CompileWatchStatus.NotYetObserved:
-                            return new JObject { ["status"] = "not-yet-observed", ["logPositionBefore"] = logPositionBefore };
-                        case CompileWatchStatus.StillCompiling:
-                            return new JObject { ["status"] = "still-compiling", ["logPositionBefore"] = logPositionBefore };
-                        case CompileWatchStatus.Failed:
-                            return new JObject
-                            {
-                                ["status"] = "failed",
-                                ["diagnostics"] = ExtractDiagnosticLines(result.LogTail),
-                            };
-                        default:
-                            var contentHash = ComputeStagedContentHash(projectRoot);
-                            return new JObject { ["status"] = "compiled", ["contentHash"] = contentHash };
-                    }
+                    var attemptId = RequireString(args, "attemptId");
+                    return new CompileAttemptStore(projectRoot, CompileAttemptStore.EditorSession).Check(attemptId);
                 }
                 default:
                     throw new McpToolException(McpNodeDevelopmentDiagnostics.MalformedArguments, "'mode' must be 'start' or 'check'.");
@@ -249,6 +232,9 @@ namespace AIBT.Mcp.NodeDevelopment
         {
             var expectedContentHash = RequireString(args, "expectedContentHash");
             var destinationRelativePath = RequireString(args, "destinationPath");
+            try { StagingSlot.ValidateDestination(projectRoot, destinationRelativePath); }
+            catch (ArgumentException ex) { throw new McpToolException(McpNodeDevelopmentDiagnostics.MalformedArguments, ex.Message); }
+            catch (InvalidOperationException ex) { throw new McpToolException(McpNodeDevelopmentDiagnostics.ApplyDestinationExists, ex.Message); }
             RequireFreshHash(projectRoot, expectedContentHash);
 
             if (!GeneratedNodeReflectionHarness.TryFindShardType(StagingAssemblyName, out var shardType, out var reason)
@@ -262,6 +248,10 @@ namespace AIBT.Mcp.NodeDevelopment
             try
             {
                 moved = StagingSlot.MoveTo(projectRoot, destinationRelativePath).ToArray();
+            }
+            catch (ArgumentException ex)
+            {
+                throw new McpToolException(McpNodeDevelopmentDiagnostics.MalformedArguments, ex.Message);
             }
             catch (InvalidOperationException ex)
             {
@@ -289,34 +279,7 @@ namespace AIBT.Mcp.NodeDevelopment
         }
 
         private static string ComputeStagedContentHash(string projectRoot)
-        {
-            var builder = new System.Text.StringBuilder();
-            foreach (var path in StagingSlot.ListStagedFiles(projectRoot))
-            {
-                builder.Append(Path.GetFileName(path)).Append('\n').Append(File.ReadAllText(path)).Append('\n');
-            }
-
-            return StableHash.Sha256Hex(builder.ToString());
-        }
-
-        private static JArray ExtractDiagnosticLines(string logTail)
-        {
-            var array = new JArray();
-            if (logTail == null)
-            {
-                return array;
-            }
-
-            foreach (var line in logTail.Split('\n'))
-            {
-                if (line.Contains("error AIBT50") || line.Contains("error CS"))
-                {
-                    array.Add(line.Trim());
-                }
-            }
-
-            return array;
-        }
+            => StagingSlot.ComputeContentHash(projectRoot);
 
         private static ConditionNodeSpec ReadConditionSpec(JObject args)
         {
@@ -426,15 +389,5 @@ namespace AIBT.Mcp.NodeDevelopment
             return token == null ? (uint?)null : token.Value<uint>();
         }
 
-        private static long RequireLong(JObject json, string property)
-        {
-            var token = json[property];
-            if (token == null || token.Type != JTokenType.Integer)
-            {
-                throw new McpToolException(McpNodeDevelopmentDiagnostics.MalformedArguments, "Missing required integer property '" + property + "'.");
-            }
-
-            return token.Value<long>();
-        }
     }
 }

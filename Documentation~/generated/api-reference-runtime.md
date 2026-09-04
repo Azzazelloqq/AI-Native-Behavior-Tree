@@ -3046,12 +3046,15 @@ An immutable, non-owning job view of one snapshot revision. Payload bytes use th
 
 ### `AIBT.ProductionTreeHost`
 
-Applies <c>ADR-P7-010</c> to production: a real component driving one compiled tree instance's lifecycle every frame during actual Play mode -- the missing piece every prior debugger/preview tool (<c>P3-009</c>, <c>P3-010</c>, <c>P3-011</c>, <c>P6-008</c>, <c>P6-012</c>) disclosed and worked around with a self-driven or benchmark-driven substitute. <para> Reuses <see cref="SchedulingPolicyDriver"/>'s own already-tested agent construction (<c>TryCreateAgents</c>) and disposal, but does not reuse its <c>TryRunImmediate</c>/ <c>TryRunBudgeted</c> driving loops -- those require every leaf's status to be supplied by the caller *in advance* (a benchmark-only shape; see their own doc comments), which cannot drive a real running tree whose leaves compute their own outcome. This host instead drives <see cref="NativeLifecycleMachineV1.TryAdvance"/>/<c>TryCompleteDispatch</c> directly, mirroring <c>SchedulingPolicyDriver.TryHandleStep</c>'s own exact per-step handling but resolving a real Tick's status through <see cref="DispatchLeaf"/> -- a delegate supplied by whoever builds this host, on demand, at the exact moment a dispatch is due. This keeps the host itself free of any <c>AIBT.Authoring</c> dependency (matching the ADR's own reasoning that a shipped game needs only <c>AIBT.Runtime</c> plus an already-compiled program): the real per-project leaf dispatch table (a generated <c>GenericNativeDispatchTranslatorV1</c>, <c>P7-009</c>) is resolved by the caller that constructs this host, never by the host itself. </para> <para> Scope, per the ADR's own decision 3: <c>Immediate</c>/<c>Budgeted</c> only. A single per-<see cref="GameObject"/> host cannot itself perform <c>BatchedJobsSameFrame</c>/ <c>PipelinedJobs</c>'s population-wide batch dispatch -- a population-level coordinator for those policies is explicit, disclosed future work, not attempted here. </para>
+Drives one native tree in Unity Update with an optional per-frame step budget. Completion stops execution; disabling pauses; destruction cancels active work. Generated-node dispatch adapters remain caller-owned.
 
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLeaf,AIBT.NativeTraceChannelCapacityV1,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLifecycle,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Void .ctor()`
+- `PROPERTY AIBT.NativeRuntimeFailureV1 LastFailure`
 - `PROPERTY AIBT.NativeTraceChannelOwnerV1 TraceChannelOwner`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastRootResult`
+- `PROPERTY System.Nullable`1<System.UInt32> StepBudget`
 - `PROPERTY System.UInt64 TotalUpdates`
 
 ---

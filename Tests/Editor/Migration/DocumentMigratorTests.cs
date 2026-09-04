@@ -17,6 +17,64 @@ namespace AIBT.Tests.Editor.Migration
     {
         private const string TypeId = "aibt.core.migration-test-node";
 
+        [TestCase(1)]
+        [TestCase(2)]
+        public void Migration_PreservesDocumentAndNodeFields_WithoutChangingSource(int formatVersion)
+        {
+            var original = AuthoredDocument(1, ("moveSpeed", SemanticValue.FromUInt64(10)));
+            var bindings = new NodeBindingMap(new[] { new System.Collections.Generic.KeyValuePair<string, string>("target", "value") });
+            var leaf = new NodeDocument(original.Root, TypeId, 1, null, original.Nodes[0].Parameters,
+                null, "Display", "Node description", TagSet.Empty, formatVersion == 2 ? bindings : null);
+            var keys = new System.Collections.Generic.List<BlackboardKeyDefinition> { new BlackboardKeyDefinition("value", "value",
+                BlackboardTypeReference.BuiltIn(BlackboardValueType.Bool), defaultValue: BlackboardDefaultValue.Bool(true)) };
+            if (formatVersion == 2)
+            {
+                keys.Add(new BlackboardKeyDefinition("agent.value", "agent.value", BlackboardTypeReference.BuiltIn(BlackboardValueType.Bool),
+                    BlackboardScope.Agent, BlackboardDefaultValue.Bool(false)));
+                keys.Add(new BlackboardKeyDefinition("shared.value", "shared.value", BlackboardTypeReference.BuiltIn(BlackboardValueType.Bool),
+                    BlackboardScope.Shared, BlackboardDefaultValue.Bool(true)));
+            }
+            var source = new TreeDocument(original.Format, formatVersion, original.TreeId, "Rich document", original.Root,
+                new[] { leaf }, keys, "Tree description", TagSet.Empty, SemanticObject.Empty, new Revision(17),
+                formatVersion == 2 ? new BlackboardScopeContract("agent.contract", 2) : null,
+                formatVersion == 2 ? new BlackboardScopeContract("shared.contract", 3) : null);
+            var serialized = CanonicalTreeJson.Serialize(source);
+            Assert.That(serialized.Success, Is.True, string.Join(" | ", serialized.Diagnostics.Select(d => d.Message)));
+            var before = serialized.Utf8;
+            var rules = NodeMigrationRegistry.Empty.WithRule(new NodeMigrationRule(TypeId, 1,
+                renames: new[] { new NodeFieldRename("moveSpeed", "speed") },
+                additions: new[] { new NodeFieldAddition("acceleration", SemanticValue.FromUInt64(5)) }));
+            var migrated = DocumentMigrator.TryMigrate(source, RegistryWithManifest(ManifestVersion(2)), rules, out _);
+            Assert.That(migrated.Blackboard, Is.EqualTo(source.Blackboard));
+            Assert.That(migrated.Description, Is.EqualTo(source.Description));
+            Assert.That(migrated.Revision, Is.EqualTo(source.Revision));
+            Assert.That(migrated.AgentContract, Is.SameAs(source.AgentContract));
+            Assert.That(migrated.SharedContract, Is.SameAs(source.SharedContract));
+            Assert.That(migrated.Nodes[0].Bindings, Is.SameAs(leaf.Bindings));
+            Assert.That(migrated.Nodes[0].DisplayName, Is.EqualTo(leaf.DisplayName));
+            Assert.That(migrated.Nodes[0].Description, Is.EqualTo(leaf.Description));
+            Assert.That(migrated.Nodes[0].TypeVersion, Is.EqualTo(2));
+            var expectedNode = new NodeDocument(leaf.Id, leaf.TypeId, 2, leaf.Children, migrated.Nodes[0].Parameters,
+                leaf.Observer, leaf.DisplayName, leaf.Description, leaf.Tags, leaf.Bindings);
+            var expected = new TreeDocument(source.Format, source.FormatVersion, source.TreeId, source.Name, source.Root,
+                new[] { expectedNode }, source.Blackboard, source.Description, source.Tags, source.Metadata, source.Revision,
+                source.AgentContract, source.SharedContract);
+            Assert.That(CanonicalTreeJson.Serialize(migrated).Utf8, Is.EqualTo(CanonicalTreeJson.Serialize(expected).Utf8));
+            Assert.That(CanonicalTreeJson.Serialize(source).Utf8, Is.EqualTo(before));
+            Assert.That(CanonicalTreeJson.Parse(CanonicalTreeJson.Serialize(migrated).Utf8).Success, Is.True);
+        }
+
+        [TestCase(1)]
+        [TestCase(2)]
+        public void NoApplicableRule_ReturnsTheOriginalDocument(int version)
+        {
+            var source = AuthoredDocument(version, ("speed", SemanticValue.FromUInt64(10)));
+            var migrated = DocumentMigrator.TryMigrate(source, RegistryWithManifest(ManifestVersion(2)),
+                NodeMigrationRegistry.Empty, out var outcomes);
+            Assert.That(migrated, Is.SameAs(source));
+            Assert.That(outcomes, Is.Empty);
+        }
+
         [Test]
         public void SingleHopMigration_RenamesAndAddsField_AgainstRealDocumentAndCompiler()
         {

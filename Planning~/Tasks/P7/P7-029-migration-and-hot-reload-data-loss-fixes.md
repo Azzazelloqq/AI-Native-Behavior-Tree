@@ -1,6 +1,14 @@
 # P7-029 — Fix real data-loss/state bugs in document migration and native hot reload
 
-Status: `Draft`
+Status: `Done`
+
+Verified 2026-09-04: 90/90 focused tests, full EditMode 1685/1688 with the same three unrelated
+baseline failures, and separate live document/Sequence/Cooldown probes.
+See [evidence and limits](../../Evidence/P7-029/README.md). No Player build was run.
+
+Owner approved the cancellation-before-new-order lifecycle on 2026-09-04:
+[accepted implementation plan](../../Evidence/P7-029/implementation-proposal.md).
+The narrow internal lifecycle helper in `NativeLifecycleMachineV1.cs` is included in this scope.
 
 ## Objective
 
@@ -68,7 +76,7 @@ three review findings in existing Phase 7 functionality. Revalidated against `66
   legitimately re-enter a child. Require a coherent stack/cursor and the accepted reset semantics.
 - Before implementation, agree the precise callback sequence for reconciling a still-active child
   with that reset, including any required Abort/Exit. Do not silently invent lifecycle behavior or
-  remove active-instance migration support. Keep this card Draft until that decision is resolved.
+  remove active-instance migration support. This gate was resolved by the owner-approved plan above.
 
 ## Required reading
 

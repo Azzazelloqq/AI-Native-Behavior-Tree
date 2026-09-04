@@ -132,11 +132,9 @@ namespace AIBT.Mcp.NodeDevelopment
         internal static IReadOnlyList<string> MoveTo(string projectRoot, string destinationRelativePath)
         {
             var root = RootPath(projectRoot);
-            var destination = Path.Combine(projectRoot, destinationRelativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (Directory.Exists(destination))
-            {
-                throw new InvalidOperationException("Apply destination already exists: " + destinationRelativePath);
-            }
+            var destination = ValidateDestination(projectRoot, destinationRelativePath);
+            RejectLinkedPath(projectRoot, root);
+            foreach (var file in Directory.GetFiles(root, "*.cs")) RejectLinkedPath(projectRoot, file);
 
             Directory.CreateDirectory(destination);
             var moved = new List<string>();
@@ -149,11 +147,58 @@ namespace AIBT.Mcp.NodeDevelopment
 
             if (!HasEnclosingAsmdef(projectRoot, destination))
             {
-                var asmdefPath = WriteDestinationAsmdef(destination, destinationRelativePath);
+                var asmdefPath = WriteDestinationAsmdef(destination, Path.GetRelativePath(projectRoot, destination));
                 moved.Add(asmdefPath);
             }
 
             return moved;
+        }
+
+        internal static string ValidateDestination(string assetsRoot, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath) || relativePath[0] == '/' || relativePath[0] == '\\'
+                || relativePath.IndexOfAny(new[] { ':', '"', '<', '>', '|', '*', '?' }) >= 0
+                || relativePath.Any(char.IsControl))
+                throw new ArgumentException("Destination must be a nonempty Assets-relative directory path.");
+            var normalized = relativePath.Replace('\\', '/');
+            if (normalized.Split('/').Any(p => p != "." && p != ".." && (p.EndsWith(" ") || p.EndsWith("."))))
+                throw new ArgumentException("Destination contains an ambiguous directory name.");
+            var root = Path.GetFullPath(assetsRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var destination = Path.GetFullPath(Path.Combine(root, normalized.Replace('/', Path.DirectorySeparatorChar)));
+            var comparison = Path.DirectorySeparatorChar == '\\' ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            if (!destination.StartsWith(root + Path.DirectorySeparatorChar, comparison))
+                throw new ArgumentException("Destination must remain inside Assets.");
+            RejectLinkedPath(root, destination);
+            if (Directory.Exists(destination) || File.Exists(destination))
+                throw new InvalidOperationException("Apply destination already exists: " + relativePath);
+            return destination;
+        }
+
+        private static void RejectLinkedPath(string assetsRoot, string path)
+        {
+            var root = Path.GetFullPath(assetsRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var current = root;
+            var parts = Path.GetRelativePath(root, Path.GetFullPath(path)).Split(Path.DirectorySeparatorChar);
+            for (var index = -1; index < parts.Length; index++)
+            {
+                if (index >= 0) current = Path.Combine(current, parts[index]);
+                try
+                {
+                    if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                        throw new ArgumentException("Apply does not permit symbolic links or reparse points: " + current);
+                }
+                catch (FileNotFoundException) { break; }
+                catch (DirectoryNotFoundException) { break; }
+            }
+        }
+
+        internal static string ComputeContentHash(string projectRoot)
+        {
+            var builder = new System.Text.StringBuilder();
+            foreach (var path in ListStagedFiles(projectRoot))
+                builder.Append(Path.GetRelativePath(RootPath(projectRoot), path).Replace('\\', '/'))
+                    .Append('\n').Append(File.ReadAllText(path)).Append('\n');
+            return StableHash.Sha256Hex(builder.ToString());
         }
 
         private static bool HasEnclosingAsmdef(string projectRoot, string destination)

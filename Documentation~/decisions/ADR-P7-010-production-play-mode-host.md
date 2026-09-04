@@ -4,6 +4,42 @@
 - Date: 2026-09-01
 - Decision ID: AIBT-034
 
+## P7-030 owner-approved implementation addendum (2026-09-04)
+
+The owner approved `Planning~/Evidence/P7-030/implementation-proposal.md` before implementation.
+This addendum resolves the previously unspecified host integration choices without changing the
+native execution semantics:
+
+- Retain terminal Success/Failure and stop; no implicit restart. Disabling pauses stepping;
+  enabling resumes. Destruction drains cancellation/Exit for active work before disposing storage.
+  A terminal-pending Exit keeps its terminal reason. Faulted callbacks are not retried during cleanup.
+- Use scaled Unity game time by default, or a caller-supplied nonnegative/nondecreasing microsecond
+  clock. Freeze clock/update identity while resuming budget-suspended work. At timeScale zero,
+  the clock stops advancing but Tick is not automatically suppressed.
+- Keep the existing Tick-only bootstrap overload compatible. Add a lifecycle overload taking
+  `DispatchLifecycle`, trace capacity, `Func<long>` clock (null means default), and an out failure.
+  The immutable `DispatchRequest` exposes node index, callback phase, logical update ID/time and
+  actual Exit/Abort reasons. It exposes neither native ownership tokens nor fabricated Burst contexts.
+- `StepBudget` is nullable: null selects Immediate, zero executes no steps, a positive value limits
+  each Unity frame segment. A resume is the same logical update, not a new eligible update.
+  `TotalUpdates` counts logical updates. `LastFailure` retains the failure that stopped the host.
+- A full-lifecycle caller adapter executes its own node implementation. Automatic generated-catalog
+  workspace construction and population-wide scheduled execution remain outside this host scope.
+- Native dispatch results may carry their existing frame/control reasons so the host need not
+  duplicate lifecycle state. The recorder may emit existing budget yield/resume event kinds and
+  correct Exit/Abort reasons. The host uses Detailed trace level because Lifecycle filters budget
+  events, and releases writer leases between frame segments for debugger reads.
+
+Normal disable pauses stepping, not the selected clock; an expired deadline is observed at the next
+eligible update. Destruction inside a callback defers storage release until that callback has been
+acknowledged. Native VM, compiled format and node ABI contracts remain unchanged.
+
+Implementation detail: beginning an eligible update can already request reactive or timeout
+cancellation. Destruction promotes that pending cancellation to a whole-tree `TreeStopped`
+request, through an internal opt-in argument on `TryRequestAbort`. Ordinary abort requests
+retain their existing preconditions. This avoids failing teardown merely because native
+cancellation was already queued; it does not allow updates after terminal completion.
+
 ## Context
 
 `P3-009`, `P3-010`, `P3-011`, `P6-008`, and `P6-012`'s own gate session each independently found the
