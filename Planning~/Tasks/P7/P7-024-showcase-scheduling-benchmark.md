@@ -1,13 +1,15 @@
 # P7-024 — Showcase Job-system vs. non-Job scheduling benchmark report
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
 `Benchmarks~/Phase4/Scheduling`, `CostCurves`, `AutoComparison`, and `Platform` already contain real,
 committed measurements comparing `Immediate`/`Budgeted` (plain managed loops, no Jobs involved) against
-`BatchedJobsSameFrame`/`PipelinedJobs`/`Auto` (real Unity Jobs-based execution) — this is exactly the
-"Job system vs plain" comparison requested, already collected across multiple P4 cards plus
+`BatchedJobsSameFrame` and same-frame `Auto` selections. The data audit performed by this card found
+that `PipelinedJobs` was not integrated into the benchmark harness and has no committed measurement.
+The available data is the "Job system vs plain" comparison requested, collected across multiple P4
+cards plus
 `P7-002`'s own Windows Player run (`Documentation~/compatibility-matrix.md`'s cited
 `windows-player-scheduling-20260821.json`). None of it exists as an actual readable, showcase-oriented
 report or chart — it's raw per-case JSON (`Benchmarks~/Phase4/Scheduling/Results/scheduling-windows-
@@ -77,3 +79,7 @@ every cited number spot-checked against its real source JSON/README
   `1.0`. Recommended to scope as a repackaging task first (cheap, uses already-validated data) —
   re-evaluate whether a new live-comparison sample is also worth the added cost once the report
   itself is assembled and reviewed.
+- Completed 2026-09-04 as a report-first scope. `Documentation~/scheduling-benchmark-report.md`
+  presents all 42 comparable Windows/Android Player points, a deterministic SVG and a traceable
+  derived-data file. No benchmark was rerun, no live sample was added, and the missing
+  `PipelinedJobs` measurement is disclosed. See `Planning~/Evidence/P7-024/README.md`.

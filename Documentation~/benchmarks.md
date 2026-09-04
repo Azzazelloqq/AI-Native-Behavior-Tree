@@ -1,5 +1,9 @@
 # Benchmark and platform research
 
+For a readable summary of the accepted Player scheduling measurements, see
+[`scheduling-benchmark-report.md`](scheduling-benchmark-report.md). It compares the measured
+same-frame Unity Jobs policy with plain loops and keeps unmeasured pipelined performance explicit.
+
 ## Purpose
 
 Benchmarks determine execution-policy and batching defaults, expose regressions, and define evidence-based platform support. They do not exist to produce one universal agent-count threshold.

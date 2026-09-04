@@ -1,0 +1,458 @@
+{
+  "schema": "aibt-p7-024-showcase-derived-v1",
+  "metric": "BatchedJobsSameFrame median nanoseconds per agent divided by the lower of Immediate and Budgeted median nanoseconds per agent for the same platform, scenario, and population.",
+  "rounding": "Ratios are rounded to four decimal places after division.",
+  "playerSources": {
+    "Windows x64 Player": {
+      "path": "Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821.json",
+      "sha256": "ec50fcbcda75b20fc9b89078695e74a56199d47084cd49c6a6395cbfeba07427",
+      "schema": "aibt-p4-008-windows-player-scheduling-v1",
+      "unityVersion": "6000.5.8f1"
+    },
+    "Android ARM64 Player": {
+      "path": "Benchmarks~/Phase4/Platform/Android/Results/android-player-scheduling-20260821.json",
+      "sha256": "d965d802cb4eae931851d543e74d5b0e71d699e368ff703dd6318a6178c041cb",
+      "schema": "aibt-p4-008-android-player-scheduling-v1",
+      "unityVersion": "6000.5.8f1"
+    }
+  },
+  "playerPoints": [
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "scheduling-baseline-empty-job",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 218.75,
+      "budgetedMedianNsPerAgent": 231.25,
+      "batchedJobsSameFrameMedianNsPerAgent": 4631.25,
+      "fastestNonJobsMedianNsPerAgent": 218.75,
+      "batchedToFastestNonJobsRatio": 21.1714
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "scheduling-baseline-empty-job",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 218.75,
+      "budgetedMedianNsPerAgent": 229.6875,
+      "batchedJobsSameFrameMedianNsPerAgent": 3909.375,
+      "fastestNonJobsMedianNsPerAgent": 218.75,
+      "batchedToFastestNonJobsRatio": 17.8714
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "scheduling-baseline-empty-job",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 232.421875,
+      "budgetedMedianNsPerAgent": 558.984375,
+      "batchedJobsSameFrameMedianNsPerAgent": 3475.390625,
+      "fastestNonJobsMedianNsPerAgent": 232.421875,
+      "batchedToFastestNonJobsRatio": 14.9529
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "scheduling-baseline-empty-job",
+      "agentCount": 1024,
+      "immediateMedianNsPerAgent": 225.9765625,
+      "budgetedMedianNsPerAgent": 378.125,
+      "batchedJobsSameFrameMedianNsPerAgent": 3279.39453125,
+      "fastestNonJobsMedianNsPerAgent": 225.9765625,
+      "batchedToFastestNonJobsRatio": 14.5121
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "shallow-tree-cheap-conditions",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 1125.0,
+      "budgetedMedianNsPerAgent": 1175.0,
+      "batchedJobsSameFrameMedianNsPerAgent": 28418.75,
+      "fastestNonJobsMedianNsPerAgent": 1125.0,
+      "batchedToFastestNonJobsRatio": 25.2611
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "shallow-tree-cheap-conditions",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 1081.25,
+      "budgetedMedianNsPerAgent": 1137.5,
+      "batchedJobsSameFrameMedianNsPerAgent": 23485.9375,
+      "fastestNonJobsMedianNsPerAgent": 1081.25,
+      "batchedToFastestNonJobsRatio": 21.7211
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "shallow-tree-cheap-conditions",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 1061.71875,
+      "budgetedMedianNsPerAgent": 1379.296875,
+      "batchedJobsSameFrameMedianNsPerAgent": 15644.921875,
+      "fastestNonJobsMedianNsPerAgent": 1061.71875,
+      "batchedToFastestNonJobsRatio": 14.7355
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "shallow-tree-cheap-conditions",
+      "agentCount": 1024,
+      "immediateMedianNsPerAgent": 1083.30078125,
+      "budgetedMedianNsPerAgent": 1295.41015625,
+      "batchedJobsSameFrameMedianNsPerAgent": 13514.55078125,
+      "fastestNonJobsMedianNsPerAgent": 1083.30078125,
+      "batchedToFastestNonJobsRatio": 12.4753
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "deep-sequence-selector-traversal",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 12625.0,
+      "budgetedMedianNsPerAgent": 12575.0,
+      "batchedJobsSameFrameMedianNsPerAgent": 370418.75,
+      "fastestNonJobsMedianNsPerAgent": 12575.0,
+      "batchedToFastestNonJobsRatio": 29.4568
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "deep-sequence-selector-traversal",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 12040.625,
+      "budgetedMedianNsPerAgent": 12921.875,
+      "batchedJobsSameFrameMedianNsPerAgent": 294165.625,
+      "fastestNonJobsMedianNsPerAgent": 12040.625,
+      "batchedToFastestNonJobsRatio": 24.4311
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "deep-sequence-selector-traversal",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 12429.6875,
+      "budgetedMedianNsPerAgent": 13641.796875,
+      "batchedJobsSameFrameMedianNsPerAgent": 176230.078125,
+      "fastestNonJobsMedianNsPerAgent": 12429.6875,
+      "batchedToFastestNonJobsRatio": 14.1782
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "deep-sequence-selector-traversal",
+      "agentCount": 1024,
+      "immediateMedianNsPerAgent": 12437.98828125,
+      "budgetedMedianNsPerAgent": 13698.2421875,
+      "batchedJobsSameFrameMedianNsPerAgent": 148613.57421875,
+      "fastestNonJobsMedianNsPerAgent": 12437.98828125,
+      "batchedToFastestNonJobsRatio": 11.9484
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "wide-branching-frequent-failures",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 356.25,
+      "budgetedMedianNsPerAgent": 381.25,
+      "batchedJobsSameFrameMedianNsPerAgent": 10018.75,
+      "fastestNonJobsMedianNsPerAgent": 356.25,
+      "batchedToFastestNonJobsRatio": 28.1228
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "wide-branching-frequent-failures",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 354.6875,
+      "budgetedMedianNsPerAgent": 403.125,
+      "batchedJobsSameFrameMedianNsPerAgent": 8489.0625,
+      "fastestNonJobsMedianNsPerAgent": 354.6875,
+      "batchedToFastestNonJobsRatio": 23.9339
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "wide-branching-frequent-failures",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 363.28125,
+      "budgetedMedianNsPerAgent": 474.609375,
+      "batchedJobsSameFrameMedianNsPerAgent": 5912.109375,
+      "fastestNonJobsMedianNsPerAgent": 363.28125,
+      "batchedToFastestNonJobsRatio": 16.2742
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "wide-branching-frequent-failures",
+      "agentCount": 1024,
+      "immediateMedianNsPerAgent": 375.5859375,
+      "budgetedMedianNsPerAgent": 647.8515625,
+      "batchedJobsSameFrameMedianNsPerAgent": 5619.7265625,
+      "fastestNonJobsMedianNsPerAgent": 375.5859375,
+      "batchedToFastestNonJobsRatio": 14.9626
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "predominantly-running-actions",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 268.75,
+      "budgetedMedianNsPerAgent": 262.5,
+      "batchedJobsSameFrameMedianNsPerAgent": 6131.25,
+      "fastestNonJobsMedianNsPerAgent": 262.5,
+      "batchedToFastestNonJobsRatio": 23.3571
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "predominantly-running-actions",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 243.75,
+      "budgetedMedianNsPerAgent": 285.9375,
+      "batchedJobsSameFrameMedianNsPerAgent": 5382.8125,
+      "fastestNonJobsMedianNsPerAgent": 243.75,
+      "batchedToFastestNonJobsRatio": 22.0833
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "predominantly-running-actions",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 248.4375,
+      "budgetedMedianNsPerAgent": 335.546875,
+      "batchedJobsSameFrameMedianNsPerAgent": 3961.328125,
+      "fastestNonJobsMedianNsPerAgent": 248.4375,
+      "batchedToFastestNonJobsRatio": 15.945
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "predominantly-running-actions",
+      "agentCount": 1024,
+      "immediateMedianNsPerAgent": 254.39453125,
+      "budgetedMedianNsPerAgent": 450.9765625,
+      "batchedJobsSameFrameMedianNsPerAgent": 3826.171875,
+      "fastestNonJobsMedianNsPerAgent": 254.39453125,
+      "batchedToFastestNonJobsRatio": 15.0403
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "many-programs-small-populations",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 218.75,
+      "budgetedMedianNsPerAgent": 231.25,
+      "batchedJobsSameFrameMedianNsPerAgent": 4931.25,
+      "fastestNonJobsMedianNsPerAgent": 218.75,
+      "batchedToFastestNonJobsRatio": 22.5429
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "many-programs-small-populations",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 239.0625,
+      "budgetedMedianNsPerAgent": 223.4375,
+      "batchedJobsSameFrameMedianNsPerAgent": 4379.6875,
+      "fastestNonJobsMedianNsPerAgent": 223.4375,
+      "batchedToFastestNonJobsRatio": 19.6014
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "many-programs-small-populations",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 220.703125,
+      "budgetedMedianNsPerAgent": 272.65625,
+      "batchedJobsSameFrameMedianNsPerAgent": 3346.875,
+      "fastestNonJobsMedianNsPerAgent": 220.703125,
+      "batchedToFastestNonJobsRatio": 15.1646
+    },
+    {
+      "platform": "Windows x64 Player",
+      "scenario": "many-programs-small-populations",
+      "agentCount": 1024,
+      "immediateMedianNsPerAgent": 221.484375,
+      "budgetedMedianNsPerAgent": 384.765625,
+      "batchedJobsSameFrameMedianNsPerAgent": 3349.8046875,
+      "fastestNonJobsMedianNsPerAgent": 221.484375,
+      "batchedToFastestNonJobsRatio": 15.1243
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "scheduling-baseline-empty-job",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 287.5,
+      "budgetedMedianNsPerAgent": 300.0,
+      "batchedJobsSameFrameMedianNsPerAgent": 6406.25,
+      "fastestNonJobsMedianNsPerAgent": 287.5,
+      "batchedToFastestNonJobsRatio": 22.2826
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "scheduling-baseline-empty-job",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 287.5,
+      "budgetedMedianNsPerAgent": 293.75,
+      "batchedJobsSameFrameMedianNsPerAgent": 4843.75,
+      "fastestNonJobsMedianNsPerAgent": 287.5,
+      "batchedToFastestNonJobsRatio": 16.8478
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "scheduling-baseline-empty-job",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 287.109,
+      "budgetedMedianNsPerAgent": 295.703,
+      "batchedJobsSameFrameMedianNsPerAgent": 4879.688,
+      "fastestNonJobsMedianNsPerAgent": 287.109,
+      "batchedToFastestNonJobsRatio": 16.9959
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "shallow-tree-cheap-conditions",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 1468.75,
+      "budgetedMedianNsPerAgent": 1531.25,
+      "batchedJobsSameFrameMedianNsPerAgent": 30406.25,
+      "fastestNonJobsMedianNsPerAgent": 1468.75,
+      "batchedToFastestNonJobsRatio": 20.7021
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "shallow-tree-cheap-conditions",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 1465.625,
+      "budgetedMedianNsPerAgent": 1525.0,
+      "batchedJobsSameFrameMedianNsPerAgent": 20435.938,
+      "fastestNonJobsMedianNsPerAgent": 1465.625,
+      "batchedToFastestNonJobsRatio": 13.9435
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "shallow-tree-cheap-conditions",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 1323.828,
+      "budgetedMedianNsPerAgent": 1374.609,
+      "batchedJobsSameFrameMedianNsPerAgent": 18677.734,
+      "fastestNonJobsMedianNsPerAgent": 1323.828,
+      "batchedToFastestNonJobsRatio": 14.1089
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "deep-sequence-selector-traversal",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 15106.25,
+      "budgetedMedianNsPerAgent": 15937.5,
+      "batchedJobsSameFrameMedianNsPerAgent": 352643.75,
+      "fastestNonJobsMedianNsPerAgent": 15106.25,
+      "batchedToFastestNonJobsRatio": 23.3442
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "deep-sequence-selector-traversal",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 15135.938,
+      "budgetedMedianNsPerAgent": 15942.188,
+      "batchedJobsSameFrameMedianNsPerAgent": 224189.063,
+      "fastestNonJobsMedianNsPerAgent": 15135.938,
+      "batchedToFastestNonJobsRatio": 14.8117
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "deep-sequence-selector-traversal",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 15146.094,
+      "budgetedMedianNsPerAgent": 15999.219,
+      "batchedJobsSameFrameMedianNsPerAgent": 205607.422,
+      "fastestNonJobsMedianNsPerAgent": 15146.094,
+      "batchedToFastestNonJobsRatio": 13.5749
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "wide-branching-frequent-failures",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 450.0,
+      "budgetedMedianNsPerAgent": 475.0,
+      "batchedJobsSameFrameMedianNsPerAgent": 9812.5,
+      "fastestNonJobsMedianNsPerAgent": 450.0,
+      "batchedToFastestNonJobsRatio": 21.8056
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "wide-branching-frequent-failures",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 450.0,
+      "budgetedMedianNsPerAgent": 465.625,
+      "batchedJobsSameFrameMedianNsPerAgent": 7307.813,
+      "fastestNonJobsMedianNsPerAgent": 450.0,
+      "batchedToFastestNonJobsRatio": 16.2396
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "wide-branching-frequent-failures",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 451.172,
+      "budgetedMedianNsPerAgent": 471.875,
+      "batchedJobsSameFrameMedianNsPerAgent": 7496.094,
+      "fastestNonJobsMedianNsPerAgent": 451.172,
+      "batchedToFastestNonJobsRatio": 16.6147
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "predominantly-running-actions",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 293.75,
+      "budgetedMedianNsPerAgent": 306.25,
+      "batchedJobsSameFrameMedianNsPerAgent": 5831.25,
+      "fastestNonJobsMedianNsPerAgent": 293.75,
+      "batchedToFastestNonJobsRatio": 19.8511
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "predominantly-running-actions",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 295.313,
+      "budgetedMedianNsPerAgent": 306.25,
+      "batchedJobsSameFrameMedianNsPerAgent": 4748.438,
+      "fastestNonJobsMedianNsPerAgent": 295.313,
+      "batchedToFastestNonJobsRatio": 16.0793
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "predominantly-running-actions",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 291.797,
+      "budgetedMedianNsPerAgent": 313.281,
+      "batchedJobsSameFrameMedianNsPerAgent": 5181.25,
+      "fastestNonJobsMedianNsPerAgent": 291.797,
+      "batchedToFastestNonJobsRatio": 17.7564
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "many-programs-small-populations",
+      "agentCount": 16,
+      "immediateMedianNsPerAgent": 262.5,
+      "budgetedMedianNsPerAgent": 275.0,
+      "batchedJobsSameFrameMedianNsPerAgent": 4668.75,
+      "fastestNonJobsMedianNsPerAgent": 262.5,
+      "batchedToFastestNonJobsRatio": 17.7857
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "many-programs-small-populations",
+      "agentCount": 64,
+      "immediateMedianNsPerAgent": 257.813,
+      "budgetedMedianNsPerAgent": 262.5,
+      "batchedJobsSameFrameMedianNsPerAgent": 3943.75,
+      "fastestNonJobsMedianNsPerAgent": 257.813,
+      "batchedToFastestNonJobsRatio": 15.2969
+    },
+    {
+      "platform": "Android ARM64 Player",
+      "scenario": "many-programs-small-populations",
+      "agentCount": 256,
+      "immediateMedianNsPerAgent": 257.031,
+      "budgetedMedianNsPerAgent": 267.188,
+      "batchedJobsSameFrameMedianNsPerAgent": 4553.516,
+      "fastestNonJobsMedianNsPerAgent": 257.031,
+      "batchedToFastestNonJobsRatio": 17.7158
+    }
+  ],
+  "autoEditorSummary": {
+    "source": {
+      "path": "Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json",
+      "sha256": "b9ebc85cde851329d4df04094c6057ae553f5e67434bada5377440c530d1c8f3",
+      "schema": "aibt-p4-006-auto-comparison-v1"
+    },
+    "caseCount": 24,
+    "underperformingCaseCount": 23,
+    "matchingOrBetterCaseCount": 1,
+    "confidenceValues": [
+      "Low"
+    ],
+    "jobsSelectionUnderperformanceGapPercent": {
+      "minimum": 188.3028,
+      "maximum": 1773.9927
+    }
+  }
+}

@@ -1938,7 +1938,7 @@
       "id": "P7-024",
       "phase": 7,
       "title": "Showcase Job-system vs. non-Job scheduling benchmark report",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-024-showcase-scheduling-benchmark.md",
       "dependsOn": [

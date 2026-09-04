@@ -15,6 +15,11 @@ positions and derives readable titles without changing semantic identity. See
 layouts and verified reference outcomes; both opened live in AIBT Graph with zero diagnostics and
 no overlaps. See [evidence](Evidence/P7-023/README.md). P7-024 is next.
 
+2026-09-04 update: **P7-024 is Done**. A reproducible scheduling report compares all 42 committed
+Windows/Android Player points for plain loops and same-frame Unity Jobs. The report explicitly
+records that `PipelinedJobs` has no committed Phase 4 measurement. See
+[evidence](Evidence/P7-024/README.md). The planned Phase 7 implementation queue is complete.
+
 ## Required reading order
 
 1. Repository `AGENTS.md`.

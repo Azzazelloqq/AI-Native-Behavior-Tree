@@ -18,10 +18,15 @@ Update after step 3 (2026-09-04): P7-023 is Done. Two production-node examples p
 compile, execute to Success, and open with zero diagnostics in authored layouts. See
 [evidence](Evidence/P7-023/README.md). P7-024 is the next planned scope.
 
+Update after step 4 (2026-09-04): P7-024 is Done. The report packages all 42 comparable
+Windows/Android Player points into a reproducible chart and keeps `PipelinedJobs`' missing
+measurement explicit. See [evidence](Evidence/P7-024/README.md). Phase 7's planned implementation
+queue is complete; integration and release readiness is next.
+
 - P7-028 and review scopes P7-029 through P7-032 are Done. The package working tree was clean.
 - Latest completed full host EditMode run: 1726/1729 passed. Two CodeGen PackageInfo assertions
   and one LocalSaveSystem autosave test remain failed; do not describe this as an all-green suite.
-- Remaining Phase 7 cards: P7-023, P7-024, P7-025, P7-026.
+- Remaining Phase 7 cards in this plan: none.
 - P0-005 is Review; P0-006 and P1-019 are Blocked in the tracker. Existing evidence requires a
   successful remote Unity CI run. Runner availability must be rechecked live, not inferred from
   historical USER_ACTIONS.md entries.

@@ -6,6 +6,10 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- Reproducible scheduling benchmark report and chart covering all 42 comparable Windows/Android
+  Player points for plain loops versus same-frame Unity Jobs, with source hashes and explicit
+  disclosure of the unmeasured pipelined policy.
+
 - Two readable production-node showcase trees demonstrate timed sequence and deterministic
   parallel/decorator behavior, each with a committed graph layout and verified execution outcome.
 
