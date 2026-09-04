@@ -1983,7 +1983,7 @@
       "id": "P7-027",
       "phase": 7,
       "title": "Production Play-mode host and live visual debugger",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-027-production-debugger.md",
       "dependsOn": [

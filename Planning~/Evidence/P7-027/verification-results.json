@@ -1,0 +1,27 @@
+{
+  "schema": "aibt-p7-027-verification-v1",
+  "passed": true,
+  "findings": [
+    "ADR_HEDGE_RESOLVED|ADR-P7-010's own text hedged 'SchedulingPolicyDriver (or a promoted equivalent's)'|SchedulingPolicyDriver is a benchmark harness -- every leaf status is supplied by the caller in advance via a plain array (its own doc comment: 'this driver never interprets a node's type ID'), cannot drive a tree whose leaves compute their own real outcome",
+    "OWNER_DECISION|resolve real dispatch now rather than defer|owner's explicit choice, not assumed",
+    "DESIGN_RESOLUTION|SchedulingPolicyDriver.TryRunImmediate's own loop is a thin wrapper over already-internal NativeLifecycleMachineV1.TryAdvance/TryCompleteDispatch|host drives these two primitives directly; real per-project leaf dispatch (GenericNativeDispatchTranslatorV1, generated code, P7-009) resolved via a delegate injected at host construction time, keeping the host AIBT.Runtime-only per the ADR's own reasoning",
+    "DELIVERABLE|Runtime/Integration/ProductionTreeHost.cs|new, MonoBehaviour per ADR-P7-010's shape, TryBootstrap/Update/OnDestroy",
+    "REAL_COMPILE_ERROR_FOUND_AND_FIXED|CS0051 Inconsistent accessibility|NativeLifecycleNodeKindV1 is internal, cannot appear in TryBootstrap's public signature -- fixed by deriving nodeKinds internally via NativeHotReloadInstance.ClassifyKind (existing internal helper, same pattern NativeHotReloadInstance.TryBuild already uses), a cleaner API as a side effect",
+    "DELIVERABLE|Editor/Trace/TraceTimelineWindow.cs|modified: EditorApplication.update-driven live auto-refresh while attached+Play mode; AdvanceHighlightAnimation fades border alpha toward target over ~200ms instead of an instant flat swap",
+    "TEST_RESULT|Tests/Runtime/Integration/ProductionTreeHostTests.cs (new, 4 tests)|4/4 passed: TryBootstrap succeeds and owns a trace channel; Update calls the real dispatch delegate on-demand with the correct node index (not from a pre-supplied array); Running-then-Success two-tick pattern matches SchedulingPolicyDriverTests's own already-proven sequence; OnDestroy disposes leak-free",
+    "DOC_REGEN|Documentation~/generated/api-reference-runtime.md|regenerated via real AIBT/MCP/Regenerate Documentation menu command for 4 new public members; McpDocumentationGeneratorsTests drift-check re-passed 12/12",
+    "STATIC_VERIFICATION|Tools~/Verification/Verify-Static.ps1|passed, 7 schemas, 134 work items",
+    "TEST_RESULT|AIBT.Editor.Tests (live run_tests, full assembly)|396/396 passed, 0 failed (392 baseline + 4 new)",
+    "TEST_RESULT|whole host-project regression (live run_tests, no assembly filter, 1649 tests)|3 pre-existing unrelated failures only (same 3 disclosed in P7-018's own evidence) -- zero regressions attributable to this card",
+    "LIVE_PROOF|real Play mode via Unity MCP: ProductionTreeHost bootstrapped against a real CompiledProgram (mirrors SchedulingPolicyDriverTests's own fixture) with a real on-demand dispatch delegate|bootstrap succeeded live",
+    "LIVE_PROOF|Editor Play-mode's own known unfocused-throttling (already disclosed by ADR-P7-010's own spike, finding 2)|Update() needed the same manual-tick workaround the spike itself needed for a fast MCP round-trip proof -- the mechanism ticked is real, live, unmodified production code, only the pumping cadence was worked around",
+    "LIVE_PROOF|TraceTimelineWindow attached via unmodified NativeExecutionDebuggerSession.Attach, LoadGraphContext with a real TreeDocument/registry/CompiledProgram|session.IsAttached=True, model.steps=17 on first read (real trace records)",
+    "LIVE_PROOF_LOAD_BEARING|10 more host ticks via reflection, then re-read CurrentModel WITHOUT calling Refresh() explicitly|model.steps=47 -- proves the EditorApplication.update-driven live auto-refresh subscription genuinely fired and re-read the channel on its own, not merely that Refresh() works when clicked",
+    "LIVE_PROOF|_highlightAlphaByNode read via reflection after continuous activity|root alpha=1, leaf alpha=1 -- both continuously-active nodes reached the animation's own correct steady-state target",
+    "LIVE_PROOF|exited Play mode via manage_editor stop, console cleared and re-checked immediately after|zero new leak diagnostics from this teardown, consistent with the EditMode test's own already-passing leak-free OnDestroy proof",
+    "SCOPE_LIMITATION|Immediate/Budgeted scheduling policies only|per ADR-P7-010's own decision 3; a population-level coordinator for BatchedJobsSameFrame/PipelinedJobs remains separate future work",
+    "SCOPE_LIMITATION|full Standalone-Player proof not exercised|matches the ADR's own already-disclosed scope limitation (Editor Play mode is the accepted proxy)",
+    "SCOPE_LIMITATION|no visual screenshot of the animated fade captured this session|the live proof is programmatic (reading real internal state through live MCP round trips), not a rendered image; a future session or the owner can capture one directly if wanted",
+    "WORK_ITEM_STATUS|P7-027|draft->done"
+  ]
+}

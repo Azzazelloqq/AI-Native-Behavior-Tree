@@ -22,6 +22,9 @@ namespace AIBT.Editor.Trace
     public sealed class TraceTimelineWindow : EditorWindow
     {
         private static readonly Color ActiveNodeColor = new Color(0.20f, 0.75f, 0.95f);
+        private const float MaxBorderWidth = 3f;
+        private const double AnimationRatePerSecond = 1000d / 200d; // ~200ms full fade, per the card's own disclosed first-pass minimum.
+        private const double LiveRefreshIntervalSeconds = 0.1d;
 
         private NativeExecutionDebuggerSession _session;
         private TreeDocument _document;
@@ -37,6 +40,11 @@ namespace AIBT.Editor.Trace
 
         private TraceTimelineModel _model = TraceTimelineModel.Empty;
         private int _scrubStepIndex = -1;
+
+        private HashSet<NodeId> _targetActiveNodeIds = new HashSet<NodeId>();
+        private readonly Dictionary<NodeId, float> _highlightAlphaByNode = new Dictionary<NodeId, float>();
+        private double _lastAnimationTickTime;
+        private double _lastLiveRefreshTime;
 
         [MenuItem("AIBT/Trace Timeline")]
         public static TraceTimelineWindow ShowWindow()
@@ -81,6 +89,34 @@ namespace AIBT.Editor.Trace
         private void OnEnable()
         {
             BuildLayout();
+            _lastAnimationTickTime = EditorApplication.timeSinceStartup;
+            _lastLiveRefreshTime = EditorApplication.timeSinceStartup;
+            EditorApplication.update += OnEditorUpdate;
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.update -= OnEditorUpdate;
+        }
+
+        /// <summary>
+        /// Drives two independent things every Editor tick: (a) auto-refresh while a session is
+        /// attached and the Editor is actually in Play mode -- this is what makes highlighting
+        /// "live" rather than requiring a manual Refresh click; (b) the active-highlight fade
+        /// animation, which always advances regardless of live-refresh state so scrubbing still
+        /// animates smoothly.
+        /// </summary>
+        private void OnEditorUpdate()
+        {
+            var now = EditorApplication.timeSinceStartup;
+            if (_session != null && _session.IsAttached && EditorApplication.isPlaying
+                && now - _lastLiveRefreshTime >= LiveRefreshIntervalSeconds)
+            {
+                _lastLiveRefreshTime = now;
+                Refresh();
+            }
+
+            AdvanceHighlightAnimation(now);
         }
 
         private void BuildLayout()
@@ -170,28 +206,65 @@ namespace AIBT.Editor.Trace
             ApplyHighlight(_scrubStepIndex);
         }
 
+        /// <summary>
+        /// Sets which nodes are the current highlight target -- does not itself paint any border.
+        /// <see cref="AdvanceHighlightAnimation"/> (driven every Editor tick by
+        /// <see cref="OnEditorUpdate"/>) animates each node's own border toward this target, so a
+        /// node lights up/fades out over ~200ms rather than snapping instantly.
+        /// </summary>
         private void ApplyHighlight(int stepIndex)
         {
+            // Rebuilding the graph on every highlight (including every live-mode auto-refresh tick)
+            // is the existing, pre-P7-027 behavior -- not made worse here, just called more often in
+            // live mode. Avoiding the rebuild (and preserving pan/zoom) is P7-025's own scope.
             if (_document != null && _registry != null)
             {
                 _graphView.Populate(_document, _registry);
             }
 
             var activeRuntimeIndices = _model.ActiveRuntimeNodeIndicesAtStep(stepIndex);
-            var activeNodeIds = new HashSet<NodeId>();
+            _targetActiveNodeIds = new HashSet<NodeId>();
             foreach (var runtimeIndex in activeRuntimeIndices)
             {
                 if (_nodeIdByRuntimeIndex.TryGetValue(runtimeIndex, out var nodeId))
                 {
-                    activeNodeIds.Add(nodeId);
+                    _targetActiveNodeIds.Add(nodeId);
                 }
+            }
+
+            // The graph was just repopulated with fresh VisualElements -- apply each node's own
+            // already-tracked alpha immediately so a still-active node doesn't visually reset to
+            // zero on every rebuild; AdvanceHighlightAnimation continues animating it from there.
+            foreach (var pair in _graphView.NodesById)
+            {
+                _highlightAlphaByNode.TryGetValue(pair.Key, out var alpha);
+                SetBorder(pair.Value, alpha);
+            }
+        }
+
+        /// <summary>Advances every currently-graphed node's highlight alpha toward 1 (in <see cref="_targetActiveNodeIds"/>) or 0, and paints its border.</summary>
+        private void AdvanceHighlightAnimation(double now)
+        {
+            var delta = (float)Math.Max(0d, now - _lastAnimationTickTime) * (float)AnimationRatePerSecond;
+            _lastAnimationTickTime = now;
+            if (_graphView == null)
+            {
+                return;
             }
 
             foreach (var pair in _graphView.NodesById)
             {
-                var highlighted = activeNodeIds.Contains(pair.Key);
-                SetBorder(pair.Value, highlighted ? ActiveNodeColor : Color.clear, highlighted ? 3f : 0f);
+                var target = _targetActiveNodeIds.Contains(pair.Key) ? 1f : 0f;
+                _highlightAlphaByNode.TryGetValue(pair.Key, out var alpha);
+                alpha = Mathf.MoveTowards(alpha, target, delta);
+                _highlightAlphaByNode[pair.Key] = alpha;
+                SetBorder(pair.Value, alpha);
             }
+        }
+
+        private static void SetBorder(VisualElement element, float alpha)
+        {
+            SetBorder(element, Color.Lerp(Color.clear, ActiveNodeColor, alpha), Mathf.Lerp(0f, MaxBorderWidth, alpha));
         }
 
         private static void SetBorder(VisualElement element, Color color, float width)

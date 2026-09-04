@@ -1130,8 +1130,31 @@ mirror); and native hot reload never copies `NativeHotReloadInstance.CooldownIni
 None were introduced by `P7-018`, though the first directly affects `P7-018`'s own new v2/Agent-Shared
 documents once a migrated node is involved.
 
-Remaining Phase 7 work, per the owner's own priority ("functionality before polish"): `P7-027`
-(production debugger) next, then `P7-028` (node library), then `P7-026` (build-size validation);
-`P7-029` (the three bug fixes above) filed alongside this queue, not yet sequenced ahead of it;
-`P7-023`/`P7-024`/`P7-025` (editor/showcase cards) last. `1.0.0` itself remains the owner's own
-separate release decision.
+Same day, `P7-027` (production Play-mode host and live visual debugger) is also **done** —
+applying `ADR-P7-010` to production, the single most-repeated disclosed gap across the whole
+project. The ADR's own hedge ("driving `SchedulingPolicyDriver`'s (or a promoted equivalent's)
+methods") turned out well-founded: `SchedulingPolicyDriver` is a benchmark harness whose every leaf
+status is supplied by the caller in advance via a plain array, unable to drive a tree whose leaves
+compute their own real outcome. Put to the owner rather than deferred; the owner asked to resolve
+real dispatch now. Resolved by reading the engine's own primitives directly:
+`SchedulingPolicyDriver.TryRunImmediate`'s own loop is a thin wrapper over already-`internal`
+`NativeLifecycleMachineV1.TryAdvance`/`TryCompleteDispatch` — the new `Runtime/Integration/
+ProductionTreeHost.cs` drives these directly, resolving each real Tick through a delegate injected
+at construction (keeping the host itself free of any `AIBT.Authoring` dependency, matching the ADR's
+own reasoning). A real `CS0051` compile error, not predicted at planning time, was found and fixed
+during implementation: `NativeLifecycleNodeKindV1` is itself `internal` and cannot appear in a public
+method's signature, resolved by deriving it internally via the existing `NativeHotReloadInstance
+.ClassifyKind` helper — a cleaner API as a side effect. `TraceTimelineWindow` gained a live
+`EditorApplication.update`-driven auto-refresh (while attached and in real Play mode) plus a
+~200ms border-alpha fade animation on node highlighting, the owner's own explicit ask. Live proof
+via Unity MCP in real Play mode: the load-bearing check was reading the trace model's step count
+grow from 17 to 47 across two calls **without an explicit `Refresh()` in between**, proving the live
+auto-refresh subscription genuinely works. Full regression 396/396 (`AIBT.Editor.Tests`), only the
+same 3 pre-existing unrelated failures across the whole 1649-test host-project run; no leak
+diagnostic on real Play-mode teardown. See `Planning~/Evidence/P7-027/README.md`.
+
+Remaining Phase 7 work, per the owner's own priority ("functionality before polish"): `P7-028`
+(node library) next, then `P7-026` (build-size validation); `P7-029` (three data-loss/state bug
+fixes, filed after `P7-018`) alongside this queue, not yet sequenced ahead of it; `P7-023`/`P7-024`/
+`P7-025` (editor/showcase cards) last. `1.0.0` itself remains the owner's own separate release
+decision.
