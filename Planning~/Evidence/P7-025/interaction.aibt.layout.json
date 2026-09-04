@@ -1,0 +1,32 @@
+{
+  "format": "aibt.layout",
+  "formatVersion": 1,
+  "treeId": "tree.test.graph-interaction",
+  "direction": "topToBottom",
+  "nodes": {
+    "first": {
+      "position": {
+        "x": 100,
+        "y": 260
+      }
+    },
+    "root": {
+      "position": {
+        "x": 400,
+        "y": 60
+      }
+    },
+    "second": {
+      "position": {
+        "x": 400,
+        "y": 260
+      }
+    },
+    "third": {
+      "position": {
+        "x": 700,
+        "y": 260
+      }
+    }
+  }
+}

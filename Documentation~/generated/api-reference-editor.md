@@ -76,7 +76,7 @@ Gates every semantic edit through the same canonical parse/validate/compile pipe
 
 ### `AIBT.Editor.Graph.BehaviorTreeGraphView`
 
-Read-only rendering of a canonical <see cref="TreeDocument"/> as a graph. Never mutates the document and never writes to disk; positions are a transient default until a real *.aibt.layout.json reader exists (P3-005).
+Read-only rendering of a canonical <see cref="TreeDocument"/> as a graph. Never mutates the document and never writes to disk. Node movement is presentation-only and transient.
 
 - `METHOD System.Void .ctor()`
 - `METHOD System.Void Populate(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry)`

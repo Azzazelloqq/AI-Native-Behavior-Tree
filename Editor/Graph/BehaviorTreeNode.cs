@@ -1,3 +1,4 @@
+using System.Globalization;
 using AIBT.Authoring;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -12,16 +13,20 @@ namespace AIBT.Editor.Graph
             NodeId = document.Id;
             TypeId = document.TypeId;
             Manifest = manifest;
-            title = string.IsNullOrEmpty(document.DisplayName) ? document.TypeId : document.DisplayName;
+            title = string.IsNullOrEmpty(document.DisplayName) ? ReadableTitle(document.TypeId) : document.DisplayName;
+            tooltip = document.TypeId;
+            capabilities = Capabilities.Selectable | Capabilities.Movable;
 
             InputPort = Port.Create<Edge>(Orientation.Vertical, Direction.Input, Port.Capacity.Single, typeof(bool));
             InputPort.portName = "in";
+            InputPort.SetEnabled(false);
             inputContainer.Add(InputPort);
 
             if (AcceptsChildren(manifest))
             {
                 OutputPort = Port.Create<Edge>(Orientation.Vertical, Direction.Output, Port.Capacity.Multi, typeof(bool));
                 OutputPort.portName = "children";
+                OutputPort.SetEnabled(false);
                 outputContainer.Add(OutputPort);
             }
 
@@ -41,6 +46,12 @@ namespace AIBT.Editor.Graph
         public Port InputPort { get; }
 
         public Port OutputPort { get; }
+
+        private static string ReadableTitle(string typeId)
+        {
+            var leaf = typeId.Substring(typeId.LastIndexOf('.') + 1).Replace('-', ' ').Replace('_', ' ');
+            return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(leaf);
+        }
 
         private static bool AcceptsChildren(NodeManifest manifest)
         {

@@ -1953,7 +1953,7 @@
       "id": "P7-025",
       "phase": 7,
       "title": "Graph editor interactivity and readability",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-025-graph-editor-interactivity.md",
       "dependsOn": [

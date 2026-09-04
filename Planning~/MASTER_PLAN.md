@@ -6,7 +6,10 @@ This plan is the coordination entry point for human and AI contributors.
 trees) added 36,028 shipped bytes, wholly in serialized Resources data/index files; code and
 IL2CPP metadata are byte-identical. Both actual Player payload probes and static verification
 passed. See [evidence](Evidence/P7-026/README.md) for packaging limits and reproduction.
-The next approved-plan scope is P7-025; see [next steps](NEXT_STEPS.md).
+P7-025 is also Done: the read-only graph viewer now supports navigation/selection, loads persisted
+positions and derives readable titles without changing semantic identity. See
+[evidence](Evidence/P7-025/README.md). The next approved-plan scope is P7-023; see
+[next steps](NEXT_STEPS.md).
 
 ## Required reading order
 

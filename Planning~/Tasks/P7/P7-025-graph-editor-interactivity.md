@@ -1,6 +1,6 @@
 # P7-025 — Graph editor interactivity and readability
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -92,6 +92,12 @@ live interaction proof via Unity MCP + a real screenshot
 ```
 
 ## Handoff notes
+
+- Completed 2026-09-04: standard pan/zoom/select/box-select are active; stored layouts load through
+  P3-005, invalid layouts expose diagnostics, missing layouts retain the default, and titles are
+  readable without changing semantic identity. Live mouse-event proof and screenshot passed.
+  Focused graph tests 9/9; full host EditMode 1732/1735 with the same three established failures.
+  Static verification passed (7 schemas, 137 items). See [evidence](../../Evidence/P7-025/README.md).
 
 - Spun off from a direct owner usability review this session (2026-09-03), after a live demo of
   `tree.golden.parallel-decorator` in `AIBT Graph` surfaced these three gaps in person. Confirmed in

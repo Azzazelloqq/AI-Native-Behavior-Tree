@@ -1,7 +1,11 @@
 using System.IO;
+using System.Linq;
 using AIBT.Authoring;
+using AIBT.Editor.Layout;
+using AIBT.Editor.Organization;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace AIBT.Editor.Graph
 {
@@ -9,6 +13,7 @@ namespace AIBT.Editor.Graph
     public sealed class BehaviorTreeGraphWindow : EditorWindow
     {
         private BehaviorTreeGraphView _view;
+        private Label _diagnosticLabel;
 
         public TreeDocument Document { get; private set; }
 
@@ -24,21 +29,34 @@ namespace AIBT.Editor.Graph
 
         public void OpenFromPath(string path, NodeRegistry registry)
         {
-            OpenFromBytes(File.ReadAllBytes(path), path, registry);
+            OpenDocument(File.ReadAllBytes(path), path, registry, path);
         }
 
         public void OpenFromBytes(byte[] utf8, string documentId, NodeRegistry registry)
+            => OpenDocument(utf8, documentId, registry, null);
+
+        private void OpenDocument(byte[] utf8, string documentId, NodeRegistry registry, string treePath)
         {
             EnsureView();
+            _view.ClearDocument();
 
             var result = CanonicalTreeJson.Parse(utf8, documentId);
             Diagnostics = result.Diagnostics;
             Document = result.Success ? result.Document : null;
 
-            if (Document != null)
+            LayoutDocument layout = null;
+            var canRender = Document != null;
+            if (canRender && treePath != null)
             {
-                _view.Populate(Document, registry);
+                var loaded = LayoutPersistenceController.Load(treePath, Document);
+                Diagnostics = new DiagnosticCollection(Diagnostics.Concat(loaded.Diagnostics));
+                canRender = loaded.Success;
+                if (!loaded.UsedDefault) layout = loaded.Document;
             }
+
+            _diagnosticLabel.text = string.Join("\n", Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
+            _diagnosticLabel.style.display = Diagnostics.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+            if (canRender) _view.Populate(Document, registry, layout);
         }
 
         private void OnEnable()
@@ -55,6 +73,10 @@ namespace AIBT.Editor.Graph
 
             _view = new BehaviorTreeGraphView { name = "aibt-graph-view" };
             _view.style.flexGrow = 1;
+            _diagnosticLabel = new Label { name = "aibt-graph-diagnostics" };
+            _diagnosticLabel.style.whiteSpace = WhiteSpace.Normal;
+            _diagnosticLabel.style.display = DisplayStyle.None;
+            rootVisualElement.Add(_diagnosticLabel);
             rootVisualElement.Add(_view);
         }
     }

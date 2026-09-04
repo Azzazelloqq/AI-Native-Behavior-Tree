@@ -6,6 +6,9 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- `AIBT Graph` now supports pan, zoom, node dragging, click and box selection; it reads existing
+  layout positions and shows readable titles while keeping semantic editing disabled.
+
 - Reproducible Windows IL2CPP tree-count size comparison: 1/100 authored trees, actual Player
   payload verification and file inventories. The measured +36,028-byte delta is serialized data
   and resource metadata; code is byte-identical. See `Planning~/Evidence/P7-026/` for scope limits.

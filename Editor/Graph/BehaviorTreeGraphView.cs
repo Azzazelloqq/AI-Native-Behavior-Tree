@@ -2,15 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Editor.Layout;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace AIBT.Editor.Graph
 {
     /// <summary>
     /// Read-only rendering of a canonical <see cref="TreeDocument"/> as a graph. Never mutates
-    /// the document and never writes to disk; positions are a transient default until a real
-    /// *.aibt.layout.json reader exists (P3-005).
+    /// the document and never writes to disk. Node movement is presentation-only and transient.
     /// </summary>
     public sealed class BehaviorTreeGraphView : GraphView
     {
@@ -21,15 +22,32 @@ namespace AIBT.Editor.Graph
 
         public IReadOnlyDictionary<NodeId, BehaviorTreeNode> NodesById => _nodesById;
 
+        public BehaviorTreeGraphView()
+        {
+            SetupZoom(ContentZoomer.DefaultMinScale, ContentZoomer.DefaultMaxScale);
+            this.AddManipulator(new ContentDragger());
+            this.AddManipulator(new SelectionDragger());
+            this.AddManipulator(new RectangleSelector());
+        }
+
         public void Populate(TreeDocument document, NodeRegistry registry)
+            => Populate(document, registry, null);
+
+        internal void ClearDocument()
+        {
+            ClearSelection();
+            DeleteElements(graphElements.ToList());
+            _nodesById.Clear();
+        }
+
+        internal void Populate(TreeDocument document, NodeRegistry registry, LayoutDocument layout)
         {
             if (document == null)
             {
                 throw new ArgumentNullException(nameof(document));
             }
 
-            DeleteElements(graphElements.ToList());
-            _nodesById.Clear();
+            ClearDocument();
 
             var documentNodesById = new Dictionary<NodeId, NodeDocument>();
             foreach (var node in document.Nodes)
@@ -50,7 +68,18 @@ namespace AIBT.Editor.Graph
                 _nodesById[node.Id] = view;
             }
 
-            AssignDefaultPositions(document, documentNodesById);
+            if (layout == null)
+            {
+                AssignDefaultPositions(document, documentNodesById);
+            }
+            else
+            {
+                foreach (var pair in _nodesById)
+                {
+                    var position = layout.Nodes[pair.Key].Position;
+                    pair.Value.SetPosition(new Rect(position.X, position.Y, 0f, 0f));
+                }
+            }
             ConnectEdges(document);
         }
 
@@ -70,7 +99,8 @@ namespace AIBT.Editor.Graph
                         continue;
                     }
 
-                    var edge = new Edge { output = parentView.OutputPort, input = childView.InputPort };
+                    var edge = new Edge { output = parentView.OutputPort, input = childView.InputPort,
+                        capabilities = Capabilities.Selectable };
                     parentView.OutputPort.Connect(edge);
                     childView.InputPort.Connect(edge);
                     AddElement(edge);

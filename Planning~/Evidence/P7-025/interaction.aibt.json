@@ -1,0 +1,10 @@
+{
+  "format": "aibt.tree", "formatVersion": 1,
+  "treeId": "tree.test.graph-interaction", "name": "Graph interaction verification", "root": "root",
+  "nodes": {
+    "root": { "type": "aibt.core.memory-sequence", "typeVersion": 1, "displayName": "Wait in order", "children": ["first", "second", "third"] },
+    "first": { "type": "aibt.stdlib.wait", "typeVersion": 1, "parameters": { "ticks": 1 } },
+    "second": { "type": "aibt.stdlib.wait", "typeVersion": 1, "parameters": { "ticks": 2 } },
+    "third": { "type": "aibt.stdlib.wait", "typeVersion": 1, "parameters": { "ticks": 3 } }
+  }
+}

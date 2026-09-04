@@ -1,9 +1,16 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using AIBT.Authoring;
 using AIBT.Editor.Graph;
+using AIBT.Editor.Layout;
+using AIBT.Editor.Organization;
 using NUnit.Framework;
+using UnityEditor.Experimental.GraphView;
+using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEngine.UIElements;
 
 namespace AIBT.Tests.Editor.Graph
 {
@@ -78,6 +85,141 @@ namespace AIBT.Tests.Editor.Graph
             Assert.DoesNotThrow(() => view.Populate(document, registry: null));
             Assert.That(view.NodesById.Count, Is.EqualTo(4));
             Assert.That(view.NodesById[new NodeId("condition")].Manifest, Is.Null);
+        }
+
+        [Test]
+        public void TitlesUseReadableTypeSuffixAndPreserveExplicitDisplayName()
+        {
+            var json = File.ReadAllText(FixturePath()).Replace("\"type\": \"sample.graph-action\"",
+                "\"displayName\": \"Wait by the gate\", \"type\": \"sample.graph-action\"");
+            var document = CanonicalTreeJson.Parse(System.Text.Encoding.UTF8.GetBytes(json)).Document;
+            var view = new BehaviorTreeGraphView();
+            view.Populate(document, BuildRegistry());
+            Assert.That(view.NodesById[new NodeId("root")].title, Is.EqualTo("Memory Sequence"));
+            Assert.That(view.NodesById[new NodeId("condition")].title, Is.EqualTo("Graph Condition"));
+            var action = view.NodesById[new NodeId("action")];
+            Assert.That(action.title, Is.EqualTo("Wait by the gate"));
+            Assert.That(action.tooltip, Is.EqualTo("sample.graph-action"));
+        }
+
+        [Test]
+        public void NavigationDoesNotEnableSemanticEditing()
+        {
+            var view = new BehaviorTreeGraphView();
+            view.Populate(ParseFixture(), BuildRegistry());
+            foreach (var node in view.NodesById.Values)
+            {
+                Assert.That(node.capabilities.HasFlag(Capabilities.Selectable), Is.True);
+                Assert.That(node.capabilities.HasFlag(Capabilities.Movable), Is.True);
+                Assert.That(node.capabilities.HasFlag(Capabilities.Deletable), Is.False);
+                Assert.That(node.capabilities.HasFlag(Capabilities.Copiable), Is.False);
+                Assert.That(node.InputPort.enabledSelf, Is.False);
+                if (node.OutputPort != null) Assert.That(node.OutputPort.enabledSelf, Is.False);
+            }
+            Assert.That(view.edges.ToList().All(edge => !edge.capabilities.HasFlag(Capabilities.Deletable)), Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator ReopeningRestoresStoredPositionsWithoutWritingEitherDocument()
+        {
+            IEnumerator Check(BehaviorTreeGraphWindow window, string path)
+            {
+                var tree = ParseFixture();
+                var placements = new System.Collections.Generic.Dictionary<NodeId, LayoutNodePlacement>
+                {
+                    [tree.Root] = new LayoutNodePlacement(new LayoutPoint(713, -129), true)
+                };
+                LayoutPersistenceController.Save(path, new LayoutDocument(tree.TreeId, LayoutDirection.TopToBottom, placements));
+                var semanticBytes = File.ReadAllBytes(path);
+                var layoutBytes = File.ReadAllBytes(LayoutPersistenceController.LayoutPathFor(path));
+                window.OpenFromPath(path, BuildRegistry());
+                yield return null;
+                var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
+                Assert.That(window.Diagnostics.Count, Is.Zero);
+                Assert.That(view.NodesById.Count, Is.EqualTo(tree.Nodes.Count), "Partial stored layouts must include new nodes too.");
+                AssertStoredPosition(view.NodesById[tree.Root], new Vector2(713, -129));
+                view.NodesById[tree.Root].SetPosition(new Rect(10, 20, 0, 0));
+                window.OpenFromPath(path, BuildRegistry());
+                yield return null;
+                AssertStoredPosition(view.NodesById[tree.Root], new Vector2(713, -129));
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(semanticBytes));
+                Assert.That(File.ReadAllBytes(LayoutPersistenceController.LayoutPathFor(path)), Is.EqualTo(layoutBytes));
+            }
+            return WithRenderedScratchWindow(Check);
+        }
+
+        [UnityTest]
+        public IEnumerator MissingLayoutUsesDefaultWithoutCreatingFile()
+        {
+            IEnumerator Check(BehaviorTreeGraphWindow window, string path)
+            {
+                window.OpenFromPath(path, BuildRegistry());
+                yield return null;
+                var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
+                Assert.That(window.Diagnostics.Count, Is.Zero);
+                Assert.That(view.NodesById[new NodeId("root")].GetPosition().position, Is.EqualTo(Vector2.zero));
+                Assert.That(view.NodesById[new NodeId("guard")].GetPosition().y, Is.GreaterThan(0));
+                Assert.That(File.Exists(LayoutPersistenceController.LayoutPathFor(path)), Is.False);
+            }
+            return WithRenderedScratchWindow(Check);
+        }
+
+        private static void AssertStoredPosition(BehaviorTreeNode node, Vector2 expected)
+        {
+            Assert.That(node.style.left.value.value, Is.EqualTo(expected.x));
+            Assert.That(node.style.top.value.value, Is.EqualTo(expected.y));
+            // UI Toolkit rounds rendered coordinates to physical pixels on scaled displays.
+            Assert.That(Vector2.Distance(node.GetPosition().position, expected),
+                Is.LessThanOrEqualTo(1f / UnityEditor.EditorGUIUtility.pixelsPerPoint));
+        }
+
+        private static IEnumerator WithRenderedScratchWindow(Func<BehaviorTreeGraphWindow, string, IEnumerator> action)
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "aibt-graph-tests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "tree.aibt.json");
+            File.Copy(FixturePath(), path);
+            var window = ScriptableObject.CreateInstance<BehaviorTreeGraphWindow>();
+            try
+            {
+                window.Show();
+                yield return action(window, path);
+            }
+            finally
+            {
+                window.Close();
+                Directory.Delete(directory, true);
+            }
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void InvalidInputClearsPreviousGraphAndDisplaysDiagnostics(bool invalidLayout)
+        {
+            WithScratchWindow((window, path) =>
+            {
+                window.OpenFromPath(path, BuildRegistry());
+                File.WriteAllText(invalidLayout ? LayoutPersistenceController.LayoutPathFor(path) : path, "{");
+                window.OpenFromPath(path, BuildRegistry());
+                Assert.That(window.rootVisualElement.Q<BehaviorTreeGraphView>().NodesById, Is.Empty);
+                Assert.That(window.Diagnostics.Count, Is.GreaterThan(0));
+                Assert.That(window.rootVisualElement.Q<Label>("aibt-graph-diagnostics").text, Is.Not.Empty);
+            });
+        }
+
+        private static void WithScratchWindow(Action<BehaviorTreeGraphWindow, string> action)
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "aibt-graph-tests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "tree.aibt.json");
+            File.Copy(FixturePath(), path);
+            var window = ScriptableObject.CreateInstance<BehaviorTreeGraphWindow>();
+            try { action(window, path); }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+                Directory.Delete(directory, true);
+            }
         }
 
         private static TreeDocument ParseFixture()

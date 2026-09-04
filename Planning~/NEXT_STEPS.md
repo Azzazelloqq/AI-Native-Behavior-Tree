@@ -10,6 +10,10 @@ Update after step 1 (2026-09-04): P7-026 is Done. Two Windows IL2CPP builds and 
 payload probes passed; 1 to 100 trees added 36,028 shipping bytes, with byte-identical code.
 See [evidence](Evidence/P7-026/README.md). P7-025 is the next planned scope.
 
+Update after step 2 (2026-09-04): P7-025 is Done. The graph viewer supports normal navigation and
+selection, loads stored layouts, keeps movement transient, and presents readable titles. See
+[evidence](Evidence/P7-025/README.md). P7-023 is the next planned scope.
+
 - P7-028 and review scopes P7-029 through P7-032 are Done. The package working tree was clean.
 - Latest completed full host EditMode run: 1726/1729 passed. Two CodeGen PackageInfo assertions
   and one LocalSaveSystem autosave test remain failed; do not describe this as an all-green suite.
