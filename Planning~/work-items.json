@@ -1882,7 +1882,7 @@
       "id": "P7-018",
       "phase": 7,
       "title": "Tree-format v2 promotion to default",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-018-tree-format-v2-promotion.md",
       "dependsOn": [

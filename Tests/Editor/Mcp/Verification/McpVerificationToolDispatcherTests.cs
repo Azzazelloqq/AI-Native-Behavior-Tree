@@ -125,6 +125,52 @@ namespace AIBT.Tests.Editor.Mcp.Verification
             Assert.That(((JArray)response["result"]["diagnostics"]).Count, Is.GreaterThan(0));
         }
 
+        [Test]
+        public void CompileWithAgentScopeBlackboardRequiresPolicyOptIn()
+        {
+            const string AgentScopeTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tree.agent-verify"",
+  ""name"": ""Agent Verify"", ""root"": ""root"",
+  ""blackboardContracts"": { ""agent"": { ""contractId"": ""contract.agent"", ""contractVersion"": 1 } },
+  ""blackboard"": { ""danger"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": false } },
+  ""nodes"": { ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1 } }
+}";
+            WriteTree("agent.aibt.json", AgentScopeTree);
+
+            var withoutPolicy = Dispatch("compile", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
+            Assert.That((bool)withoutPolicy["result"]["success"], Is.False,
+                "Without a project policy opting in, Agent scope must still be rejected exactly as before.");
+
+            WritePolicy(supportsAgentScope: true, supportsSharedScope: false);
+
+            var withPolicy = Dispatch("compile", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
+            Assert.That((bool)withPolicy["result"]["success"], Is.True, withPolicy.ToString());
+        }
+
+        private void WritePolicy(bool supportsAgentScope, bool supportsSharedScope)
+        {
+            var policyDir = Path.Combine(_projectRoot, ".aibt");
+            Directory.CreateDirectory(policyDir);
+            var json = "{\n"
+                + "  \"format\": \"aibt.policy\",\n"
+                + "  \"formatVersion\": 1,\n"
+                + "  \"allowManagedNodes\": true,\n"
+                + "  \"allowMainThreadNodes\": true,\n"
+                + "  \"requireTreeDescription\": false,\n"
+                + "  \"requireNodeDescriptions\": false,\n"
+                + "  \"blackboardNaming\": \"any\",\n"
+                + "  \"requireDeterministicNodes\": true,\n"
+                + "  \"allowSideEffects\": true,\n"
+                + "  \"unreachableNodes\": \"error\",\n"
+                + "  \"supportsAgentScope\": " + (supportsAgentScope ? "true" : "false") + ",\n"
+                + "  \"supportsSharedScope\": " + (supportsSharedScope ? "true" : "false") + ",\n"
+                + "  \"forbiddenNodeTypes\": [],\n"
+                + "  \"warningsAsErrors\": [],\n"
+                + "  \"performance\": { \"forbidUnboundedRepeaters\": false, \"requireEventDrivenServices\": false }\n"
+                + "}";
+            File.WriteAllText(Path.Combine(policyDir, "policy.json"), json);
+        }
+
         // ---- simulate ------------------------------------------------------------------------
 
         [Test]
@@ -149,6 +195,40 @@ namespace AIBT.Tests.Editor.Mcp.Verification
             var traceKinds = ((JArray)steps[0]["traceEvents"]).Select(e => (string)e["kind"]).ToList();
             Assert.That(traceKinds, Does.Contain("NodeEntered"));
             Assert.That(traceKinds, Does.Contain("NodeExited"), "Leaf 'a' (aibt.test.success) must enter and exit within the same tick.");
+        }
+
+        [Test]
+        public void SimulateOnAgentScopeTreeReturnsAClearUnsupportedCapabilityDiagnosticNotAConfusingFailure()
+        {
+            // P7-018: simulate stays Tree-scope-only (ReferencePreviewDriver.TryCreate hardcodes
+            // ReferenceCompilationPolicy.Phase1, never reads project policy) -- this is already the
+            // exact same ReferenceCompiler check the compile/create_tree fix uses, so the failure
+            // path already surfaces a clear, specific diagnostic with no extra code needed.
+            const string AgentScopeTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tree.agent-simulate"",
+  ""name"": ""Agent Simulate"", ""root"": ""root"",
+  ""blackboardContracts"": { ""agent"": { ""contractId"": ""contract.agent"", ""contractVersion"": 1 } },
+  ""blackboard"": { ""danger"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": false } },
+  ""nodes"": { ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1 } }
+}";
+            WriteTree("agent-simulate.aibt.json", AgentScopeTree);
+            WritePolicy(supportsAgentScope: true, supportsSharedScope: false);
+
+            var response = Dispatch("simulate", new JObject
+            {
+                ["treeId"] = "tree.agent-simulate",
+                ["steps"] = new JArray(),
+            }, "TestExecution");
+
+            Assert.That((bool)response["result"]["accepted"], Is.False,
+                "simulate must still reject Agent scope even with a project policy opted in -- it never reads project policy at all.");
+            var diagnostics = (JArray)response["result"]["diagnostics"];
+            // TreeValidator.Validate runs first inside ReferenceCompiler.Compile and already
+            // rejects Agent/Shared scope via AIBT2030 before ever reaching the BuildBlackboardSlots
+            // fix's own AIBT3012 check -- ReferencePreviewDriver.TryCreate hardcodes Phase1
+            // (SupportsAgentScope/SupportsSharedScope both false), so it always fails at that first
+            // gate, regardless of any project policy.
+            Assert.That(diagnostics, Has.Some.Matches<JToken>(d => (string)d["code"] == "AIBT2030"));
         }
 
         [Test]

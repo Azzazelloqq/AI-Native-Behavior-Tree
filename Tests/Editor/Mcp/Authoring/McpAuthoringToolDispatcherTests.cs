@@ -245,6 +245,90 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
         }
 
         [Test]
+        public void CreateTreeWithAgentScopeKeyRequiresPolicyOptInAndWritesV2()
+        {
+            var withoutOptIn = Dispatch("create_tree", new JObject
+            {
+                ["treeId"] = "tree.agent",
+                ["name"] = "Agent Tree",
+                ["path"] = "agent.aibt.json",
+                ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+                ["blackboard"] = new JArray(new JObject
+                {
+                    ["id"] = "danger", ["valueType"] = "Bool", ["scope"] = "agent", ["default"] = false,
+                }),
+                ["agentContract"] = new JObject { ["contractId"] = "contract.agent", ["contractVersion"] = 1 },
+            }, "SemanticEdit");
+
+            Assert.That((bool)withoutOptIn["result"]["accepted"], Is.False,
+                "Without a project policy opting in, Agent scope must still be rejected exactly as before.");
+            Assert.That(File.Exists(Path.Combine(_assetsDir, "agent.aibt.json")), Is.False);
+
+            WritePolicy(supportsAgentScope: true, supportsSharedScope: false);
+
+            var withOptIn = Dispatch("create_tree", new JObject
+            {
+                ["treeId"] = "tree.agent",
+                ["name"] = "Agent Tree",
+                ["path"] = "agent.aibt.json",
+                ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+                ["blackboard"] = new JArray(new JObject
+                {
+                    ["id"] = "danger", ["valueType"] = "Bool", ["scope"] = "agent", ["default"] = false,
+                }),
+                ["agentContract"] = new JObject { ["contractId"] = "contract.agent", ["contractVersion"] = 1 },
+            }, "SemanticEdit");
+
+            Assert.That((bool)withOptIn["result"]["accepted"], Is.True, withOptIn.ToString());
+            var written = File.ReadAllText(Path.Combine(_assetsDir, "agent.aibt.json"));
+            var document = CanonicalTreeJson.Parse(written, documentId: "agent.aibt.json").Document;
+            Assert.That(document.FormatVersion, Is.EqualTo(2));
+            Assert.That(document.Blackboard.Single().Scope, Is.EqualTo(BlackboardScope.Agent));
+            Assert.That(document.AgentContract.ContractId, Is.EqualTo("contract.agent"));
+        }
+
+        [Test]
+        public void CreateTreeWithOnlyTreeScopeKeysStillWritesV1()
+        {
+            var response = Dispatch("create_tree", new JObject
+            {
+                ["treeId"] = "tree.plain",
+                ["name"] = "Plain Tree",
+                ["path"] = "plain.aibt.json",
+                ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+                ["blackboard"] = new JArray(new JObject { ["id"] = "health", ["valueType"] = "Float32" }),
+            }, "SemanticEdit");
+
+            Assert.That((bool)response["result"]["accepted"], Is.True, response.ToString());
+            var document = CanonicalTreeJson.Parse(File.ReadAllText(Path.Combine(_assetsDir, "plain.aibt.json")), documentId: "plain.aibt.json").Document;
+            Assert.That(document.FormatVersion, Is.EqualTo(1));
+        }
+
+        private void WritePolicy(bool supportsAgentScope, bool supportsSharedScope)
+        {
+            var policyDir = Path.Combine(_projectRoot, ".aibt");
+            Directory.CreateDirectory(policyDir);
+            var json = "{\n"
+                + "  \"format\": \"aibt.policy\",\n"
+                + "  \"formatVersion\": 1,\n"
+                + "  \"allowManagedNodes\": true,\n"
+                + "  \"allowMainThreadNodes\": true,\n"
+                + "  \"requireTreeDescription\": false,\n"
+                + "  \"requireNodeDescriptions\": false,\n"
+                + "  \"blackboardNaming\": \"any\",\n"
+                + "  \"requireDeterministicNodes\": true,\n"
+                + "  \"allowSideEffects\": true,\n"
+                + "  \"unreachableNodes\": \"error\",\n"
+                + "  \"supportsAgentScope\": " + (supportsAgentScope ? "true" : "false") + ",\n"
+                + "  \"supportsSharedScope\": " + (supportsSharedScope ? "true" : "false") + ",\n"
+                + "  \"forbiddenNodeTypes\": [],\n"
+                + "  \"warningsAsErrors\": [],\n"
+                + "  \"performance\": { \"forbidUnboundedRepeaters\": false, \"requireEventDrivenServices\": false }\n"
+                + "}";
+            File.WriteAllText(Path.Combine(policyDir, "policy.json"), json);
+        }
+
+        [Test]
         public void ExtractThenInlineSubtreeRoundTripsToASemanticallyEquivalentTreeByCompiledContentHash()
         {
             var hash = CreateSessionTree();

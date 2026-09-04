@@ -56,7 +56,14 @@ namespace AIBT.Mcp.Verification
             var (loadedDocument, path) = LoadTreeOrThrow(projectRoot, args);
             var registry = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
             var document = ApplyMigrations(loadedDocument, registry, out var migrationDiagnostics);
-            var options = new ReferenceCompilerOptions(ToLogicalSourceId(projectRoot, path), ReferenceCompilationPolicy.Phase1, CompilerVersion);
+
+            // P7-018: mirrors Validate's already-established project-policy read exactly -- never
+            // touches ReferenceCompilationPolicy.Phase1's own shared default (still false/false).
+            var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
+            var policy = ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out _)
+                ? new ReferenceCompilationPolicy(supportsAgentScope: snapshot.SupportsAgentScope, supportsSharedScope: snapshot.SupportsSharedScope)
+                : ReferenceCompilationPolicy.Phase1;
+            var options = new ReferenceCompilerOptions(ToLogicalSourceId(projectRoot, path), policy, CompilerVersion);
 
             var result = ReferenceCompiler.Compile(document, registry, options);
             var diagnostics = new DiagnosticCollection(result.Diagnostics.Concat(migrationDiagnostics));

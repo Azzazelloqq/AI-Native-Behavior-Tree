@@ -1,0 +1,32 @@
+{
+  "schema": "aibt-p7-018-verification-v1",
+  "passed": true,
+  "findings": [
+    "BOOKKEEPING_DRIFT_FIXED|Planning~/Tasks/P6/P6-014-mcp-blackboard-agent-shared-scope-decision.md|Status was still Draft despite work-items.json already correctly recording it done since 2026-08-31 -- same class of drift P7-016's gate fixed on four other cards",
+    "CARD_PREMISE_CORRECTED|P7-018's original 'promote v2 to default unblocks Agent/Shared' framing|contradicted ADR-P6-014's own already-accepted 'not implemented, deferred' decision -- put to the owner, who reopened the deferral and commissioned real implementation",
+    "SCOPE_NARROWED_AFTER_INVESTIGATION|ReferenceBlackboardStorage.cs read in full|architecturally a flat single-tree-instance byte arena, no shared/cross-instance concept -- real reference-side runtime support would be new architecture from scratch",
+    "NATIVE_ALREADY_COMPLETE|Authoring/Compilation/Generated/GeneratedScopeCompiler.cs, Runtime/Blackboard/Native/Shared/NativeSharedContextOwnerV1.cs|both already fully implement Agent/Shared blackboard scope unconditionally, confirmed by direct reading and by their own passing test suites -- owner chose native-only, no reference-storage work",
+    "REAL_GAP|MCP authoring/verification surface is exclusively reference-executor-bound (McpVerificationToolDispatcher.cs's own doc comment) and ReferenceCompiler.cs's BuildBlackboardSlots check was unconditional, never consulting SupportsAgentScope/SupportsSharedScope|this is what actually blocked MCP-authored Agent/Shared documents, not the native path",
+    "DELIVERABLE|Authoring/Compilation/ReferenceCompiler.cs|modified, BuildBlackboardSlots scope check made policy-aware mirroring TreeValidator.ValidateBlackboardScope",
+    "LIVE_FINDING|ReferenceCompiler.Compile calls TreeValidator.Validate first using the same policy-derived options|that pre-existing check already gates Agent/Shared correctly (AIBT2030 when policy doesn't opt in) -- this fix's own AIBT3012 check is the second gate, reached only once validation passes, matching ADR-P6-014's own two-layer finding exactly",
+    "DELIVERABLE|MCP/Authoring/McpAuthoringToolDispatcher.cs|modified, BuildRegistryAndOptions reads .aibt/policy.json (mirrors Validate's established pattern), CreateTree picks v1/v2 based on whether Agent/Shared entries are declared",
+    "DELIVERABLE|MCP/Verification/McpVerificationToolDispatcher.cs|modified, Compile reads .aibt/policy.json (previously the one verification tool that didn't)",
+    "DELIVERABLE|MCP/Authoring/McpAuthoringJson.cs|modified, ReadBlackboardKey/WriteBlackboardKey widened for scope/default/reduction, new default-value+vector-shape reader/writer mirroring CanonicalTreeJson/CanonicalTreeJsonWriter's own private shapes, new ReadScopeContract/WriteScopeContract",
+    "NO_CHANGE_NEEDED|MCP/Verification/McpVerificationToolDispatcher.cs Simulate|ReferencePreviewDriver.TryCreate hardcodes ReferenceCompilationPolicy.Phase1, never reads project policy -- already fails Agent/Shared documents with a clear AIBT2030 diagnostic via TreeValidator's own pre-existing check, proven live, no code change needed",
+    "UNCHANGED_CONFIRMED|ReferenceCompilationPolicy.Phase1.SupportsAgentScope/SupportsSharedScope|both still false, asserted directly in Compile_AgentAndSharedScopeBlackboard_RequiresPolicyOptIn",
+    "STATIC_VERIFICATION|Tools~/Verification/Verify-Static.ps1|passed, 7 schemas, 133 work items",
+    "TEST_RESULT|AIBT.Editor.Tests (live run_tests, full assembly)|392/392 passed, 0 failed (baseline 386 + 6 new tests)",
+    "TEST_RESULT|whole host-project regression (live run_tests, no assembly filter, 1645 tests across every package in Modules)|3 pre-existing unrelated failures only: 2 known GeneratedArtifactContractTests host-layout failures (unchanged since P7-016's gate), 1 unrelated LocalSaveSystem.Tests.SaveStoreTests failure (different package, untouched) -- zero regressions attributable to this card",
+    "TEST_RESULT|AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests (live run_tests, native compile path, pre-existing, untouched by this card)|11/11 passed",
+    "TEST_RESULT|AIBT.NativeSharedBlackboard.Tests (live run_tests, native runtime path, pre-existing, untouched by this card)|36/36 passed",
+    "TEST_RESULT|ReferenceCompilerTests.Compile_AgentAndSharedScopeBlackboard_RequiresPolicyOptIn (new)|passed -- rejected without opt-in (AIBT2030), accepted with opt-in, Phase1 defaults confirmed untouched",
+    "TEST_RESULT|ReferenceCompilerTests.Compile_AgentScopeAllowedButSharedRejected_OnlyAgentSlotCompiles (new)|passed -- per-scope granularity within one compile",
+    "TEST_RESULT|McpAuthoringToolDispatcherTests.CreateTreeWithAgentScopeKeyRequiresPolicyOptInAndWritesV2 (new)|passed -- real end-to-end MCP proof, rejected then accepted+v2-written once .aibt/policy.json opts in",
+    "TEST_RESULT|McpAuthoringToolDispatcherTests.CreateTreeWithOnlyTreeScopeKeysStillWritesV1 (new)|passed -- no blanket v2 default",
+    "TEST_RESULT|McpVerificationToolDispatcherTests.CompileWithAgentScopeBlackboardRequiresPolicyOptIn (new)|passed -- same proof through the compile verification tool",
+    "TEST_RESULT|McpVerificationToolDispatcherTests.SimulateOnAgentScopeTreeReturnsAClearUnsupportedCapabilityDiagnosticNotAConfusingFailure (new)|passed -- simulate still rejects Agent scope with policy opted in, real AIBT2030 diagnostic, not a confusing failure",
+    "SCOPE_LIMITATION|ReferenceBlackboardStorage (reference-executor runtime)|still Tree-scope only, deliberately, per owner's own choice; simulate cannot run an Agent/Shared document; real execution goes through the already-working native backend",
+    "WORK_ITEM_STATUS|P6-014|draft->done (bookkeeping fix, task card only -- work-items.json was already correct)",
+    "WORK_ITEM_STATUS|P7-018|draft->done"
+  ]
+}

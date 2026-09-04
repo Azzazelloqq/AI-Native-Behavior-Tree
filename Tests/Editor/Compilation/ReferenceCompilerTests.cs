@@ -188,6 +188,93 @@ namespace AIBT.Tests.Editor.Compilation
         }
 
         [Test]
+        public void Compile_AgentAndSharedScopeBlackboard_RequiresPolicyOptIn()
+        {
+            var keys = new[]
+            {
+                new BlackboardKeyDefinition(
+                    "agent.key",
+                    "agent.key",
+                    BlackboardTypeReference.BuiltIn(BlackboardValueType.Bool),
+                    BlackboardScope.Agent,
+                    defaultValue: BlackboardDefaultValue.Bool(false)),
+                new BlackboardKeyDefinition(
+                    "shared.key",
+                    "shared.key",
+                    BlackboardTypeReference.BuiltIn(BlackboardValueType.Int32),
+                    BlackboardScope.Shared,
+                    defaultValue: BlackboardDefaultValue.Int32(0)),
+            };
+            var root = Node("root", ReferenceFixtureNodeManifests.SuccessTypeId);
+            var tree = TreeDocument.CreateVersion2(
+                new TreeId("tree.fixture"),
+                "Fixture",
+                root.Id,
+                new[] { root },
+                agentContract: new BlackboardScopeContract("contract.agent", 1),
+                sharedContract: new BlackboardScopeContract("contract.shared", 1),
+                blackboard: keys,
+                tags: TagSet.Empty,
+                metadata: SemanticObject.Empty);
+            var registry = RegistryWithFixtures();
+
+            // TreeValidator.Validate runs first inside ReferenceCompiler.Compile (using the same
+            // policy-derived ValidationOptions) and already rejects Agent/Shared scope via its own,
+            // pre-existing TreeValidationDiagnosticCodes.UnsupportedBlackboardScope (AIBT2030) --
+            // this card's own BuildBlackboardSlots fix (ReferenceCompilerDiagnosticCodes
+            // .UnsupportedCapability, AIBT3012) is reached only once validation already passes with
+            // a real opt-in policy, proven below.
+            var rejected = Compile(tree, registry, Options());
+            Assert.That(rejected.Success, Is.False, DiagnosticsText(rejected));
+            Assert.That(rejected.Diagnostics.Any(item => item.Code == TreeValidationDiagnosticCodes.UnsupportedBlackboardScope), Is.True, DiagnosticsText(rejected));
+
+            var accepted = Compile(tree, registry, Options(policy: new ReferenceCompilationPolicy(supportsAgentScope: true, supportsSharedScope: true)));
+            Assert.That(accepted.Success, Is.True, DiagnosticsText(accepted));
+            Assert.That(accepted.Program.BlackboardSlots, Has.Count.EqualTo(2));
+            Assert.That(accepted.Program.BlackboardSlots.Select(slot => slot.Scope),
+                Is.EquivalentTo(new[] { BlackboardScope.Agent, BlackboardScope.Shared }));
+
+            // ReferenceCompilationPolicy.Phase1's own shared default is untouched by this feature --
+            // every other Phase1-using call site keeps rejecting Agent/Shared exactly as before.
+            var phase1 = Compile(tree, registry, Options(policy: ReferenceCompilationPolicy.Phase1));
+            Assert.That(phase1.Success, Is.False);
+            Assert.That(ReferenceCompilationPolicy.Phase1.SupportsAgentScope, Is.False);
+            Assert.That(ReferenceCompilationPolicy.Phase1.SupportsSharedScope, Is.False);
+        }
+
+        [Test]
+        public void Compile_AgentScopeAllowedButSharedRejected_OnlyAgentSlotCompiles()
+        {
+            var keys = new[]
+            {
+                new BlackboardKeyDefinition(
+                    "agent.only",
+                    "agent.only",
+                    BlackboardTypeReference.BuiltIn(BlackboardValueType.Bool),
+                    BlackboardScope.Agent,
+                    defaultValue: BlackboardDefaultValue.Bool(false)),
+            };
+            var root = Node("root", ReferenceFixtureNodeManifests.SuccessTypeId);
+            var tree = TreeDocument.CreateVersion2(
+                new TreeId("tree.fixture"),
+                "Fixture",
+                root.Id,
+                new[] { root },
+                agentContract: new BlackboardScopeContract("contract.agent", 1),
+                sharedContract: null,
+                blackboard: keys,
+                tags: TagSet.Empty,
+                metadata: SemanticObject.Empty);
+            var registry = RegistryWithFixtures();
+
+            var result = Compile(tree, registry, Options(policy: new ReferenceCompilationPolicy(supportsAgentScope: true, supportsSharedScope: false)));
+
+            Assert.That(result.Success, Is.True, DiagnosticsText(result));
+            Assert.That(result.Program.BlackboardSlots, Has.Count.EqualTo(1));
+            Assert.That(result.Program.BlackboardSlots[0].Scope, Is.EqualTo(BlackboardScope.Agent));
+        }
+
+        [Test]
         public void Compile_InvalidSourceOrMissingTypedPolicy_ReturnsDiagnosticsWithoutProgram()
         {
             var registry = RegistryWithFixtures();

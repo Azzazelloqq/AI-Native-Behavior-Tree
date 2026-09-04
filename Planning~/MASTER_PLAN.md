@@ -1086,7 +1086,37 @@ marked `Status: Draft` despite its evidence being accepted and `work-items.json`
 recording it `done` since 2026-08-31 — the same class of drift `P7-016`'s gate fixed on four other
 cards, now fixed on this one too.
 
-Remaining Phase 7 work: `P7-018` (rescoped, see above), `P7-023`, `P7-024`, `P7-025`, `P7-026`,
-`P7-027`, `P7-028` — all `Draft`. `P7-018` is now in progress per the owner's own priority
-("functionality before polish, starting with `P7-018` then `P7-027` then `P7-028` then `P7-026`,
-editor/showcase cards last"). `1.0.0` itself remains the owner's own separate release decision.
+Same day, `P7-018` (real Agent/Shared blackboard scope) is also **done** — one more real re-scoping
+happened mid-planning, before any code was written: `Runtime/Blackboard/Storage/
+ReferenceBlackboardStorage.cs`, read in full, turned out to be architecturally a flat
+single-tree-instance byte arena with no shared/cross-instance concept at all — real reference-side
+runtime support would mean new storage architecture from scratch. Meanwhile `Authoring/Compilation/
+Generated/GeneratedScopeCompiler.cs` and `Runtime/Blackboard/Native/Shared/
+NativeSharedContextOwnerV1.cs` were found, by direct reading not assumption, to **already fully
+implement** Agent/Shared blackboard scope for the native backend — unconditional compilation with
+real reduction semantics, and a complete contribution/reduction/multi-instance runtime, both already
+covered by passing test suites. Put to the owner again: build the missing reference-side storage
+from scratch, or wire up only the already-working native path. **The owner chose native-only.** The
+real remaining gap was narrower than either framing: MCP's authoring/verification surface is
+deliberately, exclusively reference-executor-bound, and `ReferenceCompiler.cs`'s own scope check was
+*unconditional* — never consulted the policy flags at all, unlike `TreeValidator`'s own matching
+check. Fixed to be policy-aware, mirroring `TreeValidator` exactly; live-discovered while testing
+that `ReferenceCompiler.Compile` already runs `TreeValidator.Validate` first with the same
+policy-derived options, so this fix is the *second* gate, reached only once validation already
+passes — exactly `ADR-P6-014`'s own two-layer finding. MCP's `create_tree`/`compile`/`validate` now
+read `.aibt/policy.json`'s opt-in (mirroring `Validate`'s own already-established pattern), writing
+real `formatVersion: 2` specifically for documents that declare Agent/Shared entries; `simulate`
+needed no code change at all — it already, automatically produces a clear diagnostic since it
+hardcodes `Phase1` and never reads project policy. `ReferenceCompilationPolicy.Phase1`'s own shared
+default stays untouched. Full regression: 392/392 (`AIBT.Editor.Tests`), and only 3 pre-existing,
+unrelated failures across the entire 1645-test host-project run. Native capability reconfirmed live,
+not rebuilt: `GeneratedScopeCompilerTests` 11/11, `AIBT.NativeSharedBlackboard.Tests` 36/36. Also
+fixed, found while reading `P7-018`'s own required dependency: `P6-014`'s task-card file was still
+marked `Status: Draft` despite its evidence being accepted and `work-items.json` already correctly
+recording it `done` since 2026-08-31 — the same class of drift `P7-016`'s gate fixed on four other
+cards, now fixed on this one too. See `Planning~/Evidence/P7-018/README.md`.
+
+Remaining Phase 7 work, per the owner's own priority ("functionality before polish"): `P7-027`
+(production debugger) next, then `P7-028` (node library), then `P7-026` (build-size validation);
+`P7-023`/`P7-024`/`P7-025` (editor/showcase cards) last. `1.0.0` itself remains the owner's own
+separate release decision.

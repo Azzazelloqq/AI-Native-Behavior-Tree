@@ -39,17 +39,34 @@ namespace AIBT.Mcp.Authoring
 
             var path = ResolveNewTreePath(projectRoot, relativePath);
 
-            var document = new TreeDocument(
-                TreeDocument.CurrentFormat,
-                TreeDocument.CurrentFormatVersion,
-                treeId,
-                name,
-                rootNode.Id,
-                new[] { rootNode },
-                blackboard,
-                description,
-                tags: TagSet.Empty,
-                metadata: SemanticObject.Empty);
+            // P7-018: a document declaring any Agent/Shared entry must be v2, mirroring
+            // GeneratedScopeCompiler's own already-enforced rule (formatVersion == 2 required
+            // whenever Agent/Shared or extended bindings are used) -- an ordinary tree-scope-only
+            // document keeps writing v1 exactly as before, no blanket "default to v2".
+            var hasExtendedScope = blackboard.Any(key => key.Scope == BlackboardScope.Agent || key.Scope == BlackboardScope.Shared);
+            var document = hasExtendedScope
+                ? TreeDocument.CreateVersion2(
+                    treeId,
+                    name,
+                    rootNode.Id,
+                    new[] { rootNode },
+                    args["agentContract"] != null ? McpAuthoringJson.ReadScopeContract((JObject)args["agentContract"]) : null,
+                    args["sharedContract"] != null ? McpAuthoringJson.ReadScopeContract((JObject)args["sharedContract"]) : null,
+                    blackboard,
+                    description,
+                    tags: TagSet.Empty,
+                    metadata: SemanticObject.Empty)
+                : new TreeDocument(
+                    TreeDocument.CurrentFormat,
+                    TreeDocument.CurrentFormatVersion,
+                    treeId,
+                    name,
+                    rootNode.Id,
+                    new[] { rootNode },
+                    blackboard,
+                    description,
+                    tags: TagSet.Empty,
+                    metadata: SemanticObject.Empty);
 
             var (registry, options) = BuildRegistryAndOptions(projectRoot, path);
             var compilation = ReferenceCompiler.Compile(document, registry, options);
@@ -450,12 +467,31 @@ namespace AIBT.Mcp.Authoring
             return combined;
         }
 
+        /// <summary>
+        /// Builds the reference-compiler options for authoring writes. Reads
+        /// <c>.aibt/policy.json</c>'s own <c>supportsAgentScope</c>/<c>supportsSharedScope</c> for a
+        /// distinct policy instance when the project opts in (P7-018), mirroring
+        /// <c>McpVerificationToolDispatcher.Validate</c>'s already-established pattern exactly --
+        /// never mutates or touches <see cref="ReferenceCompilationPolicy.Phase1"/>'s own shared
+        /// default (still <c>false</c>/<c>false</c>), so every other call site using it directly is
+        /// unaffected. A project with no policy file, or one that leaves both flags <c>false</c>,
+        /// keeps today's exact Tree-scope-only behavior.
+        /// </summary>
         private static (NodeRegistry Registry, ReferenceCompilerOptions Options) BuildRegistryAndOptions(string projectRoot, string absolutePath)
         {
             var buildResult = NodeRegistryBuilder.CreateWithBuiltIns().Build();
             var sourceId = ToLogicalSourceId(projectRoot, absolutePath);
-            var options = new ReferenceCompilerOptions(sourceId, ReferenceCompilationPolicy.Phase1, CompilerVersion);
+            var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
+            var policy = ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out _)
+                ? new ReferenceCompilationPolicy(supportsAgentScope: snapshot.SupportsAgentScope, supportsSharedScope: snapshot.SupportsSharedScope)
+                : ReferenceCompilationPolicy.Phase1;
+            var options = new ReferenceCompilerOptions(sourceId, policy, CompilerVersion);
             return (buildResult.Registry, options);
+        }
+
+        private static string ProjectRootParent(string assetsPath)
+        {
+            return System.IO.Directory.GetParent(assetsPath)?.FullName ?? assetsPath;
         }
 
         /// <summary>

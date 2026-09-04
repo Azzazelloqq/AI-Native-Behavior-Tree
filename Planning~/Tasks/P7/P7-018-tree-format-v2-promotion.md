@@ -1,6 +1,6 @@
 # P7-018 — Real Agent/Shared blackboard scope, and tree-format v2 as a working default
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -124,3 +124,59 @@ a parallel proof that Phase1-using call sites still reject Agent/Shared exactly 
   standalone value without real Agent/Shared support. Put to the owner rather than silently
   resolved; the owner chose to reopen `ADR-P6-014` and commission the real implementation, which is
   this card's now-corrected scope. See `ADR-P6-014`'s own Addendum (2026-09-04).
+
+## Outcome
+
+Done, 2026-09-04. A second real re-scoping happened mid-planning, before any code was written:
+investigating `ReferenceBlackboardStorage.cs` found it is architecturally a flat, single-tree-instance
+byte arena with no cross-instance/shared concept at all -- giving it real Agent/Shared runtime
+support would mean building genuinely new storage architecture from scratch. Separately,
+`Authoring/Compilation/Generated/GeneratedScopeCompiler.cs` and `Runtime/Blackboard/Native/Shared/
+NativeSharedContextOwnerV1.cs` were found to **already fully implement** Agent/Shared blackboard
+scope for the **native** backend -- unconditionally, with real contribution/reduction/multi-instance
+machinery, already covered by passing test suites (`GeneratedScopeCompilerTests`,
+`NativeSharedContextTests`). Put to the owner again: build the missing reference-side storage from
+scratch, or leave the reference backend Tree-only (disclosed) and wire up only the already-working
+native path end-to-end. **The owner chose native-only.**
+
+The real remaining gap was narrower than either framing: MCP's authoring/verification surface is
+deliberately, exclusively reference-executor-bound (`McpVerificationToolDispatcher`'s own doc
+comment: "no second validator/compiler/executor exists here"), and even a project opting in via
+`.aibt/policy.json` couldn't compile an Agent/Shared document, because `ReferenceCompiler.cs`'s own
+`BuildBlackboardSlots` check was *unconditional* (never consulted the policy flags at all) --
+unlike `TreeValidator.ValidateBlackboardScope`, which already did.
+
+**Implementation:**
+- `Authoring/Compilation/ReferenceCompiler.cs`: `BuildBlackboardSlots`'s scope check made
+  policy-aware, mirroring `TreeValidator`'s exact pattern. Live-discovered while testing:
+  `ReferenceCompiler.Compile` already runs `TreeValidator.Validate` first (using the same
+  policy-derived options) -- that pre-existing check already gates Agent/Shared correctly when a
+  policy opts in; this fix's own `AIBT3012` check is the second gate, reached only once validation
+  already passes, exactly matching `ADR-P6-014`'s own live-proven finding.
+- `MCP/Authoring/McpAuthoringToolDispatcher.BuildRegistryAndOptions`: now reads `.aibt/policy.json`
+  (mirroring `McpVerificationToolDispatcher.Validate`'s already-established pattern) instead of
+  hardcoding `ReferenceCompilationPolicy.Phase1`. `CreateTree` picks `TreeDocument.CreateVersion2`
+  specifically when the document declares an Agent/Shared entry (matching
+  `GeneratedScopeCompiler.cs`'s own already-enforced v2 requirement); an ordinary tree-scope-only
+  document still writes v1.
+- `MCP/Verification/McpVerificationToolDispatcher.Compile`: same policy-read treatment.
+- `MCP/Authoring/McpAuthoringJson.cs`: `ReadBlackboardKey`/`WriteBlackboardKey` widened to accept
+  `scope`/`default`/`reduction`, plus a local default-value and vector-shape reader/writer mirroring
+  `CanonicalTreeJson`/`CanonicalTreeJsonWriter`'s own (private) canonical shapes exactly -- matches
+  `P6-014`'s own investigation-pass-1 recommendation. New `ReadScopeContract`/`WriteScopeContract`
+  for `create_tree`'s own `agentContract`/`sharedContract` args.
+- `simulate` (`ReferencePreviewDriver`-backed) needed **no code change at all**: it hardcodes
+  `ReferenceCompilationPolicy.Phase1` (never reads project policy), so it already, automatically
+  fails an Agent/Shared document at `TreeValidator`'s own pre-existing `AIBT2030` check with a clear,
+  specific diagnostic -- proven live rather than assumed.
+- `ReferenceCompilationPolicy.Phase1`'s own shared default is untouched (still
+  `false`/`false`) -- proven by a full regression pass and a direct assertion in the new
+  `Compile_AgentAndSharedScopeBlackboard_RequiresPolicyOptIn` test.
+
+**Verification:** full regression 392/392 (`AIBT.Editor.Tests`) and 1645-test whole-host-project run
+(only 3 pre-existing, unrelated failures: 2 known `GeneratedArtifactContractTests` host-layout
+failures, 1 unrelated `LocalSaveSystem` package test -- none touched by this card). Native-path
+capability reconfirmed live rather than re-built: `GeneratedScopeCompilerTests` 11/11,
+`AIBT.NativeSharedBlackboard.Tests` 36/36, both pre-existing and unaffected. New tests prove both
+policy gates end-to-end (rejected without opt-in, accepted with a real project policy, `simulate`'s
+own independent Tree-only diagnostic). See `Planning~/Evidence/P7-018/README.md`.

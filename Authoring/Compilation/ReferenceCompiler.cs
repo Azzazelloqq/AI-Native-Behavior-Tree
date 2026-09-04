@@ -387,11 +387,14 @@ namespace AIBT.Authoring
                 for (var index = 0; index < keys.Count; index++)
                 {
                     var key = keys[index];
-                    if (key.Scope != BlackboardScope.Tree)
+                    var scopeSupported = key.Scope == BlackboardScope.Tree
+                        || key.Scope == BlackboardScope.Agent && _options.Policy.SupportsAgentScope
+                        || key.Scope == BlackboardScope.Shared && _options.Policy.SupportsSharedScope;
+                    if (!scopeSupported)
                     {
                         throw Failure(
                             ReferenceCompilerDiagnosticCodes.UnsupportedCapability,
-                            "Phase 1 compilation supports only Tree-scope blackboard slots.",
+                            "The declared blackboard scope is recognized but unsupported by the compiling policy's execution capabilities.",
                             BlackboardPointer(key.Id));
                     }
 
