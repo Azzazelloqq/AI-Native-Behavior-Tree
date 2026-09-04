@@ -1,6 +1,6 @@
 # P6-014 — MCP blackboard Agent/Shared scope decision
 
-Status: `Draft`
+Status: `Done`
 
 ## Objective
 
@@ -151,3 +151,24 @@ disposable spike: real ReferenceCompiler/TreeValidator/reference executor, live 
   decomposition's own scope. `P6-012` does not depend on it.
 - If accepted, a future implementation card (not yet numbered) applies the ADR to production
   `MCP/Authoring/`.
+
+## Outcome
+
+Done, accepted 2026-09-01: **not implemented, deferred** — `ADR-P6-014` (`AIBT-029`). Found the real
+wall is one layer earlier than either investigation pass placed it: `ReferenceCompiler.cs`'s own
+Tree-scope-only check (`AIBT3012`) is unconditional, never consulting
+`SupportsAgentScope`/`SupportsSharedScope` at all, so a validated Agent/Shared-scope document can
+never become a `CompiledProgram` regardless of the policy flags. This directly answered open
+question 1 (`Phase1`'s naming is a deliberate engine-level boundary, not an accidental default) and
+made open question 2 moot (the runtime-storage question never arises if compilation itself always
+fails first). Proven via a disposable spike, 2/2 tests, archived to `Spikes~/
+McpBlackboardAgentSharedScope/`. No production file touched. See `Planning~/Evidence/P6-014/
+README.md`.
+
+**Status-flip bookkeeping note (2026-09-04):** this card's own evidence was accepted and complete on
+2026-09-01, but the card file itself was never flipped from `Draft` to `Done` at the time — the same
+class of drift `P7-016`'s gate found and fixed on four other cards. Found and fixed while reading
+this card as `P7-018`'s required dependency. `ADR-P6-014`'s own "deferred" conclusion is being
+revisited by the owner as `P7-018`'s new, explicitly-authorized scope (2026-09-04) — this does not
+reopen or invalidate this card's own investigation, which remains the accurate map of exactly where
+both engine walls are.

@@ -1068,7 +1068,25 @@ gap in the whole project's history, now finally numbered), and `P7-028` (the bui
 only 11 structural composites/decorators, zero condition/utility/action leaves — confirmed by reading
 `BuiltInNodeManifests.cs` directly).
 
-Remaining Phase 7 work: `P7-018` (tree-format `v2` promotion, dependent on re-reading `P6-014`'s own
-disclosed blocker before scoping), `P7-023`, `P7-024`, `P7-025`, `P7-026`, `P7-027`, `P7-028` — all
-`Draft`. `P7-027` is recommended priority among these given how many independent prior cards already
-deferred exactly that gap. `1.0.0` itself remains the owner's own separate release decision.
+Same day (2026-09-04), starting `P7-018` per the owner's own priority order ("functionality before
+polish"), re-reading its required dependency `P6-014` before planning found the card's own premise
+contradicted an already-accepted decision: `ADR-P6-014` (2026-08-31) found flipping Agent/Shared
+capability flags unlocks nothing, since `ReferenceCompiler.cs`'s `AIBT3012` check and
+`ReferenceBlackboardStorage.cs`'s matching check both reject Agent/Shared scope *unconditionally*,
+never consulting the policy flags at all — and decided **not implemented, deferred**. Since
+`TreeDocument.CreateVersion2`'s only real difference from v1 is the Agent/Shared scope contracts,
+promoting v2-to-default without real Agent/Shared support would have been pure format churn. Put to
+the owner rather than silently worked around: the owner chose to reopen `ADR-P6-014`'s "deferred"
+conclusion and commission the real implementation — recorded as an Addendum on the ADR itself, and
+`P7-018`'s own card fully rewritten to the real scope (make `ReferenceCompiler`/
+`ReferenceBlackboardStorage` policy-aware, mirroring `TreeValidator`'s already-correct pattern,
+without touching `ReferenceCompilationPolicy.Phase1`'s own shared defaults — already proven safe by
+`ADR-P6-014`'s own spike). Also fixed, found the same way: `P6-014`'s own task-card file was still
+marked `Status: Draft` despite its evidence being accepted and `work-items.json` already correctly
+recording it `done` since 2026-08-31 — the same class of drift `P7-016`'s gate fixed on four other
+cards, now fixed on this one too.
+
+Remaining Phase 7 work: `P7-018` (rescoped, see above), `P7-023`, `P7-024`, `P7-025`, `P7-026`,
+`P7-027`, `P7-028` — all `Draft`. `P7-018` is now in progress per the owner's own priority
+("functionality before polish, starting with `P7-018` then `P7-027` then `P7-028` then `P7-026`,
+editor/showcase cards last"). `1.0.0` itself remains the owner's own separate release decision.

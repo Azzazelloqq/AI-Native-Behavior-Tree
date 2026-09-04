@@ -95,3 +95,14 @@ exactly as they do today. This is a legitimate, evidence-backed outcome, not an 
   `TreeValidator`'s own existing pattern) or is substantially harder for reasons not yet investigated
   (blackboard slot layout, cross-instance addressing for Shared scope, etc.) was not assessed -- that
   is exactly the scope of the future engine capability card this ADR defers to, not answered here.
+
+## Addendum (2026-09-04)
+
+This ADR's "not implemented, deferred" Decision is being revisited: the owner explicitly authorized
+real implementation, superseding the deferral -- not because the evidence above was wrong, but
+because the owner now wants the capability this ADR found architecturally absent. Spun off as
+`P7-018` (tree-format `v2` promotion, rescoped to include the engine unblock this ADR identified).
+This ADR's own findings remain the accurate, still-current map of the real work -- both engine
+walls' exact locations (`ReferenceCompiler.cs`'s `AIBT3012` check and `ReferenceBlackboardStorage`'s
+matching `UnsupportedScope` check, both unconditional and never consulting the policy flags) --
+`P7-018` builds on them directly rather than re-investigating.
