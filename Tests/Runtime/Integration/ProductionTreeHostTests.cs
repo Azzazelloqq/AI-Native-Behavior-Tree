@@ -385,7 +385,7 @@ namespace AIBT.Tests.Runtime.Integration
             Assert.That(host.TraceChannelOwner.State, Is.EqualTo(NativeOwnerStateV1.Disposed));
         }
 
-        private static class Fixture
+        internal static class Fixture
         {
             internal static CompiledProgram RootLeaf() => CreateConfigured(
                 new[] { Node("test.leaf", 0, 0, 0, 0, 0, 0, 0) }, Array.Empty<uint>(), Array.Empty<byte>(), 0);

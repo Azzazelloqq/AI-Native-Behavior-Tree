@@ -1,6 +1,16 @@
 # P7-033 — Global production scheduler and custom scheduling profiles
 
-Status: `Draft`
+Status: `In Progress`
+
+Implementation update 2026-09-05: steps 2-4 of `Planning~/Evidence/P7-033/implementation-plan.md`
+are done -- `SchedulingProfile`/`SchedulingProfileAsset` (profile contracts), `ProductionTreeScheduler`
+registration/ownership (`ProductionTreeHost` refactored behind an internal `DriveOneUpdate` entry
+point, standalone behavior unchanged), and deterministic due ordering/budget admission (deadline,
+eligible age, one-shot urgency, priority, stable-ID tiebreak; `Unbounded`/`Fixed`/`Provider` budget
+modes; per-profile budget-share caps; honest cold-start, never guessing an unmeasured cost). 54 new
+tests, all passing live against the real Editor. Step 5 (deterministic policy selection integrated
+with real population-level generated-dispatch grouping through `GeneratedTreeDispatchAdapterV2`) and
+step 6 (explainability) remain.
 
 ## Objective
 

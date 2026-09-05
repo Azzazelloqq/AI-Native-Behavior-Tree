@@ -2084,13 +2084,13 @@
       "id": "P7-033",
       "phase": 7,
       "title": "Global production scheduler and custom scheduling profiles",
-      "status": "draft",
+      "status": "in_progress",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-033-global-production-scheduler-and-profiles.md",
       "dependsOn": ["P4-004", "P4-005", "P6-019", "P7-024", "P7-030", "P7-032", "P7-037"],
       "owns": [
         "Runtime/Scheduling/Production/",
-        "Tests/Runtime/Integration/ProductionScheduling/",
+        "Tests/Runtime/Scheduling/Production/",
         "Planning~/Evidence/P7-033/"
       ]
     },

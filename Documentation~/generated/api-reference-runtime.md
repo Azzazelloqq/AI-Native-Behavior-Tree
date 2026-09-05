@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-258 public type(s).
+265 public type(s).
 
 ---
 
@@ -3087,9 +3087,31 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `METHOD System.Void .ctor()`
 - `PROPERTY AIBT.NativeRuntimeFailureV1 LastFailure`
 - `PROPERTY AIBT.NativeTraceChannelOwnerV1 TraceChannelOwner`
+- `PROPERTY System.Boolean IsCoordinatorOwned`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastRootResult`
 - `PROPERTY System.Nullable`1<System.UInt32> StepBudget`
+- `PROPERTY System.UInt64 InstanceId`
 - `PROPERTY System.UInt64 TotalUpdates`
+
+---
+
+### `AIBT.ProductionTreeScheduler`
+
+One population-level production coordinator per independently scheduled AI world -- see <c>Documentation~/decisions/ADR-P7-033-global-scheduler-and-profiles.md</c> (AIBT-037). A <see cref="ProductionTreeHost"/> registers with exactly one scheduler; while registered, the coordinator drives it instead of the host's own per-frame <c>Update</c> message, in deterministic due order, admitted against one optional global time allowance. The host still owns its machine, trace channel, terminal result, failure and disposal -- registration never creates a second tree instance or transfers native ownership. Multiple independent worlds require separate explicit scheduler instances; there is no hidden global singleton.
+
+- `METHOD System.Boolean IsRegistered(AIBT.ProductionTreeHost)`
+- `METHOD System.Boolean RequestUrgentUpdate(AIBT.ProductionTreeHost)`
+- `METHOD System.Boolean TryGetProfile(AIBT.ProductionTreeHost,AIBT.SchedulingProfile&)`
+- `METHOD System.Boolean TryRegister(AIBT.ProductionTreeHost,AIBT.SchedulerRegistrationError&)`
+- `METHOD System.Boolean TryRegister(AIBT.ProductionTreeHost,AIBT.SchedulingProfile,AIBT.SchedulerRegistrationError&)`
+- `METHOD System.Boolean TryUnregister(AIBT.ProductionTreeHost)`
+- `METHOD System.Void .ctor()`
+- `METHOD System.Void SetBudgetProvider(System.Func`1<System.Double>)`
+- `METHOD System.Void SetFixedBudget(System.Double)`
+- `METHOD System.Void SetUnboundedBudget()`
+- `PROPERTY AIBT.SchedulerBudgetMode BudgetMode`
+- `PROPERTY System.Boolean LastFrameOverran`
+- `PROPERTY System.Int32 RegisteredCount`
 
 ---
 
@@ -3162,6 +3184,83 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `PROPERTY AIBT.RuntimeNodeIndex Invalid`
 - `PROPERTY System.Boolean IsValid`
 - `PROPERTY System.UInt32 Value`
+
+---
+
+### `AIBT.SchedulerBudgetMode`
+
+The three budget-source modes <c>Documentation~/decisions/ADR-P7-033-global-scheduler-and-profiles.md</c> (AIBT-037) defines. There is no zero-input automatic millisecond/percentage guess -- AIBT cannot know how much of a game's frame belongs to AI, so the honest default is <see cref="Unbounded"/>, not an invented number.
+
+- `FIELD AIBT.SchedulerBudgetMode Fixed`
+- `FIELD AIBT.SchedulerBudgetMode Provider`
+- `FIELD AIBT.SchedulerBudgetMode Unbounded`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.SchedulerRegistrationError`
+
+Why <see cref="ProductionTreeScheduler.TryRegister(ProductionTreeHost,SchedulingProfile,out SchedulerRegistrationError)"/> refused a host.
+
+- `FIELD AIBT.SchedulerRegistrationError AlreadyRegisteredWithAnotherScheduler`
+- `FIELD AIBT.SchedulerRegistrationError AlreadyRegisteredWithThisScheduler`
+- `FIELD AIBT.SchedulerRegistrationError None`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.SchedulingPolicy`
+
+The concrete execution policies a caller may force through <see cref="SchedulingProfile.ForcedPolicy"/>. Mirrors the internal Auto-selection policy set 1:1 (<c>Documentation~/execution-and-scheduling.md</c>'s policy table). There is no <c>Auto</c> value here -- Auto is expressed by leaving <see cref="SchedulingProfile.ForcedPolicy"/> unset, matching how the native selector already treats "Auto" as the absence of a forced policy rather than a fifth policy value.
+
+- `FIELD AIBT.SchedulingPolicy BatchedJobsSameFrame`
+- `FIELD AIBT.SchedulingPolicy Budgeted`
+- `FIELD AIBT.SchedulingPolicy Immediate`
+- `FIELD AIBT.SchedulingPolicy PipelinedJobs`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.SchedulingProfile`
+
+Immutable runtime scheduling intent for one tree/group -- priority, cadence, latency tolerance, optional budget share and an optional forced policy. Never a raw millisecond budget or scheduler-internal weight; see <c>Documentation~/decisions/ADR-P7-033-global-scheduler-and-profiles.md</c> (AIBT-037). Built only through <see cref="TryCreate"/> (rejects invalid values, never silently clamps) or one of the built-in presets, which call the exact same path -- no special-cased scheduler branch reads a preset differently from a custom profile.
+
+- `FIELD AIBT.SchedulingProfile Background`
+- `FIELD AIBT.SchedulingProfile Interactive`
+- `FIELD AIBT.SchedulingProfile Normal`
+- `METHOD System.Boolean TryCreate(System.String,System.Int32,System.UInt32,System.Nullable`1<System.UInt32>,System.Nullable`1<System.Double>,System.Boolean,System.Nullable`1<AIBT.SchedulingPolicy>,AIBT.SchedulingProfile&,AIBT.SchedulingProfileValidationError&)`
+- `PROPERTY System.Boolean PipeliningPermitted`
+- `PROPERTY System.Int32 Priority`
+- `PROPERTY System.Nullable`1<AIBT.SchedulingPolicy> ForcedPolicy`
+- `PROPERTY System.Nullable`1<System.Double> MaximumBudgetShare`
+- `PROPERTY System.Nullable`1<System.UInt32> MaximumResponseLatencyFrames`
+- `PROPERTY System.String Id`
+- `PROPERTY System.UInt32 Revision`
+- `PROPERTY System.UInt32 UpdateCadence`
+- `PROPERTY System.UInt64 StableId`
+
+---
+
+### `AIBT.SchedulingProfileAsset`
+
+Serializable project-asset wrapper for <see cref="SchedulingProfile"/>. Freezes to the exact same immutable runtime value production code consumes through <see cref="TryFreeze"/> -- there is no second, asset-only validation or semantic path. An Inspector edit marks the asset dirty via <see cref="OnValidate"/> (Editor-only, matching every serialized-field-backed asset in this project); the next <see cref="TryFreeze"/> call after that bumps <see cref="SchedulingProfile.Revision"/>, per ADR-P7-033: "Asset edits or runtime replacement take effect at the next eligible update boundary and produce an observable profile revision."
+
+- `METHOD System.Boolean TryFreeze(AIBT.SchedulingProfile&,AIBT.SchedulingProfileValidationError&)`
+- `METHOD System.Void .ctor()`
+
+---
+
+### `AIBT.SchedulingProfileValidationError`
+
+Why <see cref="SchedulingProfile.TryCreate(string,int,uint,uint?,double?,bool,SchedulingPolicy?,out SchedulingProfile,out SchedulingProfileValidationError)"/> refused to build a profile. Never silently clamped -- ADR-P7-033's "validated without silent clamping" acceptance criterion.
+
+- `FIELD AIBT.SchedulingProfileValidationError InvalidRevision`
+- `FIELD AIBT.SchedulingProfileValidationError MaximumBudgetShareOutOfRange`
+- `FIELD AIBT.SchedulingProfileValidationError MaximumResponseLatencyFramesBelowUpdateCadence`
+- `FIELD AIBT.SchedulingProfileValidationError MissingId`
+- `FIELD AIBT.SchedulingProfileValidationError None`
+- `FIELD AIBT.SchedulingProfileValidationError UpdateCadenceMustBeAtLeastOne`
+- `FIELD System.Byte value__`
 
 ---
 

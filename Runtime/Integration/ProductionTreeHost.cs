@@ -55,6 +55,7 @@ namespace AIBT
         private bool _driving;
         private bool _destroyRequested;
         private bool _disposed;
+        private ProductionTreeScheduler _owner;
 
         /// <summary>The instance-owned trace channel, available until destruction.</summary>
         public NativeTraceChannelOwnerV1 TraceChannelOwner { get; private set; }
@@ -64,6 +65,8 @@ namespace AIBT
         public NativeRuntimeFailureV1 LastFailure { get; private set; }
         /// <summary>Logical updates started, excluding budget-resume frames.</summary>
         public ulong TotalUpdates => _updateId;
+        /// <summary>Stable per-instance identity assigned at bootstrap; 0 before bootstrap. Used for deterministic coordinator ordering (<see cref="ProductionTreeScheduler"/>) -- never reused across instances within a process.</summary>
+        public ulong InstanceId { get; private set; }
         /// <summary>Null selects Immediate; otherwise limits native steps per frame. Zero pauses progress.</summary>
         public uint? StepBudget { get; set; }
 
@@ -164,6 +167,7 @@ namespace AIBT
             _clock = clock ?? ReadScaledTime;
             TraceChannelOwner = owner;
             _recorder = new NativeTraceRecorderV1(owner, new NativeHash256V1(program.Header.CompiledContentHash), instanceId);
+            InstanceId = instanceId;
             _bootstrapped = true;
             _ready = true;
             failure = default;
@@ -172,7 +176,40 @@ namespace AIBT
 
         private static long ReadScaledTime() => checked((long)(Time.timeAsDouble * 1000000.0));
 
+        /// <summary>
+        /// True once a <see cref="ProductionTreeScheduler"/> owns this host's drive loop. While
+        /// owned, Unity's own per-frame <c>Update</c> message no-ops; the coordinator calls
+        /// <see cref="DriveOneUpdate"/> itself. Ownership never duplicates or transfers native
+        /// state -- this host remains the sole owner of its machine, trace channel and disposal.
+        /// </summary>
+        public bool IsCoordinatorOwned => _owner != null;
+
+        internal bool TryRegisterOwner(ProductionTreeScheduler owner)
+        {
+            if (owner == null) throw new ArgumentNullException(nameof(owner));
+            if (_owner != null && _owner != owner) return false;
+            _owner = owner;
+            return true;
+        }
+
+        internal void ClearOwner(ProductionTreeScheduler owner)
+        {
+            if (_owner == owner) _owner = null;
+        }
+
         private void Update()
+        {
+            if (_owner != null) return; // driven by the coordinator instead, see DriveOneUpdate
+            DriveOneUpdate();
+        }
+
+        /// <summary>
+        /// One drive step -- identical body to the standalone per-frame <c>Update</c> message, and
+        /// the only entry point <see cref="ProductionTreeScheduler"/> uses once this host is
+        /// registered. Never called directly by application code; use a coordinator or let this
+        /// host drive itself standalone.
+        /// </summary>
+        internal void DriveOneUpdate()
         {
             if (!_ready || !isActiveAndEnabled || _disposed) return;
             if (_driving)
@@ -301,6 +338,7 @@ namespace AIBT
 
         private void OnDestroy()
         {
+            _owner?.TryUnregister(this);
             _destroyRequested = true;
             if (!_driving) DisposeHost();
         }
