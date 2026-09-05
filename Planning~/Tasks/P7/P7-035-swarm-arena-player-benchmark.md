@@ -16,6 +16,7 @@ does not begin with a desired result.
 - `P7-033` — the production coordinator and policy/profile instrumentation.
 - `P7-034` — the finished deterministic gameplay workload.
 - `P7-024` — reporting/provenance discipline and current fixed-policy Player baseline.
+- `P7-037` — production generated-node dispatch measured by the benchmark.
 - `P4-008` — release Player benchmark/build conventions.
 
 ## Required reading

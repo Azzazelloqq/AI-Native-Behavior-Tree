@@ -25,13 +25,13 @@ population-level scheduler and custom profiles without arbitrary numeric default
 an importable Swarm Arena gameplay showcase. `P7-035` measures that exact workload in release Player
 builds, including real pipelined latency. `P7-036` reviews onboarding, profile UX, performance claims
 and evidence-backed candidates for the generic node library. Execute them in that order; public
-scheduler semantics in P7-033 require an accepted planning decision before code.
+scheduler semantics in P7-033 are governed by accepted ADR AIBT-037.
 
-P7-033 planning audit completed 2026-09-05. Proposed ADR AIBT-037 defines global soft admission,
+P7-033 planning audit completed 2026-09-05. Accepted ADR AIBT-037 defines global soft admission,
 custom profiles, deterministic fairness and host/coordinator ownership. The audit found a real
 prerequisite: current batch benchmarks use precomputed leaf statuses, while production generated
-Burst dispatch is not connected to lifecycle-machine populations. Owner review of the ADR and the
-recommended prerequisite split is the active gate; no production code has started.
+Burst dispatch is not connected to lifecycle-machine populations. P7-037 now owns that prerequisite
+and precedes P7-033/P7-034/P7-035; no scheduler production code has started.
 
 ## Required reading order
 

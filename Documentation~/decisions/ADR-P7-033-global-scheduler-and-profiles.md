@@ -1,6 +1,6 @@
 # ADR P7-033: Global production scheduler and scheduling profiles
 
-- Status: Proposed 2026-09-05
+- Status: Accepted 2026-09-05
 - Date: 2026-09-05
 - Decision ID: AIBT-037
 
@@ -192,7 +192,8 @@ bounded and allocation-free after warmup; they do not expose native ownership ha
 - Public types, exact validation diagnostics and serialization details are finalized in the accepted
   implementation proposal; the behavior above is the decision under review.
 
-## Approval required
+## Acceptance record
 
-This ADR remains **Proposed**. Owner approval is required before production implementation because it
-defines new public API, lifecycle-driving ownership, budget semantics and scheduling order.
+The owner accepted AIBT-037 as proposed on 2026-09-05 and approved splitting the production
+generated-dispatch/lifecycle bridge into prerequisite card P7-037. Exact public type names remain an
+implementation detail constrained by this decision and the package's public-API review gate.

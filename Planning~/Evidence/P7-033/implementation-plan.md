@@ -1,15 +1,14 @@
-# P7-033 proposed implementation plan
+# P7-033 implementation plan
 
-Status: blocked on owner acceptance of proposed ADR AIBT-037.
+Status: accepted by the owner on 2026-09-05; implementation is sequenced after prerequisite P7-037.
 
 ## Scope sequence
 
 ### 0. Accept the decision and split the prerequisite
 
-1. Review automatic-budget source, default `Unbounded` behavior, profile fields, deterministic order
-   and host/coordinator ownership in ADR AIBT-037.
-2. If accepted, mark the ADR Accepted and create one prerequisite implementation card for real
-   generated-dispatch/lifecycle integration. Update P7-033/P7-034/P7-035 dependencies accordingly.
+1. The owner accepted automatic-budget source, default `Unbounded` behavior, profile fields,
+   deterministic order and host/coordinator ownership in ADR AIBT-037 on 2026-09-05.
+2. P7-037 now owns the real generated-dispatch/lifecycle integration prerequisite.
 3. Do not combine the prerequisite with scheduler policy, profile UX or benchmark tuning.
 
 ### 1. Prove real generated dispatch

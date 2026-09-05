@@ -24,6 +24,7 @@ to demonstrate meaningful tree transitions and scheduling pressure.
 - `P7-023` — readable semantic/layout sample conventions.
 - `P7-027`/`P7-030` — production host, lifecycle dispatch and live debugger.
 - `P7-028` — current production stdlib and custom Burst-node authoring pattern.
+- `P7-037` — production generated-node dispatch used by the sample agents.
 
 ## Required reading
 

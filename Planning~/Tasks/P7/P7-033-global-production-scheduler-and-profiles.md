@@ -31,6 +31,7 @@ step-count limits remain advanced overrides for profiling and exceptional integr
 - `P7-030` — complete single-tree production execution contract.
 - `P7-032` — recoverable native scheduler ownership.
 - `P7-024` — Player evidence and its disclosed `PipelinedJobs` measurement gap.
+- `P7-037` — real production generated-dispatch/lifecycle integration for Jobs policies.
 
 ## Required reading
 
@@ -58,12 +59,13 @@ accepted decision covering:
 
 Do not start production implementation until this decision is accepted by the owner.
 
-Planning audit completed 2026-09-05. Proposed ADR AIBT-037 and the implementation sequence are in
+Planning audit completed 2026-09-05. Accepted ADR AIBT-037 and the implementation sequence are in
 `Documentation~/decisions/ADR-P7-033-global-scheduler-and-profiles.md` and
 `Planning~/Evidence/P7-033/`. The audit also found that the existing scheduling benchmark driver
 uses precomputed leaf statuses and cannot serve as production generated-node dispatch. The proposed
 decision therefore requires a separate generated-dispatch/lifecycle prerequisite before this card
-can honestly expose Jobs policies. Owner acceptance is pending; no production code has started.
+can honestly expose Jobs policies. The owner accepted the decision and split on 2026-09-05;
+P7-037 is the active prerequisite. No P7-033 production code has started.
 
 ## Proposed profile surface
 
