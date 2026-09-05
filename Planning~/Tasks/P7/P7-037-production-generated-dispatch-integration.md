@@ -2,6 +2,12 @@
 
 Status: `Draft`
 
+Planning update 2026-09-05: the disposable immediate/scheduled Unity proof passes and exposed a
+required public bootstrap choice. Proposed ADR AIBT-038 is in
+`Documentation~/decisions/ADR-P7-037-production-generated-dispatch-bootstrap.md`; production
+promotion waits for owner acceptance. Current proof limits and verification are recorded in
+`Planning~/Evidence/P7-037/README.md`.
+
 ## Objective
 
 Connect normally compiled behavior-tree instances to generated Burst catalog dispatch in production.

@@ -33,6 +33,12 @@ supports one fixed or caller-provided global time allowance, and separates that 
 from per-update step suspension. A production generated-dispatch/lifecycle bridge is a newly verified
 prerequisite for real Jobs policies. P7-037 owns that bridge and is the active implementation scope.
 
+P7-037 proof update: a normal generated-v2 tree now compiles into a metadata-derived immediate/
+scheduled lifecycle proof. The audit showed that production also needs a common generated executor,
+explicit catalog ownership and atomic state commit; ADR AIBT-038 is Proposed for that public contract.
+The live Unity immediate/scheduled proof passes and also fixed a real core-vs-stdlib registry
+handshake mismatch in Authoring prebinding. Production promotion waits on owner acceptance of AIBT-038.
+
 - P7-028 and review scopes P7-029 through P7-032 are Done. The package working tree was clean.
 - Latest completed full host EditMode run: 1726/1729 passed. Two CodeGen PackageInfo assertions
   and one LocalSaveSystem autosave test remain failed; do not describe this as an all-green suite.

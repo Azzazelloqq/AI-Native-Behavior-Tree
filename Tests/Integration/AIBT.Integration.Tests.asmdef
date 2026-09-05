@@ -4,7 +4,10 @@
   "references": [
     "AIBT.Runtime",
     "AIBT.Authoring",
-    "AIBT.BehaviorCases.Tests"
+    "AIBT.BehaviorCases.Tests",
+    "AIBT.CodeGen.GenerationTests",
+    "Unity.Burst",
+    "Unity.Collections"
   ],
   "includePlatforms": [
     "Editor"
@@ -14,5 +17,8 @@
   ],
   "autoReferenced": false,
   "overrideReferences": false,
+  "analyzers": [
+    "GUID:31a3f09584684895a0a72916d3ad4de0"
+  ],
   "noEngineReferences": false
 }

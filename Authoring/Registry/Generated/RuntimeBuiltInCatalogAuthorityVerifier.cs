@@ -47,7 +47,7 @@ namespace AIBT.Authoring
             }
         }
 
-        private static NodeRegistryEntry[] RebuildAuthorityEntries()
+        internal static NodeRegistryEntry[] RebuildAuthorityEntries()
         {
             var result = NodeRegistryBuilder.CreateWithBuiltIns().Build();
             if (!result.Success)

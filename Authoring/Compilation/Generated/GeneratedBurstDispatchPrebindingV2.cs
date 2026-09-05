@@ -152,9 +152,7 @@ namespace AIBT.Authoring
 
             allDescriptors.Sort(CompareDescriptors);
             var registeredTypes = new RegisteredBlackboardTypeCatalog(registeredEntries.Values);
-            var registry = GeneratedNodeRegistry.Build(allDescriptors, includeBuiltIns: true);
-            if (!registry.Success)
-                throw new InvalidOperationException("Generated dispatch catalog node registry is invalid.");
+            var registryHash = CatalogRegistryHash(allDescriptors);
 
             var nodePlans = new List<GeneratedBurstDispatchNodePlanV2>(allDescriptors.Count);
             for (var index = 0; index < allDescriptors.Count; index++)
@@ -246,7 +244,7 @@ namespace AIBT.Authoring
             var handshake = new BurstCatalogHandshake(
                 2u,
                 new BurstCatalogFingerprint(ToBurstHash(catalogHash)),
-                ToBurstHash(new CompiledHash(registry.Registry.Hash)),
+                ToBurstHash(registryHash),
                 1u,
                 1u,
                 ToBurstHash(configHash),
@@ -917,6 +915,47 @@ namespace AIBT.Authoring
             return new BurstHash256(
                 words[0], words[1], words[2], words[3],
                 words[4], words[5], words[6], words[7]);
+        }
+
+        private static CompiledHash CatalogRegistryHash(IReadOnlyList<GeneratedNodeDescriptor> descriptors)
+        {
+            var generated = GeneratedNodeRegistry.Build(descriptors, includeBuiltIns: false);
+            if (!generated.Success)
+                throw new InvalidOperationException("Generated dispatch catalog node registry is invalid.");
+
+            var entries = new List<NodeRegistryEntry>(
+                RuntimeBuiltInCatalogAuthorityVerifier.RebuildAuthorityEntries());
+            var canonicalIds = new HashSet<string>(StringComparer.Ordinal);
+            var numericIds = new Dictionary<ulong, string>();
+            for (var index = 0; index < entries.Count; index++)
+            {
+                canonicalIds.Add(entries[index].Manifest.TypeId);
+                numericIds.Add(entries[index].NumericTypeId, entries[index].Manifest.TypeId);
+            }
+
+            foreach (var entry in generated.Registry)
+            {
+                var typeId = entry.Manifest.TypeId;
+                if (typeId.StartsWith("aibt.core.", StringComparison.Ordinal)
+                    || !canonicalIds.Add(typeId)
+                    || (numericIds.TryGetValue(entry.NumericTypeId, out var existing)
+                        && !string.Equals(existing, typeId, StringComparison.Ordinal)))
+                    throw new InvalidOperationException("Generated dispatch catalog collides with the runtime core authority.");
+                numericIds[entry.NumericTypeId] = typeId;
+                entries.Add(entry);
+            }
+
+            entries.Sort((left, right) =>
+            {
+                var comparison = Utf8OrdinalComparer.Instance.Compare(
+                    left.Manifest.TypeId,
+                    right.Manifest.TypeId);
+                return comparison != 0
+                    ? comparison
+                    : left.Manifest.Version.CompareTo(right.Manifest.Version);
+            });
+            return new CompiledHash(StableHash.Sha256Hex(
+                NodeManifestCanonicalJson.SerializeRegistryUtf8(entries.ToArray())));
         }
 
         private static int HexNibble(char value)
