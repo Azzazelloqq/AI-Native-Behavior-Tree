@@ -343,6 +343,7 @@ A type's own summary line is shown where an XML-doc `<summary>` exists in source
 - `FIELD System.UInt32 SharedScopeCapability`
 - `METHOD AIBT.NativeCompiledProgramHeaderV1 CreateNativeHeaderProjection()`
 - `METHOD AIBT.NativeProgramBlackboardBindingV2 CreateNativeBlackboardBindingV2(AIBT.Authoring.RegisteredBlackboardTypeCatalog)`
+- `METHOD System.Boolean TryCreateRuntimeDefinitionV2(AIBT.GeneratedBurstCatalogV2,AIBT.Authoring.RegisteredBlackboardTypeCatalog,AIBT.GeneratedTreeRuntimeDefinitionV2&,AIBT.Burst.BurstContextResult&)`
 - `METHOD System.Byte[] GetBytesCopy()`
 - `METHOD System.Byte[] GetConfigBlobCopy()`
 - `METHOD System.Byte[] GetDefaultValueBlobCopy()`

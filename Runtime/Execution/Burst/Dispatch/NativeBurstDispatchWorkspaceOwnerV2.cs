@@ -538,6 +538,51 @@ namespace AIBT.Execution.Burst.Dispatch
             return true;
         }
 
+        /// <summary>
+        /// Acknowledges commands copied by the production publication boundary while retaining
+        /// live async-operation state. This makes the fixed command buffers reusable without
+        /// allocating another workspace on later callbacks.
+        /// </summary>
+        internal bool TryAcknowledgePublishedCommands(
+            in NativeBurstDispatchWorkspaceLeaseV2 lease,
+            out BurstContextResult failure)
+        {
+            if (!ValidateLease(in lease) || !EnsureHostAccess()
+                || _state != NativeBurstDispatchWorkspaceStateV2.Consumed)
+            {
+                failure = BurstContextResult.PhaseViolation;
+                return false;
+            }
+
+            var transaction = _transactionControl[0];
+            if (!ValidateLedger(
+                    in transaction,
+                    _requests[0].TreeInstanceId,
+                    _commands.Length,
+                    _commandPayloadBytes.Length,
+                    _operations.Length,
+                    true,
+                    out failure))
+                return false;
+            if (transaction.MutationVersion == ulong.MaxValue)
+            {
+                failure = BurstContextResult.Overflow;
+                return false;
+            }
+
+            transaction.CommandCount = 0;
+            transaction.CommandPayloadByteCount = 0;
+            NativeBurstDispatchTransactionLedgerV2.Advance(ref transaction);
+            _transactionControl[0] = transaction;
+            _commandCountFloor = 0;
+            _commandPayloadByteCountFloor = 0;
+            _mutationVersionFloor = transaction.MutationVersion;
+            Clear(_commands);
+            Clear(_commandPayloadBytes);
+            failure = BurstContextResult.Success;
+            return true;
+        }
+
         internal bool TryDispose(out BurstContextResult failure)
         {
             if (_disposed)

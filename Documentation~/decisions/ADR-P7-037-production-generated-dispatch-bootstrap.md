@@ -1,6 +1,6 @@
 # ADR P7-037: Production generated-catalog bootstrap and lifecycle dispatch
 
-- Status: Proposed 2026-09-05
+- Status: Accepted 2026-09-05
 - Date: 2026-09-05
 - Decision ID: AIBT-038
 
@@ -138,7 +138,7 @@ but they may not change the ownership, reflection, grouping or atomic-commit sem
 - P7-033 can group different project catalogs without reflection and without knowing concrete
   generated types.
 
-## Approval required
+## Approval
 
-This ADR is **Proposed**. Owner approval is required because it adds the public generated-catalog
-executor/bootstrap contract and fixes which object owns catalog metadata and batch commit.
+Accepted by the owner on 2026-09-05. The accepted public contract adds the generated-catalog
+executor/bootstrap boundary and fixes explicit catalog ownership plus atomic batch commit.

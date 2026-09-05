@@ -2137,7 +2137,7 @@
       "id": "P7-037",
       "phase": 7,
       "title": "Production generated-dispatch lifecycle integration",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-037-production-generated-dispatch-integration.md",
       "dependsOn": ["P2-012", "P4-003", "P6-022", "P7-009", "P7-030", "P7-032"],
@@ -2145,7 +2145,7 @@
         "Runtime/Integration/GeneratedDispatch/",
         "Runtime/Execution/Burst/Dispatch/",
         "Authoring/Compilation/Generated/",
-        "Tests/Runtime/Integration/GeneratedDispatch/",
+        "Tests/Integration/NativeRuntime/",
         "Planning~/Evidence/P7-037/"
       ]
     },

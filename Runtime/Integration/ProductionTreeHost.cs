@@ -42,6 +42,7 @@ namespace AIBT
         private static long s_nextTreeInstanceId;
         private SchedulingAgent[] _agents;
         private DispatchLifecycle _dispatch;
+        private GeneratedTreeDispatchAdapterV2 _generatedDispatch;
         private Func<long> _clock;
         private NativeTraceRecorderV1 _recorder;
         private ulong _updateId;
@@ -86,6 +87,56 @@ namespace AIBT
         /// </summary>
         public bool TryBootstrap(CompiledProgram program, DispatchLifecycle dispatch,
             NativeTraceChannelCapacityV1 traceCapacity, Func<long> clock, out NativeRuntimeFailureV1 failure)
+            => TryBootstrapCore(
+                program, dispatch, traceCapacity, clock,
+                new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId)), out failure);
+
+        /// <summary>
+        /// Bootstraps production-owned generated dispatch. The catalog supplies every callback
+        /// and layout; no caller-authored dispatch delegate or byte offset is accepted.
+        /// </summary>
+        public bool TryBootstrap(
+            GeneratedTreeRuntimeDefinitionV2 definition,
+            GeneratedBurstCatalogV2 catalog,
+            NativeTraceChannelCapacityV1 traceCapacity,
+            Func<long> clock,
+            out NativeRuntimeFailureV1 failure)
+        {
+            if (definition == null) throw new ArgumentNullException(nameof(definition));
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+            if (_bootstrapped || _disposed || _driving)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            var treeInstanceId = new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId));
+            if (!GeneratedTreeDispatchAdapterV2.TryCreate(
+                    definition, catalog, treeInstanceId, out var adapter, out var contextFailure))
+            {
+                failure = new NativeRuntimeFailureV1(
+                    contextFailure == BurstContextResult.CapacityExceeded
+                        ? NativeRuntimeDiagnosticCodeV1.NativeInstanceCapacityExceeded
+                        : NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid);
+                return false;
+            }
+            if (!TryBootstrapCore(
+                    definition.Binding.SemanticProgram, adapter.Dispatch,
+                    traceCapacity, clock, treeInstanceId, out failure))
+            {
+                adapter.Dispose();
+                return false;
+            }
+            _generatedDispatch = adapter;
+            return true;
+        }
+
+        private bool TryBootstrapCore(
+            CompiledProgram program,
+            DispatchLifecycle dispatch,
+            NativeTraceChannelCapacityV1 traceCapacity,
+            Func<long> clock,
+            TreeInstanceId treeInstanceId,
+            out NativeRuntimeFailureV1 failure)
         {
             if (program == null) throw new ArgumentNullException(nameof(program));
             if (dispatch == null) throw new ArgumentNullException(nameof(dispatch));
@@ -99,7 +150,7 @@ namespace AIBT
                 kinds[index] = NativeHotReloadInstance.ClassifyKind(program.Nodes[index].NodeTypeId);
             if (!SchedulingPolicyDriver.TryCreateAgents(program, kinds, 1, Allocator.Persistent, out _agents, out failure))
                 return false;
-            var instanceId = (ulong)Interlocked.Increment(ref s_nextTreeInstanceId);
+            var instanceId = treeInstanceId.Value;
             // BudgetYielded/ExecutionResumed are Detailed events in the existing trace contract.
             if (!NativeTraceChannelOwnerV1.TryCreate(traceCapacity, NativeTraceLevelV1.Detailed,
                     new TreeInstanceId(instanceId), 0, Allocator.Persistent, out var owner, out var traceFailure))
@@ -293,6 +344,8 @@ namespace AIBT
                     _agents = null;
                 }
                 _dispatch = null;
+                _generatedDispatch?.Dispose();
+                _generatedDispatch = null;
                 _clock = null;
             }
         }

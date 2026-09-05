@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using AIBT.Authoring;
 using AIBT.Burst;
 using AIBT.Execution.Burst.Dispatch;
@@ -9,6 +10,9 @@ using AIBT.Tests.CodeGen.Generation;
 using NUnit.Framework;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.TestTools.Constraints;
+using GcAllocIs = UnityEngine.TestTools.Constraints.Is;
+using Is = NUnit.Framework.Is;
 
 namespace AIBT.Tests.Integration.NativeRuntime
 {
@@ -28,13 +32,95 @@ namespace AIBT.Tests.Integration.NativeRuntime
     }
 
     /// <summary>
-    /// Disposable P7-037 proof. It deliberately keeps the generated catalog calls test-local until
-    /// the production bootstrap/dispatcher surface is fixed by the implementation proposal.
-    /// Every layout, node offset and binding ordinal comes from generated metadata or the normal
-    /// v2 compiler; no dispatch shape is authored in this test.
+    /// P7-037 proof. Every layout, node offset and binding ordinal comes from generated metadata or
+    /// the normal v2 compiler; no dispatch shape is authored in this test.
     /// </summary>
     public sealed class GeneratedDispatchLifecycleProofTests
     {
+        [Test]
+        public void ProductionTreeHost_GeneratedBootstrap_DrivesRealCustomNodeThroughFullLifecycle()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+
+                var gameObject = new GameObject("AIBT.Tests.P7037.ProductionTreeHost");
+                try
+                {
+                    var host = gameObject.AddComponent<ProductionTreeHost>();
+                    var traceCapacity = new NativeTraceChannelCapacityV1(
+                        recordCapacity: 65, payloadCapacity: 0, maximumPayloadBytes: 0, emissionCapacity: 256);
+                    Assert.That(host.TryBootstrap(
+                        definition, catalog, traceCapacity, () => 123_456L, out var bootstrapFailure),
+                        Is.True, bootstrapFailure.Code.ToString());
+
+                    for (var index = 0; index < 10 && host.LastRootResult != NodeStatus.Success; index++)
+                        InvokeUpdate(host);
+
+                    Assert.That(host.LastRootResult, Is.EqualTo(NodeStatus.Success),
+                        "The real production host must drive the generated custom node (reading score=37, "
+                        + "deciding enabled=true) to a genuine Success through its own bootstrap, not a "
+                        + "caller-supplied/precomputed status.");
+                }
+                finally
+                {
+                    InvokeOnDestroy(gameObject);
+                    UnityEngine.Object.DestroyImmediate(gameObject);
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
+        private static void InvokeUpdate(ProductionTreeHost host)
+            => typeof(ProductionTreeHost).GetMethod("Update", BindingFlags.NonPublic | BindingFlags.Instance)
+                .Invoke(host, null);
+
+        private static void InvokeOnDestroy(GameObject gameObject)
+        {
+            var host = gameObject.GetComponent<ProductionTreeHost>();
+            if (host == null) return;
+            typeof(ProductionTreeHost).GetMethod("OnDestroy", BindingFlags.NonPublic | BindingFlags.Instance)
+                .Invoke(host, null);
+        }
+        [Test]
+        public void GeneratedFactory_MaterializesValidatedRuntimeCatalogAndCompiledDefinition()
+        {
+            var artifact = MaterializeGenerationShard();
+            var plan = GeneratedBurstDispatchPrebindingV2.CatalogPlan(
+                "aibt.tests.p7037.lifecycle-proof",
+                1u,
+                new[] { artifact });
+            var compiled = CompileFixture(artifact);
+
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(catalog.Cases.Length, Is.EqualTo(plan.Cases.Count));
+                Assert.That(catalog.ConfigurationFields.Length, Is.EqualTo(plan.ConfigurationFields.Count));
+                Assert.That(catalog.MemoryFields.Length, Is.EqualTo(plan.MemoryFields.Count));
+                Assert.That(catalog.Bindings.Length, Is.EqualTo(plan.Bindings.Count));
+                Assert.That(catalog.ValueFields.Length, Is.EqualTo(plan.ValueFields.Count));
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+                Assert.That(definition, Is.Not.Null);
+                Assert.That(definition.Matches(catalog), Is.True);
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out failure), Is.True, failure.ToString());
+            }
+        }
+
         [Test]
         public void NormallyCompiledTree_ImmediateAndScheduledGeneratedDispatch_AreLifecycleEquivalent()
         {
@@ -68,6 +154,242 @@ namespace AIBT.Tests.Integration.NativeRuntime
             Assert.That(immediate.TickCount, Is.EqualTo(38u),
                 "The generated Tick must read score=37, decode enabled=true and commit Count=38.");
             Assert.That(scheduled.TickCount, Is.EqualTo(immediate.TickCount));
+        }
+
+        [Test]
+        public void MultipleInstances_ShareOneCatalog_WhileEachKeepsIsolatedMutableState()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+
+            Assert.That(GeneratedTreeDispatchAdapterV2.TryCreate(
+                definition, catalog, new TreeInstanceId(1uL), out var adapterA, out failure), Is.True, failure.ToString());
+            Assert.That(GeneratedTreeDispatchAdapterV2.TryCreate(
+                definition, catalog, new TreeInstanceId(2uL), out var adapterB, out failure), Is.True, failure.ToString());
+
+            Assert.That(catalog.TryDispose(out failure), Is.False,
+                "A catalog retained by two live adapters must refuse disposal.");
+
+            RunFullLifecycleThroughAdapter(adapterA, compiled.SemanticProgram, out var rootStatusA);
+            RunFullLifecycleThroughAdapter(adapterB, compiled.SemanticProgram, out var rootStatusB);
+            Assert.That(rootStatusA, Is.EqualTo(NodeStatus.Success),
+                "Instance A must reach a genuine Success independently of instance B.");
+            Assert.That(rootStatusB, Is.EqualTo(NodeStatus.Success),
+                "Instance B must reach a genuine Success independently of instance A, sharing the same catalog.");
+
+            adapterA.Dispose();
+            Assert.That(catalog.TryDispose(out failure), Is.False,
+                "The catalog must still refuse disposal while instance B remains live.");
+
+            adapterB.Dispose();
+            Assert.That(catalog.TryDispose(out failure), Is.True, failure.ToString());
+        }
+
+        [Test]
+        public void ProductionAdapter_ImmediateAndScheduledDispatch_AreLifecycleEquivalent()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+
+                Assert.That(GeneratedTreeDispatchAdapterV2.TryCreate(
+                    definition, catalog, new TreeInstanceId(1uL), out var immediateAdapter, out failure),
+                    Is.True, failure.ToString());
+                Assert.That(GeneratedTreeDispatchAdapterV2.TryCreate(
+                    definition, catalog, new TreeInstanceId(2uL), out var scheduledAdapter, out failure),
+                    Is.True, failure.ToString());
+                try
+                {
+                    RunFullLifecycleThroughAdapter(immediateAdapter, compiled.SemanticProgram, scheduled: false, out var immediateStatus);
+                    RunFullLifecycleThroughAdapter(scheduledAdapter, compiled.SemanticProgram, scheduled: true, out var scheduledStatus);
+
+                    Assert.That(immediateStatus, Is.EqualTo(NodeStatus.Success));
+                    Assert.That(scheduledStatus, Is.EqualTo(immediateStatus));
+                    Assert.That(ReadAllTreeValueBytes(scheduledAdapter), Is.EqualTo(ReadAllTreeValueBytes(immediateAdapter)),
+                        "Immediate and a real scheduled JobHandle must publish identical accepted blackboard results "
+                        + "through the production adapter, per ADR AIBT-038.");
+                }
+                finally
+                {
+                    immediateAdapter.Dispose();
+                    scheduledAdapter.Dispose();
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
+        [Test]
+        public void Dispatch_RejectsOutOfRangeNodeIndex_WithoutMutatingAnyTreeState()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+                Assert.That(GeneratedTreeDispatchAdapterV2.TryCreate(
+                    definition, catalog, new TreeInstanceId(1uL), out var adapter, out failure),
+                    Is.True, failure.ToString());
+                try
+                {
+                    var before = ReadAllTreeValueBytes(adapter);
+
+                    var outOfRangeStep = new NativeLifecycleStepResultV1(
+                        NativeLifecycleStepKindV1.DispatchRequired,
+                        (uint)compiled.SemanticProgram.Nodes.Count + 5,
+                        BurstCallbackPhase.Enter);
+                    var request = new ProductionTreeHost.DispatchRequest(outOfRangeStep, 1uL, 123_456L);
+                    var callbackFailure = adapter.Dispatch(in request, out var status);
+
+                    Assert.That(callbackFailure, Is.EqualTo(BurstContextResult.InvalidHandle));
+                    var after = ReadAllTreeValueBytes(adapter);
+                    Assert.That(after, Is.EqualTo(before),
+                        "A rejected dispatch must not mutate any tree/blackboard byte.");
+                }
+                finally
+                {
+                    adapter.Dispose();
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
+        [Test]
+        public void Dispatch_AfterWarmup_AllocatesNoManagedMemory()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+
+                Assert.That(GeneratedTreeDispatchAdapterV2.TryCreate(
+                    definition, catalog, new TreeInstanceId(1uL), out var warmupAdapter, out failure),
+                    Is.True, failure.ToString());
+                RunFullLifecycleThroughAdapter(warmupAdapter, compiled.SemanticProgram, out var warmupStatus);
+                Assert.That(warmupStatus, Is.EqualTo(NodeStatus.Success));
+                warmupAdapter.Dispose();
+
+                Assert.That(GeneratedTreeDispatchAdapterV2.TryCreate(
+                    definition, catalog, new TreeInstanceId(2uL), out var adapter, out failure),
+                    Is.True, failure.ToString());
+                try
+                {
+                    using (var native = new NativeInputs(compiled.SemanticProgram))
+                    {
+                        Assert.That(native.Machine.TryBeginUpdate(1uL, 123_456L, out var machineFailure),
+                            Is.True, machineFailure.Code.ToString());
+                        var completed = false;
+                        NodeStatus rootStatus = default;
+                        while (!completed)
+                        {
+                            Assert.That(native.Machine.TryAdvance(out var step, out machineFailure),
+                                Is.True, machineFailure.Code.ToString());
+                            if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
+                            {
+                                var request = new ProductionTreeHost.DispatchRequest(step, 1uL, 123_456L);
+                                var callbackFailure = default(BurstContextResult);
+                                var status = default(NodeStatus);
+                                Assert.That(() => { callbackFailure = adapter.Dispatch(in request, out status); },
+                                    GcAllocIs.Not.AllocatingGCMemory());
+                                Assert.That(native.Machine.TryCompleteDispatch(
+                                    step.DispatchToken, callbackFailure, status, out machineFailure),
+                                    Is.True, machineFailure.Code.ToString());
+                            }
+                            else if (step.Kind == NativeLifecycleStepKindV1.Completed)
+                            {
+                                Assert.That(step.HasRootStatus, Is.True);
+                                rootStatus = step.RootStatus;
+                                completed = true;
+                            }
+                            else if (step.Kind == NativeLifecycleStepKindV1.Waiting)
+                            {
+                                Assert.Fail("The fixture is terminal and must complete in one logical update.");
+                            }
+                        }
+                        Assert.That(rootStatus, Is.EqualTo(NodeStatus.Success));
+                    }
+                }
+                finally
+                {
+                    adapter.Dispose();
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
+        private static void RunFullLifecycleThroughAdapter(
+            GeneratedTreeDispatchAdapterV2 adapter, CompiledProgram program, out NodeStatus rootStatus)
+            => RunFullLifecycleThroughAdapter(adapter, program, scheduled: false, out rootStatus);
+
+        private static void RunFullLifecycleThroughAdapter(
+            GeneratedTreeDispatchAdapterV2 adapter, CompiledProgram program, bool scheduled, out NodeStatus rootStatus)
+        {
+            using (var native = new NativeInputs(program))
+            {
+                Assert.That(native.Machine.TryBeginUpdate(1uL, 123_456L, out var failure), Is.True, failure.Code.ToString());
+                rootStatus = default;
+                var completed = false;
+                while (!completed)
+                {
+                    Assert.That(native.Machine.TryAdvance(out var step, out failure), Is.True, failure.Code.ToString());
+                    if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
+                    {
+                        var request = new ProductionTreeHost.DispatchRequest(step, 1uL, 123_456L);
+                        NodeStatus dispatchStatus;
+                        var callbackFailure = scheduled
+                            ? adapter.DispatchScheduledForTests(in request, out dispatchStatus)
+                            : adapter.Dispatch(in request, out dispatchStatus);
+                        Assert.That(native.Machine.TryCompleteDispatch(
+                            step.DispatchToken, callbackFailure, dispatchStatus, out failure), Is.True, failure.Code.ToString());
+                    }
+                    else if (step.Kind == NativeLifecycleStepKindV1.Completed)
+                    {
+                        Assert.That(step.HasRootStatus, Is.True);
+                        rootStatus = step.RootStatus;
+                        completed = true;
+                    }
+                    else if (step.Kind == NativeLifecycleStepKindV1.Waiting)
+                    {
+                        Assert.Fail("The fixture is terminal and must complete in one logical update.");
+                    }
+                }
+            }
+        }
+
+        private static List<byte> ReadAllTreeValueBytes(GeneratedTreeDispatchAdapterV2 adapter)
+        {
+            var bytes = new List<byte>();
+            for (uint offset = 0; adapter.TryReadTreeValueByte(offset, out var value); offset++)
+                bytes.Add(value);
+            return bytes;
         }
 
         private static ProofResult Run(

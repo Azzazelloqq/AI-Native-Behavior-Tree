@@ -349,4 +349,7 @@ E|Failure=1
 F|instance|mutable|value__|System.Byte
 F|static|const|Failure|AIBT.Burst.ConditionResult|1
 F|static|const|Success|AIBT.Burst.ConditionResult|0
+T|interface|AIBT.Burst.IGeneratedBurstCatalogExecutorV2|abstract=True|sealed=False
+M|instance|ExecuteImmediate|return=AIBT.Burst.BurstExecutionResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False
+M|instance|Schedule|return=Unity.Jobs.JobHandle|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,value:Unity.Jobs.JobHandle:dependency:optional=False
 T|struct|AIBT.Burst.SnapshotReadHandle<!T>|abstract=False|sealed=True|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi

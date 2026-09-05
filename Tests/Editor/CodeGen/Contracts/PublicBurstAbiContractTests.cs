@@ -25,7 +25,7 @@ namespace AIBT.Tests.CodeGen.Contracts
         }
 
         [Test]
-        public void PublicSurfaceV2_ChangesOnlyEnterAndTickOpaqueSizePins()
+        public void PublicSurfaceV2_ChangesOnlyEnterAndTickOpaqueSizePinsPlusAibt038GeneratedCatalogExecutor()
         {
             var v1 = ReadFixture("ExpectedPublicAbiV1.txt");
             var v2 = ReadFixture("ExpectedPublicAbiV2.txt");
@@ -33,24 +33,39 @@ namespace AIBT.Tests.CodeGen.Contracts
             var v2Lines = v2.TrimEnd('\n').Split('\n');
 
             Assert.That(v1Lines, Has.Length.EqualTo(352), "The independently accepted ABI v1 snapshot must remain intact.");
-            Assert.That(v2Lines, Has.Length.EqualTo(352), "ABI v2 must not add or remove a public record.");
+            Assert.That(v2Lines, Has.Length.EqualTo(355),
+                "ADR AIBT-038 (P7-037) adds exactly one new public type -- IGeneratedBurstCatalogExecutorV2, "
+                + "3 manifest lines (type + 2 methods) -- and must not add or remove anything else.");
 
             const string enterV1 = "T|struct|AIBT.Burst.BurstEnterContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=24,charset=Ansi";
             const string enterV2 = "T|struct|AIBT.Burst.BurstEnterContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=0,charset=Ansi";
             const string tickV1 = "T|struct|AIBT.Burst.BurstTickContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=24,charset=Ansi";
             const string tickV2 = "T|struct|AIBT.Burst.BurstTickContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=0,charset=Ansi";
 
-            var differences = Enumerable.Range(0, v1Lines.Length)
-                .Where(index => !string.Equals(v1Lines[index], v2Lines[index], StringComparison.Ordinal))
-                .ToArray();
-            Assert.That(differences, Has.Length.EqualTo(2));
-            Assert.That(v1Lines[differences[0]], Is.EqualTo(enterV1));
-            Assert.That(v2Lines[differences[0]], Is.EqualTo(enterV2));
-            Assert.That(v1Lines[differences[1]], Is.EqualTo(tickV1));
-            Assert.That(v2Lines[differences[1]], Is.EqualTo(tickV2));
+            // AIBT-038's own type sorts (by ReflectionTypeName) immediately before this pre-existing
+            // v1 anchor line -- confirmed empirically against a live BuildPublicAbiManifest() capture,
+            // not assumed.
+            const string insertBeforeAnchor =
+                "T|struct|AIBT.Burst.SnapshotReadHandle<!T>|abstract=False|sealed=True|generic=T:NotNullableValueTypeConstraint, DefaultConstructorConstraint:System.ValueType|layout=Sequential,pack=4,size=8,charset=Ansi";
+            var executorLines = new[]
+            {
+                "T|interface|AIBT.Burst.IGeneratedBurstCatalogExecutorV2|abstract=True|sealed=False",
+                "M|instance|ExecuteImmediate|return=AIBT.Burst.BurstExecutionResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False",
+                "M|instance|Schedule|return=Unity.Jobs.JobHandle|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,value:Unity.Jobs.JobHandle:dependency:optional=False",
+            };
 
-            var normalizedV2 = v2.Replace(enterV2, enterV1).Replace(tickV2, tickV1);
-            Assert.That(normalizedV2, Is.EqualTo(v1), "Every public signature, enum value, and non-context layout record must remain ABI v1-exact.");
+            var reconstructed = new List<string>(v1Lines.Length + executorLines.Length);
+            foreach (var line in v1Lines)
+            {
+                if (line == insertBeforeAnchor) reconstructed.AddRange(executorLines);
+                if (line == enterV1) reconstructed.Add(enterV2);
+                else if (line == tickV1) reconstructed.Add(tickV2);
+                else reconstructed.Add(line);
+            }
+
+            Assert.That(reconstructed, Is.EqualTo(v2Lines),
+                "Every public signature, enum value, and non-context layout record must remain ABI v1-exact "
+                + "except the two opaque-size pins and AIBT-038's new executor interface.");
         }
 
         [Test]

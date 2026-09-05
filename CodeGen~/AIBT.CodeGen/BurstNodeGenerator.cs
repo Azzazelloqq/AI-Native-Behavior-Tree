@@ -757,7 +757,7 @@ namespace AIBT.CodeGen
             if (type.TypeKind != TypeKind.Class || !type.IsStatic || type.DeclaredAccessibility != Accessibility.Public
                 || type.ContainingType != null || type.Arity != 0 || !partial)
                 return "catalog set must be a public top-level non-generic static partial class";
-            var reserved = new[] { "IsUsable", "Fingerprint", "Validate", "ExecuteImmediate", "Schedule" };
+            var reserved = new[] { "IsUsable", "Fingerprint", "Executor", "TryCreateRuntimeCatalog", "Validate", "ExecuteImmediate", "Schedule" };
             return type.GetMembers().Any(member => reserved.Contains(member.Name, StringComparer.Ordinal))
                 ? "catalog set declares a reserved generated member" : null;
         }
@@ -1401,6 +1401,7 @@ namespace AIBT.CodeGen
         private static string EmitFacade(INamedTypeSymbol catalogSet, IReadOnlyList<INamedTypeSymbol> shardTypes, List<Node> nodes, byte[] registryHash)
         {
             var fingerprints = Fingerprints(catalogSet, shardTypes, nodes, registryHash);
+            var runtimeLayout = Convert.ToBase64String(RuntimeLayoutBlob(nodes));
             var builder = Header(); OpenNamespace(builder, catalogSet.ContainingNamespace);
             builder.Append("public static partial class ").Append(catalogSet.Name).AppendLine(); builder.AppendLine("{");
             builder.AppendLine("    public const bool IsUsable = true;");
@@ -1409,6 +1410,18 @@ namespace AIBT.CodeGen
             builder.Append("    private static global::AIBT.Burst.BurstHash256 ConfigurationLayoutFingerprint { get { return ").Append(HashLiteral(fingerprints.Configuration)).AppendLine("; } }");
             builder.Append("    private static global::AIBT.Burst.BurstHash256 MemoryLayoutFingerprint { get { return ").Append(HashLiteral(fingerprints.Memory)).AppendLine("; } }");
             builder.Append("    private static global::AIBT.Burst.BurstHash256 AccessLayoutFingerprint { get { return ").Append(HashLiteral(fingerprints.Access)).AppendLine("; } }");
+            builder.AppendLine("    private static readonly global::AIBT.Burst.IGeneratedBurstCatalogExecutorV2 s_executor = new GeneratedExecutor();");
+            builder.AppendLine("    public static global::AIBT.Burst.IGeneratedBurstCatalogExecutorV2 Executor { get { return s_executor; } }");
+            builder.AppendLine("    public static bool TryCreateRuntimeCatalog(global::Unity.Collections.Allocator allocator, out global::AIBT.GeneratedBurstCatalogV2 catalog, out global::AIBT.Burst.BurstContextResult failure)");
+            builder.AppendLine("    {");
+            builder.AppendLine("        var handshake = new global::AIBT.Burst.BurstCatalogHandshake(2u, Fingerprint, NodeRegistryFingerprint, 1u, 1u, ConfigurationLayoutFingerprint, MemoryLayoutFingerprint, AccessLayoutFingerprint);");
+            builder.Append("        return global::AIBT.GeneratedBurstCatalogV2.TryCreate(Executor, in handshake, global::System.Convert.FromBase64String(\"").Append(runtimeLayout).AppendLine("\"), allocator, out catalog, out failure);");
+            builder.AppendLine("    }");
+            builder.AppendLine("    private sealed class GeneratedExecutor : global::AIBT.Burst.IGeneratedBurstCatalogExecutorV2");
+            builder.AppendLine("    {");
+            builder.AppendLine("        public global::AIBT.Burst.BurstExecutionResult ExecuteImmediate(ref global::AIBT.Burst.BurstExecutionBatch batch) { return " + catalogSet.Name + ".ExecuteImmediate(ref batch); }");
+            builder.AppendLine("        public global::Unity.Jobs.JobHandle Schedule(ref global::AIBT.Burst.BurstExecutionBatch batch, global::Unity.Jobs.JobHandle dependency) { return " + catalogSet.Name + ".Schedule(ref batch, dependency); }");
+            builder.AppendLine("    }");
             builder.AppendLine("    public static global::AIBT.Burst.BurstCatalogValidationResult Validate(in global::AIBT.Burst.BurstCatalogHandshake handshake)");
             builder.AppendLine("    {");
             builder.AppendLine("        if (handshake.AbiVersion != 2u) return new global::AIBT.Burst.BurstCatalogValidationResult(global::AIBT.Burst.BurstCatalogValidationCode.AbiVersionMismatch, 5012);");
@@ -1829,6 +1842,267 @@ namespace AIBT.CodeGen
             return bytes.Hash();
         }
 
+        private static byte[] RuntimeLayoutBlob(IReadOnlyList<Node> nodes)
+        {
+            var cases = new List<RuntimeCaseRecord>(nodes.Count);
+            var configurationFields = new List<RuntimeFieldRecord>();
+            var memoryFields = new List<RuntimeFieldRecord>();
+            var bindings = new List<RuntimeBindingRecord>();
+            var valueFields = new List<RuntimeFieldRecord>();
+            var caseRanges = new List<RuntimeRangeRecord>(nodes.Count * 2);
+            var bindingRanges = new List<RuntimeRangeRecord>();
+            var caseRules = new List<RuntimeRuleRecord>();
+            var bindingRules = new List<RuntimeRuleRecord>();
+
+            for (var nodeIndex = 0; nodeIndex < nodes.Count; nodeIndex++)
+            {
+                var node = nodes[nodeIndex];
+                var config = DescribeLayout(node.Config!);
+                var memory = DescribeLayout(node.Memory!);
+                var firstConfigurationField = (uint)configurationFields.Count;
+                var firstMemoryField = (uint)memoryFields.Count;
+                var firstBinding = (uint)bindings.Count;
+                AppendRuntimeStorage(config, configurationFields, caseRules, out var configRange);
+                AppendRuntimeStorage(memory, memoryFields, caseRules, out var memoryRange);
+                caseRanges.Add(configRange);
+                caseRanges.Add(memoryRange);
+
+                var nodeBindings = config.Fields
+                    .Select(field => new { Field = field, Binding = BindingRecord.TryCreate(field.Field) })
+                    .Where(value => value.Binding != null)
+                    .OrderBy(value => value.Binding!.Id, Utf8StringComparer.Instance)
+                    .ToArray();
+                for (var bindingIndex = 0; bindingIndex < nodeBindings.Length; bindingIndex++)
+                {
+                    var source = nodeBindings[bindingIndex];
+                    var binding = source.Binding!;
+                    var configurationFieldOrdinal = (uint)Array.IndexOf(config.Fields, source.Field);
+                    var primary = AppendRuntimeValue(binding.Types[0].Type, valueFields, bindingRules);
+                    bindingRanges.Add(primary.Range);
+                    var secondary = default(RuntimeValueLayout);
+                    if (binding.Types.Length == 2)
+                    {
+                        secondary = AppendRuntimeValue(binding.Types[1].Type, valueFields, bindingRules);
+                        bindingRanges.Add(secondary.Range);
+                    }
+                    else
+                    {
+                        bindingRanges.Add(new RuntimeRangeRecord((uint)bindingRules.Count, 0u));
+                    }
+
+                    bindings.Add(new RuntimeBindingRecord(
+                        (uint)bindingIndex,
+                        configurationFieldOrdinal,
+                        binding.Kind,
+                        binding.Scope,
+                        binding.PhaseMask,
+                        NumericId(binding.Types[0].Id),
+                        binding.Types[0].Version,
+                        primary.FirstField,
+                        primary.FieldCount,
+                        primary.Size,
+                        binding.Types.Length == 2 ? NumericId(binding.Types[1].Id) : 0UL,
+                        binding.Types.Length == 2 ? binding.Types[1].Version : 0u,
+                        binding.Types.Length == 2 ? secondary.FirstField : 0u,
+                        binding.Types.Length == 2 ? secondary.FieldCount : 0u,
+                        binding.Types.Length == 2 ? secondary.Size : 0u));
+                }
+
+                var nodeAttribute = Attribute(node.Type, NodeAttribute)!;
+                var statuses = Convert.ToByte(nodeAttribute.ConstructorArguments[9].Value, CultureInfo.InvariantCulture);
+                var phases = (byte)(15 | (Attribute(node.Type, ObserverAttribute) != null ? 16 : 0));
+                cases.Add(new RuntimeCaseRecord(
+                    NumericId(node.TypeId), node.Version, (uint)nodeIndex,
+                    firstConfigurationField, (uint)(configurationFields.Count - firstConfigurationField), config.Size,
+                    firstMemoryField, (uint)(memoryFields.Count - firstMemoryField), memory.Size,
+                    phases, statuses, Attribute(node.Type, RandomAttribute) != null,
+                    firstBinding, (uint)nodeBindings.Length));
+            }
+
+            var ruleOffset = (uint)caseRules.Count;
+            for (var index = 0; index < bindingRanges.Count; index++)
+            {
+                var range = bindingRanges[index];
+                bindingRanges[index] = new RuntimeRangeRecord(ruleOffset + range.FirstRule, range.RuleCount);
+            }
+            var rules = new List<RuntimeRuleRecord>(caseRules.Count + bindingRules.Count);
+            rules.AddRange(caseRules);
+            rules.AddRange(bindingRules);
+
+            var writer = new RuntimeLayoutBytes();
+            writer.Raw("AIBT-GENERATED-CATALOG-LAYOUT-V1\0");
+            writer.U32(1u);
+            writer.U32((uint)cases.Count);
+            foreach (var value in cases) value.Write(writer);
+            WriteRuntimeFields(writer, configurationFields);
+            WriteRuntimeFields(writer, memoryFields);
+            writer.U32((uint)bindings.Count);
+            foreach (var value in bindings) value.Write(writer);
+            WriteRuntimeFields(writer, valueFields);
+            WriteRuntimeRanges(writer, caseRanges);
+            WriteRuntimeRanges(writer, bindingRanges);
+            writer.U32((uint)rules.Count);
+            foreach (var value in rules) value.Write(writer);
+            return writer.ToArray();
+        }
+
+        private static void AppendRuntimeStorage(
+            LayoutDescription layout,
+            IList<RuntimeFieldRecord> destination,
+            IList<RuntimeRuleRecord> rules,
+            out RuntimeRangeRecord range)
+        {
+            var firstRule = (uint)rules.Count;
+            for (var fieldIndex = 0; fieldIndex < layout.Fields.Length; fieldIndex++)
+            {
+                var field = layout.Fields[fieldIndex];
+                var leaves = new List<RuntimeLeaf>();
+                FlattenRuntimeValue(field.Field.Type, field.Offset, leaves, rules);
+                for (var leafIndex = 0; leafIndex < leaves.Count; leafIndex++)
+                    AppendRuntimeLeaf(destination, (uint)fieldIndex, (uint)leafIndex, leaves[leafIndex]);
+            }
+            range = new RuntimeRangeRecord(firstRule, (uint)rules.Count - firstRule);
+        }
+
+        private static RuntimeValueLayout AppendRuntimeValue(
+            ITypeSymbol type,
+            IList<RuntimeFieldRecord> destination,
+            IList<RuntimeRuleRecord> rules)
+        {
+            var firstField = (uint)destination.Count;
+            var firstRule = (uint)rules.Count;
+            uint size;
+            if (type is INamedTypeSymbol registered && Attribute(registered, ValueAttribute) != null)
+            {
+                var layout = DescribeLayout(registered);
+                size = layout.Size;
+                for (var fieldIndex = 0; fieldIndex < layout.Fields.Length; fieldIndex++)
+                {
+                    var field = layout.Fields[fieldIndex];
+                    var leaves = new List<RuntimeLeaf>();
+                    FlattenRuntimeValue(field.Field.Type, field.Offset, leaves, rules);
+                    for (var leafIndex = 0; leafIndex < leaves.Count; leafIndex++)
+                        AppendRuntimeLeaf(destination, (uint)fieldIndex, (uint)leafIndex, leaves[leafIndex]);
+                }
+            }
+            else
+            {
+                SizeAndEncoding(type, out size, out _, out _);
+                var leaves = new List<RuntimeLeaf>();
+                FlattenRuntimeValue(type, 0u, leaves, rules);
+                for (var leafIndex = 0; leafIndex < leaves.Count; leafIndex++)
+                    AppendRuntimeLeaf(destination, 0u, (uint)leafIndex, leaves[leafIndex]);
+            }
+            return new RuntimeValueLayout(
+                firstField, (uint)destination.Count - firstField, size,
+                new RuntimeRangeRecord(firstRule, (uint)rules.Count - firstRule));
+        }
+
+        private static void FlattenRuntimeValue(
+            ITypeSymbol type,
+            uint offset,
+            IList<RuntimeLeaf> leaves,
+            IList<RuntimeRuleRecord> rules)
+        {
+            if (type.SpecialType != SpecialType.None)
+            {
+                SizeAndEncoding(type, out var size, out _, out var encoding);
+                leaves.Add(new RuntimeLeaf(offset, size, encoding));
+                return;
+            }
+
+            var named = (INamedTypeSymbol)type;
+            if (named.IsGenericType && named.Name.EndsWith("Handle", StringComparison.Ordinal))
+            {
+                leaves.Add(new RuntimeLeaf(offset, 4u, 11));
+                return;
+            }
+
+            var display = type.ToDisplayString();
+            if (display == "AIBT.Float2Value" || display == "AIBT.Float3Value" || display == "AIBT.QuaternionValue")
+            {
+                var count = display == "AIBT.Float2Value" ? 2 : display == "AIBT.Float3Value" ? 3 : 4;
+                for (var index = 0; index < count; index++) leaves.Add(new RuntimeLeaf(offset + (uint)index * 4u, 4u, 9));
+                return;
+            }
+            if (display == "AIBT.AgentId" || display == "AIBT.EntityId")
+            {
+                var kind = display == "AIBT.AgentId" ? (byte)1 : (byte)2;
+                leaves.Add(new RuntimeLeaf(offset, 8u, 8, kind));
+                rules.Add(new RuntimeRuleRecord(kind, offset));
+                return;
+            }
+            if (display == "AIBT.OperationId")
+            {
+                leaves.Add(new RuntimeLeaf(offset, 8u, 8, 3));
+                leaves.Add(new RuntimeLeaf(offset + 8u, 4u, 6));
+                leaves.Add(new RuntimeLeaf(offset + 12u, 4u, 6));
+                leaves.Add(new RuntimeLeaf(offset + 16u, 8u, 8));
+                rules.Add(new RuntimeRuleRecord(3, offset));
+                return;
+            }
+            if (display == "AIBT.AssetId")
+            {
+                leaves.Add(new RuntimeLeaf(offset, 8u, 8, 4));
+                leaves.Add(new RuntimeLeaf(offset + 8u, 8u, 8));
+                leaves.Add(new RuntimeLeaf(offset + 16u, 8u, 7));
+                leaves.Add(new RuntimeLeaf(offset + 24u, 1u, 0));
+                rules.Add(new RuntimeRuleRecord(4, offset));
+                return;
+            }
+            if (TryFixedStringShape(display, out var fixedSize, out _))
+            {
+                var kind = fixedSize == 32 ? (byte)5 : fixedSize == 64 ? (byte)6 : fixedSize == 128 ? (byte)7 : (byte)8;
+                leaves.Add(new RuntimeLeaf(offset, 2u, 4, kind));
+                for (var index = 2; index < fixedSize; index++) leaves.Add(new RuntimeLeaf(offset + (uint)index, 1u, 2));
+                rules.Add(new RuntimeRuleRecord(kind, offset));
+                return;
+            }
+            if (Attribute(named, ValueAttribute) != null)
+            {
+                var layout = DescribeLayout(named);
+                foreach (var field in layout.Fields)
+                    FlattenRuntimeValue(field.Field.Type, offset + field.Offset, leaves, rules);
+                return;
+            }
+            throw new InvalidOperationException("Generated runtime layout contains an unsupported value type: " + display);
+        }
+
+        private static void AppendRuntimeLeaf(
+            IList<RuntimeFieldRecord> destination,
+            uint fieldOrdinal,
+            uint elementIndex,
+            RuntimeLeaf leaf)
+        {
+            if (destination.Count != 0)
+            {
+                var previous = destination[destination.Count - 1];
+                if (previous.FieldOrdinal == fieldOrdinal
+                    && previous.CanonicalRuleKind == 0 && leaf.CanonicalRuleKind == 0
+                    && previous.Encoding == leaf.Encoding && previous.ElementSize == leaf.Size
+                    && previous.FirstElementIndex + previous.ElementCount == elementIndex
+                    && previous.ByteOffset + previous.ElementCount * previous.ElementSize == leaf.Offset)
+                {
+                    destination[destination.Count - 1] = previous.WithElementCount(previous.ElementCount + 1u);
+                    return;
+                }
+            }
+            destination.Add(new RuntimeFieldRecord(
+                fieldOrdinal, elementIndex, leaf.Offset, 1u, leaf.Size, leaf.Encoding, leaf.CanonicalRuleKind));
+        }
+
+        private static void WriteRuntimeFields(RuntimeLayoutBytes writer, IReadOnlyList<RuntimeFieldRecord> fields)
+        {
+            writer.U32((uint)fields.Count);
+            foreach (var value in fields) value.Write(writer);
+        }
+
+        private static void WriteRuntimeRanges(RuntimeLayoutBytes writer, IReadOnlyList<RuntimeRangeRecord> ranges)
+        {
+            writer.U32((uint)ranges.Count);
+            foreach (var value in ranges) value.Write(writer);
+        }
+
         private static byte[] RegistryHash(IReadOnlyList<Node> nodes)
         {
             var builder = new StringBuilder(4096);
@@ -2031,6 +2305,159 @@ namespace AIBT.CodeGen
             internal void S(string value) { var encoded = Utf8.GetBytes(value); U32((uint)encoded.Length); bytes.AddRange(encoded); }
             internal void H32(byte[] value) { if (value.Length != 32) throw new InvalidDataException("H32 requires exactly 32 bytes."); bytes.AddRange(value); }
             internal byte[] Hash() { using (var sha = SHA256.Create()) return sha.ComputeHash(bytes.ToArray()); }
+        }
+
+        private sealed class RuntimeLayoutBytes
+        {
+            private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false, true);
+            private readonly List<byte> _bytes = new List<byte>();
+            internal void Raw(string value) => _bytes.AddRange(Utf8.GetBytes(value));
+            internal void U8(byte value) => _bytes.Add(value);
+            internal void U32(uint value)
+            {
+                _bytes.Add((byte)value); _bytes.Add((byte)(value >> 8));
+                _bytes.Add((byte)(value >> 16)); _bytes.Add((byte)(value >> 24));
+            }
+            internal void U64(ulong value) { U32((uint)value); U32((uint)(value >> 32)); }
+            internal byte[] ToArray() => _bytes.ToArray();
+        }
+
+        private readonly struct RuntimeCaseRecord
+        {
+            internal RuntimeCaseRecord(
+                ulong typeId, uint version, uint caseIndex,
+                uint firstConfigurationField, uint configurationFieldCount, uint configurationSize,
+                uint firstMemoryField, uint memoryFieldCount, uint memorySize,
+                byte phases, byte statuses, bool random,
+                uint firstBinding, uint bindingCount)
+            {
+                TypeId = typeId; Version = version; CaseIndex = caseIndex;
+                FirstConfigurationField = firstConfigurationField; ConfigurationFieldCount = configurationFieldCount;
+                ConfigurationSize = configurationSize; FirstMemoryField = firstMemoryField;
+                MemoryFieldCount = memoryFieldCount; MemorySize = memorySize; Phases = phases;
+                Statuses = statuses; Random = random; FirstBinding = firstBinding; BindingCount = bindingCount;
+            }
+            private ulong TypeId { get; }
+            private uint Version { get; }
+            private uint CaseIndex { get; }
+            private uint FirstConfigurationField { get; }
+            private uint ConfigurationFieldCount { get; }
+            private uint ConfigurationSize { get; }
+            private uint FirstMemoryField { get; }
+            private uint MemoryFieldCount { get; }
+            private uint MemorySize { get; }
+            private byte Phases { get; }
+            private byte Statuses { get; }
+            private bool Random { get; }
+            private uint FirstBinding { get; }
+            private uint BindingCount { get; }
+            internal void Write(RuntimeLayoutBytes writer)
+            {
+                writer.U64(TypeId); writer.U32(Version); writer.U32(CaseIndex);
+                writer.U32(FirstConfigurationField); writer.U32(ConfigurationFieldCount); writer.U32(ConfigurationSize);
+                writer.U32(FirstMemoryField); writer.U32(MemoryFieldCount); writer.U32(MemorySize);
+                writer.U8(Phases); writer.U8(Statuses); writer.U8(Random ? (byte)1 : (byte)0);
+                writer.U32(FirstBinding); writer.U32(BindingCount);
+            }
+        }
+
+        private readonly struct RuntimeFieldRecord
+        {
+            internal RuntimeFieldRecord(
+                uint fieldOrdinal, uint firstElementIndex, uint byteOffset,
+                uint elementCount, uint elementSize, byte encoding, byte canonicalRuleKind)
+            {
+                FieldOrdinal = fieldOrdinal; FirstElementIndex = firstElementIndex; ByteOffset = byteOffset;
+                ElementCount = elementCount; ElementSize = elementSize; Encoding = encoding;
+                CanonicalRuleKind = canonicalRuleKind;
+            }
+            internal uint FieldOrdinal { get; }
+            internal uint FirstElementIndex { get; }
+            internal uint ByteOffset { get; }
+            internal uint ElementCount { get; }
+            internal uint ElementSize { get; }
+            internal byte Encoding { get; }
+            internal byte CanonicalRuleKind { get; }
+            internal RuntimeFieldRecord WithElementCount(uint count)
+                => new RuntimeFieldRecord(FieldOrdinal, FirstElementIndex, ByteOffset, count, ElementSize, Encoding, CanonicalRuleKind);
+            internal void Write(RuntimeLayoutBytes writer)
+            {
+                writer.U32(FieldOrdinal); writer.U32(FirstElementIndex); writer.U32(ByteOffset);
+                writer.U32(ElementCount); writer.U32(ElementSize); writer.U8(Encoding); writer.U8(CanonicalRuleKind);
+            }
+        }
+
+        private readonly struct RuntimeBindingRecord
+        {
+            internal RuntimeBindingRecord(
+                uint ordinal, uint configurationFieldOrdinal, byte kind, byte scope, byte phaseMask,
+                ulong primaryTypeId, uint primaryVersion, uint firstPrimaryField, uint primaryFieldCount, uint primarySize,
+                ulong secondaryTypeId, uint secondaryVersion, uint firstSecondaryField, uint secondaryFieldCount, uint secondarySize)
+            {
+                Ordinal = ordinal; ConfigurationFieldOrdinal = configurationFieldOrdinal; Kind = kind; Scope = scope;
+                PhaseMask = phaseMask; PrimaryTypeId = primaryTypeId; PrimaryVersion = primaryVersion;
+                FirstPrimaryField = firstPrimaryField; PrimaryFieldCount = primaryFieldCount; PrimarySize = primarySize;
+                SecondaryTypeId = secondaryTypeId; SecondaryVersion = secondaryVersion;
+                FirstSecondaryField = firstSecondaryField; SecondaryFieldCount = secondaryFieldCount; SecondarySize = secondarySize;
+            }
+            private uint Ordinal { get; }
+            private uint ConfigurationFieldOrdinal { get; }
+            private byte Kind { get; }
+            private byte Scope { get; }
+            private byte PhaseMask { get; }
+            private ulong PrimaryTypeId { get; }
+            private uint PrimaryVersion { get; }
+            private uint FirstPrimaryField { get; }
+            private uint PrimaryFieldCount { get; }
+            private uint PrimarySize { get; }
+            private ulong SecondaryTypeId { get; }
+            private uint SecondaryVersion { get; }
+            private uint FirstSecondaryField { get; }
+            private uint SecondaryFieldCount { get; }
+            private uint SecondarySize { get; }
+            internal void Write(RuntimeLayoutBytes writer)
+            {
+                writer.U32(Ordinal); writer.U32(ConfigurationFieldOrdinal); writer.U8(Kind); writer.U8(Scope); writer.U8(PhaseMask);
+                writer.U64(PrimaryTypeId); writer.U32(PrimaryVersion); writer.U32(FirstPrimaryField);
+                writer.U32(PrimaryFieldCount); writer.U32(PrimarySize); writer.U64(SecondaryTypeId);
+                writer.U32(SecondaryVersion); writer.U32(FirstSecondaryField); writer.U32(SecondaryFieldCount); writer.U32(SecondarySize);
+            }
+        }
+
+        private readonly struct RuntimeRangeRecord
+        {
+            internal RuntimeRangeRecord(uint firstRule, uint ruleCount) { FirstRule = firstRule; RuleCount = ruleCount; }
+            internal uint FirstRule { get; }
+            internal uint RuleCount { get; }
+            internal void Write(RuntimeLayoutBytes writer) { writer.U32(FirstRule); writer.U32(RuleCount); }
+        }
+
+        private readonly struct RuntimeRuleRecord
+        {
+            internal RuntimeRuleRecord(byte kind, uint byteOffset) { Kind = kind; ByteOffset = byteOffset; }
+            private byte Kind { get; }
+            private uint ByteOffset { get; }
+            internal void Write(RuntimeLayoutBytes writer) { writer.U8(Kind); writer.U32(ByteOffset); }
+        }
+
+        private readonly struct RuntimeLeaf
+        {
+            internal RuntimeLeaf(uint offset, uint size, byte encoding, byte canonicalRuleKind = 0)
+            { Offset = offset; Size = size; Encoding = encoding; CanonicalRuleKind = canonicalRuleKind; }
+            internal uint Offset { get; }
+            internal uint Size { get; }
+            internal byte Encoding { get; }
+            internal byte CanonicalRuleKind { get; }
+        }
+
+        private readonly struct RuntimeValueLayout
+        {
+            internal RuntimeValueLayout(uint firstField, uint fieldCount, uint size, RuntimeRangeRecord range)
+            { FirstField = firstField; FieldCount = fieldCount; Size = size; Range = range; }
+            internal uint FirstField { get; }
+            internal uint FieldCount { get; }
+            internal uint Size { get; }
+            internal RuntimeRangeRecord Range { get; }
         }
 
         private sealed class Utf8StringComparer : IComparer<string>

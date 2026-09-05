@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using AIBT;
+using AIBT.Burst;
 
 namespace AIBT.Authoring
 {
@@ -179,6 +181,32 @@ namespace AIBT.Authoring
 
             return new NativeProgramBlackboardBindingV2(
                 SemanticProgram, GetBytesCopy(), scopes, slots, slotAuthorities, accesses, watched, types, fields);
+        }
+
+        public bool TryCreateRuntimeDefinitionV2(
+            GeneratedBurstCatalogV2 catalog,
+            RegisteredBlackboardTypeCatalog registeredTypes,
+            out GeneratedTreeRuntimeDefinitionV2 definition,
+            out BurstContextResult failure)
+        {
+            definition = null;
+            if (catalog == null || registeredTypes == null)
+            {
+                failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
+
+            NativeProgramBlackboardBindingV2 binding;
+            try
+            {
+                binding = CreateNativeBlackboardBindingV2(registeredTypes);
+            }
+            catch (Exception)
+            {
+                failure = BurstContextResult.InvalidEncoding;
+                return false;
+            }
+            return GeneratedTreeRuntimeDefinitionV2.TryCreate(binding, catalog, out definition, out failure);
         }
 
         private static CompiledProgram WithContentHash(CompiledProgram source, CompiledHash hash)

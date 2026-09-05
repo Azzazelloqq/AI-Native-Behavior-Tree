@@ -1254,3 +1254,61 @@ across the whole ~1653-test host-project run; public API diff purely additive (1
 removals). Live proof: a real tree using `aibt.stdlib.wait`, validated and compiled through the real
 `McpVerificationToolDispatcher` against the project's own adopted `.aibt/policy.json`, came back
 `valid: true` / `success: true` with zero diagnostics. See `Planning~/Evidence/P7-028/README.md`.
+
+Same day (2026-09-05), the owner added four further Draft Phase 7 cards -- `P7-033` (global
+production scheduler and custom profiles), `P7-034` (Swarm Arena sample), `P7-035` (release Player
+benchmark), `P7-036` (UX/node-library review) -- with `P7-033` gated on a mandatory public-API/
+automatic-budget decision. `ADR-P7-033-global-scheduler-and-profiles.md` (`AIBT-037`, Accepted
+2026-09-05) keeps the zero-input default honestly unbounded, supports one fixed or caller-provided
+global time allowance, and separates that admission budget from per-update step suspension.
+Auditing `P7-033` surfaced a real, newly-verified prerequisite: no production bridge connects a
+normally compiled tree to generated Burst catalog dispatch at all (every existing generated-dispatch
+proof was disposable/test-only or routed through the MCP-only `GenericNativeDispatchTranslatorV1`).
+`P7-037` was created to own that bridge and sequenced before `P7-033`.
+
+`P7-037` (production generated-dispatch lifecycle integration) is **done** -- `ADR-P7-037-production-
+generated-dispatch-bootstrap.md` (`AIBT-038`, Accepted 2026-09-05) defines the contract: one small
+`IGeneratedBurstCatalogExecutorV2` interface each generated `[AibtCatalogSet]` facade implements, an
+explicitly-owned `GeneratedBurstCatalogV2` decoding a generated canonical layout blob, an immutable
+`GeneratedTreeRuntimeDefinitionV2` binding a compiled v2 program to that catalog, and a new
+`ProductionTreeHost.TryBootstrap(GeneratedTreeRuntimeDefinitionV2, GeneratedBurstCatalogV2, ...)`
+overload -- all in new `Runtime/Integration/GeneratedDispatch/`. The implementation (substantially
+already written when the closing pass started) had four real, load-bearing defects, each found and
+fixed empirically against the live `6000.5.8f1` Editor via Unity MCP, not assumed correct because the
+code compiled: two real compile errors invisible from reading the source alone (an uninitialized
+`out failure` branch, and ten call sites where a nested class's own same-named `IDisposable.Dispose()`
+silently hid the enclosing class's differently-signed private static `Dispose<T>` helper by C#'s
+declaring-type-first name lookup, not a signature mismatch); a genuine architectural bug in the new
+bootstrap gate comparing two same-named but semantically unrelated version/hash field pairs (the
+generated catalog's own self-identity fields vs. the compiled program's own, differently-scoped
+fields) that could never agree for a real tree, root-caused by diffing live hash dumps from both sides
+rather than guessed, and fixed by keeping only the field pair that is genuinely shared
+(`ExecutionSemanticsVersion`, confirmed carried unchanged across the v1-to-v2 wrap) plus the real
+per-node case lookup; a real scope gap where the adapter accepted only Tree-scope blackboard bindings
+while the project's own canonical reference fixture (and Agent/Shared scope generally, since `P7-018`)
+uses Agent scope -- fixed by giving Agent-scope storage its own collision-safe base offset within the
+same per-instance buffer (confirmed safe by reading `ReferenceCompiler.BuildBlackboardSlots`'s own
+per-scope offset numbering first), deliberately excluding genuinely cross-instance Shared scope, left
+to `P7-033`'s own population semantics. The ADR's approved new public surface
+(`IGeneratedBurstCatalogExecutorV2`) required refreshing `Tests/Editor/CodeGen/Contracts/
+ExpectedPublicAbiV2.txt` and its own regression test (confirmed purely additive by diffing a live
+manifest capture against the checked-in baseline before writing anything) and regenerating
+`Documentation~/generated/api-reference-{runtime,authoring}.md` via `P7-014`'s own generator command.
+Five new tests prove the real production path end-to-end, not just the disposable low-level proof:
+bootstrap-to-`Success` through the actual `ProductionTreeHost`, immediate/scheduled byte-identical
+equivalence through the actual adapter, two instances sharing one catalog with independently-verified
+isolated state and correct retain-counted disposal, a rejected out-of-range dispatch committing no
+partial state, and zero managed allocation on a warmed-up instance. One acceptance criterion is
+disclosed as only partially met, not silently claimed: a genuine mid-execution generated-callback
+fault (as opposed to a guard-level rejection) is not separately proven for the adapter, since forcing
+one needs a dedicated fault-injectable Burst leaf fixture judged disproportionate to add this pass --
+the underlying `NativeBurstDispatchWorkspaceOwnerV2` atomic-commit mechanics the adapter wraps
+unmodified are already independently proven by its own existing test suite. Full regression:
+`AIBT.Integration.Tests` + 3 CodeGen assemblies 58/58, `AIBT.CodeGen.ContractTests` 6/6,
+`McpDocumentationGeneratorsTests` 12/12, full host EditMode **1739/1742**, the same 3 pre-existing
+unrelated failures as every prior Phase 7 card (2 CodeGen `PackageInfo` assertions, 1
+`LocalSaveSystem` autosave test). Not refreshed this pass, disclosed rather than assumed clean: the
+CI-only `P7-020` public-API baseline, still gated on `P0-005`'s blocked self-hosted runner -- real,
+bounded follow-up owned by `P7-020`, not `P7-037`. See `Planning~/Evidence/P7-037/README.md`.
+`P7-033` is next; `P7-034` and `P7-035` must consume this public production path rather than a
+benchmark or test-only adapter, per `P7-037`'s own handoff notes.

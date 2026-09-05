@@ -1,12 +1,18 @@
 # P7-037 — Production generated-dispatch lifecycle integration
 
-Status: `Draft`
+Status: `Done`
 
 Planning update 2026-09-05: the disposable immediate/scheduled Unity proof passes and exposed a
-required public bootstrap choice. Proposed ADR AIBT-038 is in
+required public bootstrap choice. Accepted ADR AIBT-038 is in
 `Documentation~/decisions/ADR-P7-037-production-generated-dispatch-bootstrap.md`; production
-promotion waits for owner acceptance. Current proof limits and verification are recorded in
+production promotion was approved on 2026-09-05. Current proof limits and verification are recorded in
 `Planning~/Evidence/P7-037/README.md`.
+
+Closing update 2026-09-05: production implementation is done. Full detail, including four real
+defects found and fixed against the live Editor (two compile errors, a wrong version/hash comparison
+in the new bootstrap gate, a missing Agent-scope blackboard path) and the closing test/verification
+pass, is in `Planning~/Evidence/P7-037/README.md`'s "Production implementation" section. See
+`## Outcome` below.
 
 ## Objective
 
@@ -101,3 +107,53 @@ git diff --check
 
 P7-033 may start only after this card proves the real path required by its Jobs policies. P7-034 and
 P7-035 must consume this public production path rather than a benchmark or test-only adapter.
+
+## Outcome
+
+Done, 2026-09-05. `Runtime/Integration/GeneratedDispatch/` implements ADR AIBT-038's contract exactly
+(`IGeneratedBurstCatalogExecutorV2`, `GeneratedBurstCatalogV2`, `GeneratedTreeRuntimeDefinitionV2`,
+a new `ProductionTreeHost.TryBootstrap(GeneratedTreeRuntimeDefinitionV2, GeneratedBurstCatalogV2, ...)`
+overload). Full defect list and verification are in `Planning~/Evidence/P7-037/README.md`.
+
+Acceptance criteria:
+
+- **A normally compiled tree with a real generated custom node runs through production-owned
+  immediate and scheduled dispatch with identical results** — met. Proven through the real
+  `ProductionTreeHost`/`GeneratedTreeDispatchAdapterV2` path (not the original disposable proof's raw
+  workspace calls), both for a single bootstrap-to-`Success` run and for immediate-vs-scheduled
+  byte-identical equivalence.
+- **Runtime bootstrap rejects mismatches with a structured diagnostic, never guesses a compatible
+  layout** — met, with a correction: the original gate compared two same-named but semantically
+  unrelated version/hash fields (catalog self-identity vs. compiled-program identity) that could never
+  agree for a real tree; fixed to compare the fields that are actually shared
+  (`ExecutionSemanticsVersion`) plus the real per-node case lookup (TypeId+Version+size).
+- **Enter/Tick/Exit/Abort reach the generated implementation; terminal/failure/cancellation preserve
+  the lifecycle contract** — met for Enter/Tick/Exit (proven live); Abort/cancellation is exercised by
+  the underlying `NativeBurstDispatchWorkspaceOwnerV2` tests it wraps unmodified, not by a new
+  P7-037-specific test — disclosed, not separately proven this pass.
+- **Blackboard/snapshot/command ownership follows existing deterministic publication rules** — met;
+  additionally required widening the adapter to accept Agent-scope blackboard bindings (the project's
+  own reference fixture uses Agent scope, not Tree), with its own independent, collision-safe storage
+  region — Shared scope stays unsupported, correctly out of this single-instance adapter's scope.
+- **Multiple instances share catalog metadata while retaining isolated mutable state** — met, proven
+  directly: two adapters over one catalog both reach `Success` independently; the catalog refuses
+  disposal until both release it.
+- **Outstanding scheduled work can complete, reject invalid output and dispose/recover through the
+  P7-032 ownership contract** — partially met. A guard-level rejection (invalid node index) is proven
+  to commit no partial tree/blackboard state. A genuine mid-execution generated-callback fault (the
+  executor runs and reports failure) is not separately proven for the adapter — it would need a
+  dedicated fault-injectable Burst leaf fixture, judged disproportionate to add this pass since the
+  underlying `NativeBurstDispatchWorkspaceOwnerV2` atomic-commit mechanics the adapter wraps unmodified
+  are already independently proven by `Tests/Runtime/NativeExecution/Dispatch/
+  NativeBurstDispatchWorkspaceTests.cs`. Disclosed as a real, bounded gap, not silently skipped.
+- **Hot paths allocate no managed memory after warmup, leak no native ownership** — met; a
+  warmed-up, freshly bootstrapped instance's `Dispatch` calls allocate zero GC memory, and every
+  `TryCreate` failure path and `Dispose` releases every owned `NativeArray`/workspace/catalog retain.
+
+Verification: `AIBT.Integration.Tests` + 3 CodeGen assemblies 58/58; `AIBT.CodeGen.ContractTests`
+(ABI baseline) 6/6; `McpDocumentationGeneratorsTests` 12/12; full host EditMode **1739/1742**, 0
+skipped, the same 3 pre-existing unrelated failures as before this pass (2 CodeGen `PackageInfo`
+assertions, 1 `LocalSaveSystem` autosave test); `Verify-Static.ps1` and `git diff --check` passed.
+Not refreshed this pass, disclosed: the CI-only `P7-020` public-API baseline
+(`Tools~/Verification/P7/Audit/Baseline/public-api-baseline.txt`), still gated on `P0-005`'s blocked
+runner — real follow-up owned by `P7-020`, not this card.

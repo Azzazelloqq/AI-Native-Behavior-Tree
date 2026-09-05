@@ -39,10 +39,22 @@ explicit catalog ownership and atomic state commit; ADR AIBT-038 is Proposed for
 The live Unity immediate/scheduled proof passes and also fixed a real core-vs-stdlib registry
 handshake mismatch in Authoring prebinding. Production promotion waits on owner acceptance of AIBT-038.
 
-- P7-028 and review scopes P7-029 through P7-032 are Done. The package working tree was clean.
-- Latest completed full host EditMode run: 1726/1729 passed. Two CodeGen PackageInfo assertions
-  and one LocalSaveSystem autosave test remain failed; do not describe this as an all-green suite.
-- Remaining Phase 7 cards: P7-033 through P7-037, all Draft; execute P7-037 before P7-033.
+**P7-037 is now Done (2026-09-05)**. AIBT-038 was accepted the same day; closing production
+implementation found and fixed four real defects (two compile errors, a wrong version/hash comparison
+in the new bootstrap gate comparing two same-named but unrelated fields, a missing Agent-scope
+blackboard path the project's own reference fixture actually needs) and added 5 new live-proven
+tests, including the real `ProductionTreeHost` bootstrap end-to-end and immediate/scheduled
+equivalence through the actual adapter (not just the disposable low-level proof). `ExpectedPublicAbiV2.txt`
+and the generated API docs were refreshed for the ADR's own approved additive surface. Full detail:
+`Planning~/Evidence/P7-037/README.md`. P7-033 (global scheduler, ADR AIBT-037 already accepted) is
+next; it depends on P7-037.
+
+- P7-028 and review scopes P7-029 through P7-032 are Done. P7-037 is Done. The package working tree
+  is dirty with this closing work, not yet committed as of this note.
+- Latest completed full host EditMode run: 1739/1742 passed. The same two CodeGen PackageInfo
+  assertions and one LocalSaveSystem autosave test remain failed as before P7-037; do not describe
+  this as an all-green suite.
+- Remaining Phase 7 cards: P7-033 through P7-036, all Draft.
 - P0-005 is Review; P0-006 and P1-019 are Blocked in the tracker. Existing evidence requires a
   successful remote Unity CI run. Runner availability must be rechecked live, not inferred from
   historical USER_ACTIONS.md entries.

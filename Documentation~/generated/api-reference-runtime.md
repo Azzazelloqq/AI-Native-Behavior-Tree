@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-255 public type(s).
+258 public type(s).
 
 ---
 
@@ -658,6 +658,15 @@ _No public members declared directly on this type._
 
 ---
 
+### `AIBT.Burst.IGeneratedBurstCatalogExecutorV2`
+
+Closed generated-catalog entry point retained by the production runtime.
+
+- `METHOD AIBT.Burst.BurstExecutionResult ExecuteImmediate(AIBT.Burst.BurstExecutionBatch&)`
+- `METHOD Unity.Jobs.JobHandle Schedule(AIBT.Burst.BurstExecutionBatch&,Unity.Jobs.JobHandle)`
+
+---
+
 ### `AIBT.Burst.SnapshotReadHandle`1`
 
 _No public members declared directly on this type._
@@ -1118,6 +1127,30 @@ _No public members declared directly on this type._
 - `PROPERTY System.Single X`
 - `PROPERTY System.Single Y`
 - `PROPERTY System.Single Z`
+
+---
+
+### `AIBT.GeneratedBurstCatalogV2`
+
+Explicit owner for one source-generated Burst catalog's immutable dispatch metadata. The generated layout blob is validated before the owner becomes usable.
+
+- `METHOD System.Boolean TryCreate(AIBT.Burst.IGeneratedBurstCatalogExecutorV2,AIBT.Burst.BurstCatalogHandshake&,System.Byte[],Unity.Collections.Allocator,AIBT.GeneratedBurstCatalogV2&,AIBT.Burst.BurstContextResult&)`
+- `METHOD System.Boolean TryDispose(AIBT.Burst.BurstContextResult&)`
+- `METHOD System.Void Dispose()`
+- `PROPERTY AIBT.Burst.BurstCatalogFingerprint Fingerprint`
+- `PROPERTY AIBT.Burst.BurstHash256 NodeRegistryFingerprint`
+- `PROPERTY System.Boolean IsCreated`
+- `PROPERTY System.UInt32 Generation`
+- `PROPERTY System.UInt64 OwnerId`
+
+---
+
+### `AIBT.GeneratedTreeRuntimeDefinitionV2`
+
+Immutable, shareable bootstrap definition for a compiled-v2 tree and one exact source-generated dispatch catalog.
+
+- `PROPERTY AIBT.Burst.BurstCatalogFingerprint CatalogFingerprint`
+- `PROPERTY AIBT.CompiledHash ContentHash`
 
 ---
 
@@ -3050,6 +3083,7 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLeaf,AIBT.NativeTraceChannelCapacityV1,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLifecycle,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Void .ctor()`
 - `PROPERTY AIBT.NativeRuntimeFailureV1 LastFailure`
 - `PROPERTY AIBT.NativeTraceChannelOwnerV1 TraceChannelOwner`
