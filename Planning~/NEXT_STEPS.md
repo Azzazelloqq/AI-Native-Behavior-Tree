@@ -28,6 +28,11 @@ production scheduler and custom profiles), followed by P7-034 (Swarm Arena), P7-
 benchmark) and P7-036 (UX/node-library review). P7-033 has a mandatory public-API/automatic-budget
 decision gate before implementation.
 
+P7-033 audit update: ADR AIBT-037 is Proposed. It keeps the zero-input default honestly unbounded,
+supports one fixed or caller-provided global time allowance, and separates that admission budget
+from per-update step suspension. A production generated-dispatch/lifecycle bridge is a newly verified
+prerequisite for real Jobs policies; approve the ADR/split before implementation.
+
 - P7-028 and review scopes P7-029 through P7-032 are Done. The package working tree was clean.
 - Latest completed full host EditMode run: 1726/1729 passed. Two CodeGen PackageInfo assertions
   and one LocalSaveSystem autosave test remain failed; do not describe this as an all-green suite.

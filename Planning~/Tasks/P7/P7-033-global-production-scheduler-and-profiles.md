@@ -58,6 +58,13 @@ accepted decision covering:
 
 Do not start production implementation until this decision is accepted by the owner.
 
+Planning audit completed 2026-09-05. Proposed ADR AIBT-037 and the implementation sequence are in
+`Documentation~/decisions/ADR-P7-033-global-scheduler-and-profiles.md` and
+`Planning~/Evidence/P7-033/`. The audit also found that the existing scheduling benchmark driver
+uses precomputed leaf statuses and cannot serve as production generated-node dispatch. The proposed
+decision therefore requires a separate generated-dispatch/lifecycle prerequisite before this card
+can honestly expose Jobs policies. Owner acceptance is pending; no production code has started.
+
 ## Proposed profile surface
 
 The exact public names are decided at the planning gate. The capability set must cover:
