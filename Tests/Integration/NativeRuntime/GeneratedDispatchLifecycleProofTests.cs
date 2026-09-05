@@ -91,6 +91,88 @@ namespace AIBT.Tests.Integration.NativeRuntime
             typeof(ProductionTreeHost).GetMethod("OnDestroy", BindingFlags.NonPublic | BindingFlags.Instance)
                 .Invoke(host, null);
         }
+
+        [Test]
+        public void GroupDispatch_TwoInstances_ShareOneCatalog_AndReachSuccessThroughOneBatchPerWave()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+
+                var hostObjectA = new GameObject("AIBT.Tests.P7033.GroupHostA");
+                var hostObjectB = new GameObject("AIBT.Tests.P7033.GroupHostB");
+                try
+                {
+                    var hostA = hostObjectA.AddComponent<ProductionTreeHost>();
+                    var hostB = hostObjectB.AddComponent<ProductionTreeHost>();
+                    var traceCapacity = new NativeTraceChannelCapacityV1(
+                        recordCapacity: 65, payloadCapacity: 0, maximumPayloadBytes: 0, emissionCapacity: 256);
+                    Assert.That(hostA.TryBootstrap(definition, catalog, traceCapacity, () => 123_456L, out var bootstrapFailureA),
+                        Is.True, bootstrapFailureA.Code.ToString());
+                    Assert.That(hostB.TryBootstrap(definition, catalog, traceCapacity, () => 123_456L, out var bootstrapFailureB),
+                        Is.True, bootstrapFailureB.Code.ToString());
+
+                    var hosts = new[] { hostA, hostB };
+                    var done = new[] { false, false };
+                    var waveGroupSizes = new List<int>();
+                    var waves = 0;
+                    while (!done[0] || !done[1])
+                    {
+                        Assert.That(waves++, Is.LessThan(10), "The fixture must complete within a small, bounded number of waves.");
+                        var members = new List<GeneratedDispatchGroupExecutorV2.Member>();
+                        for (var index = 0; index < hosts.Length; index++)
+                        {
+                            if (done[index]) continue;
+                            if (hosts[index].TryAdvanceToNextDispatch(out var request))
+                                members.Add(new GeneratedDispatchGroupExecutorV2.Member(hosts[index], request.NodeIndex, request));
+                            else
+                            {
+                                done[index] = true;
+                                Assert.That(hosts[index].LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None));
+                            }
+                        }
+                        if (members.Count > 0)
+                        {
+                            waveGroupSizes.Add(members.Count);
+                            var groupOk = GeneratedDispatchGroupExecutorV2.TryExecuteGroup(
+                                catalog, members, scheduled: false, out var groupFailure);
+                            if (!groupOk)
+                            {
+                                // TryExecuteGroup's own contract: on failure, the caller completes
+                                // every member's pending dispatch with the returned failure so
+                                // disposal below can proceed cleanly.
+                                foreach (var member in members)
+                                    member.Host.CompletePendingDispatch(groupFailure, NodeStatus.Failure);
+                            }
+                            Assert.That(groupOk, Is.True, "wave " + waves + " failed: " + groupFailure);
+                        }
+                    }
+
+                    Assert.That(waveGroupSizes, Has.Some.EqualTo(2),
+                        "At least one real wave must have grouped both instances into a single batch call.");
+                    Assert.That(hostA.LastRootResult, Is.EqualTo(NodeStatus.Success));
+                    Assert.That(hostB.LastRootResult, Is.EqualTo(NodeStatus.Success));
+                }
+                finally
+                {
+                    InvokeOnDestroy(hostObjectA);
+                    UnityEngine.Object.DestroyImmediate(hostObjectA);
+                    InvokeOnDestroy(hostObjectB);
+                    UnityEngine.Object.DestroyImmediate(hostObjectB);
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
         [Test]
         public void GeneratedFactory_MaterializesValidatedRuntimeCatalogAndCompiledDefinition()
         {

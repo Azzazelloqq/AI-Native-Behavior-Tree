@@ -1,8 +1,8 @@
 # P7-033 evidence
 
-Status: **In Progress**. Steps 0-4 of `implementation-plan.md` are done; step 5 (deterministic policy
-selection integrated with real population-level generated-dispatch grouping) and step 6
-(explainability) remain.
+Status: **In Progress**. Steps 0-4 of `implementation-plan.md` are done. Step 5's cross-instance
+generated-dispatch grouping mechanism is built and proven; wiring it into the coordinator's own
+deterministic policy selection (step 5's remainder) and step 6 (explainability) remain.
 
 ## Steps 2-4 (2026-09-05)
 
@@ -51,11 +51,55 @@ selection integrated with real population-level generated-dispatch grouping) and
 - `Verify-Static.ps1` and `git diff --check` passed. Generated API docs regenerated for the new
   additive public surface via `AIBT/MCP/Regenerate Documentation`.
 
+## Step 5, part 1: cross-instance group dispatch (2026-09-05)
+
+`GeneratedTreeDispatchAdapterV2` (P7-037) previously dispatched exactly one node for one instance
+per call -- no cross-instance grouping existed. Built the grouping mechanism required for real
+`BatchedJobsSameFrame`/`PipelinedJobs` support:
+
+- `Runtime/Integration/GeneratedDispatch/GeneratedDispatchGroupParticipantV2.cs` -- one agent's own
+  request/config/memory/binding data, prepared without copying its persistent storage.
+- `GeneratedTreeDispatchAdapterV2.TryPrepareGroupParticipant`/`TryCommitGroupParticipant` -- the
+  adapter's own per-agent prepare/commit halves of the existing single-instance `DispatchSlot.Execute`
+  preamble/postamble, reused rather than duplicated.
+- `GeneratedDispatchGroupExecutorV2.TryExecuteGroup` -- builds one shared
+  `NativeBurstDispatchBatchOwnerV2` batch spanning every participating agent's own request, executes
+  it as exactly one immediate or scheduled call, and commits each participant's own result back
+  through its own adapter. A rejected/faulted batch commits no participant's memory or blackboard
+  state.
+- `ProductionTreeHost.TryAdvanceToNextDispatch`/`CompletePendingDispatch` -- inverted the host's own
+  drive loop so a coordinator-driven group wave can pause a host mid-segment at exactly its next
+  `DispatchRequired` step and resume it later with the group's own result, instead of the host
+  driving itself start-to-finish per `RunSegment`.
+
+Two defects found and fixed empirically (via live Unity MCP bisection, not guessed):
+1. `NativeBurstDispatchBindingInputV2`'s `completions`/`completionPayloadBytes` were constructed with
+   `default` instead of a genuinely-allocated zero-length array; `default(NativeArray<T>.ReadOnly)`
+   reports `IsCreated=false`, failing the validator's own enabled-branch consistency gate that the
+   single-instance `DispatchSlot.TryCreate` path already satisfies by convention.
+2. The shared batch copied each participant's `TargetOrdinal` verbatim. `TargetOrdinal` is a
+   structural blackboard-slot index, identical across every instance of the same tree type by
+   design -- so two different agents' own, separately-stored slot 0 collided and were rejected by
+   the validator's own same-identity consistency check (`NativeBurstDispatchBindingValidationV2`,
+   unmodified -- confirmed by a pre-existing test, `LiveValueRanges_OnlyExactSemanticAliasesAreAccepted`,
+   that intentionally locks in "same (Scope, TargetOrdinal) implies same live storage" independent of
+   tree instance). Fixed by shifting each participant's own target ordinals into a disjoint range
+   before building the shared batch, exactly mirroring the existing `LiveValueOffset` shift.
+
+Verified live: `GroupDispatch_TwoInstances_ShareOneCatalog_AndReachSuccessThroughOneBatchPerWave`
+drives two `ProductionTreeHost`s sharing one catalog to `NodeStatus.Success` through exactly one
+`NativeBurstDispatchBatchOwnerV2.TryCreate` call per wave (3/3 waves grouped both instances). Full
+regression: 796/796 in the directly-relevant assemblies (`AIBT.Runtime.Tests`,
+`AIBT.Integration.Tests`, `AIBT.NativeBurstDispatch.Tests`); 613/615 in the remaining assemblies, the
+2 failures pre-existing and unrelated (`GeneratedArtifactContractTests` package-path resolution).
+
 ## Remaining scope
 
-Step 5 is the largest remaining piece: `GeneratedTreeDispatchAdapterV2` (P7-037) currently dispatches
-one node for one instance per call -- no cross-instance grouping exists yet. Real `BatchedJobsSameFrame`/
-`PipelinedJobs` support requires building that grouping, wiring `NativeWorkEstimatorV1`/
-`NativeAutoSelectionV1.TrySelect` into the coordinator's own per-due-group decision, and driving
-Immediate/Budgeted through the existing single-instance path unchanged. Step 6 (explainability
-snapshot) builds on step 5's own selection/grouping decisions.
+Step 5, part 2: wire `GeneratedDispatchGroupExecutorV2` into `ProductionTreeScheduler`'s own
+admission loop -- build supported-policy masks from backend/catalog capability and profile latency
+permission, feed estimates into the existing deterministic `NativeAutoSelectionV1.TrySelect` per
+due-group, and drive Immediate/Budgeted through the existing single-instance path while Jobs
+policies route through the new group executor, all through one result contract. Needs tests for
+forced-policy contradictions, deadline deferral, non-preemptible overrun and disposal while a group
+batch is outstanding. Step 6 (explainability snapshot) builds on step 5's own selection/grouping
+decisions.

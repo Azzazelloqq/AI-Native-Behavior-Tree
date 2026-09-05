@@ -8,9 +8,16 @@ registration/ownership (`ProductionTreeHost` refactored behind an internal `Driv
 point, standalone behavior unchanged), and deterministic due ordering/budget admission (deadline,
 eligible age, one-shot urgency, priority, stable-ID tiebreak; `Unbounded`/`Fixed`/`Provider` budget
 modes; per-profile budget-share caps; honest cold-start, never guessing an unmeasured cost). 54 new
-tests, all passing live against the real Editor. Step 5 (deterministic policy selection integrated
-with real population-level generated-dispatch grouping through `GeneratedTreeDispatchAdapterV2`) and
-step 6 (explainability) remain.
+tests, all passing live against the real Editor.
+
+Step 5's cross-instance group-dispatch mechanism is also built and proven: `ProductionTreeHost`
+gained a pause/resume drive entry point (`TryAdvanceToNextDispatch`/`CompletePendingDispatch`), and a
+new `GeneratedDispatchGroupExecutorV2` batches multiple agents' generated-dispatch requests through
+exactly one `NativeBurstDispatchBatchOwnerV2` call per wave. Verified live with two real
+`ProductionTreeHost`s sharing one catalog reaching `NodeStatus.Success` through one shared batch per
+wave; full regression clean (see `Planning~/Evidence/P7-033/README.md` for the two defects found and
+fixed). Wiring this into the coordinator's own deterministic policy selection (step 5's remainder)
+and step 6 (explainability) remain.
 
 ## Objective
 

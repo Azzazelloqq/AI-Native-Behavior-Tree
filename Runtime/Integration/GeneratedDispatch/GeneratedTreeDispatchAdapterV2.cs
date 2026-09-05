@@ -137,6 +137,60 @@ namespace AIBT
             return true;
         }
 
+        /// <summary>The exact catalog identity this instance was bound to -- a group wave's own grouping key (only instances sharing one catalog can share one batch call).</summary>
+        internal GeneratedBurstCatalogV2 Catalog => _catalog;
+
+        /// <summary>
+        /// Prepares one node's own request/config/memory/binding data for a
+        /// <see cref="ProductionTreeScheduler"/> group wave, without touching this slot's own
+        /// single-request workspace. See <see cref="DispatchSlot.TryPrepareForGroup"/>.
+        /// </summary>
+        internal bool TryPrepareGroupParticipant(
+            uint nodeIndex,
+            in ProductionTreeHost.DispatchRequest hostRequest,
+            out GeneratedDispatchGroupParticipantV2 participant,
+            out BurstContextResult failure)
+        {
+            participant = default;
+            if (_disposed || nodeIndex >= _slots.Length)
+            {
+                failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
+            var slot = _slots[nodeIndex];
+            if (slot == null)
+            {
+                failure = BurstContextResult.TypeMismatch;
+                return false;
+            }
+            return slot.TryPrepareForGroup(
+                _definition.Binding, _catalog, _treeValues, _agentBaseOffset,
+                in hostRequest, _treeInstanceId, out participant, out failure);
+        }
+
+        /// <summary>Commits one node's own portion of a completed group wave. See <see cref="DispatchSlot.TryCommitFromGroup"/>.</summary>
+        internal bool TryCommitGroupParticipant(
+            uint nodeIndex,
+            NativeArray<byte>.ReadOnly committedMemory,
+            NativeArray<byte>.ReadOnly committedBindingValues,
+            out BurstContextResult failure)
+        {
+            if (_disposed || nodeIndex >= _slots.Length)
+            {
+                failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
+            var slot = _slots[nodeIndex];
+            if (slot == null)
+            {
+                failure = BurstContextResult.TypeMismatch;
+                return false;
+            }
+            return slot.TryCommitFromGroup(
+                _definition.Binding, _treeValues, _treeVersions, _agentBaseOffset,
+                committedMemory, committedBindingValues, out failure);
+        }
+
         private BurstContextResult Dispatch(
             in ProductionTreeHost.DispatchRequest request,
             bool scheduled,
@@ -416,6 +470,88 @@ namespace AIBT
                 if (!_workspace.TryAcknowledgePublishedCommands(in lease, out failure)
                     || !_workspace.TryReset(in lease, out failure)) return failure;
                 return callback;
+            }
+
+            /// <summary>
+            /// Same activation/memory-clear/tree-value-snapshot preamble as <see cref="Execute"/>,
+            /// but stops before touching this slot's own <see cref="_workspace"/> -- the returned
+            /// participant exposes this slot's own persistent storage directly (not a copy) for a
+            /// <see cref="ProductionTreeScheduler"/> group wave to fold into one shared batch.
+            /// </summary>
+            internal bool TryPrepareForGroup(
+                NativeProgramBlackboardBindingV2 programBinding,
+                GeneratedBurstCatalogV2 catalog,
+                NativeArray<byte> treeValues,
+                uint agentBaseOffset,
+                in ProductionTreeHost.DispatchRequest hostRequest,
+                TreeInstanceId treeInstanceId,
+                out GeneratedDispatchGroupParticipantV2 participant,
+                out BurstContextResult failure)
+            {
+                participant = default;
+                if (_disposed)
+                {
+                    failure = BurstContextResult.InvalidHandle;
+                    return false;
+                }
+                var node = programBinding.SemanticProgram.Nodes[(int)_nodeIndex];
+                if (hostRequest.Phase == BurstCallbackPhase.Enter)
+                {
+                    if (_activationGeneration == uint.MaxValue)
+                    {
+                        failure = BurstContextResult.Overflow;
+                        return false;
+                    }
+                    _activationGeneration++;
+                    if (node.MemoryLifetime == NodeMemoryLifetime.Activation) Clear(_memory);
+                }
+                if (_activationGeneration == 0) _activationGeneration = 1;
+                if (!SnapshotTreeValues(programBinding, treeValues, agentBaseOffset))
+                {
+                    failure = BurstContextResult.InvalidHandle;
+                    return false;
+                }
+
+                participant = new GeneratedDispatchGroupParticipantV2(
+                    node.NodeTypeId, node.NodeTypeVersion, _caseIndex, hostRequest.Phase,
+                    _configuration, _memory, _randomStates, _randomIncrements,
+                    _resolvedBindings, _bindingValues, treeInstanceId, _activationGeneration,
+                    hostRequest.AbortReason, hostRequest.ExitReason);
+                failure = BurstContextResult.Success;
+                return true;
+            }
+
+            /// <summary>
+            /// Writes a group wave's own committed memory/binding-value bytes for this one
+            /// participant back into this slot's persistent storage (so the next tick sees it, same
+            /// as <see cref="Execute"/>'s own single-request path) and commits tree/blackboard
+            /// values. The caller (the group executor) has already verified the shared batch
+            /// succeeded and carries no commands before calling this -- command publication is not
+            /// yet supported for grouped dispatch, a disclosed P7-033 gap, not silently dropped.
+            /// </summary>
+            internal bool TryCommitFromGroup(
+                NativeProgramBlackboardBindingV2 programBinding,
+                NativeArray<byte> treeValues,
+                NativeArray<ulong> treeVersions,
+                uint agentBaseOffset,
+                NativeArray<byte>.ReadOnly committedMemory,
+                NativeArray<byte>.ReadOnly committedBindingValues,
+                out BurstContextResult failure)
+            {
+                if (_disposed || committedMemory.Length != _memory.Length || committedBindingValues.Length != _bindingValues.Length)
+                {
+                    failure = BurstContextResult.InvalidHandle;
+                    return false;
+                }
+                for (var index = 0; index < _memory.Length; index++) _memory[index] = committedMemory[index];
+                for (var index = 0; index < _bindingValues.Length; index++) _bindingValues[index] = committedBindingValues[index];
+                if (!CommitTreeValues(programBinding, treeValues, treeVersions, agentBaseOffset))
+                {
+                    failure = BurstContextResult.Overflow;
+                    return false;
+                }
+                failure = BurstContextResult.Success;
+                return true;
             }
 
             internal bool TryGetLastPublishedCommand(uint index, out NativeBurstDispatchCommandV2 command)

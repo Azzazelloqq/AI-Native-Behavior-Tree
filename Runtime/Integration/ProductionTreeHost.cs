@@ -56,6 +56,8 @@ namespace AIBT
         private bool _destroyRequested;
         private bool _disposed;
         private ProductionTreeScheduler _owner;
+        private NativeLifecycleStepResultV1 _pendingStep;
+        private bool _hasPendingStep;
 
         /// <summary>The instance-owned trace channel, available until destruction.</summary>
         public NativeTraceChannelOwnerV1 TraceChannelOwner { get; private set; }
@@ -69,6 +71,14 @@ namespace AIBT
         public ulong InstanceId { get; private set; }
         /// <summary>Null selects Immediate; otherwise limits native steps per frame. Zero pauses progress.</summary>
         public uint? StepBudget { get; set; }
+
+        /// <summary>
+        /// This host's own generated-catalog dispatch bridge, if bootstrapped through the generated
+        /// overload; null for the legacy delegate-based overloads. A <see cref="ProductionTreeScheduler"/>
+        /// group wave uses this to fold this host's own pending request into a shared batch -- never
+        /// exposed for any other purpose.
+        /// </summary>
+        internal GeneratedTreeDispatchAdapterV2 GeneratedDispatchAdapter => _generatedDispatch;
 
         /// <summary>Bootstraps a Tick-only integration with scaled Unity time and no-op lifecycle callbacks.</summary>
         public bool TryBootstrap(CompiledProgram program, DispatchLeaf dispatch,
@@ -241,6 +251,142 @@ namespace AIBT
             catch (Exception exception)
             {
                 Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+            }
+            finally
+            {
+                _driving = false;
+                if (_destroyRequested) DisposeHost();
+            }
+        }
+
+        /// <summary>
+        /// True while this host has advanced to a dispatch requirement not yet resolved via
+        /// <see cref="CompletePendingDispatch"/> -- a <see cref="ProductionTreeScheduler"/> wave in
+        /// flight. A second overlapping wave step is refused, matching the existing single-driver
+        /// invariant this host has always held (<see cref="_driving"/>).
+        /// </summary>
+        internal bool HasPendingDispatch => _hasPendingStep;
+
+        /// <summary>
+        /// Advances until the next dispatch requirement -- returned unresolved for a caller-owned
+        /// wave batch, never auto-resolved -- or the update segment reaches Completed/Waiting.
+        /// Reserved for <see cref="ProductionTreeScheduler"/>'s own generated-catalog group
+        /// dispatch; unlike <see cref="DriveOneUpdate"/>, the caller alone decides how the returned
+        /// request is resolved and must call <see cref="CompletePendingDispatch"/> exactly once
+        /// before advancing this host again. Never mixed with <see cref="DriveOneUpdate"/> on the
+        /// same host in the same update -- both share the identical reentrancy guard.
+        /// </summary>
+        internal bool TryAdvanceToNextDispatch(out DispatchRequest request)
+        {
+            request = default;
+            if (!_ready || !isActiveAndEnabled || _disposed || _destroyRequested || _hasPendingStep) return false;
+            if (_driving)
+            {
+                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                return false;
+            }
+            _driving = true;
+            var resolvedWithinThisCall = false;
+            try
+            {
+                if (!_updateOpen)
+                {
+                    var now = _clock();
+                    if (!_ready || _destroyRequested) return false;
+                    if (now < 0 || (_updateId != 0 && now < _timeMicroseconds))
+                    {
+                        Fail(InvalidLifetime(), "Clock must return nonnegative, nondecreasing microseconds.");
+                        return false;
+                    }
+                    if (!BeginUpdate(now)) return false;
+                }
+                else if (_suspended)
+                {
+                    _recorder.RecordExecutionResumed(_updateId);
+                    _suspended = false;
+                }
+                var found = AdvanceOneStepForGroupedDispatch(out request);
+                resolvedWithinThisCall = !_hasPendingStep;
+                return found;
+            }
+            catch (Exception exception)
+            {
+                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+                resolvedWithinThisCall = true;
+                return false;
+            }
+            finally
+            {
+                // A pending step deliberately keeps _driving held across this call's own return --
+                // released only once CompletePendingDispatch resolves it, mirroring DriveOneUpdate's
+                // own hold for the whole (synchronous, here caller-paced) duration of one dispatch.
+                if (resolvedWithinThisCall)
+                {
+                    _driving = false;
+                    if (_destroyRequested) DisposeHost();
+                }
+            }
+        }
+
+        private bool AdvanceOneStepForGroupedDispatch(out DispatchRequest request)
+        {
+            // NativeLifecycleStepKindV1 has several internal-progress kinds (CompositeEntered,
+            // ChildSelected, ...) that carry nothing for a caller to act on -- exactly what
+            // RunSegment's own while loop already keeps calling TryAdvance through. A wave barrier
+            // is reached only at DispatchRequired (return it unresolved) or Completed/Waiting
+            // (nothing pending this update); every other kind must keep advancing right here.
+            request = default;
+            while (_ready)
+            {
+                if (!_agents[0].Machine.TryAdvance(out var step, out var failure))
+                {
+                    Fail(failure, "Cannot advance execution.");
+                    return false;
+                }
+                _hasExecuted = true;
+                _recorder.RecordStep(_updateId, step);
+                if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
+                {
+                    _pendingStep = step;
+                    _hasPendingStep = true;
+                    request = new DispatchRequest(step, _updateId, _timeMicroseconds);
+                    return true;
+                }
+                if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting)
+                {
+                    _updateOpen = false;
+                    _recorder.RecordUpdateEnded(_updateId, step.HasRootStatus, step.RootStatus);
+                    if (step.Kind == NativeLifecycleStepKindV1.Completed)
+                    {
+                        if (step.HasRootStatus) LastRootResult = step.RootStatus;
+                        _ready = false;
+                    }
+                    break;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Resolves the single dispatch requirement <see cref="TryAdvanceToNextDispatch"/> most
+        /// recently returned. Returns false, without mutating the machine, if no wave step is
+        /// currently pending (a caller error) or the host already faulted reentrantly.
+        /// </summary>
+        internal bool CompletePendingDispatch(BurstContextResult result, NodeStatus status)
+        {
+            if (!_hasPendingStep) return false;
+            var step = _pendingStep;
+            _hasPendingStep = false;
+            try
+            {
+                if (!_ready) return false; // A reentrant call may already have faulted the host.
+                if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out var failure))
+                {
+                    Fail(failure, "Callback rejected: " + result);
+                    return false;
+                }
+                _recorder.RecordDispatchCompletion(_updateId, step, status);
+                return true;
             }
             finally
             {
