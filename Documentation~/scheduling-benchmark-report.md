@@ -53,14 +53,20 @@ IL2CPP/Burst Player on one physical Google Pixel 10 Pro, three warmups and seven
 [Windows Player JSON](../Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821.json)
 and [Android Player JSON](../Benchmarks~/Phase4/Platform/Android/Results/android-player-scheduling-20260821.json).
 
-## Auto does not remove the tradeoff
+## Auto was recalibrated after the original comparison
 
-The existing same-frame Editor comparison selected a policy through `Auto` for 24 cases. It
-underperformed the best measured fixed policy in **23 of 24** cases. In the cases where it selected
+The original same-frame Editor comparison selected a policy through `Auto` for 24 cases and
+underperformed the best measured fixed policy in **23 of 24**. When it selected
 `BatchedJobsSameFrame`, the gap was **+188.30% to +1,773.99%**. Every selection had `Low`
-confidence because the estimator was cold-started with one observation per case. These numbers come
-from the canonical [Auto comparison JSON](../Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json);
-they are Editor measurements and must not be mixed with the Player medians above.
+confidence because the estimator was cold-started with one observation per case. These historical
+numbers remain in the [original Auto JSON](../Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json).
+
+P6-019 then changed the deterministic same-frame preference to try `Immediate`/`Budgeted` before
+`BatchedJobsSameFrame`, without adding a new threshold. The same 24-case methodology was rerun on
+2026-08-31: current `Auto` selected `Immediate` and matched the best fixed policy in **24 of 24**
+cases. The [post-recalibration JSON](../Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260831-124156.json)
+is the current behavior evidence. Both comparisons are Editor measurements and must not be mixed
+with the Player medians above.
 
 ## Interpretation and limits
 
@@ -83,6 +89,6 @@ From the package root, use Python 3 with no third-party dependencies:
 python Planning~/Evidence/P7-024/generate_report_data.py --check
 ```
 
-Omit `--check` to rebuild `derived-data.json` and the SVG from the three committed source JSON
+Omit `--check` to rebuild `derived-data.json` and the SVG from the four committed source JSON
 files. The generator validates that every Player case contains exactly the three comparable fixed
 policies before producing the chart.

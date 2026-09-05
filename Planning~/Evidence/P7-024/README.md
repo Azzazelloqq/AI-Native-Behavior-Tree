@@ -18,7 +18,8 @@ populations. This is a descriptive result, not a new default or threshold.
 
 ## Artifact provenance
 
-- `generate_report_data.py` reads the canonical Windows Player, Android Player and Auto Editor JSON.
+- `generate_report_data.py` reads the canonical Windows/Android Player JSON plus the Auto Editor
+  comparisons before and after P6-019 recalibration.
 - `derived-data.json` records every source path and SHA-256, all 42 normalized Player points, the
   ratio formula and the Auto summary.
 - `jobs-vs-non-jobs.svg` is deterministic output generated without third-party packages.
@@ -51,6 +52,7 @@ The 2026-09-04 verification passed:
 - Windows: one release IL2CPP/Burst run on one Intel Core Ultra 9 275HX workstation.
 - Android: one release IL2CPP/Burst run on one physical Google Pixel 10 Pro.
 - `PipelinedJobs` has no committed Phase 4 performance result.
-- `Auto` evidence is Editor-only, same-frame and cold-estimator (`Low` confidence in all 24 cases).
+- `Auto` evidence is Editor-only and same-frame. The cold estimator had `Low` confidence in all 24
+  cases; current post-P6-019 behavior nevertheless matched the best fixed policy in 24/24 cases.
 - Web has no Unity worker-Job policy and is outside the comparison chart.
 - The catalog contains six small built-in-node scenarios; it does not establish a universal policy.

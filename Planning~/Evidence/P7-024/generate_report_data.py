@@ -18,10 +18,12 @@ SOURCES = {
     "Android ARM64 Player": ROOT
     / "Benchmarks~/Phase4/Platform/Android/Results/android-player-scheduling-20260821.json",
 }
-AUTO_SOURCE = (
-    ROOT
-    / "Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json"
-)
+AUTO_SOURCES = {
+    "beforeP6-019": ROOT
+    / "Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json",
+    "afterP6-019": ROOT
+    / "Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260831-124156.json",
+}
 SCENARIO_LABELS = {
     "scheduling-baseline-empty-job": "Baseline leaf",
     "shallow-tree-cheap-conditions": "Shallow sequence",
@@ -91,8 +93,8 @@ def load_player_points() -> tuple[list[dict], dict]:
     return points, source_metadata
 
 
-def load_auto_summary() -> dict:
-    document = json.loads(AUTO_SOURCE.read_text(encoding="utf-8"))
+def load_auto_summary(path: Path) -> dict:
+    document = json.loads(path.read_text(encoding="utf-8"))
     cases = [case for scenario in document["scenarios"] for case in scenario["cases"]]
     underperforming = [case for case in cases if case["outcome"] == "Underperforms"]
     jobs_cases = [
@@ -100,15 +102,17 @@ def load_auto_summary() -> dict:
     ]
     return {
         "source": {
-            "path": relative(AUTO_SOURCE),
-            "sha256": sha256(AUTO_SOURCE),
+            "path": relative(path),
+            "sha256": sha256(path),
             "schema": document["schema"],
         },
         "caseCount": len(cases),
         "underperformingCaseCount": len(underperforming),
         "matchingOrBetterCaseCount": len(cases) - len(underperforming),
         "confidenceValues": sorted({case["autoConfidence"] for case in cases}),
-        "jobsSelectionUnderperformanceGapPercent": {
+        "jobsSelectionUnderperformanceGapPercent": None
+        if not jobs_cases
+        else {
             "minimum": round(min(case["gapPercent"] for case in jobs_cases), 4),
             "maximum": round(max(case["gapPercent"] for case in jobs_cases), 4),
         },
@@ -118,7 +122,7 @@ def load_auto_summary() -> dict:
 def build_data() -> dict:
     points, sources = load_player_points()
     return {
-        "schema": "aibt-p7-024-showcase-derived-v1",
+        "schema": "aibt-p7-024-showcase-derived-v2",
         "metric": (
             "BatchedJobsSameFrame median nanoseconds per agent divided by the lower of "
             "Immediate and Budgeted median nanoseconds per agent for the same platform, "
@@ -127,7 +131,9 @@ def build_data() -> dict:
         "rounding": "Ratios are rounded to four decimal places after division.",
         "playerSources": sources,
         "playerPoints": points,
-        "autoEditorSummary": load_auto_summary(),
+        "autoEditorComparisons": {
+            label: load_auto_summary(path) for label, path in AUTO_SOURCES.items()
+        },
     }
 
 

@@ -1,5 +1,5 @@
 {
-  "schema": "aibt-p7-024-showcase-derived-v1",
+  "schema": "aibt-p7-024-showcase-derived-v2",
   "metric": "BatchedJobsSameFrame median nanoseconds per agent divided by the lower of Immediate and Budgeted median nanoseconds per agent for the same platform, scenario, and population.",
   "rounding": "Ratios are rounded to four decimal places after division.",
   "playerSources": {
@@ -438,21 +438,37 @@
       "batchedToFastestNonJobsRatio": 17.7158
     }
   ],
-  "autoEditorSummary": {
-    "source": {
-      "path": "Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json",
-      "sha256": "b9ebc85cde851329d4df04094c6057ae553f5e67434bada5377440c530d1c8f3",
-      "schema": "aibt-p4-006-auto-comparison-v1"
+  "autoEditorComparisons": {
+    "beforeP6-019": {
+      "source": {
+        "path": "Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json",
+        "sha256": "b9ebc85cde851329d4df04094c6057ae553f5e67434bada5377440c530d1c8f3",
+        "schema": "aibt-p4-006-auto-comparison-v1"
+      },
+      "caseCount": 24,
+      "underperformingCaseCount": 23,
+      "matchingOrBetterCaseCount": 1,
+      "confidenceValues": [
+        "Low"
+      ],
+      "jobsSelectionUnderperformanceGapPercent": {
+        "minimum": 188.3028,
+        "maximum": 1773.9927
+      }
     },
-    "caseCount": 24,
-    "underperformingCaseCount": 23,
-    "matchingOrBetterCaseCount": 1,
-    "confidenceValues": [
-      "Low"
-    ],
-    "jobsSelectionUnderperformanceGapPercent": {
-      "minimum": 188.3028,
-      "maximum": 1773.9927
+    "afterP6-019": {
+      "source": {
+        "path": "Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260831-124156.json",
+        "sha256": "6b3ff965d206442258ce62645dda7165af14682088139b558f8be8de6192eb86",
+        "schema": "aibt-p4-006-auto-comparison-v1"
+      },
+      "caseCount": 24,
+      "underperformingCaseCount": 0,
+      "matchingOrBetterCaseCount": 24,
+      "confidenceValues": [
+        "Low"
+      ],
+      "jobsSelectionUnderperformanceGapPercent": null
     }
   }
 }
