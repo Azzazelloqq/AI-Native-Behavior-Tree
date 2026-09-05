@@ -23,10 +23,15 @@ Windows/Android Player points into a reproducible chart and keeps `PipelinedJobs
 measurement explicit. See [evidence](Evidence/P7-024/README.md). Phase 7's planned implementation
 queue is complete; integration and release readiness is next.
 
+Update 2026-09-05: the owner added four Draft scopes. The next planning target is P7-033 (global
+production scheduler and custom profiles), followed by P7-034 (Swarm Arena), P7-035 (release Player
+benchmark) and P7-036 (UX/node-library review). P7-033 has a mandatory public-API/automatic-budget
+decision gate before implementation.
+
 - P7-028 and review scopes P7-029 through P7-032 are Done. The package working tree was clean.
 - Latest completed full host EditMode run: 1726/1729 passed. Two CodeGen PackageInfo assertions
   and one LocalSaveSystem autosave test remain failed; do not describe this as an all-green suite.
-- Remaining Phase 7 cards in this plan: none.
+- Remaining Phase 7 cards: P7-033 through P7-036, all Draft.
 - P0-005 is Review; P0-006 and P1-019 are Blocked in the tracker. Existing evidence requires a
   successful remote Unity CI run. Runner availability must be rechecked live, not inferred from
   historical USER_ACTIONS.md entries.

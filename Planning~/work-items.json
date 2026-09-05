@@ -2081,6 +2081,59 @@
       ]
     },
     {
+      "id": "P7-033",
+      "phase": 7,
+      "title": "Global production scheduler and custom scheduling profiles",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-033-global-production-scheduler-and-profiles.md",
+      "dependsOn": ["P4-004", "P4-005", "P6-019", "P7-024", "P7-030", "P7-032"],
+      "owns": [
+        "Runtime/Scheduling/Production/",
+        "Tests/Runtime/Integration/ProductionScheduling/",
+        "Planning~/Evidence/P7-033/"
+      ]
+    },
+    {
+      "id": "P7-034",
+      "phase": 7,
+      "title": "Swarm Arena gameplay and behavior-tree showcase",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-034-swarm-arena-showcase.md",
+      "dependsOn": ["P7-023", "P7-027", "P7-028", "P7-030", "P7-033"],
+      "owns": [
+        "Samples~/SwarmArena/",
+        "Planning~/Evidence/P7-034/"
+      ]
+    },
+    {
+      "id": "P7-035",
+      "phase": 7,
+      "title": "Swarm Arena deterministic Player benchmark",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-035-swarm-arena-player-benchmark.md",
+      "dependsOn": ["P4-008", "P7-024", "P7-033", "P7-034"],
+      "owns": [
+        "Benchmarks~/Phase7/SwarmArena/",
+        "Documentation~/scheduling-benchmark-report.md",
+        "Planning~/Evidence/P7-035/"
+      ]
+    },
+    {
+      "id": "P7-036",
+      "phase": 7,
+      "title": "Swarm Arena UX and node-library review",
+      "status": "draft",
+      "kind": "review",
+      "card": "Planning~/Tasks/P7/P7-036-swarm-arena-ux-and-node-review.md",
+      "dependsOn": ["P7-034", "P7-035"],
+      "owns": [
+        "Planning~/Evidence/P7-036/"
+      ]
+    },
+    {
       "id": "P7-020",
       "phase": 7,
       "title": "CI-enforced public API diff check",

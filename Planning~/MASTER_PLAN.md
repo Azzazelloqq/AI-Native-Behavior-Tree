@@ -20,6 +20,13 @@ Windows/Android Player points for plain loops and same-frame Unity Jobs. The rep
 records that `PipelinedJobs` has no committed Phase 4 measurement. See
 [evidence](Evidence/P7-024/README.md). The planned Phase 7 implementation queue is complete.
 
+2026-09-05 update: four new owner-requested Draft scopes extend Phase 7. `P7-033` adds the missing
+population-level scheduler and custom profiles without arbitrary numeric defaults. `P7-034` builds
+an importable Swarm Arena gameplay showcase. `P7-035` measures that exact workload in release Player
+builds, including real pipelined latency. `P7-036` reviews onboarding, profile UX, performance claims
+and evidence-backed candidates for the generic node library. Execute them in that order; public
+scheduler semantics in P7-033 require an accepted planning decision before code.
+
 ## Required reading order
 
 1. Repository `AGENTS.md`.
