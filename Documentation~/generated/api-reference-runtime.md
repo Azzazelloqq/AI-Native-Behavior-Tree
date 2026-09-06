@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-265 public type(s).
+267 public type(s).
 
 ---
 
@@ -3106,8 +3106,10 @@ One population-level production coordinator per independently scheduled AI world
 - `METHOD System.Boolean TryRegister(AIBT.ProductionTreeHost,AIBT.SchedulingProfile,AIBT.SchedulerRegistrationError&)`
 - `METHOD System.Boolean TryUnregister(AIBT.ProductionTreeHost)`
 - `METHOD System.Void .ctor()`
+- `METHOD System.Void ClearJobsCapabilities()`
 - `METHOD System.Void SetBudgetProvider(System.Func`1<System.Double>)`
 - `METHOD System.Void SetFixedBudget(System.Double)`
+- `METHOD System.Void SetJobsCapabilities(AIBT.SchedulerJobsCapabilities)`
 - `METHOD System.Void SetUnboundedBudget()`
 - `PROPERTY AIBT.SchedulerBudgetMode BudgetMode`
 - `PROPERTY System.Boolean LastFrameOverran`
@@ -3194,6 +3196,28 @@ The three budget-source modes <c>Documentation~/decisions/ADR-P7-033-global-sche
 - `FIELD AIBT.SchedulerBudgetMode Fixed`
 - `FIELD AIBT.SchedulerBudgetMode Provider`
 - `FIELD AIBT.SchedulerBudgetMode Unbounded`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.SchedulerJobsCapabilities`
+
+Explicit, caller-authored tuning for <see cref="ProductionTreeScheduler"/>'s own Jobs-policy selection (<c>NativeAutoConfigurationV1</c>'s <c>MinimumJobWorkloadNanoseconds</c>/ <c>TargetBatchWorkNanoseconds</c>/batch-size bounds) -- never a hidden default, per ADR-P7-033/P7-033's own "no hidden arbitrary budget, weight or latency default" clause. Until a caller sets this via <see cref="ProductionTreeScheduler.SetJobsCapabilities"/>, <c>BatchedJobsSameFrame</c>/<c>PipelinedJobs</c> are simply absent from the coordinator's own supported-policy set: an unmeasured batch-work target is never guessed, so a forced Jobs policy fails with a structured diagnostic rather than silently using an invented number.
+
+- `METHOD System.Boolean TryCreate(System.Double,System.Double,System.UInt32,System.UInt32,System.UInt32,AIBT.SchedulerJobsCapabilities&,AIBT.SchedulerJobsCapabilitiesValidationError&)`
+
+---
+
+### `AIBT.SchedulerJobsCapabilitiesValidationError`
+
+Why <see cref="SchedulerJobsCapabilities.TryCreate"/> refused to build a capability set. Never silently clamped.
+
+- `FIELD AIBT.SchedulerJobsCapabilitiesValidationError MemoryLimitBatchSizeMustBeAtLeastOne`
+- `FIELD AIBT.SchedulerJobsCapabilitiesValidationError MinimumJobWorkloadNanosecondsMustBePositive`
+- `FIELD AIBT.SchedulerJobsCapabilitiesValidationError None`
+- `FIELD AIBT.SchedulerJobsCapabilitiesValidationError PolicyMaxBatchSizeBelowMinimum`
+- `FIELD AIBT.SchedulerJobsCapabilitiesValidationError PolicyMinBatchSizeMustBeAtLeastOne`
+- `FIELD AIBT.SchedulerJobsCapabilitiesValidationError TargetBatchWorkNanosecondsMustBePositive`
 - `FIELD System.Byte value__`
 
 ---

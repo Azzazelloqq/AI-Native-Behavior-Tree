@@ -10,14 +10,23 @@ eligible age, one-shot urgency, priority, stable-ID tiebreak; `Unbounded`/`Fixed
 modes; per-profile budget-share caps; honest cold-start, never guessing an unmeasured cost). 54 new
 tests, all passing live against the real Editor.
 
-Step 5's cross-instance group-dispatch mechanism is also built and proven: `ProductionTreeHost`
-gained a pause/resume drive entry point (`TryAdvanceToNextDispatch`/`CompletePendingDispatch`), and a
-new `GeneratedDispatchGroupExecutorV2` batches multiple agents' generated-dispatch requests through
-exactly one `NativeBurstDispatchBatchOwnerV2` call per wave. Verified live with two real
-`ProductionTreeHost`s sharing one catalog reaching `NodeStatus.Success` through one shared batch per
-wave; full regression clean (see `Planning~/Evidence/P7-033/README.md` for the two defects found and
-fixed). Wiring this into the coordinator's own deterministic policy selection (step 5's remainder)
-and step 6 (explainability) remain.
+Implementation update 2026-09-06: step 5 is done. Part 1 built the cross-instance group-dispatch
+mechanism: `ProductionTreeHost` gained a pause/resume drive entry point
+(`TryAdvanceToNextDispatch`/`CompletePendingDispatch`), and `GeneratedDispatchGroupExecutorV2` batches
+multiple agents' generated-dispatch requests through exactly one `NativeBurstDispatchBatchOwnerV2`
+call per wave. Part 2 wired real `BatchedJobsSameFrame` selection into the coordinator's own
+admission loop: a profile forcing it groups adjacent same-catalog due entries, calls the real
+`NativeAutoSelectionV1.TrySelect` fed by a per-catalog `NativeWorkEstimatorV1`, and drives an admitted
+group through `ProductionBatchedGroupDriverV1` -- the same `NativeBatchedLifecycleOwnerV1`
+lifecycle-step batching the existing benchmark harness and `TrySelect`'s own calibration are measured
+against, with `DispatchRequired` resolved through real generated dispatch instead of a caller-supplied
+status. Unsupported forced policies (no catalog, Jobs capabilities never configured, or forced
+`PipelinedJobs`, not yet supported by any configuration) fail every member with a structured
+diagnostic rather than a silent Immediate substitution. Verified live: two real hosts reach genuine
+`Success` through one `groupCount=2` batch under a forced `BatchedJobsSameFrame` profile driven
+through `ProductionTreeScheduler` itself; full regression clean (see
+`Planning~/Evidence/P7-033/README.md` for the design, the honest-rejection tests and the disclosed
+remaining scope: `PipelinedJobs` support and step 6 explainability).
 
 ## Objective
 

@@ -1,8 +1,8 @@
 # P7-033 evidence
 
-Status: **In Progress**. Steps 0-4 of `implementation-plan.md` are done. Step 5's cross-instance
-generated-dispatch grouping mechanism is built and proven; wiring it into the coordinator's own
-deterministic policy selection (step 5's remainder) and step 6 (explainability) remain.
+Status: **In Progress**. Steps 0-5 of `implementation-plan.md` are done -- real `BatchedJobsSameFrame`
+selection now drives real generated-node dispatch through the coordinator's own deterministic
+`NativeAutoSelectionV1.TrySelect` integration. Step 6 (explainability) remains.
 
 ## Steps 2-4 (2026-09-05)
 
@@ -93,13 +93,68 @@ regression: 796/796 in the directly-relevant assemblies (`AIBT.Runtime.Tests`,
 `AIBT.Integration.Tests`, `AIBT.NativeBurstDispatch.Tests`); 613/615 in the remaining assemblies, the
 2 failures pre-existing and unrelated (`GeneratedArtifactContractTests` package-path resolution).
 
+## Step 5, part 2: real BatchedJobsSameFrame policy selection (2026-09-06)
+
+Wired real Jobs-policy execution into the coordinator's own admission loop, closing the gap the
+architecture audit raised: `NativeAutoSelectionV1`/`NativeWorkEstimatorV1` are calibrated against
+whole-lifecycle-step batching (`NativeBatchedLifecycleOwnerV1`, the same primitive
+`SchedulingPolicyDriver.TryRunBatchedJobsSameFrame` already uses for its own benchmark harness), not
+merely the leaf-dispatch grouping part 1 built -- so part 1's mechanism alone could not honestly
+claim to be `BatchedJobsSameFrame`.
+
+- `SchedulerJobsCapabilities.cs` -- validated, caller-authored tuning for Jobs selection
+  (`MinimumJobWorkloadNanoseconds`/`TargetBatchWorkNanoseconds`/batch-size bounds). Never a hidden
+  default: until `ProductionTreeScheduler.SetJobsCapabilities` is called, Jobs policies are simply
+  absent from the coordinator's own supported set, so a forced Jobs policy fails honestly rather
+  than guessing a batch-work number.
+- `ProductionTreeHost` gained the externally-driven batched-round API
+  (`TryBeginBatchedRound`/`Machine`/`TryHandleBatchedStepResult`/`TryResolveSinglePendingDispatch`/
+  `ReleaseBatchedDrive`/`FailUnsupportedForcedPolicy`) -- the same per-step recorder/terminal
+  bookkeeping `AdvanceOneStepForGroupedDispatch` already applies, minus the loop and the `TryAdvance`
+  call itself, since a group driver advances the step externally through a shared Job.
+- `ProductionBatchedGroupDriverV1.TryRun` -- mirrors `SchedulingPolicyDriver.TryRunBatchedJobsSameFrame`'s
+  own round-robin shape (schedule one `NativeBatchedLifecycleOwnerV1` Job round per still-open lane,
+  complete, handle each result) but resolves `DispatchRequired` through real generated dispatch:
+  `GeneratedDispatchGroupExecutorV2` (part 1) when two or more open lanes share one catalog this
+  exact round, otherwise each host's own single-instance callback. A rejected dispatch drops only
+  that host from later rounds (matches `RunSegment`'s own single-instance rejection contract); every
+  other lane is unaffected. The owner is rebuilt fresh each round from the currently-open lanes only
+  (not a fixed set reused across rounds) so a machine whose host just went terminal is never advanced
+  again.
+- `ProductionTreeScheduler.DriveForcedJobsGroup` -- a profile forcing `BatchedJobsSameFrame`/
+  `PipelinedJobs` groups consecutive due entries sharing that profile and catalog (adjacent-in-due-
+  order only, so grouping never reorders deadline/priority guarantees), estimates the group's
+  workload from a per-catalog `NativeWorkEstimatorV1` fed by real `(agentCount, totalSteps)`
+  observations after each drive, and calls the real `NativeAutoSelectionV1.TrySelect`. A group with no
+  generated catalog, or with Jobs capabilities never configured, or whose forced policy `TrySelect`
+  itself rejects (`PipelinedJobs` is never in the supported set -- its own cross-frame stage
+  semantics are a distinct, not-yet-built integration) fails every member with a structured
+  diagnostic (`ProductionTreeHost.FailUnsupportedForcedPolicy`) rather than silently substituting
+  Immediate. Auto (no forced policy) is untouched -- `TrySelect`'s own P6-019-recalibrated rule
+  already prefers Immediate whenever it is supported, which it always is, so Jobs policies only ever
+  activate through an explicit `ForcedPolicy`, matching the accepted ADR's own "manual Jobs selection
+  remains an explicit advanced override" direction.
+
+Verified live: `BatchedJobsSameFrame_TwoInstances_ShareOneCatalog_DriveThroughProductionTreeScheduler_ReachSuccess`
+drives two real generated-dispatch hosts through one forced-`BatchedJobsSameFrame` profile to genuine
+`NodeStatus.Success`; a temporary diagnostic (removed after confirming, not left in) showed both
+hosts were genuinely admitted into one `groupCount=2` batch, not two solo groups. Two new
+`ProductionTreeSchedulerTests` prove the honest-rejection contract: a forced `BatchedJobsSameFrame`
+with no generated catalog, and a forced `PipelinedJobs` even with Jobs capabilities configured, both
+fail with a structured diagnostic and drive the host zero times. Full regression: 728/728
+(`AIBT.Runtime.Tests` + `AIBT.Integration.Tests`), 665/665 across the remaining directly-exercised
+assemblies, 19/21 in the CodeGen assemblies (the same 2 pre-existing, unrelated `GeneratedArtifactContractTests`
+package-path failures as every prior Phase 7 card). Generated API docs regenerated for the new
+additive public surface (`SchedulerJobsCapabilities`, `SetJobsCapabilities`/`ClearJobsCapabilities`)
+via `AIBT/MCP/Regenerate Documentation`.
+
 ## Remaining scope
 
-Step 5, part 2: wire `GeneratedDispatchGroupExecutorV2` into `ProductionTreeScheduler`'s own
-admission loop -- build supported-policy masks from backend/catalog capability and profile latency
-permission, feed estimates into the existing deterministic `NativeAutoSelectionV1.TrySelect` per
-due-group, and drive Immediate/Budgeted through the existing single-instance path while Jobs
-policies route through the new group executor, all through one result contract. Needs tests for
-forced-policy contradictions, deadline deferral, non-preemptible overrun and disposal while a group
-batch is outstanding. Step 6 (explainability snapshot) builds on step 5's own selection/grouping
-decisions.
+- `PipelinedJobs` is not supported by any configuration yet: its own cross-frame stage semantics
+  (`NativePipelinedPhaseControllerV1`'s explicit `TryAdvanceStage`/multi-frame round boundary) are a
+  distinct integration axis from `BatchedJobsSameFrame`'s same-frame batching, not yet built.
+- Deadline-deferral, non-preemptible-overrun and disposal-while-a-group-batch-is-outstanding are
+  exercised indirectly by the existing due-ordering/budget/registration test suites (unchanged code
+  paths for non-Jobs entries) but have no *Jobs-group-specific* dedicated test yet.
+- Step 6 (explainability snapshot: `NativeAutoExplanationV1`'s own fields surfaced per-frame) builds
+  on step 5's own selection/grouping decisions and is not started.

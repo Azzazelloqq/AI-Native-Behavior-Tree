@@ -173,6 +173,87 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        /// <summary>
+        /// P7-033 step 5 proof: a profile that forces <see cref="SchedulingPolicy.BatchedJobsSameFrame"/>
+        /// drives two real generated-dispatch hosts through <see cref="ProductionTreeScheduler"/>'s
+        /// own <c>NativeAutoSelectionV1.TrySelect</c> integration and a real
+        /// <c>NativeBatchedLifecycleOwnerV1</c>-batched drive -- not a caller-supplied status, and
+        /// not the raw wave-group primitive the prior test exercises directly.
+        /// </summary>
+        [Test]
+        public void BatchedJobsSameFrame_TwoInstances_ShareOneCatalog_DriveThroughProductionTreeScheduler_ReachSuccess()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+
+                Assert.That(SchedulerJobsCapabilities.TryCreate(
+                        1.0, 1.0, 1u, 8u, 8u, out var jobsCapabilities, out var capabilitiesError),
+                    Is.True, capabilitiesError.ToString());
+                Assert.That(SchedulingProfile.TryCreate(
+                        "aibt.tests.p7033.batched-jobs-same-frame", 0, 1u, null, null, false,
+                        SchedulingPolicy.BatchedJobsSameFrame, out var profile, out var profileError),
+                    Is.True, profileError.ToString());
+
+                var schedulerObject = new GameObject("AIBT.Tests.P7033.BatchedJobsScheduler");
+                var hostObjectA = new GameObject("AIBT.Tests.P7033.BatchedJobsHostA");
+                var hostObjectB = new GameObject("AIBT.Tests.P7033.BatchedJobsHostB");
+                try
+                {
+                    var scheduler = schedulerObject.AddComponent<ProductionTreeScheduler>();
+                    scheduler.SetJobsCapabilities(jobsCapabilities);
+
+                    var hostA = hostObjectA.AddComponent<ProductionTreeHost>();
+                    var hostB = hostObjectB.AddComponent<ProductionTreeHost>();
+                    var traceCapacity = new NativeTraceChannelCapacityV1(
+                        recordCapacity: 65, payloadCapacity: 0, maximumPayloadBytes: 0, emissionCapacity: 256);
+                    Assert.That(hostA.TryBootstrap(definition, catalog, traceCapacity, () => 123_456L, out var bootstrapFailureA),
+                        Is.True, bootstrapFailureA.Code.ToString());
+                    Assert.That(hostB.TryBootstrap(definition, catalog, traceCapacity, () => 123_456L, out var bootstrapFailureB),
+                        Is.True, bootstrapFailureB.Code.ToString());
+
+                    Assert.That(scheduler.TryRegister(hostA, profile, out var registerErrorA), Is.True, registerErrorA.ToString());
+                    Assert.That(scheduler.TryRegister(hostB, profile, out var registerErrorB), Is.True, registerErrorB.ToString());
+
+                    for (var frame = 0;
+                         frame < 10 && (hostA.LastRootResult != NodeStatus.Success || hostB.LastRootResult != NodeStatus.Success);
+                         frame++)
+                    {
+                        InvokePrivate(scheduler, "Update");
+                        Assert.That(hostA.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None),
+                            "host A frame " + frame);
+                        Assert.That(hostB.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None),
+                            "host B frame " + frame);
+                    }
+
+                    Assert.That(hostA.LastRootResult, Is.EqualTo(NodeStatus.Success),
+                        "BatchedJobsSameFrame must drive the real generated custom node to genuine Success, not a precomputed status.");
+                    Assert.That(hostB.LastRootResult, Is.EqualTo(NodeStatus.Success));
+                }
+                finally
+                {
+                    InvokeOnDestroy(hostObjectA);
+                    UnityEngine.Object.DestroyImmediate(hostObjectA);
+                    InvokeOnDestroy(hostObjectB);
+                    UnityEngine.Object.DestroyImmediate(hostObjectB);
+                    UnityEngine.Object.DestroyImmediate(schedulerObject);
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
+        private static void InvokePrivate(object target, string methodName)
+            => target.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(target, null);
+
         [Test]
         public void GeneratedFactory_MaterializesValidatedRuntimeCatalogAndCompiledDefinition()
         {

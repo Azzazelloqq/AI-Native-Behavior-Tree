@@ -396,6 +396,51 @@ namespace AIBT.Tests.Runtime.Scheduling.Production
             Assert.That(log, Does.Contain("uncapped"), "A capped group's own limit must not block a different, uncapped group.");
         }
 
+        [Test]
+        public void ForcedBatchedJobsSameFrame_WithNoGeneratedCatalog_FailsWithStructuredDiagnostic()
+        {
+            var scheduler = CreateScheduler();
+            scheduler.SetJobsCapabilities(RequireJobsCapabilities());
+            var host = CreateBootstrappedHost(); // legacy delegate bootstrap -- no generated catalog to batch.
+            Assert.That(SchedulingProfile.TryCreate(
+                    "test.forcedBatchedNoCatalog", 0, 1u, null, null, false,
+                    SchedulingPolicy.BatchedJobsSameFrame, out var profile, out _), Is.True);
+            Assert.That(scheduler.TryRegister(host, profile, out _), Is.True);
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("AIBT ProductionTreeHost:.*Forced scheduling policy"));
+            InvokePrivate(scheduler, "Update");
+
+            Assert.That(host.LastFailure.Code, Is.Not.EqualTo(NativeRuntimeDiagnosticCodeV1.None),
+                "A forced Jobs policy with nothing real to batch must fail with a structured diagnostic, never silently run as Immediate.");
+            Assert.That(host.TotalUpdates, Is.Zero, "The host's own machine must never have been driven once its forced policy was rejected.");
+        }
+
+        [Test]
+        public void ForcedPipelinedJobs_IsNeverSupportedYet_FailsEvenWithJobsCapabilitiesConfigured()
+        {
+            var scheduler = CreateScheduler();
+            scheduler.SetJobsCapabilities(RequireJobsCapabilities());
+            var host = CreateBootstrappedHost();
+            Assert.That(SchedulingProfile.TryCreate(
+                    "test.forcedPipelined", 0, 1u, null, null, false,
+                    SchedulingPolicy.PipelinedJobs, out var profile, out _), Is.True);
+            Assert.That(scheduler.TryRegister(host, profile, out _), Is.True);
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("AIBT ProductionTreeHost:.*Forced scheduling policy"));
+            InvokePrivate(scheduler, "Update");
+
+            Assert.That(host.LastFailure.Code, Is.Not.EqualTo(NativeRuntimeDiagnosticCodeV1.None),
+                "PipelinedJobs' own cross-frame stage semantics are not yet integrated by any configuration -- forcing it must fail honestly, not silently downgrade to a different policy.");
+        }
+
+        private static SchedulerJobsCapabilities RequireJobsCapabilities()
+        {
+            Assert.That(SchedulerJobsCapabilities.TryCreate(
+                    1.0, 1.0, 1u, 8u, 8u, out var capabilities, out var error),
+                Is.True, error.ToString());
+            return capabilities;
+        }
+
         private ProductionTreeHost CreateHostWithRecordingDispatch(List<string> log, string label, int sleepMilliseconds = 0)
         {
             var obj = new GameObject("AIBT.Tests.P7033.Host." + label);

@@ -80,6 +80,15 @@ namespace AIBT
         /// </summary>
         internal GeneratedTreeDispatchAdapterV2 GeneratedDispatchAdapter => _generatedDispatch;
 
+        /// <summary>
+        /// This host's own machine value -- a bundle of <c>NativeArray</c> handles, not a snapshot;
+        /// any copy observes the same underlying native state. For a
+        /// <see cref="ProductionTreeScheduler"/> group driver to schedule this host's own
+        /// <c>TryAdvance</c> as part of a shared <c>NativeBatchedLifecycleOwnerV1</c> Job, between
+        /// a <see cref="TryBeginBatchedRound"/> and this host's next barrier.
+        /// </summary>
+        internal NativeLifecycleMachineV1 Machine => _agents[0].Machine;
+
         /// <summary>Bootstraps a Tick-only integration with scaled Unity time and no-op lifecycle callbacks.</summary>
         public bool TryBootstrap(CompiledProgram program, DispatchLeaf dispatch,
             NativeTraceChannelCapacityV1 traceCapacity, out NativeRuntimeFailureV1 failure)
@@ -365,6 +374,142 @@ namespace AIBT
                 }
             }
             return false;
+        }
+
+        /// <summary>What one externally-supplied lifecycle step meant for a <see cref="ProductionTreeScheduler"/>'s own BatchedJobsSameFrame/PipelinedJobs group round.</summary>
+        internal enum BatchedStepOutcome : byte
+        {
+            /// <summary>An internal-progress step; this host stays open for the group driver's next round.</summary>
+            Continue = 0,
+            /// <summary>A dispatch requirement was reached; resolve it via <see cref="TryResolveSinglePendingDispatch"/> or a <see cref="GeneratedDispatchGroupExecutorV2"/> batch, then this host is open again.</summary>
+            DispatchRequired = 1,
+            /// <summary>The update reached Completed/Waiting; call <see cref="ReleaseBatchedDrive"/> and drop this host from the round.</summary>
+            Terminal = 2,
+        }
+
+        /// <summary>
+        /// Opens this host's next logical update (or resumes a suspended one) and holds its drive
+        /// lock across every subsequent <see cref="TryHandleBatchedStepResult"/> call until a
+        /// barrier is reached -- for a <see cref="ProductionTreeScheduler"/> group driver that
+        /// advances this host's own machine externally through a <c>NativeBatchedLifecycleOwnerV1</c>
+        /// Job shared with other agents, rather than this host calling <c>TryAdvance</c> itself.
+        /// <paramref name="included"/> is false, with no failure, when this host is simply not
+        /// eligible right now (already terminal, disabled, destroying); a genuine misuse (already
+        /// driving, a bad clock) fails and returns false. The caller must schedule the returned
+        /// <paramref name="machine"/> for exactly one <c>TryAdvance</c> per round until a barrier.
+        /// </summary>
+        internal bool TryBeginBatchedRound(out bool included, out NativeLifecycleMachineV1 machine)
+        {
+            included = false;
+            machine = default;
+            if (_disposed || _destroyRequested || !_ready || !isActiveAndEnabled || _hasPendingStep)
+                return true; // not eligible this round -- not a caller error.
+            if (_driving)
+            {
+                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                return false;
+            }
+            _driving = true;
+            try
+            {
+                if (!_updateOpen)
+                {
+                    var now = _clock();
+                    if (!_ready || _destroyRequested) { included = false; return true; }
+                    if (now < 0 || (_updateId != 0 && now < _timeMicroseconds))
+                    {
+                        Fail(InvalidLifetime(), "Clock must return nonnegative, nondecreasing microseconds.");
+                        return false;
+                    }
+                    if (!BeginUpdate(now)) return false;
+                }
+                else if (_suspended)
+                {
+                    _recorder.RecordExecutionResumed(_updateId);
+                    _suspended = false;
+                }
+                machine = _agents[0].Machine;
+                included = true;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+                return false;
+            }
+            finally
+            {
+                if (!included) _driving = false;
+            }
+        }
+
+        /// <summary>
+        /// Applies one externally-advanced lifecycle step (already produced by the group driver's
+        /// own batched Job) to this host's own recorder/terminal bookkeeping -- the exact same
+        /// per-step handling <see cref="AdvanceOneStepForGroupedDispatch"/> already applies, minus
+        /// the loop and the <c>TryAdvance</c> call itself, since the step was advanced elsewhere.
+        /// Must only be called between a <see cref="TryBeginBatchedRound"/> that returned
+        /// <c>included: true</c> (or a prior round's own <see cref="BatchedStepOutcome.Continue"/>)
+        /// and this host's next barrier.
+        /// </summary>
+        internal BatchedStepOutcome TryHandleBatchedStepResult(NativeLifecycleStepResultV1 step, out DispatchRequest request)
+        {
+            request = default;
+            _hasExecuted = true;
+            _recorder.RecordStep(_updateId, step);
+            if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
+            {
+                _pendingStep = step;
+                _hasPendingStep = true;
+                request = new DispatchRequest(step, _updateId, _timeMicroseconds);
+                return BatchedStepOutcome.DispatchRequired;
+            }
+            if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting)
+            {
+                _updateOpen = false;
+                _recorder.RecordUpdateEnded(_updateId, step.HasRootStatus, step.RootStatus);
+                if (step.Kind == NativeLifecycleStepKindV1.Completed)
+                {
+                    if (step.HasRootStatus) LastRootResult = step.RootStatus;
+                    _ready = false;
+                }
+                return BatchedStepOutcome.Terminal;
+            }
+            return BatchedStepOutcome.Continue;
+        }
+
+        /// <summary>
+        /// Resolves this host's own currently-pending dispatch requirement through its normal
+        /// single-instance callback (the same call <see cref="RunSegment"/> already makes) --
+        /// for a group driver's round with no other same-catalog member to batch with this frame.
+        /// </summary>
+        internal bool TryResolveSinglePendingDispatch()
+        {
+            if (!_hasPendingStep) return false;
+            var request = new DispatchRequest(_pendingStep, _updateId, _timeMicroseconds);
+            var result = _dispatch(in request, out var status);
+            if (!_ready) return false; // A reentrant call may already have faulted the host.
+            return CompletePendingDispatch(result, status);
+        }
+
+        /// <summary>Releases the drive lock <see cref="TryBeginBatchedRound"/> took for a host whose round ended at <see cref="BatchedStepOutcome.Terminal"/> (no dispatch was pending, so <see cref="CompletePendingDispatch"/> never runs to release it).</summary>
+        internal void ReleaseBatchedDrive()
+        {
+            _driving = false;
+            if (_destroyRequested) DisposeHost();
+        }
+
+        /// <summary>
+        /// Structured, never-silent rejection for a <see cref="SchedulingProfile.ForcedPolicy"/> the
+        /// coordinator cannot honor this frame (no generated catalog to batch, no
+        /// <see cref="SchedulerJobsCapabilities"/> configured, or <c>NativeAutoSelectionV1.TrySelect</c>
+        /// itself rejected the forced policy) -- never a silent fallback to a different policy.
+        /// </summary>
+        internal void FailUnsupportedForcedPolicy()
+        {
+            Fail(
+                new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid),
+                "Forced scheduling policy is not supported by this coordinator's own current configuration.");
         }
 
         /// <summary>
