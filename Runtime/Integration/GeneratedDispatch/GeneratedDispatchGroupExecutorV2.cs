@@ -44,6 +44,21 @@ namespace AIBT
         /// </summary>
         internal static bool TryExecuteGroup(
             GeneratedBurstCatalogV2 catalog,
+            GeneratedDispatchGroupWorkspaceV2 workspace,
+            IReadOnlyList<Member> members,
+            bool scheduled,
+            out BurstContextResult failure)
+        {
+            failure = BurstContextResult.InvalidHandle;
+            if (catalog == null || workspace == null || !ReferenceEquals(workspace.Catalog, catalog))
+            {
+                return false;
+            }
+            return workspace.TryExecute(members, scheduled, out failure);
+        }
+
+        internal static bool TryExecuteGroup(
+            GeneratedBurstCatalogV2 catalog,
             IReadOnlyList<Member> members,
             bool scheduled,
             out BurstContextResult failure)

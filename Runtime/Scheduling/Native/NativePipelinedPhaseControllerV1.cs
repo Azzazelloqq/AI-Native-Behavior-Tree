@@ -160,12 +160,31 @@ namespace AIBT
             JobHandle dependency,
             out JobHandle scheduled,
             out NativeRuntimeFailureV1 failure)
+            => TryScheduleExecuteRound(
+                batchSize, null, (int)_laneCount, dependency, out scheduled, out failure);
+
+        /// <summary>
+        /// Schedules only the supplied stable lane subset. The controller retains ownership of all
+        /// lanes it was created with, so an active subset may shrink between pipeline updates
+        /// without rebuilding native lane storage.
+        /// </summary>
+        internal bool TryScheduleExecuteRound(
+            uint batchSize,
+            int[] activeLaneIds,
+            int activeLaneCount,
+            JobHandle dependency,
+            out JobHandle scheduled,
+            out NativeRuntimeFailureV1 failure)
         {
             using var _ = s_ScheduleExecuteRoundMarker.Auto();
             scheduled = default;
-            if (_phase != NativePipelinedPhaseV1.ExecuteReady)
+            if (_phase != NativePipelinedPhaseV1.ExecuteReady
+                || activeLaneCount <= 0 || activeLaneCount > uint.MaxValue)
                 return Fail(out failure);
-            if (!_execution.TrySchedule(batchSize, dependency, out scheduled, out failure)) return false;
+            if (!_execution.TrySchedule(
+                    batchSize, activeLaneIds, activeLaneCount, dependency, out scheduled, out failure))
+                return false;
+            _laneCount = (uint)activeLaneCount;
             _dependency = scheduled;
             _scheduledAtStage = _currentStage;
             if (_rounds == 0) _firstScheduledStage = _currentStage;
@@ -182,13 +201,22 @@ namespace AIBT
             NativeArray<NativeLifecycleStepResultV1> results,
             NativeArray<NativeRuntimeFailureV1> failures,
             out NativeRuntimeFailureV1 failure)
+            => TryCompleteExecuteRound(results, failures, null, (int)_laneCount, out failure);
+
+        /// <summary>Completes the currently scheduled active subset in the supplied lane order.</summary>
+        internal bool TryCompleteExecuteRound(
+            NativeArray<NativeLifecycleStepResultV1> results,
+            NativeArray<NativeRuntimeFailureV1> failures,
+            int[] activeLaneIds,
+            int activeLaneCount,
+            out NativeRuntimeFailureV1 failure)
         {
             if (_phase != NativePipelinedPhaseV1.ExecuteScheduled)
                 return Fail(out failure);
             if (_currentStage <= _scheduledAtStage)
                 return Fail(out failure);
             _dependency.Complete();
-            if (!_execution.TryComplete(results, failures, out failure))
+            if (!_execution.TryComplete(results, failures, activeLaneIds, activeLaneCount, out failure))
             {
                 if (!_execution.HasOutstandingOperation)
                 {

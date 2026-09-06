@@ -91,9 +91,25 @@ namespace AIBT
             JobHandle dependency,
             out JobHandle scheduled,
             out NativeRuntimeFailureV1 failure)
+            => TrySchedule(batchSize, null, _lanes == null ? 0 : _lanes.Length, dependency, out scheduled, out failure);
+
+        /// <summary>
+        /// Schedules one advance for each explicitly active lane. The lane array remains owned by
+        /// this instance for its full lifetime; callers may change the active subset only between
+        /// completed operations. This lets a production pipeline remove terminal or dispatch-bound
+        /// machines without recreating their native storage every round.
+        /// </summary>
+        internal bool TrySchedule(
+            uint batchSize,
+            int[] activeLaneIds,
+            int activeLaneCount,
+            JobHandle dependency,
+            out JobHandle scheduled,
+            out NativeRuntimeFailureV1 failure)
         {
             scheduled = default;
-            if (_state != 1 || batchSize == 0 || batchSize > int.MaxValue)
+            if (_state != 1 || batchSize == 0 || batchSize > int.MaxValue
+                || !ValidateActiveLanes(activeLaneIds, activeLaneCount))
             {
                 failure = new NativeRuntimeFailureV1(
                     NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid,
@@ -101,12 +117,13 @@ namespace AIBT
                 return false;
             }
             var combined = dependency;
-            for (var batchStart = 0; batchStart < _lanes.Length; batchStart += (int)batchSize)
+            for (var batchStart = 0; batchStart < activeLaneCount; batchStart += (int)batchSize)
             {
-                var batchEnd = System.Math.Min(_lanes.Length, batchStart + (int)batchSize);
+                var batchEnd = System.Math.Min(activeLaneCount, batchStart + (int)batchSize);
                 for (var index = batchStart; index < batchEnd; index++)
                 {
-                    var lane = _lanes[index];
+                    var laneId = activeLaneIds == null ? index : activeLaneIds[index];
+                    var lane = _lanes[laneId];
                     lane.Success[0] = 0;
                     lane.Failure[0] = default;
                     var job = new AdvanceJob
@@ -130,10 +147,22 @@ namespace AIBT
             NativeArray<NativeLifecycleStepResultV1> results,
             NativeArray<NativeRuntimeFailureV1> failures,
             out NativeRuntimeFailureV1 failure)
+            => TryComplete(results, failures, null, _lanes == null ? 0 : _lanes.Length, out failure);
+
+        /// <summary>Completes the currently scheduled active subset in the caller's active-lane order.</summary>
+        internal bool TryComplete(
+            NativeArray<NativeLifecycleStepResultV1> results,
+            NativeArray<NativeRuntimeFailureV1> failures,
+            int[] activeLaneIds,
+            int activeLaneCount,
+            out NativeRuntimeFailureV1 failure)
         {
             failure = default;
             if (_state != 2 || !results.IsCreated || !failures.IsCreated
-                || results.Length != _lanes.Length || failures.Length != _lanes.Length)
+                || (activeLaneIds == null
+                    ? results.Length != activeLaneCount || failures.Length != activeLaneCount
+                    : results.Length < activeLaneCount || failures.Length < activeLaneCount)
+                || !ValidateActiveLanes(activeLaneIds, activeLaneCount))
             {
                 failure = new NativeRuntimeFailureV1(
                     NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid,
@@ -141,16 +170,34 @@ namespace AIBT
                 return false;
             }
             _dependency.Complete();
-            for (var index = 0; index < _lanes.Length; index++)
+            for (var index = 0; index < activeLaneCount; index++)
             {
-                results[index] = _lanes[index].Result[0];
-                failures[index] = _lanes[index].Failure[0];
-                if (_lanes[index].Success[0] == 0 && failure.Code == NativeRuntimeDiagnosticCodeV1.None)
+                var laneId = activeLaneIds == null ? index : activeLaneIds[index];
+                var lane = _lanes[laneId];
+                results[index] = lane.Result[0];
+                failures[index] = lane.Failure[0];
+                if (lane.Success[0] == 0 && failure.Code == NativeRuntimeDiagnosticCodeV1.None)
                     failure = failures[index];
             }
             _dependency = default;
             _state = 1;
             return failure.Code == NativeRuntimeDiagnosticCodeV1.None;
+        }
+
+        private bool ValidateActiveLanes(int[] activeLaneIds, int activeLaneCount)
+        {
+            if (_lanes == null || activeLaneCount <= 0 || activeLaneCount > _lanes.Length)
+                return false;
+            if (activeLaneIds == null) return activeLaneCount == _lanes.Length;
+            if (activeLaneIds.Length < activeLaneCount) return false;
+            for (var index = 0; index < activeLaneCount; index++)
+            {
+                var laneId = activeLaneIds[index];
+                if (laneId < 0 || laneId >= _lanes.Length) return false;
+                for (var previous = 0; previous < index; previous++)
+                    if (activeLaneIds[previous] == laneId) return false;
+            }
+            return true;
         }
 
         internal bool TryDispose(out NativeRuntimeFailureV1 failure)

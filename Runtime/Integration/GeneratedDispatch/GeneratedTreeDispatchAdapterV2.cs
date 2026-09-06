@@ -191,6 +191,29 @@ namespace AIBT
                 committedMemory, committedBindingValues, out failure);
         }
 
+        /// <summary>Validates a group result before any participant commits its own bytes.</summary>
+        internal bool TryValidateGroupParticipantCommit(
+            uint nodeIndex,
+            NativeArray<byte>.ReadOnly committedMemory,
+            NativeArray<byte>.ReadOnly committedBindingValues,
+            out BurstContextResult failure)
+        {
+            if (_disposed || nodeIndex >= _slots.Length)
+            {
+                failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
+            var slot = _slots[nodeIndex];
+            if (slot == null)
+            {
+                failure = BurstContextResult.TypeMismatch;
+                return false;
+            }
+            return slot.TryValidateGroupCommit(
+                _definition.Binding, _treeValues, _treeVersions, _agentBaseOffset,
+                committedMemory, committedBindingValues, out failure);
+        }
+
         private BurstContextResult Dispatch(
             in ProductionTreeHost.DispatchRequest request,
             bool scheduled,
@@ -554,6 +577,32 @@ namespace AIBT
                 return true;
             }
 
+            internal bool TryValidateGroupCommit(
+                NativeProgramBlackboardBindingV2 programBinding,
+                NativeArray<byte> treeValues,
+                NativeArray<ulong> treeVersions,
+                uint agentBaseOffset,
+                NativeArray<byte>.ReadOnly committedMemory,
+                NativeArray<byte>.ReadOnly committedBindingValues,
+                out BurstContextResult failure)
+            {
+                if (_disposed || committedMemory.Length != _memory.Length
+                    || committedBindingValues.Length != _bindingValues.Length)
+                {
+                    failure = BurstContextResult.InvalidHandle;
+                    return false;
+                }
+                if (!CanCommitTreeValues(
+                        programBinding, treeValues, treeVersions, agentBaseOffset,
+                        committedBindingValues))
+                {
+                    failure = BurstContextResult.Overflow;
+                    return false;
+                }
+                failure = BurstContextResult.Success;
+                return true;
+            }
+
             internal bool TryGetLastPublishedCommand(uint index, out NativeBurstDispatchCommandV2 command)
             {
                 command = default;
@@ -608,19 +657,9 @@ namespace AIBT
                 NativeArray<ulong> versions,
                 uint agentBaseOffset)
             {
-                for (var index = 0; index < _resolutions.Length; index++)
-                {
-                    var resolution = _resolutions[index];
-                    if (!resolution.WritesBlackboard) continue;
-                    var slotIndex = resolution.TargetOrdinal;
-                    var slot = binding.Slots[(int)slotIndex];
-                    var baseOffset = slot.Scope == BlackboardScope.Agent ? agentBaseOffset : 0u;
-                    var changed = false;
-                    for (uint offset = 0; offset < slot.Size; offset++)
-                        if (values[(int)(baseOffset + slot.Offset + offset)] != _bindingValues[(int)(resolution.LiveOffset + offset)])
-                        { changed = true; break; }
-                    if (changed && versions[(int)slotIndex] == ulong.MaxValue) return false;
-                }
+                if (!CanCommitTreeValues(
+                        binding, values, versions, agentBaseOffset, _bindingValues.AsReadOnly()))
+                    return false;
                 for (var index = 0; index < _resolutions.Length; index++)
                 {
                     var resolution = _resolutions[index];
@@ -638,6 +677,30 @@ namespace AIBT
                         changed = true;
                     }
                     if (changed) versions[(int)slotIndex]++;
+                }
+                return true;
+            }
+
+            private bool CanCommitTreeValues(
+                NativeProgramBlackboardBindingV2 binding,
+                NativeArray<byte> values,
+                NativeArray<ulong> versions,
+                uint agentBaseOffset,
+                NativeArray<byte>.ReadOnly candidateBindingValues)
+            {
+                for (var index = 0; index < _resolutions.Length; index++)
+                {
+                    var resolution = _resolutions[index];
+                    if (!resolution.WritesBlackboard) continue;
+                    var slotIndex = resolution.TargetOrdinal;
+                    var slot = binding.Slots[(int)slotIndex];
+                    var baseOffset = slot.Scope == BlackboardScope.Agent ? agentBaseOffset : 0u;
+                    var changed = false;
+                    for (uint offset = 0; offset < slot.Size; offset++)
+                        if (values[(int)(baseOffset + slot.Offset + offset)]
+                            != candidateBindingValues[(int)(resolution.LiveOffset + offset)])
+                        { changed = true; break; }
+                    if (changed && versions[(int)slotIndex] == ulong.MaxValue) return false;
                 }
                 return true;
             }

@@ -17,6 +17,7 @@ does not begin with a desired result.
 - `P7-034` — the finished deterministic gameplay workload.
 - `P7-024` — reporting/provenance discipline and current fixed-policy Player baseline.
 - `P7-037` — production generated-node dispatch measured by the benchmark.
+- `P7-038` — bounded grouped-dispatch workspace required for any grouped-dispatch allocation claim.
 - `P4-008` — release Player benchmark/build conventions.
 
 ## Required reading

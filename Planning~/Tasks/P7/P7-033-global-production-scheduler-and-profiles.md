@@ -1,6 +1,13 @@
 # P7-033 — Global production scheduler and custom scheduling profiles
 
-Status: `In Progress`
+Status: `Done`
+
+Completion update 2026-09-06: all implementation-plan steps are complete. Forced
+`PipelinedJobs` now uses the real native phase controller across scheduler frames with explicit
+capability/profile latency opt-in and deterministic teardown draining. The bounded reused frame
+snapshot exposes direct and native-selected policy decisions, estimates/confidence, batch shape,
+budget allocation/consumption, deferrals, terminal outcome, latency and structured failure. See
+`Planning~/Evidence/P7-033/README.md` for exact verification and disclosed CodeGen baseline failures.
 
 Implementation update 2026-09-05: steps 2-4 of `Planning~/Evidence/P7-033/implementation-plan.md`
 are done -- `SchedulingProfile`/`SchedulingProfileAsset` (profile contracts), `ProductionTreeScheduler`

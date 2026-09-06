@@ -100,10 +100,21 @@ namespace AIBT.Tests.Integration.NativeRuntime
 
             Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
                 Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            GeneratedDispatchGroupWorkspaceV2 workspace = null;
             try
             {
                 Assert.That(compiled.TryCreateRuntimeDefinitionV2(
                     catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+                Assert.That(GeneratedDispatchGroupWorkspaceV2.TryCreate(
+                    catalog, 2, out workspace, out var workspaceFailure), Is.True, workspaceFailure.ToString());
+                var overCapacityMembers = new List<GeneratedDispatchGroupExecutorV2.Member>
+                {
+                    default, default, default
+                };
+                Assert.That(GeneratedDispatchGroupExecutorV2.TryExecuteGroup(
+                    catalog, workspace, overCapacityMembers, scheduled: false, out var overCapacityFailure), Is.False);
+                Assert.That(overCapacityFailure, Is.EqualTo(BurstContextResult.CapacityExceeded),
+                    "A prepared workspace must reject excess participants without growth or fallback.");
 
                 var hostObjectA = new GameObject("AIBT.Tests.P7033.GroupHostA");
                 var hostObjectB = new GameObject("AIBT.Tests.P7033.GroupHostB");
@@ -140,8 +151,23 @@ namespace AIBT.Tests.Integration.NativeRuntime
                         if (members.Count > 0)
                         {
                             waveGroupSizes.Add(members.Count);
-                            var groupOk = GeneratedDispatchGroupExecutorV2.TryExecuteGroup(
-                                catalog, members, scheduled: false, out var groupFailure);
+                            var groupOk = false;
+                            var groupFailure = default(BurstContextResult);
+                            if (waveGroupSizes.Count == 1)
+                            {
+                                groupOk = GeneratedDispatchGroupExecutorV2.TryExecuteGroup(
+                                    catalog, workspace, members, scheduled: false, out groupFailure);
+                            }
+                            else
+                            {
+                                Assert.That(() =>
+                                {
+                                    groupOk = GeneratedDispatchGroupExecutorV2.TryExecuteGroup(
+                                        catalog, workspace, members, scheduled: false, out groupFailure);
+                                },
+                                    GcAllocIs.Not.AllocatingGCMemory(),
+                                    "A warmed grouped workspace must not allocate managed memory per wave.");
+                            }
                             if (!groupOk)
                             {
                                 // TryExecuteGroup's own contract: on failure, the caller completes
@@ -156,6 +182,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
 
                     Assert.That(waveGroupSizes, Has.Some.EqualTo(2),
                         "At least one real wave must have grouped both instances into a single batch call.");
+                    Assert.That(waveGroupSizes.Count, Is.GreaterThanOrEqualTo(2),
+                        "The same warmed workspace must serve successive real group waves.");
                     Assert.That(hostA.LastRootResult, Is.EqualTo(NodeStatus.Success));
                     Assert.That(hostB.LastRootResult, Is.EqualTo(NodeStatus.Success));
                 }
@@ -169,6 +197,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
             finally
             {
+                if (workspace != null)
+                    Assert.That(workspace.TryDispose(out var workspaceDisposeFailure), Is.True, workspaceDisposeFailure.ToString());
                 Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
             }
         }
@@ -235,6 +265,34 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     Assert.That(hostA.LastRootResult, Is.EqualTo(NodeStatus.Success),
                         "BatchedJobsSameFrame must drive the real generated custom node to genuine Success, not a precomputed status.");
                     Assert.That(hostB.LastRootResult, Is.EqualTo(NodeStatus.Success));
+
+                    Assert.That(scheduler.TryUnregister(hostA), Is.True);
+                    Assert.That(scheduler.TryUnregister(hostB), Is.True);
+                    var deferredHostObject = new GameObject("AIBT.Tests.P7033.DeferredJobsHost");
+                    try
+                    {
+                        var deferredHost = deferredHostObject.AddComponent<ProductionTreeHost>();
+                        Assert.That(deferredHost.TryBootstrap(definition, catalog, traceCapacity, () => 123_456L, out var deferredBootstrapFailure),
+                            Is.True, deferredBootstrapFailure.Code.ToString());
+                        Assert.That(scheduler.TryRegister(deferredHost, profile, out var deferredRegisterError),
+                            Is.True, deferredRegisterError.ToString());
+                        scheduler.SetFixedBudget(0.000001);
+
+                        InvokePrivate(scheduler, "Update");
+
+                        Assert.That(scheduler.FrameEntryCount, Is.EqualTo(1));
+                        Assert.That(scheduler.TryGetFrameEntry(0, out var deferred), Is.True);
+                        Assert.That(deferred.Disposition, Is.EqualTo(SchedulerFrameDisposition.DeferredGlobalBudget));
+                        Assert.That(deferred.SelectedPolicy, Is.EqualTo(SchedulingPolicy.BatchedJobsSameFrame));
+                        Assert.That(deferred.SelectionSource, Is.EqualTo(SchedulerFrameSelectionSource.NativeAutoSelector));
+                        Assert.That(deferred.SelectionReason, Is.EqualTo(SchedulerSelectionReason.ForcedByCaller));
+                        Assert.That(deferred.HasWorkEstimate, Is.True);
+                    }
+                    finally
+                    {
+                        InvokeOnDestroy(deferredHostObject);
+                        UnityEngine.Object.DestroyImmediate(deferredHostObject);
+                    }
                 }
                 finally
                 {
@@ -242,6 +300,188 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     UnityEngine.Object.DestroyImmediate(hostObjectA);
                     InvokeOnDestroy(hostObjectB);
                     UnityEngine.Object.DestroyImmediate(hostObjectB);
+                    UnityEngine.Object.DestroyImmediate(schedulerObject);
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
+        [Test]
+        public void PipelinedJobs_TwoInstances_CrossFrameBoundaries_AndReachSuccessThroughGeneratedDispatch()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+                Assert.That(SchedulerJobsCapabilities.TryCreate(
+                        1.0, 1.0, 1u, 8u, 8u, true, out var capabilities, out var capabilitiesError),
+                    Is.True, capabilitiesError.ToString());
+                Assert.That(SchedulingProfile.TryCreate(
+                        "aibt.tests.p7033.pipelined", 0, 1u, null, null, true,
+                        SchedulingPolicy.PipelinedJobs, out var profile, out var profileError),
+                    Is.True, profileError.ToString());
+
+                var schedulerObject = new GameObject("AIBT.Tests.P7033.PipelinedScheduler");
+                var hostObjectA = new GameObject("AIBT.Tests.P7033.PipelinedHostA");
+                var hostObjectB = new GameObject("AIBT.Tests.P7033.PipelinedHostB");
+                try
+                {
+                    var scheduler = schedulerObject.AddComponent<ProductionTreeScheduler>();
+                    scheduler.SetJobsCapabilities(capabilities);
+                    var hostA = hostObjectA.AddComponent<ProductionTreeHost>();
+                    var hostB = hostObjectB.AddComponent<ProductionTreeHost>();
+                    var traceCapacity = new NativeTraceChannelCapacityV1(65, 0, 0, 256);
+                    Assert.That(hostA.TryBootstrap(definition, catalog, traceCapacity, () => 123_456L, out var bootstrapFailureA),
+                        Is.True, bootstrapFailureA.Code.ToString());
+                    Assert.That(hostB.TryBootstrap(definition, catalog, traceCapacity, () => 123_456L, out var bootstrapFailureB),
+                        Is.True, bootstrapFailureB.Code.ToString());
+                    Assert.That(scheduler.TryRegister(hostA, profile, out _), Is.True);
+                    Assert.That(scheduler.TryRegister(hostB, profile, out _), Is.True);
+
+                    scheduler.SetFixedBudget(1_000_000.0);
+                    InvokePrivate(scheduler, "Update");
+                    Assert.That(scheduler.LastFrameOverran, Is.True,
+                        "A bounded cold-start Jobs group must disclose that it was admitted without a real estimate.");
+                    Assert.That(hostA.LastRootResult, Is.Null,
+                        "Scheduling a pipelined round must not publish its result in the same scheduler frame.");
+                    Assert.That(hostB.LastRootResult, Is.Null);
+                    Assert.That(scheduler.TryGetFrameEntry(0, out var scheduled), Is.True);
+                    Assert.That(scheduled.Disposition, Is.EqualTo(SchedulerFrameDisposition.PipelinedScheduled));
+                    Assert.That(scheduled.SelectionReason, Is.EqualTo(SchedulerSelectionReason.ForcedByCaller));
+                    Assert.That(scheduled.HasWorkEstimate, Is.False,
+                        "The forced-selection positivity sentinel is not a measured workload and must not be published as one.");
+                    Assert.That(scheduled.EstimatedWorkPerAgentNanoseconds, Is.Zero);
+                    Assert.That(scheduled.PipelinedLatencyAllowed, Is.True);
+
+                    var advancedFrames = 0;
+                    for (var frame = 0;
+                         frame < 32 && (hostA.LastRootResult != NodeStatus.Success || hostB.LastRootResult != NodeStatus.Success);
+                         frame++)
+                    {
+                        InvokePrivate(scheduler, "Update");
+                        for (var entryIndex = 0; entryIndex < scheduler.FrameEntryCount; entryIndex++)
+                        {
+                            Assert.That(scheduler.TryGetFrameEntry(entryIndex, out var entry), Is.True);
+                            if (entry.Disposition != SchedulerFrameDisposition.PipelinedAdvanced) continue;
+                            advancedFrames++;
+                            Assert.That(entry.ExecutedSteps, Is.EqualTo(1ul),
+                                "A frame snapshot must report this advance's own step, not cumulative pipeline work.");
+                        }
+                    }
+
+                    Assert.That(hostA.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None));
+                    Assert.That(hostB.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None));
+                    Assert.That(hostA.LastRootResult, Is.EqualTo(NodeStatus.Success));
+                    Assert.That(hostB.LastRootResult, Is.EqualTo(NodeStatus.Success));
+                    Assert.That(advancedFrames, Is.GreaterThanOrEqualTo(2),
+                        "The generated fixture must cross multiple pipeline stages for the per-frame snapshot proof.");
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(schedulerObject);
+                    InvokeOnDestroy(hostObjectA);
+                    UnityEngine.Object.DestroyImmediate(hostObjectA);
+                    InvokeOnDestroy(hostObjectB);
+                    UnityEngine.Object.DestroyImmediate(hostObjectB);
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
+        [Test]
+        public void PipelinedJobs_SchedulerDestroyedWithOutstandingRound_DrainsAndReleasesHosts()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+                Assert.That(SchedulerJobsCapabilities.TryCreate(
+                    1.0, 1.0, 1u, 8u, 8u, true, out var capabilities, out _), Is.True);
+                Assert.That(SchedulingProfile.TryCreate(
+                    "aibt.tests.p7033.pipeline-dispose", 0, 1u, null, null, true,
+                    SchedulingPolicy.PipelinedJobs, out var profile, out _), Is.True);
+                var schedulerObject = new GameObject("AIBT.Tests.P7033.PipelineDisposeScheduler");
+                var hostObject = new GameObject("AIBT.Tests.P7033.PipelineDisposeHost");
+                try
+                {
+                    var scheduler = schedulerObject.AddComponent<ProductionTreeScheduler>();
+                    scheduler.SetJobsCapabilities(capabilities);
+                    var host = hostObject.AddComponent<ProductionTreeHost>();
+                    Assert.That(host.TryBootstrap(definition, catalog,
+                        new NativeTraceChannelCapacityV1(65, 0, 0, 256), () => 123_456L, out var bootstrapFailure),
+                        Is.True, bootstrapFailure.Code.ToString());
+                    Assert.That(scheduler.TryRegister(host, profile, out _), Is.True);
+                    InvokePrivate(scheduler, "Update");
+
+                    UnityEngine.Object.DestroyImmediate(schedulerObject);
+                    Assert.That(host.IsCoordinatorOwned, Is.False,
+                        "Scheduler teardown must drain the outstanding Job and release host ownership.");
+                }
+                finally
+                {
+                    if (schedulerObject != null) UnityEngine.Object.DestroyImmediate(schedulerObject);
+                    InvokeOnDestroy(hostObject);
+                    UnityEngine.Object.DestroyImmediate(hostObject);
+                }
+            }
+            finally
+            {
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
+        [Test]
+        public void PipelinedJobs_HostDestroyedWithOutstandingRound_UnregistersAndReleasesNativeState()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+                Assert.That(SchedulerJobsCapabilities.TryCreate(
+                    1.0, 1.0, 1u, 8u, 8u, true, out var capabilities, out _), Is.True);
+                Assert.That(SchedulingProfile.TryCreate(
+                    "aibt.tests.p7033.pipeline-host-dispose", 0, 1u, null, null, true,
+                    SchedulingPolicy.PipelinedJobs, out var profile, out _), Is.True);
+                var schedulerObject = new GameObject("AIBT.Tests.P7033.PipelineHostDisposeScheduler");
+                var hostObject = new GameObject("AIBT.Tests.P7033.PipelineHostDisposeHost");
+                try
+                {
+                    var scheduler = schedulerObject.AddComponent<ProductionTreeScheduler>();
+                    scheduler.SetJobsCapabilities(capabilities);
+                    var host = hostObject.AddComponent<ProductionTreeHost>();
+                    Assert.That(host.TryBootstrap(definition, catalog,
+                        new NativeTraceChannelCapacityV1(65, 0, 0, 256), () => 123_456L, out var bootstrapFailure),
+                        Is.True, bootstrapFailure.Code.ToString());
+                    Assert.That(scheduler.TryRegister(host, profile, out _), Is.True);
+                    InvokePrivate(scheduler, "Update");
+
+                    InvokeOnDestroy(hostObject);
+                    UnityEngine.Object.DestroyImmediate(hostObject);
+                    Assert.That(scheduler.RegisteredCount, Is.Zero,
+                        "Host teardown must drain its outstanding group before removing the registration.");
+                    Assert.That(scheduler.FrameEntryCount, Is.GreaterThanOrEqualTo(1));
+                }
+                finally
+                {
+                    if (hostObject != null) UnityEngine.Object.DestroyImmediate(hostObject);
                     UnityEngine.Object.DestroyImmediate(schedulerObject);
                 }
             }

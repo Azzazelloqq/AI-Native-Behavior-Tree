@@ -3,6 +3,9 @@ using System.Reflection;
 using AIBT.Burst;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Constraints;
+using GcAllocIs = UnityEngine.TestTools.Constraints.Is;
+using Is = NUnit.Framework.Is;
 
 namespace AIBT.Tests.Runtime.Scheduling.Production
 {
@@ -377,12 +380,13 @@ namespace AIBT.Tests.Runtime.Scheduling.Production
             // timer-resolution granularity (observed ~15-20ms in practice), so the budget/share
             // below are derived from cappedA's own real measured cost rather than an assumed
             // sleep duration. Total is 20x that cost (comfortably fits it and uncapped's own
-            // near-zero cost globally); the group's own share is half of it, so cappedA's own
-            // admission alone already exceeds its group's cap for cappedB's turn.
+            // near-zero cost globally); the group's own cap is exactly one microsecond, so the
+            // deliberately sleeping first member necessarily exhausts it for cappedB's turn even
+            // if Windows changes timer resolution between the warmup and measured frames.
             var cappedACost = GetLastMeasuredMicroseconds(scheduler, cappedA);
             Assert.That(cappedACost, Is.GreaterThan(0.0));
             scheduler.SetFixedBudget(cappedACost * 20.0);
-            var share = 0.5 / 20.0;
+            var share = 1.0 / (cappedACost * 20.0);
             Assert.That(SchedulingProfile.TryCreate("test.cappedGroup", 0, 1u, null, share, false, null, out cappedProfile, out _), Is.True);
             Assert.That(scheduler.TryUnregister(cappedA), Is.True);
             Assert.That(scheduler.TryUnregister(cappedB), Is.True);
@@ -431,6 +435,46 @@ namespace AIBT.Tests.Runtime.Scheduling.Production
 
             Assert.That(host.LastFailure.Code, Is.Not.EqualTo(NativeRuntimeDiagnosticCodeV1.None),
                 "PipelinedJobs' own cross-frame stage semantics are not yet integrated by any configuration -- forcing it must fail honestly, not silently downgrade to a different policy.");
+        }
+
+        [Test]
+        public void FrameSnapshot_DirectExecutionIsQueryableWithoutFabricatingAutoSelection()
+        {
+            var scheduler = CreateScheduler();
+            var host = CreateBootstrappedHost();
+            Assert.That(scheduler.TryRegister(host, out _), Is.True);
+
+            InvokePrivate(scheduler, "Update");
+
+            Assert.That(scheduler.FrameEntryCount, Is.EqualTo(1));
+            Assert.That(scheduler.TryGetFrameEntry(0, out var entry), Is.True);
+            Assert.That(entry.HostInstanceId, Is.EqualTo(host.InstanceId));
+            Assert.That(entry.ProfileId, Is.EqualTo(SchedulingProfile.Normal.Id));
+            Assert.That(entry.SelectionSource, Is.EqualTo(SchedulerFrameSelectionSource.DirectHostPath));
+            Assert.That(entry.SelectionReason, Is.EqualTo(SchedulerSelectionReason.None));
+            Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.Immediate));
+            Assert.That(entry.Disposition, Is.EqualTo(SchedulerFrameDisposition.Executed));
+        }
+
+        [Test]
+        public void FrameSnapshot_PublicationAndQueryAfterWarmupDoNotAllocateManagedMemory()
+        {
+            var scheduler = CreateScheduler();
+            var host = CreateBootstrappedHost();
+            Assert.That(scheduler.TryRegister(host, out _), Is.True);
+            var updateMethod = typeof(ProductionTreeScheduler).GetMethod("Update", BindingFlags.NonPublic | BindingFlags.Instance);
+            var update = (System.Action)System.Delegate.CreateDelegate(typeof(System.Action), scheduler, updateMethod);
+            update();
+            update();
+            SchedulerFrameEntry entry = default;
+
+            Assert.That(() =>
+            {
+                update();
+                for (var index = 0; index < 32; index++)
+                    scheduler.TryGetFrameEntry(0, out entry);
+            }, GcAllocIs.Not.AllocatingGCMemory());
+            Assert.That(entry.HostInstanceId, Is.EqualTo(host.InstanceId));
         }
 
         private static SchedulerJobsCapabilities RequireJobsCapabilities()

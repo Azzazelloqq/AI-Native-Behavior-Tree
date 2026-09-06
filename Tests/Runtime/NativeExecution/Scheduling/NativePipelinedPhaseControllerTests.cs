@@ -173,6 +173,56 @@ namespace AIBT.Tests.Runtime.NativeExecution.Scheduling
         }
 
         [Test]
+        public void ActiveLanesCanShrinkBetweenUpdatesWithoutReschedulingRemovedMachines()
+        {
+            using var first = new Scenario();
+            using var removed = new Scenario();
+            using var remaining = new Scenario();
+            Assert.That(NativePipelinedPhaseControllerV1.TryCreate(
+                new[] { first.Machine, removed.Machine, remaining.Machine }, Allocator.Persistent,
+                out var controller, out var failure), Is.True, failure.Code.ToString());
+            using var results = new NativeArray<NativeLifecycleStepResultV1>(3, Allocator.Persistent);
+            using var failures = new NativeArray<NativeRuntimeFailureV1>(3, Allocator.Persistent);
+            var active = new[] { 0, 2 };
+            try
+            {
+                Assert.That(controller.TryBeginSnapshot(1, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryCompleteSnapshot(1, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryScheduleExecuteRound(1, active, 2, default, out var firstDependency, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryAdvanceStage(out failure), Is.True, failure.Code.ToString());
+                firstDependency.Complete();
+                Assert.That(controller.TryCompleteExecuteRound(results, failures, active, 2, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TrySealExecute(out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryCompleteReduce(out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryCompletePublish(out var firstMetrics, out failure), Is.True, failure.Code.ToString());
+                Assert.That(firstMetrics.LaneCount, Is.EqualTo(2));
+                Assert.That(firstMetrics.ExecutedAtomicSteps, Is.EqualTo(2));
+
+                active[0] = 2;
+                Assert.That(controller.TryBeginSnapshot(2, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryCompleteSnapshot(2, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryScheduleExecuteRound(1, active, 1, default, out var secondDependency, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryAdvanceStage(out failure), Is.True, failure.Code.ToString());
+                secondDependency.Complete();
+                Assert.That(controller.TryCompleteExecuteRound(results, failures, active, 1, out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TrySealExecute(out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryCompleteReduce(out failure), Is.True, failure.Code.ToString());
+                Assert.That(controller.TryCompletePublish(out var secondMetrics, out failure), Is.True, failure.Code.ToString());
+                Assert.That(secondMetrics.LaneCount, Is.EqualTo(1));
+                Assert.That(secondMetrics.ExecutedAtomicSteps, Is.EqualTo(1));
+
+                Assert.That(first.Control[0].SemanticSteps, Is.EqualTo(1));
+                Assert.That(removed.Control[0].SemanticSteps, Is.Zero,
+                    "A removed lane must not be scheduled merely because its storage remains owned by the controller.");
+                Assert.That(remaining.Control[0].SemanticSteps, Is.EqualTo(2));
+            }
+            finally
+            {
+                Assert.That(controller.TryDispose(out failure), Is.True, failure.Code.ToString());
+            }
+        }
+
+        [Test]
         public void SteadyStatePipelineDrivingIntroducesNoManagedAllocation()
         {
             using var first = new Scenario();

@@ -28,13 +28,15 @@ namespace AIBT
             double targetBatchWorkNanoseconds,
             uint policyMinBatchSize,
             uint policyMaxBatchSize,
-            uint memoryLimitBatchSize)
+            uint memoryLimitBatchSize,
+            bool pipelinedJobsPermitted)
         {
             MinimumJobWorkloadNanoseconds = minimumJobWorkloadNanoseconds;
             TargetBatchWorkNanoseconds = targetBatchWorkNanoseconds;
             PolicyMinBatchSize = policyMinBatchSize;
             PolicyMaxBatchSize = policyMaxBatchSize;
             MemoryLimitBatchSize = memoryLimitBatchSize;
+            PipelinedJobsPermitted = pipelinedJobsPermitted;
         }
 
         internal double MinimumJobWorkloadNanoseconds { get; }
@@ -42,6 +44,7 @@ namespace AIBT
         internal uint PolicyMinBatchSize { get; }
         internal uint PolicyMaxBatchSize { get; }
         internal uint MemoryLimitBatchSize { get; }
+        internal bool PipelinedJobsPermitted { get; }
 
         /// <summary>Validates and builds a capability set. Returns false with a structured reason on any invalid value; never clamps.</summary>
         public static bool TryCreate(
@@ -50,6 +53,25 @@ namespace AIBT
             uint policyMinBatchSize,
             uint policyMaxBatchSize,
             uint memoryLimitBatchSize,
+            out SchedulerJobsCapabilities capabilities,
+            out SchedulerJobsCapabilitiesValidationError error)
+            => TryCreate(
+                minimumJobWorkloadNanoseconds, targetBatchWorkNanoseconds,
+                policyMinBatchSize, policyMaxBatchSize, memoryLimitBatchSize,
+                false, out capabilities, out error);
+
+        /// <summary>
+        /// Validates and builds a capability set, including the caller's explicit permission for
+        /// the coordinator to retain a real PipelinedJobs round across scheduler frames. The flag
+        /// is capability only: the assigned profile must independently permit pipelined latency.
+        /// </summary>
+        public static bool TryCreate(
+            double minimumJobWorkloadNanoseconds,
+            double targetBatchWorkNanoseconds,
+            uint policyMinBatchSize,
+            uint policyMaxBatchSize,
+            uint memoryLimitBatchSize,
+            bool pipelinedJobsPermitted,
             out SchedulerJobsCapabilities capabilities,
             out SchedulerJobsCapabilitiesValidationError error)
         {
@@ -81,7 +103,8 @@ namespace AIBT
             }
             capabilities = new SchedulerJobsCapabilities(
                 minimumJobWorkloadNanoseconds, targetBatchWorkNanoseconds,
-                policyMinBatchSize, policyMaxBatchSize, memoryLimitBatchSize);
+                policyMinBatchSize, policyMaxBatchSize, memoryLimitBatchSize,
+                pipelinedJobsPermitted);
             error = SchedulerJobsCapabilitiesValidationError.None;
             return true;
         }

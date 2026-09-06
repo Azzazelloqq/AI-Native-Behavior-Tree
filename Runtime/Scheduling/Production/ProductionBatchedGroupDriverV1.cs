@@ -23,7 +23,8 @@ namespace AIBT
             IReadOnlyList<ProductionTreeHost> members,
             uint batchSize,
             out ulong totalSteps,
-            out NativeRuntimeFailureV1 failure)
+            out NativeRuntimeFailureV1 failure,
+            GeneratedDispatchGroupWorkspaceV2 workspace = null)
         {
             totalSteps = 0;
             failure = default;
@@ -38,7 +39,8 @@ namespace AIBT
                     open.Add(members[index]);
             }
 
-            var pendingDispatch = new List<GeneratedDispatchGroupExecutorV2.Member>();
+            var pendingDispatch = new List<GeneratedDispatchGroupExecutorV2.Member>(members.Count);
+            var dispatchGroupScratch = new List<GeneratedDispatchGroupExecutorV2.Member>(members.Count);
             while (open.Count > 0)
             {
                 var machines = new NativeLifecycleMachineV1[open.Count];
@@ -99,61 +101,13 @@ namespace AIBT
                 results.Dispose();
                 stepFailures.Dispose();
 
-                if (pendingDispatch.Count > 0) ResolvePendingDispatches(pendingDispatch, next);
+                if (pendingDispatch.Count > 0)
+                    ProductionDispatchResolverV1.Resolve(pendingDispatch, next, dispatchGroupScratch, workspace);
                 open = next;
             }
 
             failure = default;
             return true;
-        }
-
-        private static void ResolvePendingDispatches(
-            List<GeneratedDispatchGroupExecutorV2.Member> pending,
-            List<ProductionTreeHost> next)
-        {
-            var byCatalog = new Dictionary<GeneratedBurstCatalogV2, List<GeneratedDispatchGroupExecutorV2.Member>>();
-            var singles = new List<GeneratedDispatchGroupExecutorV2.Member>();
-            foreach (var member in pending)
-            {
-                var catalog = member.Host.GeneratedDispatchAdapter?.Catalog;
-                if (catalog == null)
-                {
-                    singles.Add(member);
-                    continue;
-                }
-                if (!byCatalog.TryGetValue(catalog, out var list))
-                {
-                    list = new List<GeneratedDispatchGroupExecutorV2.Member>();
-                    byCatalog[catalog] = list;
-                }
-                list.Add(member);
-            }
-
-            foreach (var pair in byCatalog)
-            {
-                if (pair.Value.Count == 1)
-                {
-                    singles.Add(pair.Value[0]);
-                    continue;
-                }
-                if (GeneratedDispatchGroupExecutorV2.TryExecuteGroup(pair.Key, pair.Value, scheduled: false, out var groupFailure))
-                {
-                    foreach (var member in pair.Value) next.Add(member.Host);
-                }
-                else
-                {
-                    // TryExecuteGroup's own contract: on failure the caller completes every
-                    // member's pending dispatch with the returned failure. That host is now
-                    // terminal/faulted and does not rejoin the next round.
-                    foreach (var member in pair.Value)
-                        member.Host.CompletePendingDispatch(groupFailure, NodeStatus.Failure);
-                }
-            }
-
-            foreach (var member in singles)
-            {
-                if (member.Host.TryResolveSinglePendingDispatch()) next.Add(member.Host);
-            }
         }
 
         private static void ReleaseAll(List<ProductionTreeHost> hosts)

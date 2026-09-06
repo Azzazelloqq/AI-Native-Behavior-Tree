@@ -1,6 +1,6 @@
 # P7-033 implementation plan
 
-Status: accepted by the owner on 2026-09-05; implementation is sequenced after prerequisite P7-037.
+Status: completed 2026-09-06; accepted sequence and prerequisite P7-037 were followed.
 
 ## Scope sequence
 

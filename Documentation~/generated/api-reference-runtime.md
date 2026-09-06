@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-267 public type(s).
+272 public type(s).
 
 ---
 
@@ -3101,6 +3101,7 @@ One population-level production coordinator per independently scheduled AI world
 
 - `METHOD System.Boolean IsRegistered(AIBT.ProductionTreeHost)`
 - `METHOD System.Boolean RequestUrgentUpdate(AIBT.ProductionTreeHost)`
+- `METHOD System.Boolean TryGetFrameEntry(System.Int32,AIBT.SchedulerFrameEntry&)`
 - `METHOD System.Boolean TryGetProfile(AIBT.ProductionTreeHost,AIBT.SchedulingProfile&)`
 - `METHOD System.Boolean TryRegister(AIBT.ProductionTreeHost,AIBT.SchedulerRegistrationError&)`
 - `METHOD System.Boolean TryRegister(AIBT.ProductionTreeHost,AIBT.SchedulingProfile,AIBT.SchedulerRegistrationError&)`
@@ -3113,7 +3114,11 @@ One population-level production coordinator per independently scheduled AI world
 - `METHOD System.Void SetUnboundedBudget()`
 - `PROPERTY AIBT.SchedulerBudgetMode BudgetMode`
 - `PROPERTY System.Boolean LastFrameOverran`
+- `PROPERTY System.Double LastFrameAllocatedBudgetMicroseconds`
+- `PROPERTY System.Double LastFrameConsumedMicroseconds`
+- `PROPERTY System.Int32 FrameEntryCount`
 - `PROPERTY System.Int32 RegisteredCount`
+- `PROPERTY System.UInt32 LastFrameIndex`
 
 ---
 
@@ -3200,11 +3205,77 @@ The three budget-source modes <c>Documentation~/decisions/ADR-P7-033-global-sche
 
 ---
 
+### `AIBT.SchedulerEstimateConfidence`
+
+- `FIELD AIBT.SchedulerEstimateConfidence High`
+- `FIELD AIBT.SchedulerEstimateConfidence Low`
+- `FIELD AIBT.SchedulerEstimateConfidence Medium`
+- `FIELD AIBT.SchedulerEstimateConfidence None`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.SchedulerFrameDisposition`
+
+- `FIELD AIBT.SchedulerFrameDisposition DeferredGlobalBudget`
+- `FIELD AIBT.SchedulerFrameDisposition DeferredProfileShare`
+- `FIELD AIBT.SchedulerFrameDisposition Executed`
+- `FIELD AIBT.SchedulerFrameDisposition Failed`
+- `FIELD AIBT.SchedulerFrameDisposition PipelinedAdvanced`
+- `FIELD AIBT.SchedulerFrameDisposition PipelinedScheduled`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.SchedulerFrameEntry`
+
+One immutable agent entry from the scheduler's most recently completed frame. Entries are held in a scheduler-owned reused buffer and copied out by value through TryGetFrameEntry.
+
+- `PROPERTY AIBT.NativeRuntimeFailureV1 Failure`
+- `PROPERTY AIBT.SchedulerEstimateConfidence Confidence`
+- `PROPERTY AIBT.SchedulerFrameDisposition Disposition`
+- `PROPERTY AIBT.SchedulerFrameSelectionSource SelectionSource`
+- `PROPERTY AIBT.SchedulerSelectionReason SelectionReason`
+- `PROPERTY AIBT.SchedulingPolicy SelectedPolicy`
+- `PROPERTY System.Boolean ExceedsConfiguredStepBudget`
+- `PROPERTY System.Boolean HasConfiguredStepBudget`
+- `PROPERTY System.Boolean HasDeadline`
+- `PROPERTY System.Boolean HasWorkEstimate`
+- `PROPERTY System.Boolean PipelinedLatencyAllowed`
+- `PROPERTY System.Double ConfiguredStepBudgetNanoseconds`
+- `PROPERTY System.Double ConsumedMicroseconds`
+- `PROPERTY System.Double EstimatedTotalWorkNanoseconds`
+- `PROPERTY System.Double EstimatedWorkPerAgentNanoseconds`
+- `PROPERTY System.Double ExpectedNodeStepsPerAgent`
+- `PROPERTY System.Double WorkerUtilizationProxy`
+- `PROPERTY System.Nullable`1<AIBT.NodeStatus> TerminalOutcome`
+- `PROPERTY System.String ProfileId`
+- `PROPERTY System.UInt32 BatchCount`
+- `PROPERTY System.UInt32 BatchSize`
+- `PROPERTY System.UInt32 DeadlineFrame`
+- `PROPERTY System.UInt32 EligibleSinceFrame`
+- `PROPERTY System.UInt32 ProfileRevision`
+- `PROPERTY System.UInt32 UpdateCadence`
+- `PROPERTY System.UInt64 ExecutedSteps`
+- `PROPERTY System.UInt64 HostInstanceId`
+- `PROPERTY System.UInt64 ObservedLatencyFrames`
+
+---
+
+### `AIBT.SchedulerFrameSelectionSource`
+
+- `FIELD AIBT.SchedulerFrameSelectionSource DirectHostPath`
+- `FIELD AIBT.SchedulerFrameSelectionSource NativeAutoSelector`
+- `FIELD System.Byte value__`
+
+---
+
 ### `AIBT.SchedulerJobsCapabilities`
 
 Explicit, caller-authored tuning for <see cref="ProductionTreeScheduler"/>'s own Jobs-policy selection (<c>NativeAutoConfigurationV1</c>'s <c>MinimumJobWorkloadNanoseconds</c>/ <c>TargetBatchWorkNanoseconds</c>/batch-size bounds) -- never a hidden default, per ADR-P7-033/P7-033's own "no hidden arbitrary budget, weight or latency default" clause. Until a caller sets this via <see cref="ProductionTreeScheduler.SetJobsCapabilities"/>, <c>BatchedJobsSameFrame</c>/<c>PipelinedJobs</c> are simply absent from the coordinator's own supported-policy set: an unmeasured batch-work target is never guessed, so a forced Jobs policy fails with a structured diagnostic rather than silently using an invented number.
 
 - `METHOD System.Boolean TryCreate(System.Double,System.Double,System.UInt32,System.UInt32,System.UInt32,AIBT.SchedulerJobsCapabilities&,AIBT.SchedulerJobsCapabilitiesValidationError&)`
+- `METHOD System.Boolean TryCreate(System.Double,System.Double,System.UInt32,System.UInt32,System.UInt32,System.Boolean,AIBT.SchedulerJobsCapabilities&,AIBT.SchedulerJobsCapabilitiesValidationError&)`
 
 ---
 
@@ -3229,6 +3300,20 @@ Why <see cref="ProductionTreeScheduler.TryRegister(ProductionTreeHost,Scheduling
 - `FIELD AIBT.SchedulerRegistrationError AlreadyRegisteredWithAnotherScheduler`
 - `FIELD AIBT.SchedulerRegistrationError AlreadyRegisteredWithThisScheduler`
 - `FIELD AIBT.SchedulerRegistrationError None`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.SchedulerSelectionReason`
+
+- `FIELD AIBT.SchedulerSelectionReason BatchedForSameFrameThroughput`
+- `FIELD AIBT.SchedulerSelectionReason BelowMinimumJobWorkload`
+- `FIELD AIBT.SchedulerSelectionReason BudgetConfigured`
+- `FIELD AIBT.SchedulerSelectionReason FallbackToOnlyAvailablePolicy`
+- `FIELD AIBT.SchedulerSelectionReason ForcedByCaller`
+- `FIELD AIBT.SchedulerSelectionReason None`
+- `FIELD AIBT.SchedulerSelectionReason PipelinedPreferredForThroughput`
+- `FIELD AIBT.SchedulerSelectionReason PreferredOverBatchedByMeasuredCost`
 - `FIELD System.Byte value__`
 
 ---

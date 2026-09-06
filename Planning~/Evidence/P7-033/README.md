@@ -1,8 +1,6 @@
 # P7-033 evidence
 
-Status: **In Progress**. Steps 0-5 of `implementation-plan.md` are done -- real `BatchedJobsSameFrame`
-selection now drives real generated-node dispatch through the coordinator's own deterministic
-`NativeAutoSelectionV1.TrySelect` integration. Step 6 (explainability) remains.
+Status: **Done**. Steps 0-6 of `implementation-plan.md` are complete.
 
 ## Steps 2-4 (2026-09-05)
 
@@ -148,13 +146,40 @@ package-path failures as every prior Phase 7 card). Generated API docs regenerat
 additive public surface (`SchedulerJobsCapabilities`, `SetJobsCapabilities`/`ClearJobsCapabilities`)
 via `AIBT/MCP/Regenerate Documentation`.
 
-## Remaining scope
+## PipelinedJobs and step 6 (2026-09-06)
 
-- `PipelinedJobs` is not supported by any configuration yet: its own cross-frame stage semantics
-  (`NativePipelinedPhaseControllerV1`'s explicit `TryAdvanceStage`/multi-frame round boundary) are a
-  distinct integration axis from `BatchedJobsSameFrame`'s same-frame batching, not yet built.
-- Deadline-deferral, non-preemptible-overrun and disposal-while-a-group-batch-is-outstanding are
-  exercised indirectly by the existing due-ordering/budget/registration test suites (unchanged code
-  paths for non-Jobs entries) but have no *Jobs-group-specific* dedicated test yet.
-- Step 6 (explainability snapshot: `NativeAutoExplanationV1`'s own fields surfaced per-frame) builds
-  on step 5's own selection/grouping decisions and is not started.
+- `SchedulerJobsCapabilities` gained an additive overload whose boolean is the caller's explicit
+  permission for cross-frame Jobs retention. A forced pipeline is supported only when that flag and
+  `SchedulingProfile.PipeliningPermitted` are both true; the old overload preserves false.
+- `ProductionPipelinedGroupDriverV1` schedules one real `NativePipelinedPhaseControllerV1` lifecycle
+  round in frame N and advances/completes it no earlier than scheduler frame N+1. Each later round
+  rebuilds lanes from still-open hosts, so terminal/faulted lanes are never advanced again.
+- Same-frame and pipelined drivers share `ProductionDispatchResolverV1`; grouped generated dispatch
+  is not duplicated. `ProductionTreeHost.TryResumeBatchedDriveAfterDispatch` makes cross-round drive
+  ownership explicit after dispatch completion releases the lock.
+- Scheduler/host destruction and unregister drain the already-outstanding round, publish its actual
+  step bookkeeping, release host drive locks and dispose native controller/buffers before ownership
+  changes. Dedicated live tests cover scheduler and member-host destruction while a Job is live.
+- `SchedulerFrameEntry` is copied from a bounded, scheduler-owned reused buffer. It exposes profile
+  identity/revision, eligibility/deadline, direct-vs-native selection source, selected policy/reason,
+  estimate/confidence, batch size, disposition, consumed time, executed steps, observed pipeline
+  latency, terminal result and structured failure. Scheduler-level properties expose the frozen
+  allocated and measured consumed budget. Immediate/Budgeted entries explicitly say `DirectHostPath`
+  with no fabricated native-selection reason.
+- Unity Profiler exposes allocation-free `AIBT.Production.Scheduler.Frame` and
+  `AIBT.Production.Scheduler.PipelinedAdvance` markers; detailed per-agent values remain in the
+  bounded query API instead of being copied into profiler strings.
+
+Verification against Unity `6000.5.8f1` through Unity MCP:
+
+- focused new pipeline/disposal/snapshot/allocation tests: 5/5; generated-dispatch allocation canary
+  rerun independently after one instrumentation-noise failure: 1/1;
+- `AIBT.Runtime.Tests` + `AIBT.Integration.Tests`: 733/733;
+- `AIBT.Editor.Tests`: 433/433 after `AIBT/MCP/Regenerate Documentation`;
+- other directly exercised assemblies: 232/232;
+- CodeGen assemblies: 19/21, exactly the two disclosed pre-existing
+  `GeneratedArtifactContractTests.*` package-path failures (`PackageInfo` cannot associate the test
+  assembly with the embedded AIBT submodule package); no new failure;
+- live Play Mode: one coordinator registered Normal and Background hosts, both coordinator-owned;
+  after real Editor frames the snapshot reported two entries with the two exact profile IDs;
+- no cross-platform performance conclusion is made; P7-035 still owns Player measurement.

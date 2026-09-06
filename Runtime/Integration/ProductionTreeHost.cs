@@ -492,6 +492,24 @@ namespace AIBT
             return CompletePendingDispatch(result, status);
         }
 
+        /// <summary>
+        /// Reacquires the externally-driven lifecycle lock after a grouped dispatch completion
+        /// released it. This makes the cross-round ownership invariant explicit for both the
+        /// same-frame and pipelined production drivers.
+        /// </summary>
+        internal bool TryResumeBatchedDriveAfterDispatch()
+        {
+            if (_disposed || _destroyRequested || !_ready || !isActiveAndEnabled || _hasPendingStep)
+                return false;
+            if (_driving)
+            {
+                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                return false;
+            }
+            _driving = true;
+            return true;
+        }
+
         /// <summary>Releases the drive lock <see cref="TryBeginBatchedRound"/> took for a host whose round ended at <see cref="BatchedStepOutcome.Terminal"/> (no dispatch was pending, so <see cref="CompletePendingDispatch"/> never runs to release it).</summary>
         internal void ReleaseBatchedDrive()
         {
@@ -510,6 +528,11 @@ namespace AIBT
             Fail(
                 new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid),
                 "Forced scheduling policy is not supported by this coordinator's own current configuration.");
+        }
+
+        internal void FailExternalScheduling(NativeRuntimeFailureV1 failure)
+        {
+            Fail(failure, "The coordinator's externally-driven scheduling round failed.");
         }
 
         /// <summary>
@@ -629,8 +652,8 @@ namespace AIBT
 
         private void OnDestroy()
         {
-            _owner?.TryUnregister(this);
             _destroyRequested = true;
+            _owner?.TryUnregister(this);
             if (!_driving) DisposeHost();
         }
 

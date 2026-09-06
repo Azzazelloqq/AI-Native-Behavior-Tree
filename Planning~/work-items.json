@@ -2084,7 +2084,7 @@
       "id": "P7-033",
       "phase": 7,
       "title": "Global production scheduler and custom scheduling profiles",
-      "status": "in_progress",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-033-global-production-scheduler-and-profiles.md",
       "dependsOn": ["P4-004", "P4-005", "P6-019", "P7-024", "P7-030", "P7-032", "P7-037"],
@@ -2114,7 +2114,7 @@
       "status": "draft",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-035-swarm-arena-player-benchmark.md",
-      "dependsOn": ["P4-008", "P7-024", "P7-033", "P7-034", "P7-037"],
+      "dependsOn": ["P4-008", "P7-024", "P7-033", "P7-034", "P7-037", "P7-038"],
       "owns": [
         "Benchmarks~/Phase7/SwarmArena/",
         "Documentation~/scheduling-benchmark-report.md",
@@ -2147,6 +2147,23 @@
         "Authoring/Compilation/Generated/",
         "Tests/Integration/NativeRuntime/",
         "Planning~/Evidence/P7-037/"
+      ]
+    },
+    {
+      "id": "P7-038",
+      "phase": 7,
+      "title": "Bounded grouped generated-dispatch workspace",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-038-bounded-grouped-generated-dispatch-workspace.md",
+      "dependsOn": ["P2-012", "P7-032", "P7-033", "P7-037"],
+      "owns": [
+        "Runtime/Execution/Burst/Dispatch/",
+        "Runtime/Integration/GeneratedDispatch/",
+        "Runtime/Scheduling/Production/ProductionPipelinedGroupDriverV1.cs",
+        "Tests/Runtime/NativeExecution/Dispatch/",
+        "Tests/Integration/NativeRuntime/",
+        "Planning~/Evidence/P7-038/"
       ]
     },
     {
