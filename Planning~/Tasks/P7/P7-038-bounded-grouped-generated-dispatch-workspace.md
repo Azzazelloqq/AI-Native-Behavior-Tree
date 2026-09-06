@@ -104,3 +104,29 @@ git diff --check
 P7-035 may measure and claim grouped-dispatch allocation behavior only after this card is Done.
 P7-034 remains independent: it may build the deterministic gameplay workload while this internal
 workspace work is in progress.
+
+## Outcome
+
+Done, 2026-09-06 (committed 2026-09-07, submodule `a3e69b2`). ADR AIBT-039 is implemented exactly;
+full defect history and verification are in `Planning~/Evidence/P7-038/README.md`.
+
+Acceptance criteria:
+
+- **Repeated grouped waves and later scheduler runs for a warmed catalog/profile key allocate no
+  managed or native memory, for both Jobs policies** -- met: `GeneratedDispatchGroupWorkspaceV2`
+  owns persistent maximum-size buffers; zero managed GC allocation confirmed live after warm-up
+  across multiple waves.
+- **Exactly one executor invocation per wave; each participant receives only its own committed
+  result** -- met, unchanged from the contract P7-033 established.
+- **A terminal, dispatch-bound or removed lane never reappears in a later request slice** -- met.
+- **An over-capacity request fails structurally, commits no partial state, never resizes or falls
+  back to sequential dispatch** -- met: a structured `CapacityExceeded` result, no silent
+  single-dispatch fallback.
+- **Workspace reset, host destruction and scheduler destruction release leases and dispose native
+  allocations exactly once** -- met, including live tests for teardown around an outstanding
+  scheduled wave.
+- **Existing single-instance generated dispatch (P7-037) and its bootstrap validation remain
+  unchanged** -- met, no regression.
+
+Full regression at completion: `AIBT.Runtime.Tests` + `AIBT.Integration.Tests` 734/734,
+`AIBT.Editor.Tests` 433/433, `Verify-Static.ps1` (143 work items), `git diff --check` clean.

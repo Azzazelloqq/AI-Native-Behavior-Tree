@@ -6,6 +6,22 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- One optional population-level `ProductionTreeScheduler` replaces per-tree scheduling choices:
+  registered `ProductionTreeHost` instances share one deterministic due/budget/policy decision built
+  from stable `SchedulingProfile`s (built-in `Normal`/`Interactive`/`Background` presets, or custom
+  project/runtime profiles) and an explicit `Unbounded`/`Fixed`/`Provider` global time allowance.
+  Selection stays the existing deterministic `Auto` rule; a forced `BatchedJobsSameFrame` groups
+  compatible agents through real generated-node dispatch, and a forced `PipelinedJobs` now drives that
+  same real dispatch across scheduler-frame boundaries under explicit per-profile/capability opt-in.
+  A bounded, allocation-free per-registration snapshot exposes every decision, estimate, budget and
+  deferral for debugging. See `Planning~/Evidence/P7-033/README.md`.
+
+- Grouped generated-dispatch (`BatchedJobsSameFrame`/`PipelinedJobs`) no longer allocates per wave: a
+  scheduler-owned workspace, keyed by catalog and profile reference identity, stays warm across
+  repeated runs with a fixed capacity derived from the registered cohort; a request beyond capacity
+  fails structurally without committing partial participant state. See
+  `Planning~/Evidence/P7-038/README.md`.
+
 - Reproducible scheduling benchmark report and chart covering all 42 comparable Windows/Android
   Player points for plain loops versus same-frame Unity Jobs, with source hashes and explicit
   disclosure of the unmeasured pipelined policy.

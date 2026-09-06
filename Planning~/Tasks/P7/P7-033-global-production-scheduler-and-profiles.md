@@ -165,3 +165,42 @@ git diff --check
 ```
 
 No new cross-platform performance claim is required here. P7-035 owns canonical Player measurement.
+
+## Outcome
+
+Done, 2026-09-06 (committed 2026-09-07, submodule `a3e69b2`). All six implementation-plan steps are
+complete; full defect history and verification are in `Planning~/Evidence/P7-033/README.md`.
+
+Acceptance criteria:
+
+- **A default profile requires no per-tree policy or step-budget choice** -- met: a profile-less
+  `TryRegister(host)` defaults to `SchedulingProfile.Normal` (`Auto`).
+- **One coordinator enforces one observable global budget** -- met: `Unbounded`/`Fixed`/`Provider`
+  modes, frozen once per scheduler frame, never copied into a host's own `UpdateBudgetSteps`.
+- **Custom profiles as project assets and runtime values, validated without silent clamping** --
+  met: `SchedulingProfile.TryCreate`/`SchedulingProfileAsset.TryFreeze` fail closed on an empty ID,
+  zero cadence, a latency cap below cadence, or an out-of-(0,1] budget share.
+- **Deterministic deadline/starvation ordering** -- met: a five-tier `Comparison<Registration>`
+  (deadline, eligible-since age, one-shot urgency, profile priority, stable `InstanceId`).
+- **Temporary urgency without mutating the shared profile** -- met: a one-shot
+  `RequestUrgentUpdate` signal.
+- **Unsupported forced policies fail with a structured diagnostic; `Auto` respects backend/latency
+  capability** -- met: `FailUnsupportedForcedPolicy` for a missing generated catalog, unconfigured
+  Jobs capabilities, or forced `PipelinedJobs` without both capability and profile opt-in.
+- **Explainability** -- met: a bounded, reused `SchedulerFrameSnapshot` per registration exposing
+  policy/reason, estimate/confidence, batch shape, allocated/consumed budget, deferred/completed
+  agents, observed latency and structured failure; allocation-free `AIBT.Production.Scheduler.*`
+  Profiler markers.
+- **Registration, scene disable/unload, terminal completion, failure and disposal do not leak or
+  retain stale agents** -- met, including dedicated live tests for scheduler and member-host
+  destruction while a Job is outstanding.
+- **Hot paths meet the existing allocation/Burst rules** -- met: zero managed GC allocation
+  confirmed live after warm-up for repeated group waves.
+
+Disclosed, not claimed: no cross-platform/Player performance conclusion is made here -- `P7-035`
+measures that once `P7-034` supplies a real deterministic workload.
+
+Full regression at completion: `AIBT.Runtime.Tests` + `AIBT.Integration.Tests` 733/733,
+`AIBT.Editor.Tests` 433/433, other directly exercised assemblies 232/232, CodeGen assemblies 19/21
+(the same 2 pre-existing, unrelated `GeneratedArtifactContractTests` package-path failures as every
+prior Phase 7 card).

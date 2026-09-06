@@ -1312,3 +1312,39 @@ CI-only `P7-020` public-API baseline, still gated on `P0-005`'s blocked self-hos
 bounded follow-up owned by `P7-020`, not `P7-037`. See `Planning~/Evidence/P7-037/README.md`.
 `P7-033` is next; `P7-034` and `P7-035` must consume this public production path rather than a
 benchmark or test-only adapter, per `P7-037`'s own handoff notes.
+
+Same cycle, `P7-033` (global production scheduler and custom scheduling profiles) is now **fully
+done** -- submodule commit `a3e69b2` (2026-09-07), covering all six implementation-plan steps:
+profile contracts (`SchedulingProfile`/`SchedulingProfileAsset`), coordinator registration/ownership
+(`ProductionTreeScheduler`, `ProductionTreeHost` refactored behind an internal single-owner entry
+point with standalone behavior unchanged), deterministic due ordering and budget admission
+(`Unbounded`/`Fixed`/`Provider` modes, per-profile share caps, honest cold-start), real cross-instance
+grouped generated dispatch for forced `BatchedJobsSameFrame` (`GeneratedDispatchGroupExecutorV2`,
+`ProductionBatchedGroupDriverV1`), and -- closing the card's last disclosed gap -- real forced
+`PipelinedJobs` execution across scheduler frames through `NativePipelinedPhaseControllerV1` under
+explicit per-profile/capability opt-in (`ProductionPipelinedGroupDriverV1`), plus a bounded,
+allocation-free reused per-registration `SchedulerFrameSnapshot` and `AIBT.Production.Scheduler.*`
+Profiler markers for explainability. Unsupported forced policies (no catalog, unconfigured Jobs
+capabilities, or `PipelinedJobs` without both capability and profile opt-in) fail every group member
+with a structured diagnostic rather than a silent `Immediate` substitution. See
+`Planning~/Evidence/P7-033/README.md`.
+
+Same commit, `P7-038` (bounded grouped generated-dispatch workspace) is also **done**: a new
+scheduler-owned `GeneratedDispatchGroupWorkspaceV2`, cached by `ProductionTreeScheduler` keyed on
+`GeneratedBurstCatalogV2`/`SchedulingProfile` reference identity, replaces the per-wave managed/native
+allocation `P7-033` step 5 originally used for grouped dispatch. Capacity is derived once at
+registration from the registered compatible cohort and the catalog's own validated metadata; a wave
+exceeding it fails structurally (`CapacityExceeded`), committing no participant state and never
+resizing or falling back to sequential dispatch; capacity-only slots never reach the generated
+executor. See `Planning~/Evidence/P7-038/README.md`.
+
+Both cards were verified live against Unity `6000.5.8f1` before this commit: `AIBT.Runtime.Tests` +
+`AIBT.Integration.Tests` 734/734, `AIBT.Editor.Tests` 433/433, `Verify-Static.ps1` (143 work items)
+and `git diff --check` all passed; zero managed GC allocation after warm-up for repeated grouped
+dispatch waves under both Jobs policies. No new cross-platform performance claim is made by either
+card -- `P7-035` still owns Player measurement, and needs `P7-034`'s deterministic workload first.
+
+Remaining assignable frontier: `P7-034` (Swarm Arena gameplay showcase) is the only Phase 7 card with
+fully satisfied dependencies (`P7-023`/`P7-027`/`P7-028`/`P7-030`/`P7-033`/`P7-037`, all done).
+`P7-035` (Player benchmark) and `P7-036` (UX/node-library review) both remain blocked on it. Owner
+priority stands: `P7-034` next.
