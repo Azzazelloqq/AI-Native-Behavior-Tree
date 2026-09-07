@@ -45,6 +45,14 @@ namespace AIBT.Authoring
         /// heads-up for review, never a blocking failure.
         /// </summary>
         public static readonly DiagnosticCode MigrationApplied = new DiagnosticCode("AIBT2042");
+
+        /// <summary>
+        /// P7-039 (ADR-P7-039): a declared Tree-scope blackboard key has zero Write accesses across
+        /// the whole tree, making it eligible for a native <c>ProductionTreeHost</c> external write
+        /// (a compiled node never claims it). Info severity -- the document already compiles and
+        /// validates successfully; this is a review heads-up, never a blocking failure.
+        /// </summary>
+        public static readonly DiagnosticCode TreeScopeSlotNeverWritten = new DiagnosticCode("AIBT2043");
     }
 
     public static class TreeValidationDiagnosticCatalog
@@ -90,6 +98,7 @@ namespace AIBT.Authoring
             TreeValidationDiagnosticCodes.UnsupportedNodeCapability,
             TreeValidationDiagnosticCodes.MultipleParents,
             TreeValidationDiagnosticCodes.MigrationApplied,
+            TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten,
         };
 
         public static DiagnosticCatalog Catalog { get; } = CreateCatalog();
@@ -114,10 +123,11 @@ namespace AIBT.Authoring
             var descriptors = new DiagnosticDescriptor[Codes.Length];
             for (var index = 0; index < Codes.Length; index++)
             {
-                // Every code defaults to Error except MigrationApplied: a migration having been
-                // applied means the document already compiles/validates successfully, so it is
-                // never a blocking failure -- only Info, a review heads-up (ADR-P7-005).
+                // Every code defaults to Error except MigrationApplied and TreeScopeSlotNeverWritten:
+                // both describe a document that already compiles/validates successfully, so neither
+                // is a blocking failure -- only Info, a review heads-up (ADR-P7-005/ADR-P7-039).
                 var defaultSeverity = Codes[index] == TreeValidationDiagnosticCodes.MigrationApplied
+                    || Codes[index] == TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten
                     ? DiagnosticSeverity.Info
                     : DiagnosticSeverity.Error;
                 descriptors[index] = new DiagnosticDescriptor(

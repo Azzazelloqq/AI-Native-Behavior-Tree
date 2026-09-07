@@ -471,6 +471,7 @@ namespace AIBT.Authoring
             ValidationOptions options,
             ICollection<Diagnostic> diagnostics)
         {
+            var writtenTreeKeys = new HashSet<string>(StringComparer.Ordinal);
             for (var index = 0; index < graph.OrderedNodes.Count; index++)
             {
                 var node = graph.OrderedNodes[index];
@@ -493,9 +494,31 @@ namespace AIBT.Authoring
 
                 ValidateChildPolicy(document, node, manifest, options, diagnostics);
                 ValidateParameters(document, node, manifest, options, diagnostics);
-                ValidateAccess(document, node, manifest, blackboard, options, diagnostics);
+                ValidateAccess(document, node, manifest, blackboard, options, diagnostics, writtenTreeKeys);
                 ValidateObserver(document, node, graph, blackboard, manifest, options, diagnostics);
                 ValidateNodeCapabilities(document, node, manifest, options, diagnostics);
+            }
+            ValidateBlackboardWriteCoverage(document, blackboard, writtenTreeKeys, options, diagnostics);
+        }
+
+        /// <summary>
+        /// P7-039 (ADR-P7-039): flags every declared Tree-scope key no node in the tree ever writes
+        /// -- purely informational (the document already validates), a heads-up that the key is
+        /// eligible for a native <c>ProductionTreeHost</c> external write.
+        /// </summary>
+        private static void ValidateBlackboardWriteCoverage(
+            TreeDocument document,
+            IReadOnlyDictionary<string, BlackboardKeyDefinition> blackboard,
+            ICollection<string> writtenTreeKeys,
+            ValidationOptions options,
+            ICollection<Diagnostic> diagnostics)
+        {
+            foreach (var key in blackboard.Values)
+            {
+                if (key.Scope != BlackboardScope.Tree || writtenTreeKeys.Contains(key.Id)) continue;
+                diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten,
+                    "No node in this tree declares Write access to this Tree-scope key.",
+                    BlackboardPointer(key.Id), document.TreeId));
             }
         }
 
@@ -676,7 +699,8 @@ namespace AIBT.Authoring
             NodeManifest manifest,
             IReadOnlyDictionary<string, BlackboardKeyDefinition> blackboard,
             ValidationOptions options,
-            ICollection<Diagnostic> diagnostics)
+            ICollection<Diagnostic> diagnostics,
+            ICollection<string> writtenTreeKeys)
         {
             for (var index = 0; index < manifest.Accesses.Count; index++)
             {
@@ -692,6 +716,10 @@ namespace AIBT.Authoring
                     diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.UnsupportedBlackboardWrite,
                         "Shared-scope writes require a deterministic reduction policy not available in Phase 1.",
                         BlackboardPointer(key.Id), document.TreeId, node.Id));
+                }
+                else if (access.Mode == NodeAccessMode.Write && key.Scope == BlackboardScope.Tree)
+                {
+                    writtenTreeKeys.Add(access.Key);
                 }
             }
         }

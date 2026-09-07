@@ -6,6 +6,7 @@
     "AIBT.Authoring",
     "AIBT.BehaviorCases.Tests",
     "AIBT.CodeGen.GenerationTests",
+    "AIBT.CodeGen.P7039ExternalTreeWrite.Tests",
     "Unity.Burst",
     "Unity.Collections"
   ],

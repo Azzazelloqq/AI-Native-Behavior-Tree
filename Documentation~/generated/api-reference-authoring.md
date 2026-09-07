@@ -1394,6 +1394,7 @@ Mirrors <c>ReferenceTraceEventKind</c> (internal, Runtime) across the assembly b
 - `FIELD AIBT.DiagnosticCode ParameterConstraint`
 - `FIELD AIBT.DiagnosticCode ParameterType`
 - `FIELD AIBT.DiagnosticCode PolicyViolation`
+- `FIELD AIBT.DiagnosticCode TreeScopeSlotNeverWritten`
 - `FIELD AIBT.DiagnosticCode UnknownNodeType`
 - `FIELD AIBT.DiagnosticCode UnknownParameter`
 - `FIELD AIBT.DiagnosticCode UnreachableNode`

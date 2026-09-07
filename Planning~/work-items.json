@@ -2167,6 +2167,40 @@
       ]
     },
     {
+      "id": "P7-039",
+      "phase": 7,
+      "title": "External write to a native Tree-scope blackboard slot",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-039-external-tree-blackboard-write.md",
+      "dependsOn": ["P2-007", "P7-030", "P7-033", "P7-037"],
+      "owns": [
+        "Runtime/Integration/GeneratedDispatch/GeneratedTreeDispatchAdapterV2.cs",
+        "Runtime/Blackboard/Native/Tree/NativeTreeBlackboardV1.cs",
+        "Runtime/Integration/ProductionTreeHost.cs",
+        "Authoring/Validation/TreeValidator.cs",
+        "Authoring/Validation/TreeValidationDiagnostics.cs",
+        "Tests/Editor/CodeGen/GenerationP7039/",
+        "Tests/Editor/Validation/TreeScopeSlotNeverWrittenValidatorTests.cs",
+        "Tests/Integration/NativeRuntime/ExternalTreeBlackboardWriteTests.cs",
+        "Planning~/Evidence/P7-039/"
+      ]
+    },
+    {
+      "id": "P7-040",
+      "phase": 7,
+      "title": "Native hot reload never migrates or defaults Tree-scope blackboard",
+      "status": "draft",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-040-native-hot-reload-blackboard-defaults-gap.md",
+      "dependsOn": ["P7-012", "P2-007"],
+      "owns": [
+        "Runtime/Execution/Native/HotReload/NativeHotReloadStateMigration.cs",
+        "Runtime/Execution/Native/HotReload/NativeHotReloadInstance.cs",
+        "Planning~/Evidence/P7-040/"
+      ]
+    },
+    {
       "id": "P7-020",
       "phase": 7,
       "title": "CI-enforced public API diff check",

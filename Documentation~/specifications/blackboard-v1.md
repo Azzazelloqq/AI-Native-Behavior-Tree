@@ -44,6 +44,32 @@ Each slot has a change version. The version increments only when the registered 
 
 Built-in equality is exact value equality. Integers, IDs, enums, and fixed strings compare their canonical values. Floating values compare IEEE numeric values after canonicalizing both `-0` and `+0` to zero; all NaN values are invalid and cannot enter a slot. Vectors and quaternions compare their canonicalized components exactly. Registered unmanaged types supply deterministic equality as part of registration.
 
+## External Tree-scope write (P7-039)
+
+Ordinary C# game code may write one live value per frame into a running native tree instance's own
+`Tree`-scope slot, addressed by stable key, through `ProductionTreeHost.TryResolveExternalTreeWrite`/
+`TryWriteExternalTreeValue` (ADR-P7-039). This is a host-level capability, not a node-authored
+binding, and is deliberately narrow:
+
+- Eligible only when no node in the tree declares Write access to the key --
+  `(slot.AccessFlags & CompiledBlackboardAccessFlags.Write) == 0`, the exact compile-time signal
+  `TreeValidator`'s `AIBT2043 TreeScopeSlotNeverWritten` (Info) already surfaces. A key any node
+  writes is refused, never a silent race between external and node-authored writes.
+- Reachable only for a `ProductionTreeHost` bootstrapped through the generated-catalog overload
+  (`GeneratedTreeRuntimeDefinitionV2`/`GeneratedBurstCatalogV2`); a delegate-based
+  (`DispatchLifecycle`/`DispatchLeaf`) host has no Tree-scope blackboard storage at all and is
+  refused structurally.
+- Limited to built-in (non-registered) value types in this release.
+- Only `Tree` scope. `Agent` scope has no external-write path (a live value shared identically
+  across instances is simplest as a plain per-instance write in the caller's own population loop);
+  `Shared` scope stays governed entirely by the rules above.
+
+**Disclosed limitations.** An external writer makes an instance's deterministic replay dependent on
+the calling code reproducing the exact same writes at the exact same logical updates -- the same
+class of non-determinism already disclosed for a custom execution clock, not a new kind of bug. A
+resolved write handle is valid only for the exact host instance it was resolved against; using it
+against a different (or destroyed) host is refused, never trusted.
+
 ## Shared writes
 
 Shared scope is read-only during the execute phase. A declared Shared write

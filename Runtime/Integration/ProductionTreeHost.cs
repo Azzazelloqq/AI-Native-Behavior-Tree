@@ -203,6 +203,132 @@ namespace AIBT
         /// </summary>
         public bool IsCoordinatorOwned => _owner != null;
 
+        /// <summary>
+        /// Opaque, per-host handle for one Tree-scope blackboard slot resolved for external write
+        /// (ADR-P7-039). Resolve once via <see cref="TryResolveExternalTreeWrite{T}"/>, typically at
+        /// spawn time, then reuse every frame with <see cref="TryWriteExternalTreeValue{T}"/>. Valid
+        /// only for the exact host it was resolved against.
+        /// </summary>
+        public readonly struct ExternalTreeWriteHandle<T> where T : unmanaged
+        {
+            private readonly ulong _instanceId;
+            private readonly uint _slotIndex;
+            private readonly NativeBlackboardSlotBindingV2 _slot;
+
+            internal ExternalTreeWriteHandle(ulong instanceId, uint slotIndex, NativeBlackboardSlotBindingV2 slot)
+            {
+                _instanceId = instanceId;
+                _slotIndex = slotIndex;
+                _slot = slot;
+            }
+
+            internal ulong InstanceId => _instanceId;
+            internal uint SlotIndex => _slotIndex;
+            internal NativeBlackboardSlotBindingV2 Slot => _slot;
+            internal bool IsValid => _instanceId != 0;
+        }
+
+        /// <summary>
+        /// Resolves a Tree-scope blackboard slot, addressed by <paramref name="stableKey"/>, for
+        /// repeated external writes from ordinary C# code (ADR-P7-039) -- an agent's own live
+        /// transform, a moving target's position, and similar per-frame inputs a compiled node
+        /// itself never writes. Succeeds only when no node in this tree declares Write access to the
+        /// key; reusing an eligible key that some node does write is refused, never a silent race.
+        /// Available only for a host bootstrapped through the generated-catalog
+        /// <see cref="TryBootstrap(GeneratedTreeRuntimeDefinitionV2, GeneratedBurstCatalogV2, NativeTraceChannelCapacityV1, Func{long}, out NativeRuntimeFailureV1)"/>
+        /// overload -- a delegate-based host has no blackboard storage to write into and is refused
+        /// structurally. Only built-in (non-registered) blackboard value types are supported.
+        /// </summary>
+        public bool TryResolveExternalTreeWrite<T>(
+            string stableKey,
+            NativeBlackboardTypeIdV2 expectedType,
+            out ExternalTreeWriteHandle<T> handle,
+            out NativeRuntimeFailureV1 failure)
+            where T : unmanaged
+        {
+            handle = default;
+            if (string.IsNullOrEmpty(stableKey)) throw new ArgumentException("A stable blackboard key is required.", nameof(stableKey));
+            if (!_bootstrapped || _disposed)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            if (_generatedDispatch == null)
+            {
+                failure = new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid);
+                return false;
+            }
+            var stableKeyId = StableHash.Fnv1A64(stableKey);
+            if (!_generatedDispatch.TryResolveExternalTreeWrite(
+                    stableKeyId, expectedType, out var slotIndex, out var slot, out var burstFailure))
+            {
+                failure = new NativeRuntimeFailureV1(MapExternalWriteFailure(burstFailure));
+                return false;
+            }
+            handle = new ExternalTreeWriteHandle<T>(InstanceId, slotIndex, slot);
+            failure = default;
+            return true;
+        }
+
+        /// <summary>
+        /// Writes one external value through a handle already resolved by
+        /// <see cref="TryResolveExternalTreeWrite{T}"/> -- the per-frame hot path, no string lookup
+        /// or managed allocation. Refuses, touching no memory, when this host is mid-round (the same
+        /// reentrancy invariant every other entry point already enforces via <see cref="_driving"/>
+        /// -- refused rather than faulting the host, since writing at the wrong moment is an
+        /// expected, recoverable caller situation, not a reentrancy bug) or when
+        /// <paramref name="handle"/> was resolved against a different (or since-destroyed) host.
+        /// </summary>
+        public bool TryWriteExternalTreeValue<T>(
+            ExternalTreeWriteHandle<T> handle,
+            T value,
+            out bool changed,
+            out NativeRuntimeFailureV1 failure)
+            where T : unmanaged
+        {
+            changed = false;
+            if (!handle.IsValid || handle.InstanceId != InstanceId || _generatedDispatch == null
+                || !_ready || _disposed || _destroyRequested)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            if (_driving)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            var candidate = new NativeArray<T>(1, Allocator.Temp);
+            try
+            {
+                candidate[0] = value;
+                if (!_generatedDispatch.TryWriteExternalTreeValue(
+                        handle.SlotIndex, handle.Slot, candidate, out changed, out var burstFailure))
+                {
+                    failure = new NativeRuntimeFailureV1(MapExternalWriteFailure(burstFailure));
+                    return false;
+                }
+                failure = default;
+                return true;
+            }
+            finally
+            {
+                candidate.Dispose();
+            }
+        }
+
+        private static NativeRuntimeDiagnosticCodeV1 MapExternalWriteFailure(BurstContextResult failure)
+        {
+            switch (failure)
+            {
+                case BurstContextResult.TypeMismatch: return NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch;
+                case BurstContextResult.PhaseViolation: return NativeRuntimeDiagnosticCodeV1.BlackboardRegistryMismatch;
+                case BurstContextResult.InvalidEncoding: return NativeRuntimeDiagnosticCodeV1.BlackboardInvalidValue;
+                case BurstContextResult.Overflow: return NativeRuntimeDiagnosticCodeV1.BlackboardVersionOverflow;
+                default: return NativeRuntimeDiagnosticCodeV1.BlackboardUndeclaredAccess;
+            }
+        }
+
         internal bool TryRegisterOwner(ProductionTreeScheduler owner)
         {
             if (owner == null) throw new ArgumentNullException(nameof(owner));

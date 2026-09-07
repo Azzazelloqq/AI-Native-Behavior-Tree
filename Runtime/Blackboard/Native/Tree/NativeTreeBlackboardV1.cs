@@ -264,6 +264,62 @@ namespace AIBT
                 destination[(int)slot.Offset + index] = CanonicalByte(program, slot, source, (uint)index);
         }
 
+        // Built-in-only counterparts of IsCanonical/EqualsCanonical/CopyCanonical, for a caller
+        // (GeneratedTreeDispatchAdapterV2's external-write path, P7-039/ADR-P7-039) that has no
+        // NativeProgramImageViewV2 to offer -- only a managed NativeProgramBlackboardBindingV2.
+        // Safe because the built-in canonicalization branch these mirror never dereferences its own
+        // `program` parameter; a registered-type slot is refused up front instead, never silently
+        // mishandled.
+        internal static bool IsCanonicalBuiltInOnly(
+            NativeBlackboardSlotBindingV2 slot,
+            NativeArray<byte>.ReadOnly bytes)
+        {
+            if (slot.RegisteredTypeIndex != CompiledIndex.Invalid) return false;
+            if (slot.Size > (uint)bytes.Length) return false;
+            return IsCanonicalBuiltIn(slot.TypeId, slot.EnumContractId, bytes, 0, slot.Size);
+        }
+
+        internal static bool EqualsCanonicalBuiltInOnly(
+            NativeBlackboardSlotBindingV2 slot,
+            NativeArray<byte> current,
+            NativeArray<byte>.ReadOnly candidate)
+        {
+            for (var index = 0; index < slot.Size; index++)
+                if (current[(int)slot.Offset + index] != CanonicalByteBuiltInOnly(slot, candidate, (uint)index)) return false;
+            return true;
+        }
+
+        internal static void CopyCanonicalBuiltInOnly(
+            NativeBlackboardSlotBindingV2 slot,
+            NativeArray<byte>.ReadOnly source,
+            NativeArray<byte> destination)
+        {
+            for (var index = 0; index < slot.Size; index++)
+                destination[(int)slot.Offset + index] = CanonicalByteBuiltInOnly(slot, source, (uint)index);
+        }
+
+        private static byte CanonicalByteBuiltInOnly(
+            NativeBlackboardSlotBindingV2 slot,
+            NativeArray<byte>.ReadOnly source,
+            uint index)
+        {
+            if (IsNegativeZeroComponentBuiltInOnly(slot, source, index)) return 0;
+            return source[(int)index];
+        }
+
+        private static bool IsNegativeZeroComponentBuiltInOnly(
+            NativeBlackboardSlotBindingV2 slot,
+            NativeArray<byte>.ReadOnly source,
+            uint index)
+        {
+            if (slot.TypeId == NativeBuiltInBlackboardTypeIdsV1.Float64)
+                return index == 7 && ReadU64(source, 0) == 0x8000000000000000ul;
+            if ((index & 3) != 3 || !IsFloatType(slot.TypeId, out var componentSize, out var components)
+                || componentSize != 4) return false;
+            var component = index / 4;
+            return component < components && ReadU32(source, (int)(component * 4)) == 0x80000000u;
+        }
+
         private static byte CanonicalByte(
             NativeProgramImageViewV2 program,
             NativeBlackboardSlotBindingV2 slot,

@@ -6,6 +6,13 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- Ordinary C# code can now write one live external value per frame into a running native tree
+  instance's own Tree-scope blackboard, through new `ProductionTreeHost.TryResolveExternalTreeWrite<T>`/
+  `TryWriteExternalTreeValue<T>` — gated on no node in the tree ever declaring Write access to the
+  key, available only for a host bootstrapped through the generated-catalog dispatch overload.
+  `TreeValidator` gained a new Info diagnostic, `AIBT2043 TreeScopeSlotNeverWritten`, flagging a
+  declared Tree-scope key eligible for this. See `Planning~/Evidence/P7-039/README.md`.
+
 - One optional population-level `ProductionTreeScheduler` replaces per-tree scheduling choices:
   registered `ProductionTreeHost` instances share one deterministic due/budget/policy decision built
   from stable `SchedulingProfile`s (built-in `Normal`/`Interactive`/`Background` presets, or custom

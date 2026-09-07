@@ -1344,7 +1344,28 @@ and `git diff --check` all passed; zero managed GC allocation after warm-up for 
 dispatch waves under both Jobs policies. No new cross-platform performance claim is made by either
 card -- `P7-035` still owns Player measurement, and needs `P7-034`'s deterministic workload first.
 
+Same cycle (2026-09-07), a separate session planning `P7-034` (Swarm Arena) found a real
+architectural gap before writing any gameplay code: `ProductionTreeHost`/`ProductionTreeScheduler`
+had no public channel for ordinary C# code to feed live external data (a moving target's position,
+an agent's own transform) into an already-bootstrapped native tree instance. That session did not
+continue `P7-034` itself; instead it filed and closed `P7-039` (external write to a native
+Tree-scope blackboard slot) as its own dedicated card, now **done** -- `ADR-P7-039` (Accepted,
+including a same-day "Correction": the first-drafted mechanism assumed a shared V2 arena neither
+`ProductionTreeHost` bootstrap overload actually uses; the real, corrected mechanism writes through
+`GeneratedTreeDispatchAdapterV2`'s own private per-instance storage, reachable only via the
+generated-catalog bootstrap overload). New public `ProductionTreeHost.TryResolveExternalTreeWrite<T>`/
+`TryWriteExternalTreeValue<T>`, gated on no node in the tree ever declaring Write access to the key
+(`(AccessFlags & Write) == 0`, surfaced informationally by new `TreeValidator` diagnostic `AIBT2043`).
+Full regression 1800 total, 1797 passed, the same 3 pre-existing unrelated baseline failures this
+project has documented since P7-003; `Verify-Static.ps1` (145 work items) and `git diff --check` both
+passed. See `Planning~/Evidence/P7-039/README.md`. The same audit also found and disclosed an
+unrelated, independent hot-reload gap (native hot reload never migrates or defaults Tree-scope
+blackboard for any slot) -- filed separately as new `Draft` card `P7-040`, not required for `P7-034`
+and not yet sequenced.
+
 Remaining assignable frontier: `P7-034` (Swarm Arena gameplay showcase) is the only Phase 7 card with
-fully satisfied dependencies (`P7-023`/`P7-027`/`P7-028`/`P7-030`/`P7-033`/`P7-037`, all done).
-`P7-035` (Player benchmark) and `P7-036` (UX/node-library review) both remain blocked on it. Owner
-priority stands: `P7-034` next.
+fully satisfied dependencies (`P7-023`/`P7-027`/`P7-028`/`P7-030`/`P7-033`/`P7-037`, all done; `P7-039`
+is available to it but not a hard dependency). `P7-035` (Player benchmark) and `P7-036` (UX/node-library
+review) both remain blocked on it. Owner priority stands: `P7-034` next, picked up by a separate
+session/user with its own gameplay-design context -- this session stops here and does not continue it.
+`P7-040` (hot-reload/blackboard-defaults gap) remains a separate, unsequenced `Draft` card.

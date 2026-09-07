@@ -3084,6 +3084,8 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLeaf,AIBT.NativeTraceChannelCapacityV1,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLifecycle,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryResolveExternalTreeWrite(System.String,AIBT.NativeBlackboardTypeIdV2,,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryWriteExternalTreeValue(AIBT.ProductionTreeHost+ExternalTreeWriteHandle`1<>,,System.Boolean&,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Void .ctor()`
 - `PROPERTY AIBT.NativeRuntimeFailureV1 LastFailure`
 - `PROPERTY AIBT.NativeTraceChannelOwnerV1 TraceChannelOwner`

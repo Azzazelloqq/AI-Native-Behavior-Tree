@@ -2,6 +2,7 @@ using System;
 using AIBT.Burst;
 using AIBT.Execution.Burst.Dispatch;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace AIBT
 {
@@ -134,6 +135,110 @@ namespace AIBT
             value = 0;
             if (_disposed || offset >= _treeValues.Length) return false;
             value = _treeValues[(int)offset];
+            return true;
+        }
+
+        /// <summary>
+        /// Resolves a Tree-scope, built-in-typed slot for repeated external writes from ordinary C#
+        /// code (ADR-P7-039), addressed by <paramref name="stableKeyId"/> instead of a compiled
+        /// node's own access record. Succeeds only when no node in this tree ever declares Write
+        /// access to the slot -- a slot some node writes, an unknown key, a type mismatch, or a
+        /// registered (non-built-in) value type are all refused, never silently accepted. Registered
+        /// types are refused because their canonical-encoding check needs the native program's own
+        /// registered-type/field tables as <c>NativeArray</c>s, which this managed-list-backed
+        /// binding does not carry.
+        /// </summary>
+        internal bool TryResolveExternalTreeWrite(
+            ulong stableKeyId,
+            NativeBlackboardTypeIdV2 expectedType,
+            out uint slotIndex,
+            out NativeBlackboardSlotBindingV2 slot,
+            out BurstContextResult failure)
+        {
+            slotIndex = 0;
+            slot = default;
+            if (_disposed)
+            {
+                failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
+            var slots = _definition.Binding.Slots;
+            for (var index = 0; index < slots.Count; index++)
+            {
+                var candidate = slots[index];
+                if (candidate.Scope != BlackboardScope.Tree || candidate.StableKeyId != stableKeyId) continue;
+                if (candidate.RegisteredTypeIndex != CompiledIndex.Invalid)
+                {
+                    failure = BurstContextResult.TypeMismatch;
+                    return false;
+                }
+                if (expectedType.TypeId != candidate.TypeId || expectedType.Version != candidate.TypeVersion
+                    || expectedType.Size != candidate.Size || expectedType.Alignment != candidate.Alignment
+                    || expectedType.EnumContractId != candidate.EnumContractId)
+                {
+                    failure = BurstContextResult.TypeMismatch;
+                    return false;
+                }
+                if ((candidate.AccessFlags & CompiledBlackboardAccessFlags.Write) != CompiledBlackboardAccessFlags.None)
+                {
+                    failure = BurstContextResult.PhaseViolation;
+                    return false;
+                }
+                slotIndex = (uint)index;
+                slot = candidate;
+                failure = BurstContextResult.Success;
+                return true;
+            }
+            failure = BurstContextResult.InvalidHandle;
+            return false;
+        }
+
+        /// <summary>
+        /// Writes one external value into the Tree-scope slot <paramref name="slot"/> already
+        /// resolved by <see cref="TryResolveExternalTreeWrite"/>. Mirrors
+        /// <c>NativeTreeBlackboardV1.TryWrite</c>'s own canonical-encoding/negative-zero-
+        /// normalization/version-bump body exactly, adapted to this adapter's own
+        /// <see cref="_treeValues"/>/<see cref="_treeVersions"/> storage.
+        /// </summary>
+        internal bool TryWriteExternalTreeValue<T>(
+            uint slotIndex,
+            NativeBlackboardSlotBindingV2 slot,
+            NativeArray<T> candidate,
+            out bool changed,
+            out BurstContextResult failure)
+            where T : unmanaged
+        {
+            changed = false;
+            if (_disposed || !candidate.IsCreated || candidate.Length != 1
+                || UnsafeUtility.SizeOf<T>() != slot.Size || UnsafeUtility.AlignOf<T>() != slot.Alignment
+                || slotIndex >= (uint)_treeVersions.Length
+                || (ulong)slot.Offset + slot.Size > (uint)_treeValues.Length)
+            {
+                failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
+
+            var bytes = candidate.Reinterpret<byte>(UnsafeUtility.SizeOf<T>());
+            if (!NativeBlackboardCanonicalV1.IsCanonicalBuiltInOnly(slot, bytes.AsReadOnly()))
+            {
+                failure = BurstContextResult.InvalidEncoding;
+                return false;
+            }
+            if (NativeBlackboardCanonicalV1.EqualsCanonicalBuiltInOnly(slot, _treeValues, bytes.AsReadOnly()))
+            {
+                failure = BurstContextResult.Success;
+                return true;
+            }
+            if (_treeVersions[(int)slotIndex] == ulong.MaxValue)
+            {
+                failure = BurstContextResult.Overflow;
+                return false;
+            }
+
+            NativeBlackboardCanonicalV1.CopyCanonicalBuiltInOnly(slot, bytes.AsReadOnly(), _treeValues);
+            _treeVersions[(int)slotIndex]++;
+            changed = true;
+            failure = BurstContextResult.Success;
             return true;
         }
 

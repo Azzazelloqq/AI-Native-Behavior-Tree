@@ -37,7 +37,14 @@ namespace AIBT.Tests.Integration.SemanticSlice
             Assert.That(read.Success, Is.True, Diagnostics(read.Diagnostics));
             Assert.That(write.Success, Is.True, Diagnostics(write.Diagnostics));
             Assert.That(write.Utf8, Is.EqualTo(source));
-            Assert.That(validation, Is.Empty, Diagnostics(validation));
+            // P7-039 (ADR-P7-039): a golden fixture may now carry the new Info-severity
+            // TreeScopeSlotNeverWritten diagnostic (e.g. enum-snapshot.aibt.json's own "state" key
+            // has no node writer) without that being a real validation failure -- only an actual
+            // Error/Warning diagnostic still fails this fixture's own "compiles cleanly" invariant.
+            Assert.That(validation.All(diagnostic =>
+                diagnostic.Severity == DiagnosticSeverity.Info
+                && diagnostic.Code == TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten),
+                Is.True, Diagnostics(validation));
             Assert.That(first.Success, Is.True, Diagnostics(first.Diagnostics));
             Assert.That(second.Success, Is.True, Diagnostics(second.Diagnostics));
             Assert.That(second.Program.Header.CanonicalSemanticHash,
