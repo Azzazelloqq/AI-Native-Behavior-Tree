@@ -1410,28 +1410,56 @@ namespace AIBT.Burst
                 return Latch(reader.Runtime, reader.FrameId, BurstContextResult.TypeMismatch);
             }
 
-            var localOrdinal = ReadUInt32(
+            // A generated handle persists the compiled per-node blackboard access ordinal.  That
+            // ordinal is intentionally not the catalog binding ordinal: command/snapshot bindings
+            // do not consume an access entry, so the two namespaces diverge as soon as a node has
+            // more than one kind of generated handle.  The configuration-field ordinal is the
+            // catalog-stable link from this generated field to its binding; use it to select the
+            // binding and retain the encoded value only as the compiler's non-sentinel authority.
+            var encodedAccessOrdinal = ReadUInt32(
                 reader.Runtime.ConfigurationBytes,
                 request.ConfigurationOffset + fieldOffset);
-            if (localOrdinal == uint.MaxValue
-                || localOrdinal >= dispatchCase.BindingCount
-                || localOrdinal >= request.ResolvedBindingCount)
+            if (encodedAccessOrdinal == uint.MaxValue)
             {
                 return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            globalBindingOrdinal = dispatchCase.FirstBinding + localOrdinal;
-            var resolvedOrdinal = request.FirstResolvedBinding + localOrdinal;
-            if (globalBindingOrdinal >= reader.Runtime.Bindings.Length
-                || resolvedOrdinal >= reader.Runtime.ResolvedBindings.Length)
+            var matchingLocalOrdinal = uint.MaxValue;
+            for (uint candidateLocalOrdinal = 0; candidateLocalOrdinal < dispatchCase.BindingCount; candidateLocalOrdinal++)
+            {
+                var candidateGlobalOrdinal = dispatchCase.FirstBinding + candidateLocalOrdinal;
+                if (candidateGlobalOrdinal >= reader.Runtime.Bindings.Length)
+                {
+                    return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                }
+
+                var candidate = reader.Runtime.Bindings[(int)candidateGlobalOrdinal];
+                if (candidate.ConfigurationFieldOrdinal != fieldOrdinal) continue;
+                if (matchingLocalOrdinal != uint.MaxValue)
+                {
+                    return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                }
+
+                matchingLocalOrdinal = candidateLocalOrdinal;
+            }
+
+            if (matchingLocalOrdinal == uint.MaxValue
+                || matchingLocalOrdinal >= request.ResolvedBindingCount)
+            {
+                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+            }
+
+            globalBindingOrdinal = dispatchCase.FirstBinding + matchingLocalOrdinal;
+            var resolvedOrdinal = request.FirstResolvedBinding + matchingLocalOrdinal;
+            if (resolvedOrdinal >= reader.Runtime.ResolvedBindings.Length)
             {
                 return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
             var binding = reader.Runtime.Bindings[(int)globalBindingOrdinal];
             resolved = reader.Runtime.ResolvedBindings[(int)resolvedOrdinal];
-            if (binding.BindingOrdinal != localOrdinal
-                || resolved.BindingOrdinal != localOrdinal
+            if (binding.BindingOrdinal != matchingLocalOrdinal
+                || resolved.BindingOrdinal != matchingLocalOrdinal
                 || binding.ConfigurationFieldOrdinal != fieldOrdinal
                 || binding.Kind != expectedKind
                 || binding.PrimaryTypeNumericId != primaryTypeNumericId

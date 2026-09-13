@@ -7,5 +7,6 @@ namespace AIBT.Burst
     {
         BurstExecutionResult ExecuteImmediate(ref BurstExecutionBatch batch);
         JobHandle Schedule(ref BurstExecutionBatch batch, JobHandle dependency);
+        bool TryGetEffectDescriptor(uint catalogCaseIndex, uint bindingOrdinal, out global::AIBT.ProductionTreeEffectDescriptor descriptor);
     }
 }

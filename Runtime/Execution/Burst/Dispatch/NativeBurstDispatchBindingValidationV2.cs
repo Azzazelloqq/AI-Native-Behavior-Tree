@@ -156,8 +156,19 @@ namespace AIBT.Execution.Burst.Dispatch
                         }
 
                         var offset = (ulong)request.ConfigurationOffset + handleField.ByteOffset;
-                        if (offset + 4UL > (ulong)input.ConfigurationBytes.Length
-                            || ReadUInt32(input.ConfigurationBytes, (uint)offset) != localOrdinal)
+                        if (offset + 4UL > (ulong)input.ConfigurationBytes.Length)
+                        {
+                            return false;
+                        }
+
+                        // A blackboard generated-handle stores its compiled per-node access
+                        // ordinal. Other generated handles store their catalog-local binding
+                        // ordinal. These are different namespaces once a node combines, for
+                        // example, a blackboard fact with an EffectCommand.
+                        var encodedOrdinal = ReadUInt32(input.ConfigurationBytes, (uint)offset);
+                        var isBlackboard = binding.Kind <= NativeBurstDispatchBindingKindV2.BlackboardReadWrite;
+                        if (encodedOrdinal == uint.MaxValue
+                            || (!isBlackboard && encodedOrdinal != localOrdinal))
                         {
                             return false;
                         }

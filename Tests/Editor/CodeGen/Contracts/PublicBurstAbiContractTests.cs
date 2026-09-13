@@ -25,7 +25,7 @@ namespace AIBT.Tests.CodeGen.Contracts
         }
 
         [Test]
-        public void PublicSurfaceV2_ChangesOnlyEnterAndTickOpaqueSizePinsPlusAibt038GeneratedCatalogExecutor()
+        public void PublicSurfaceV2_ChangesOnlyAcceptedGeneratedCatalogExecutorMembers()
         {
             var v1 = ReadFixture("ExpectedPublicAbiV1.txt");
             var v2 = ReadFixture("ExpectedPublicAbiV2.txt");
@@ -33,9 +33,9 @@ namespace AIBT.Tests.CodeGen.Contracts
             var v2Lines = v2.TrimEnd('\n').Split('\n');
 
             Assert.That(v1Lines, Has.Length.EqualTo(352), "The independently accepted ABI v1 snapshot must remain intact.");
-            Assert.That(v2Lines, Has.Length.EqualTo(355),
-                "ADR AIBT-038 (P7-037) adds exactly one new public type -- IGeneratedBurstCatalogExecutorV2, "
-                + "3 manifest lines (type + 2 methods) -- and must not add or remove anything else.");
+            Assert.That(v2Lines, Has.Length.EqualTo(356),
+                "ADR AIBT-038 (P7-037) adds the executor type and its two dispatch members; ADR AIBT-041 "
+                + "adds its one typed effect-descriptor lookup. No other Burst ABI line may drift.");
 
             const string enterV1 = "T|struct|AIBT.Burst.BurstEnterContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=24,charset=Ansi";
             const string enterV2 = "T|struct|AIBT.Burst.BurstEnterContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=0,charset=Ansi";
@@ -52,6 +52,7 @@ namespace AIBT.Tests.CodeGen.Contracts
                 "T|interface|AIBT.Burst.IGeneratedBurstCatalogExecutorV2|abstract=True|sealed=False",
                 "M|instance|ExecuteImmediate|return=AIBT.Burst.BurstExecutionResult|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False",
                 "M|instance|Schedule|return=Unity.Jobs.JobHandle|generic=0|params=ref:AIBT.Burst.BurstExecutionBatch:batch:optional=False,value:Unity.Jobs.JobHandle:dependency:optional=False",
+                "M|instance|TryGetEffectDescriptor|return=System.Boolean|generic=0|params=value:System.UInt32:catalogCaseIndex:optional=False,value:System.UInt32:bindingOrdinal:optional=False,out:AIBT.ProductionTreeEffectDescriptor:descriptor:optional=False",
             };
 
             var reconstructed = new List<string>(v1Lines.Length + executorLines.Length);

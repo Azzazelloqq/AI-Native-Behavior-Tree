@@ -1,0 +1,14 @@
+{
+  "name": "AIBT.Samples.SwarmArena.Editor",
+  "rootNamespace": "AIBT.Samples.SwarmArena.Editor",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

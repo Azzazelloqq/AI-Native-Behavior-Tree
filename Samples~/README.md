@@ -8,4 +8,8 @@ Additional samples will be added as vertical slices stabilize. Planned coverage 
 combat, event-driven reactions, async commands, managed integration, scheduling policies, behavior
 cases, and MCP authoring. Custom Burst nodes, hot reload, and visual organization now have examples.
 
+[`SwarmArena`](SwarmArena/README.md) is the importable production gameplay showcase: one reactive
+tree drives patrol, pursuit, danger avoidance and cooldown attack through public world facts and
+typed effects. It is a gameplay/debugging sample, not a benchmark result.
+
 Samples demonstrate supported APIs; they do not define hidden runtime contracts.

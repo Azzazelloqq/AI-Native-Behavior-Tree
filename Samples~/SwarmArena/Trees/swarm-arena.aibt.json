@@ -1,0 +1,94 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "aibt.samples.swarm-arena",
+  "name": "Swarm Arena Reactive Priority",
+  "description": "Threat flee, beacon pursuit and cooldown attack, otherwise patrol.",
+  "root": "priority",
+  "blackboard": {
+    "agent-position": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } },
+    "beacon-position": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } },
+    "danger-position": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 1000.0, "y": 0.0, "z": 1000.0 } },
+    "patrol-point": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } }
+  },
+  "nodes": {
+    "priority": {
+      "type": "aibt.core.reactive-selector",
+      "typeVersion": 1,
+      "displayName": "Reactive priority: flee, engage, patrol",
+      "children": ["flee", "engage", "patrol"]
+    },
+    "flee": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "displayName": "Danger zone: flee",
+      "children": ["danger-near", "flee-steer"]
+    },
+    "danger-near": {
+      "type": "aibt.samples.swarm.within-radius",
+      "typeVersion": 1,
+      "displayName": "Danger within 4 m",
+      "parameters": { "radius-millimeters": 4000 },
+      "bindings": { "agent-position": "agent-position", "goal-position": "danger-position" }
+    },
+    "flee-steer": {
+      "type": "aibt.samples.swarm.steer",
+      "typeVersion": 1,
+      "displayName": "Steer away — Flee",
+      "parameters": { "away": true, "visible-state": 3 },
+      "bindings": { "agent-position": "agent-position", "goal-position": "danger-position" }
+    },
+    "engage": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "displayName": "Beacon sensed: engage",
+      "children": ["beacon-sensed", "approach-or-attack"]
+    },
+    "beacon-sensed": {
+      "type": "aibt.samples.swarm.within-radius",
+      "typeVersion": 1,
+      "displayName": "Beacon within 12 m",
+      "parameters": { "radius-millimeters": 12000 },
+      "bindings": { "agent-position": "agent-position", "goal-position": "beacon-position" }
+    },
+    "approach-or-attack": {
+      "type": "aibt.core.reactive-selector",
+      "typeVersion": 1,
+      "displayName": "Attack in range, otherwise pursue",
+      "children": ["attack-sequence", "pursue-steer"]
+    },
+    "attack-sequence": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "displayName": "Attack range and cooldown",
+      "children": ["attack-range", "attack"]
+    },
+    "attack-range": {
+      "type": "aibt.samples.swarm.within-radius",
+      "typeVersion": 1,
+      "displayName": "Beacon within 1.8 m",
+      "parameters": { "radius-millimeters": 1800 },
+      "bindings": { "agent-position": "agent-position", "goal-position": "beacon-position" }
+    },
+    "attack": {
+      "type": "aibt.samples.swarm.attack-with-cooldown",
+      "typeVersion": 1,
+      "displayName": "Attack every 0.8 s",
+      "parameters": { "cooldown-microseconds": 800000, "damage": 1, "visible-state": 4 }
+    },
+    "pursue-steer": {
+      "type": "aibt.samples.swarm.steer",
+      "typeVersion": 1,
+      "displayName": "Steer toward beacon — Pursue",
+      "parameters": { "away": false, "visible-state": 2 },
+      "bindings": { "agent-position": "agent-position", "goal-position": "beacon-position" }
+    },
+    "patrol": {
+      "type": "aibt.samples.swarm.steer",
+      "typeVersion": 1,
+      "displayName": "Steer toward patrol point — Patrol",
+      "parameters": { "away": false, "visible-state": 1 },
+      "bindings": { "agent-position": "agent-position", "goal-position": "patrol-point" }
+    }
+  }
+}

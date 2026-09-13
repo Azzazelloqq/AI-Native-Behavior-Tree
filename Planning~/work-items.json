@@ -2098,10 +2098,10 @@
       "id": "P7-034",
       "phase": 7,
       "title": "Swarm Arena gameplay and behavior-tree showcase",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-034-swarm-arena-showcase.md",
-      "dependsOn": ["P7-023", "P7-027", "P7-028", "P7-030", "P7-033", "P7-037"],
+      "dependsOn": ["P7-023", "P7-027", "P7-028", "P7-030", "P7-033", "P7-037", "P7-039", "P7-041"],
       "owns": [
         "Samples~/SwarmArena/",
         "Planning~/Evidence/P7-034/"
@@ -2198,6 +2198,22 @@
         "Runtime/Execution/Native/HotReload/NativeHotReloadStateMigration.cs",
         "Runtime/Execution/Native/HotReload/NativeHotReloadInstance.cs",
         "Planning~/Evidence/P7-040/"
+      ]
+    },
+    {
+      "id": "P7-041",
+      "phase": 7,
+      "title": "Consumer-facing production world integration",
+      "status": "done",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P7/P7-041-production-world-integration.md",
+      "dependsOn": ["P7-030", "P7-033", "P7-037", "P7-038", "P7-039"],
+      "owns": [
+        "Runtime/Integration/",
+        "Runtime/Scheduling/Production/ProductionTreeScheduler.cs",
+        "CodeGen~/AIBT.CodeGen/",
+        "Tests/Integration/",
+        "Planning~/Evidence/P7-041/"
       ]
     },
     {

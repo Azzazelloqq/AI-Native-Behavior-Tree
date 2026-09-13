@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.Samples.SwarmArena",
+  "rootNamespace": "AIBT.Samples.SwarmArena",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring",
+    "AIBT.Samples.SwarmArena.Nodes",
+    "AIBT.Samples.SwarmArena.Catalog"
+  ],
+  "autoReferenced": false,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

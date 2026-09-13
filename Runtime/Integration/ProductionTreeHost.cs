@@ -58,6 +58,8 @@ namespace AIBT
         private ProductionTreeScheduler _owner;
         private NativeLifecycleStepResultV1 _pendingStep;
         private bool _hasPendingStep;
+        private int _configuredEffectQueueCapacity;
+        private ProductionTreeEffectQueue _effectQueue;
 
         /// <summary>The instance-owned trace channel, available until destruction.</summary>
         public NativeTraceChannelOwnerV1 TraceChannelOwner { get; private set; }
@@ -71,6 +73,70 @@ namespace AIBT
         public ulong InstanceId { get; private set; }
         /// <summary>Null selects Immediate; otherwise limits native steps per frame. Zero pauses progress.</summary>
         public uint? StepBudget { get; set; }
+
+        /// <summary>
+        /// Configures bounded public effect delivery before generated bootstrap. Omit this call to
+        /// preserve the existing production behavior where generated effect commands have no Unity
+        /// receiver. Capacity is fixed after bootstrap and must cover the largest command burst a
+        /// consumer intends to leave undrained.
+        /// </summary>
+        public bool TryConfigureEffectDelivery(int capacity, out NativeRuntimeFailureV1 failure)
+        {
+            if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
+            if (_bootstrapped || _disposed || _driving)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            _configuredEffectQueueCapacity = capacity;
+            failure = default;
+            return true;
+        }
+
+        /// <summary>True only at the P7-039-safe boundary where external Tree facts may be flushed.</summary>
+        public bool CanAcceptExternalTreeWrites
+            => _bootstrapped && _generatedDispatch != null && _ready && !_disposed && !_destroyRequested && !_driving;
+
+        // The scheduler-owned world bridge must not turn a normal cross-frame PipelinedJobs lock
+        // into a host failure. Unlike external writes, a terminal host may still have committed
+        // effects to drain, so this deliberately does not require _ready.
+        internal bool CanDrainEffects
+            => _bootstrapped && _generatedDispatch != null && !_disposed && !_destroyRequested && !_driving;
+
+        /// <summary>
+        /// Delivers buffered generated effects in deterministic command order. This main-thread
+        /// operation is refused while the host is executing; receiver exceptions remain caller
+        /// failures and leave the current effect pending for explicit recovery.
+        /// </summary>
+        public bool TryDrainEffects(IProductionTreeEffectReceiver receiver, out NativeRuntimeFailureV1 failure)
+        {
+            if (receiver == null) throw new ArgumentNullException(nameof(receiver));
+            if (!CanDrainEffects)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            if (_effectQueue == null)
+            {
+                failure = default;
+                return true;
+            }
+            try
+            {
+                while (_effectQueue.TryPeek(out var effect))
+                {
+                    receiver.Receive(in effect);
+                    _effectQueue.RemoveHead();
+                }
+                failure = default;
+                return true;
+            }
+            catch (Exception)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+        }
 
         /// <summary>
         /// This host's own generated-catalog dispatch bridge, if bootstrapped through the generated
@@ -132,6 +198,9 @@ namespace AIBT
                 return false;
             }
             var treeInstanceId = new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId));
+            ProductionTreeEffectQueue effectQueue = null;
+            if (_configuredEffectQueueCapacity != 0)
+                effectQueue = new ProductionTreeEffectQueue(_configuredEffectQueueCapacity);
             if (!GeneratedTreeDispatchAdapterV2.TryCreate(
                     definition, catalog, treeInstanceId, out var adapter, out var contextFailure))
             {
@@ -149,6 +218,7 @@ namespace AIBT
                 return false;
             }
             _generatedDispatch = adapter;
+            _effectQueue = effectQueue;
             return true;
         }
 
@@ -287,13 +357,7 @@ namespace AIBT
             where T : unmanaged
         {
             changed = false;
-            if (!handle.IsValid || handle.InstanceId != InstanceId || _generatedDispatch == null
-                || !_ready || _disposed || _destroyRequested)
-            {
-                failure = InvalidLifetime();
-                return false;
-            }
-            if (_driving)
+            if (!handle.IsValid || handle.InstanceId != InstanceId || !CanAcceptExternalTreeWrites)
             {
                 failure = InvalidLifetime();
                 return false;
@@ -613,7 +677,15 @@ namespace AIBT
         {
             if (!_hasPendingStep) return false;
             var request = new DispatchRequest(_pendingStep, _updateId, _timeMicroseconds);
-            var result = _dispatch(in request, out var status);
+            NodeStatus status;
+            BurstContextResult result;
+            if (TryReserveGeneratedEffectCapacity(request.NodeIndex, out var reserveFailure))
+                result = _dispatch(in request, out status);
+            else
+            {
+                result = reserveFailure;
+                status = NodeStatus.Failure;
+            }
             if (!_ready) return false; // A reentrant call may already have faulted the host.
             return CompletePendingDispatch(result, status);
         }
@@ -661,6 +733,22 @@ namespace AIBT
             Fail(failure, "The coordinator's externally-driven scheduling round failed.");
         }
 
+        internal bool TryReserveGeneratedEffectCapacity(uint nodeIndex, out BurstContextResult failure)
+        {
+            if (_effectQueue == null)
+            {
+                failure = BurstContextResult.Success;
+                return true;
+            }
+            if (_generatedDispatch != null && _generatedDispatch.TryReserveEffectCapacity(nodeIndex, _effectQueue))
+            {
+                failure = BurstContextResult.Success;
+                return true;
+            }
+            failure = BurstContextResult.CapacityExceeded;
+            return false;
+        }
+
         /// <summary>
         /// Resolves the single dispatch requirement <see cref="TryAdvanceToNextDispatch"/> most
         /// recently returned. Returns false, without mutating the machine, if no wave step is
@@ -674,6 +762,9 @@ namespace AIBT
             try
             {
                 if (!_ready) return false; // A reentrant call may already have faulted the host.
+                if (result == BurstContextResult.Success
+                    && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
+                    status = NodeStatus.Failure;
                 if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out var failure))
                 {
                     Fail(failure, "Callback rejected: " + result);
@@ -736,13 +827,24 @@ namespace AIBT
                     Fail(failure, "Cannot advance execution.");
                     return;
                 }
-                _hasExecuted = true;
-                _recorder.RecordStep(_updateId, step);
-                if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
-                {
-                    var request = new DispatchRequest(step, _updateId, _timeMicroseconds);
-                    var result = _dispatch(in request, out var status);
+                    _hasExecuted = true;
+                    _recorder.RecordStep(_updateId, step);
+                    if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
+                    {
+                        var request = new DispatchRequest(step, _updateId, _timeMicroseconds);
+                    NodeStatus status;
+                    BurstContextResult result;
+                    if (TryReserveGeneratedEffectCapacity(request.NodeIndex, out var reserveFailure))
+                        result = _dispatch(in request, out status);
+                    else
+                    {
+                        result = reserveFailure;
+                        status = NodeStatus.Failure;
+                    }
                     if (!_ready) return; // A reentrant call may already have faulted the host.
+                    if (result == BurstContextResult.Success
+                        && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
+                        status = NodeStatus.Failure;
                     if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out failure))
                     {
                         Fail(failure, "Callback rejected: " + result);
@@ -766,6 +868,21 @@ namespace AIBT
 
         private static NativeRuntimeFailureV1 InvalidLifetime()
             => new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid);
+
+        private bool TryCaptureGeneratedEffects(uint nodeIndex, out BurstContextResult failure)
+        {
+            if (_effectQueue == null)
+            {
+                failure = BurstContextResult.Success;
+                return true;
+            }
+            if (_generatedDispatch == null)
+            {
+                failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
+            return _generatedDispatch.TryConsumePublishedEffects(nodeIndex, _effectQueue, out failure);
+        }
 
         private void Fail(NativeRuntimeFailureV1 failure, string detail)
         {
@@ -824,6 +941,7 @@ namespace AIBT
                 _dispatch = null;
                 _generatedDispatch?.Dispose();
                 _generatedDispatch = null;
+                _effectQueue = null;
                 _clock = null;
             }
         }

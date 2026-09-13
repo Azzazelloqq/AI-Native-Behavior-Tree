@@ -130,6 +130,54 @@ namespace AIBT
                 && _slots[nodeIndex].TryGetLastPublishedCommand(commandIndex, out command);
         }
 
+        internal bool TryReserveEffectCapacity(uint nodeIndex, ProductionTreeEffectQueue queue)
+            => !_disposed && queue != null && nodeIndex < _slots.Length && _slots[nodeIndex] != null
+                && queue.CanAccept(checked((int)_slots[nodeIndex].MaximumEffectCommandCount));
+
+        internal bool TryConsumePublishedEffects(
+            uint nodeIndex,
+            ProductionTreeEffectQueue queue,
+            out BurstContextResult failure)
+        {
+            failure = BurstContextResult.InvalidHandle;
+            if (_disposed || queue == null || nodeIndex >= _slots.Length || _slots[nodeIndex] == null)
+                return false;
+            var slot = _slots[nodeIndex];
+            if (!queue.CanAccept(checked((int)slot.LastPublishedCommandCount)))
+            {
+                failure = BurstContextResult.CapacityExceeded;
+                return false;
+            }
+            for (uint index = 0; index < slot.LastPublishedCommandCount; index++)
+                if (!TryReadPublishedEffect(slot, index, out _, out failure))
+                {
+                    return false;
+                }
+            for (uint index = 0; index < slot.LastPublishedCommandCount; index++)
+            {
+                if (!TryReadPublishedEffect(slot, index, out var effect, out failure)
+                    || !queue.TryEnqueue(in effect))
+                {
+                    failure = BurstContextResult.CapacityExceeded;
+                    return false;
+                }
+            }
+            slot.ClearPublishedCommands();
+            failure = BurstContextResult.Success;
+            return true;
+        }
+
+        internal bool TryPublishGroupCommand(
+            uint nodeIndex,
+            in NativeBurstDispatchCommandV2 command,
+            NativeArray<byte>.ReadOnly payload,
+            out BurstContextResult failure)
+        {
+            failure = BurstContextResult.InvalidHandle;
+            if (_disposed || nodeIndex >= _slots.Length || _slots[nodeIndex] == null) return false;
+            return _slots[nodeIndex].TryAppendPublishedCommand(in command, payload, out failure);
+        }
+
         internal bool TryReadTreeValueByte(uint offset, out byte value)
         {
             value = 0;
@@ -334,6 +382,62 @@ namespace AIBT
                 in request, scheduled, out status);
         }
 
+        private bool TryReadPublishedEffect(
+            DispatchSlot slot,
+            uint commandIndex,
+            out ProductionTreeEffect effect,
+            out BurstContextResult failure)
+        {
+            effect = default;
+            if (!slot.TryGetLastPublishedCommand(commandIndex, out var command)
+                || command.Kind != NativeBurstDispatchCommandKindV2.Effect
+                || !_catalog.Executor.TryGetEffectDescriptor(slot.CaseIndex, command.TargetOrdinal, out var descriptor)
+                || !descriptor.IsSupported)
+            {
+                failure = BurstContextResult.TypeMismatch;
+                return false;
+            }
+            switch (descriptor.ValueKind)
+            {
+                case ProductionTreeEffectValueKind.Int32:
+                    if (command.PayloadSize != 4u || !slot.TryReadPublishedUInt32(command.PayloadOffset, out var intBits))
+                    {
+                        failure = BurstContextResult.InvalidEncoding;
+                        return false;
+                    }
+                    effect = new ProductionTreeEffect(descriptor, unchecked((int)intBits));
+                    failure = BurstContextResult.Success;
+                    return true;
+                case ProductionTreeEffectValueKind.Float32:
+                    if (command.PayloadSize != 4u || !slot.TryReadPublishedUInt32(command.PayloadOffset, out var floatBits))
+                    {
+                        failure = BurstContextResult.InvalidEncoding;
+                        return false;
+                    }
+                    effect = new ProductionTreeEffect(descriptor, BitConverter.Int32BitsToSingle(unchecked((int)floatBits)));
+                    failure = BurstContextResult.Success;
+                    return true;
+                case ProductionTreeEffectValueKind.Float3:
+                    if (command.PayloadSize != 12u
+                        || !slot.TryReadPublishedUInt32(command.PayloadOffset, out var xBits)
+                        || !slot.TryReadPublishedUInt32(command.PayloadOffset + 4u, out var yBits)
+                        || !slot.TryReadPublishedUInt32(command.PayloadOffset + 8u, out var zBits))
+                    {
+                        failure = BurstContextResult.InvalidEncoding;
+                        return false;
+                    }
+                    effect = new ProductionTreeEffect(descriptor, new Float3Value(
+                        BitConverter.Int32BitsToSingle(unchecked((int)xBits)),
+                        BitConverter.Int32BitsToSingle(unchecked((int)yBits)),
+                        BitConverter.Int32BitsToSingle(unchecked((int)zBits))));
+                    failure = BurstContextResult.Success;
+                    return true;
+                default:
+                    failure = BurstContextResult.TypeMismatch;
+                    return false;
+            }
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -427,17 +531,22 @@ namespace AIBT
             private NativeArray<NativeBurstDispatchCommandV2> _publishedCommands;
             private NativeArray<byte> _publishedPayload;
             private uint _publishedCommandCount;
+            private uint _publishedPayloadByteCount;
+            private uint _maximumEffectCommandCount;
             private uint _activationGeneration;
             private bool _disposed;
 
-            private DispatchSlot(uint nodeIndex, uint caseIndex, BindingResolution[] resolutions)
+            private DispatchSlot(uint nodeIndex, uint caseIndex, BindingResolution[] resolutions, uint maximumEffectCommandCount)
             {
                 _nodeIndex = nodeIndex;
                 _caseIndex = caseIndex;
                 _resolutions = resolutions;
+                _maximumEffectCommandCount = maximumEffectCommandCount;
             }
 
             internal uint LastPublishedCommandCount => _publishedCommandCount;
+            internal uint MaximumEffectCommandCount => _maximumEffectCommandCount;
+            internal uint CaseIndex => _caseIndex;
 
             internal static bool TryCreate(
                 GeneratedTreeRuntimeDefinitionV2 definition,
@@ -454,6 +563,7 @@ namespace AIBT
                 var dispatchCase = catalog.Cases[(int)caseIndex];
                 var resolutions = new BindingResolution[dispatchCase.BindingCount];
                 var liveBytes = 0u;
+                var effectBindingCount = 0u;
                 for (uint local = 0; local < dispatchCase.BindingCount; local++)
                 {
                     var catalogBinding = catalog.Bindings[(int)(dispatchCase.FirstBinding + local)];
@@ -474,6 +584,7 @@ namespace AIBT
                     else if (catalogBinding.Kind == NativeBurstDispatchBindingKindV2.EffectCommand)
                     {
                         resolution = resolution.WithTarget(catalogBinding.BindingOrdinal);
+                        effectBindingCount++;
                     }
                     else
                     {
@@ -481,10 +592,11 @@ namespace AIBT
                         return false;
                     }
                     resolutions[local] = resolution;
-                    liveBytes = checked(liveBytes + catalogBinding.PrimaryValueSize);
+                    if (resolution.IsBlackboard)
+                        liveBytes = checked(liveBytes + catalogBinding.PrimaryValueSize);
                 }
 
-                var created = new DispatchSlot(nodeIndex, caseIndex, resolutions);
+                var created = new DispatchSlot(nodeIndex, caseIndex, resolutions, effectBindingCount);
                 try
                 {
                     var capacity = catalog.CreateWorkspaceCapacity();
@@ -551,6 +663,7 @@ namespace AIBT
             {
                 status = NodeStatus.Running;
                 if (_disposed) return BurstContextResult.InvalidHandle;
+                ClearPublishedCommands();
                 var node = programBinding.SemanticProgram.Nodes[(int)_nodeIndex];
                 if (hostRequest.Phase == BurstCallbackPhase.Enter)
                 {
@@ -584,19 +697,20 @@ namespace AIBT
                 }
                 else
                 {
-                    var execution = catalog.Executor.ExecuteImmediate(ref batch);
-                    if (!execution.Success) return BurstContextResult.InvalidEncoding;
+                    catalog.Executor.ExecuteImmediate(ref batch);
                 }
 
                 if (!_workspace.TryConsumeResult(in lease, out var result, out failure)) return failure;
-                var callback = result.Execution.Success ? result.CallbackFailure : BurstContextResult.InvalidEncoding;
+                var callback = result.CallbackFailure;
+                if (!result.Execution.Success && callback == BurstContextResult.Success)
+                    callback = BurstContextResult.InvalidEncoding;
                 if (callback == BurstContextResult.Success
                     && !CommitTreeValues(programBinding, treeValues, treeVersions, agentBaseOffset))
                     callback = BurstContextResult.Overflow;
                 if (callback == BurstContextResult.Success) PublishCommands(result.Transaction);
                 status = result.Status;
-                if (!_workspace.TryAcknowledgePublishedCommands(in lease, out failure)
-                    || !_workspace.TryReset(in lease, out failure)) return failure;
+                if (!_workspace.TryAcknowledgePublishedCommands(in lease, out failure)) return failure;
+                if (!_workspace.TryReset(in lease, out failure)) return failure;
                 return callback;
             }
 
@@ -622,6 +736,7 @@ namespace AIBT
                     failure = BurstContextResult.InvalidHandle;
                     return false;
                 }
+                ClearPublishedCommands();
                 var node = programBinding.SemanticProgram.Nodes[(int)_nodeIndex];
                 if (hostRequest.Phase == BurstCallbackPhase.Enter)
                 {
@@ -653,9 +768,8 @@ namespace AIBT
             /// Writes a group wave's own committed memory/binding-value bytes for this one
             /// participant back into this slot's persistent storage (so the next tick sees it, same
             /// as <see cref="Execute"/>'s own single-request path) and commits tree/blackboard
-            /// values. The caller (the group executor) has already verified the shared batch
-            /// succeeded and carries no commands before calling this -- command publication is not
-            /// yet supported for grouped dispatch, a disclosed P7-033 gap, not silently dropped.
+            /// values. The caller (the group executor) has already validated and attributed any
+            /// shared effect commands before calling this, so participant commit remains atomic.
             /// </summary>
             internal bool TryCommitFromGroup(
                 NativeProgramBlackboardBindingV2 programBinding,
@@ -713,6 +827,47 @@ namespace AIBT
                 command = default;
                 if (_disposed || index >= _publishedCommandCount) return false;
                 command = _publishedCommands[(int)index];
+                return true;
+            }
+
+            internal bool TryReadPublishedUInt32(uint offset, out uint value)
+            {
+                value = 0;
+                if (_disposed || (ulong)offset + 4u > _publishedPayloadByteCount) return false;
+                value = _publishedPayload[(int)offset]
+                    | (uint)_publishedPayload[(int)(offset + 1u)] << 8
+                    | (uint)_publishedPayload[(int)(offset + 2u)] << 16
+                    | (uint)_publishedPayload[(int)(offset + 3u)] << 24;
+                return true;
+            }
+
+            internal void ClearPublishedCommands()
+            {
+                _publishedCommandCount = 0;
+                _publishedPayloadByteCount = 0;
+            }
+
+            internal bool TryAppendPublishedCommand(
+                in NativeBurstDispatchCommandV2 command,
+                NativeArray<byte>.ReadOnly payload,
+                out BurstContextResult failure)
+            {
+                if (_disposed || command.Kind != NativeBurstDispatchCommandKindV2.Effect
+                    || (ulong)command.PayloadOffset + command.PayloadSize > (uint)payload.Length
+                    || _publishedCommandCount >= (uint)_publishedCommands.Length
+                    || (ulong)_publishedPayloadByteCount + command.PayloadSize > (uint)_publishedPayload.Length)
+                {
+                    failure = BurstContextResult.InvalidEncoding;
+                    return false;
+                }
+                var destinationOffset = _publishedPayloadByteCount;
+                for (uint index = 0; index < command.PayloadSize; index++)
+                    _publishedPayload[(int)(destinationOffset + index)] = payload[(int)(command.PayloadOffset + index)];
+                _publishedCommands[(int)_publishedCommandCount] = new NativeBurstDispatchCommandV2(
+                    command.Kind, command.TargetOrdinal, command.OperationId, destinationOffset, command.PayloadSize);
+                _publishedCommandCount++;
+                _publishedPayloadByteCount += command.PayloadSize;
+                failure = BurstContextResult.Success;
                 return true;
             }
 
@@ -812,8 +967,10 @@ namespace AIBT
 
             private void PublishCommands(NativeBurstDispatchTransactionSnapshotV2 transaction)
             {
+                ClearPublishedCommands();
                 if (transaction.CommandCount == 0) return;
                 _publishedCommandCount = transaction.CommandCount;
+                _publishedPayloadByteCount = transaction.CommandPayloadByteCount;
                 for (uint index = 0; index < transaction.CommandCount; index++)
                     _publishedCommands[(int)index] = _commands[(int)index];
                 for (uint index = 0; index < transaction.CommandPayloadByteCount; index++)
@@ -859,7 +1016,9 @@ namespace AIBT
             {
                 Kind = binding.Kind;
                 TargetOrdinal = 0;
-                LiveOffset = liveOffset;
+                LiveOffset = IsBlackboardKind(binding.Kind)
+                    ? liveOffset
+                    : NativeBurstDispatchBindingV2.NoOffset;
             }
             internal NativeBurstDispatchBindingKindV2 Kind { get; }
             internal uint TargetOrdinal { get; }
@@ -869,6 +1028,10 @@ namespace AIBT
                 || Kind == NativeBurstDispatchBindingKindV2.BlackboardReadWrite;
             internal bool WritesBlackboard => Kind == NativeBurstDispatchBindingKindV2.BlackboardWrite
                 || Kind == NativeBurstDispatchBindingKindV2.BlackboardReadWrite;
+            private static bool IsBlackboardKind(NativeBurstDispatchBindingKindV2 kind)
+                => kind == NativeBurstDispatchBindingKindV2.BlackboardRead
+                    || kind == NativeBurstDispatchBindingKindV2.BlackboardWrite
+                    || kind == NativeBurstDispatchBindingKindV2.BlackboardReadWrite;
             internal BindingResolution WithTarget(uint target)
                 => new BindingResolution(Kind, target, LiveOffset);
             private BindingResolution(NativeBurstDispatchBindingKindV2 kind, uint target, uint liveOffset)

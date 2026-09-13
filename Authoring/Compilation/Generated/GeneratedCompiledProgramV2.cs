@@ -56,7 +56,14 @@ namespace AIBT.Authoring
             IList<GeneratedWatchedSlotV2> watched, byte[] configBlob, byte[] defaultBlob)
         {
             if (semanticProgram == null) throw new ArgumentNullException(nameof(semanticProgram));
-            SemanticProgram = WithContentHash(semanticProgram, CompiledProgramContentHashV1.Compute(semanticProgram));
+            if (configBlob == null) throw new ArgumentNullException(nameof(configBlob));
+            // The scope compiler first packs each handle with its generated binding ordinal, then
+            // resolves blackboard handles to their final per-node access ordinal. Runtime dispatch
+            // reads SemanticProgram.ConfigBlob, so the resolved bytes must become the semantic
+            // program itself rather than exist only in the outer v2 serialization.
+            var configuredSemanticProgram = WithConfigBlob(semanticProgram, configBlob);
+            SemanticProgram = WithContentHash(
+                configuredSemanticProgram, CompiledProgramContentHashV1.Compute(configuredSemanticProgram));
             if (CompiledProgramContentHashV1.Compute(SemanticProgram) != SemanticProgram.Header.CompiledContentHash)
                 throw new InvalidOperationException("The inner semantic program must retain its exact v1 content hash.");
             Scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
@@ -222,6 +229,15 @@ namespace AIBT.Authoring
             return new CompiledProgram(header, source.Nodes, source.ChildIndices, source.ReadSlotIndices,
                 source.WriteSlotIndices, source.BlackboardSlots, source.Observers,
                 source.WatchedSlotIndices, source.ConfigBlob, source.DefaultValueBlob, source.DebugMap);
+        }
+
+        private static CompiledProgram WithConfigBlob(CompiledProgram source, byte[] configBlob)
+        {
+            if (source.Header.ConfigBlobSize != configBlob.Length)
+                throw new InvalidOperationException("Resolved generated configuration length differs from the semantic program header.");
+            return new CompiledProgram(source.Header, source.Nodes, source.ChildIndices, source.ReadSlotIndices,
+                source.WriteSlotIndices, source.BlackboardSlots, source.Observers,
+                source.WatchedSlotIndices, configBlob, source.DefaultValueBlob, source.DebugMap);
         }
 
         private static bool Equal(byte[] left, byte[] right)

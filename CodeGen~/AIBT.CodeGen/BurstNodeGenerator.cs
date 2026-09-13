@@ -1421,6 +1421,7 @@ namespace AIBT.CodeGen
             builder.AppendLine("    {");
             builder.AppendLine("        public global::AIBT.Burst.BurstExecutionResult ExecuteImmediate(ref global::AIBT.Burst.BurstExecutionBatch batch) { return " + catalogSet.Name + ".ExecuteImmediate(ref batch); }");
             builder.AppendLine("        public global::Unity.Jobs.JobHandle Schedule(ref global::AIBT.Burst.BurstExecutionBatch batch, global::Unity.Jobs.JobHandle dependency) { return " + catalogSet.Name + ".Schedule(ref batch, dependency); }");
+            EmitEffectDescriptorLookup(builder, nodes);
             builder.AppendLine("    }");
             builder.AppendLine("    public static global::AIBT.Burst.BurstCatalogValidationResult Validate(in global::AIBT.Burst.BurstCatalogHandshake handshake)");
             builder.AppendLine("    {");
@@ -1477,6 +1478,48 @@ namespace AIBT.CodeGen
             source = source.Replace("return global::AIBT.Burst.BurstContextResult.PhaseViolation;", "return global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryFailDispatch(ref batch, in frame, global::AIBT.Burst.BurstContextResult.PhaseViolation);");
             source = source.Replace("return global::AIBT.Burst.BurstContextResult.InvalidHandle;", "return global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryFailDispatch(ref batch, in frame, global::AIBT.Burst.BurstContextResult.InvalidHandle);");
             return source;
+        }
+
+        private static void EmitEffectDescriptorLookup(StringBuilder builder, IReadOnlyList<Node> nodes)
+        {
+            builder.AppendLine("        public bool TryGetEffectDescriptor(uint catalogCaseIndex, uint bindingOrdinal, out global::AIBT.ProductionTreeEffectDescriptor descriptor)");
+            builder.AppendLine("        {");
+            builder.AppendLine("            descriptor = default(global::AIBT.ProductionTreeEffectDescriptor);");
+            builder.AppendLine("            switch (catalogCaseIndex)");
+            builder.AppendLine("            {");
+            for (var nodeIndex = 0; nodeIndex < nodes.Count; nodeIndex++)
+            {
+                var config = DescribeLayout(nodes[nodeIndex].Config!);
+                var bindings = config.Fields
+                    .Select(field => new { Field = field, Binding = BindingRecord.TryCreate(field.Field) })
+                    .Where(value => value.Binding != null)
+                    .OrderBy(value => value.Binding!.Id, Utf8StringComparer.Instance)
+                    .ToArray();
+                builder.Append("                case ").Append(nodeIndex.ToString(CultureInfo.InvariantCulture)).AppendLine("u:");
+                for (var bindingOrdinal = 0; bindingOrdinal < bindings.Length; bindingOrdinal++)
+                {
+                    var binding = bindings[bindingOrdinal].Binding!;
+                    if (binding.Kind != 4) continue;
+                    var valueKind = ProductionEffectValueKind(binding.Types[0].Type);
+                    if (valueKind == "None") continue;
+                    builder.Append("                    if (bindingOrdinal == ").Append(bindingOrdinal.ToString(CultureInfo.InvariantCulture)).AppendLine("u)");
+                    builder.Append("                    { descriptor = new global::AIBT.ProductionTreeEffectDescriptor(0x")
+                        .Append(NumericId(binding.Id).ToString("x16", CultureInfo.InvariantCulture))
+                        .Append("UL, global::AIBT.ProductionTreeEffectValueKind.").Append(valueKind)
+                        .AppendLine("); return true; }");
+                }
+                builder.AppendLine("                    return false;");
+            }
+            builder.AppendLine("                default: return false;");
+            builder.AppendLine("            }");
+            builder.AppendLine("        }");
+        }
+
+        private static string ProductionEffectValueKind(ITypeSymbol type)
+        {
+            if (type.SpecialType == SpecialType.System_Int32) return "Int32";
+            if (type.SpecialType == SpecialType.System_Single) return "Float32";
+            return type.ToDisplayString() == "AIBT.Float3Value" ? "Float3" : "None";
         }
 
         private static void EmitCase(StringBuilder builder, Node node, int index)

@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-272 public type(s).
+278 public type(s).
 
 ---
 
@@ -663,6 +663,7 @@ _No public members declared directly on this type._
 Closed generated-catalog entry point retained by the production runtime.
 
 - `METHOD AIBT.Burst.BurstExecutionResult ExecuteImmediate(AIBT.Burst.BurstExecutionBatch&)`
+- `METHOD System.Boolean TryGetEffectDescriptor(System.UInt32,System.UInt32,AIBT.ProductionTreeEffectDescriptor&)`
 - `METHOD Unity.Jobs.JobHandle Schedule(AIBT.Burst.BurstExecutionBatch&,Unity.Jobs.JobHandle)`
 
 ---
@@ -1217,6 +1218,24 @@ Maps every node in a <see cref="CompiledProgram"/> to its stable authoring <see 
 - `METHOD System.Boolean TryGetRuntimeIndex(AIBT.NodeId,System.UInt32&)`
 - `METHOD System.Boolean TryGetSignature(AIBT.NodeId,AIBT.HotReloadNodeIdentitySignature&)`
 - `PROPERTY System.Collections.Generic.IReadOnlyCollection`1<AIBT.NodeId> NodeIds`
+
+---
+
+### `AIBT.IProductionTreeEffectReceiver`
+
+Receives committed behavior-tree effects on Unity's main thread.
+
+- `METHOD System.Void Receive(AIBT.ProductionTreeEffect&)`
+
+---
+
+### `AIBT.IProductionTreeWorldParticipant`
+
+One agent binding owned by a <see cref="ProductionTreeWorld"/>. Implementations stage Unity facts in <see cref="SampleInputs"/>, flush them only when called at the safe scheduler boundary, and receive committed effects on the main thread.
+
+- `METHOD System.Boolean TryFlushInputs(AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Void SampleInputs()`
+- `PROPERTY AIBT.ProductionTreeHost Host`
 
 ---
 
@@ -3077,6 +3096,45 @@ An immutable, non-owning job view of one snapshot revision. Payload bytes use th
 
 ---
 
+### `AIBT.ProductionTreeEffect`
+
+A committed, main-thread consumable behavior-tree effect.
+
+- `METHOD System.Boolean TryGetFloat3(AIBT.Float3Value&)`
+- `METHOD System.Boolean TryGetFloat32(System.Single&)`
+- `METHOD System.Boolean TryGetInt32(System.Int32&)`
+- `PROPERTY AIBT.ProductionTreeEffectDescriptor Descriptor`
+- `PROPERTY AIBT.ProductionTreeEffectValueKind ValueKind`
+- `PROPERTY System.UInt64 StableId`
+
+---
+
+### `AIBT.ProductionTreeEffectDescriptor`
+
+Source-generated identity and payload shape of one declared <c>EffectCommand</c>. It never exposes a native buffer, command ordinal, or payload offset.
+
+- `METHOD System.Boolean Equals(AIBT.ProductionTreeEffectDescriptor)`
+- `METHOD System.Boolean Equals(System.Object)`
+- `METHOD System.Int32 GetHashCode()`
+- `METHOD System.Void .ctor(System.UInt64,AIBT.ProductionTreeEffectValueKind)`
+- `PROPERTY AIBT.ProductionTreeEffectValueKind ValueKind`
+- `PROPERTY System.Boolean IsSupported`
+- `PROPERTY System.UInt64 StableId`
+
+---
+
+### `AIBT.ProductionTreeEffectValueKind`
+
+Closed payload kinds the first production-world bridge exposes to Unity code.
+
+- `FIELD AIBT.ProductionTreeEffectValueKind Float32`
+- `FIELD AIBT.ProductionTreeEffectValueKind Float3`
+- `FIELD AIBT.ProductionTreeEffectValueKind Int32`
+- `FIELD AIBT.ProductionTreeEffectValueKind None`
+- `FIELD System.Byte value__`
+
+---
+
 ### `AIBT.ProductionTreeHost`
 
 Drives one native tree in Unity Update with an optional per-frame step budget. Completion stops execution; disabling pauses; destruction cancels active work. Generated-node dispatch adapters remain caller-owned.
@@ -3084,11 +3142,14 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLeaf,AIBT.NativeTraceChannelCapacityV1,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLifecycle,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryConfigureEffectDelivery(System.Int32,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryDrainEffects(AIBT.IProductionTreeEffectReceiver,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryResolveExternalTreeWrite(System.String,AIBT.NativeBlackboardTypeIdV2,,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryWriteExternalTreeValue(AIBT.ProductionTreeHost+ExternalTreeWriteHandle`1<>,,System.Boolean&,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Void .ctor()`
 - `PROPERTY AIBT.NativeRuntimeFailureV1 LastFailure`
 - `PROPERTY AIBT.NativeTraceChannelOwnerV1 TraceChannelOwner`
+- `PROPERTY System.Boolean CanAcceptExternalTreeWrites`
 - `PROPERTY System.Boolean IsCoordinatorOwned`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastRootResult`
 - `PROPERTY System.Nullable`1<System.UInt32> StepBudget`
@@ -3121,6 +3182,18 @@ One population-level production coordinator per independently scheduled AI world
 - `PROPERTY System.Int32 FrameEntryCount`
 - `PROPERTY System.Int32 RegisteredCount`
 - `PROPERTY System.UInt32 LastFrameIndex`
+
+---
+
+### `AIBT.ProductionTreeWorld`
+
+Optional Unity-facing frame bridge for one <see cref="ProductionTreeScheduler"/>. It adds no tree state and no per-agent Update: the scheduler invokes its three phase callbacks from its own frame, so inputs, pipelined completion and public effect delivery stay ordered.
+
+- `METHOD System.Boolean TryRegister(AIBT.IProductionTreeWorldParticipant,AIBT.SchedulingProfile,AIBT.SchedulerRegistrationError&)`
+- `METHOD System.Boolean TryUnregister(AIBT.IProductionTreeWorldParticipant)`
+- `METHOD System.Void .ctor()`
+- `PROPERTY AIBT.NativeRuntimeFailureV1 LastWorldFailure`
+- `PROPERTY System.Int32 RegisteredParticipantCount`
 
 ---
 

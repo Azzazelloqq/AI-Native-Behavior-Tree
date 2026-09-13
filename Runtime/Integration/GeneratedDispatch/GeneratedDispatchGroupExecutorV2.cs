@@ -15,11 +15,11 @@ namespace AIBT
     /// memory or blackboard state -- see <see cref="TryExecuteGroup"/>.
     /// </summary>
     /// <remarks>
-    /// Command publication is not yet supported for grouped dispatch: <see cref="NativeBurstDispatchCommandV2"/>
-    /// carries no per-request identity, so a group's own shared transaction cannot be demultiplexed
-    /// back to the agent that emitted each command without new bookkeeping. A group whose shared
-    /// transaction reports any command is rejected with a structured diagnostic rather than silently
-    /// dropping or misattributing it -- a disclosed P7-033 gap, not a silent one.
+    /// The scheduler-owned <see cref="GeneratedDispatchGroupWorkspaceV2"/> uses its existing
+    /// disjoint target-ordinal ranges to attribute committed effect commands before participant
+    /// completion (ADR-P7-041). This legacy temporary-owner overload retains its historical
+    /// fail-closed command rejection because it has no persistent workspace through which to
+    /// publish typed effects.
     /// </remarks>
     internal static class GeneratedDispatchGroupExecutorV2
     {
@@ -156,8 +156,11 @@ namespace AIBT
                         var remappedTarget = resolved.TargetOrdinal == uint.MaxValue
                             ? resolved.TargetOrdinal
                             : resolved.TargetOrdinal + targetOrdinalBaseOffsets[index];
+                        var remappedLiveOffset = resolved.LiveValueOffset == NativeBurstDispatchBindingV2.NoOffset
+                            ? NativeBurstDispatchBindingV2.NoOffset
+                            : resolved.LiveValueOffset + liveValueBaseOffsets[index];
                         resolvedBindings[(int)bindingBaseOffsets[index] + bindingIndex] = new NativeBurstDispatchResolvedBindingV2(
-                            resolved.BindingOrdinal, remappedTarget, resolved.LiveValueOffset + liveValueBaseOffsets[index]);
+                            resolved.BindingOrdinal, remappedTarget, remappedLiveOffset);
                     }
                     CopyBytes(participant.BindingValues, liveValueBytes, (int)liveValueBaseOffsets[index]);
 

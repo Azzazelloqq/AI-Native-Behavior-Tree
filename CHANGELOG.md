@@ -6,6 +6,19 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- `ProductionTreeWorld` is an optional Unity-facing frame bridge for a shared
+  `ProductionTreeScheduler`: ordinary game code stages safe external Tree-scope facts and receives
+  bounded, ordered, committed typed effects without reading native command buffers or handling Jobs.
+  Generated catalogs now describe supported `EffectCommand` bindings as stable `Int32`, `Float32` or
+  `Float3` effect descriptors. See `Planning~/Evidence/P7-041/`.
+
+- Importable `Samples~/SwarmArena/` gameplay showcase: one generated reactive tree visibly patrols,
+  pursues a beacon, flees danger, attacks with instance-local cooldown and returns to patrol. It uses
+  public external writes/effect delivery, one shared scheduler with Normal and PipelinedJobs agents,
+  deterministic scripted 64/256/512 population phases, instanced state-group rendering, public
+  scheduler/world telemetry and the existing trace debugger. This is not a performance claim; P7-035
+  owns Player measurement. See `Planning~/Evidence/P7-034/`.
+
 - Ordinary C# code can now write one live external value per frame into a running native tree
   instance's own Tree-scope blackboard, through new `ProductionTreeHost.TryResolveExternalTreeWrite<T>`/
   `TryWriteExternalTreeValue<T>` — gated on no node in the tree ever declaring Write access to the

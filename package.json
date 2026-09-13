@@ -26,6 +26,11 @@
       "displayName": "Showcase Trees",
       "description": "Readable production-node trees with saved graph layouts.",
       "path": "Samples~/ShowcaseTrees"
+    },
+    {
+      "displayName": "Swarm Arena",
+      "description": "Reactive patrol, pursuit, danger avoidance and cooldown attack through the public production world bridge.",
+      "path": "Samples~/SwarmArena"
     }
   ],
   "author": {

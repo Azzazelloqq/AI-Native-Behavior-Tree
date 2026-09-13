@@ -18,6 +18,7 @@ namespace AIBT
         private readonly int _maximumParticipants;
         private readonly GeneratedDispatchGroupParticipantV2[] _participants;
         private readonly uint[] _targetOrdinalBaseOffsets;
+        private readonly uint[] _targetOrdinalSpans;
         private readonly uint[] _liveValueBaseOffsets;
 
         private NativeArray<NativeBurstDispatchControlV2> _control;
@@ -61,12 +62,14 @@ namespace AIBT
             int maximumParticipants,
             GeneratedDispatchGroupParticipantV2[] participants,
             uint[] targetOrdinalBaseOffsets,
+            uint[] targetOrdinalSpans,
             uint[] liveValueBaseOffsets)
         {
             _catalog = catalog;
             _maximumParticipants = maximumParticipants;
             _participants = participants;
             _targetOrdinalBaseOffsets = targetOrdinalBaseOffsets;
+            _targetOrdinalSpans = targetOrdinalSpans;
             _liveValueBaseOffsets = liveValueBaseOffsets;
         }
 
@@ -96,6 +99,7 @@ namespace AIBT
                 catalog,
                 maximumParticipants,
                 new GeneratedDispatchGroupParticipantV2[maximumParticipants],
+                new uint[maximumParticipants],
                 new uint[maximumParticipants],
                 new uint[maximumParticipants]);
             try
@@ -187,6 +191,11 @@ namespace AIBT
                 {
                     return false;
                 }
+                for (var index = 0; index < activeCount; index++)
+                {
+                    if (!members[index].Host.TryReserveGeneratedEffectCapacity(members[index].NodeIndex, out failure))
+                        return false;
+                }
 
                 var backing = CreateBacking(
                     activeCount, configurationLength, memoryLength, randomCount,
@@ -195,12 +204,12 @@ namespace AIBT
                 if (scheduled)
                 {
                     var dependency = _catalog.Executor.Schedule(ref batch, default(JobHandle));
+                    dependency.Complete();
                     if (_executionClaim[0] != 2)
                     {
                         failure = BurstContextResult.PhaseViolation;
                         return false;
                     }
-                    dependency.Complete();
                     _executionClaim[0] = 3;
                 }
                 else
@@ -214,13 +223,8 @@ namespace AIBT
                 }
 
                 if (!TryValidateTransaction(out failure)) return false;
-                if (_transactionControl[0].CommandCount != 0)
-                {
-                    failure = BurstContextResult.CapacityExceeded;
-                    return false;
-                }
-
                 if (!TryValidateCommits(members, activeCount, out failure)) return false;
+                if (!TryPublishGroupedCommands(members, activeCount, out failure)) return false;
                 for (var index = 0; index < activeCount; index++)
                 {
                     var participant = _participants[index];
@@ -340,6 +344,7 @@ namespace AIBT
                     if (targetOrdinal != uint.MaxValue && targetOrdinal + 1u > participantTargetSpan)
                         participantTargetSpan = targetOrdinal + 1u;
                 }
+                _targetOrdinalSpans[index] = participantTargetSpan;
                 if ((ulong)totalTargetOrdinals + participantTargetSpan > uint.MaxValue)
                 {
                     failure = BurstContextResult.Overflow;
@@ -399,9 +404,12 @@ namespace AIBT
                     var remappedTarget = resolved.TargetOrdinal == uint.MaxValue
                         ? uint.MaxValue
                         : checked(resolved.TargetOrdinal + _targetOrdinalBaseOffsets[index]);
+                    var remappedLiveOffset = resolved.LiveValueOffset == NativeBurstDispatchBindingV2.NoOffset
+                        ? NativeBurstDispatchBindingV2.NoOffset
+                        : checked(resolved.LiveValueOffset + (uint)liveValueOffset);
                     _resolvedBindings[bindingOffset + bindingIndex] = new NativeBurstDispatchResolvedBindingV2(
                         resolved.BindingOrdinal, remappedTarget,
-                        checked(resolved.LiveValueOffset + (uint)liveValueOffset));
+                        remappedLiveOffset);
                 }
                 Copy(participant.BindingValues, _bindingValueBytes, liveValueOffset);
                 _liveValueBaseOffsets[index] = (uint)liveValueOffset;
@@ -496,6 +504,62 @@ namespace AIBT
             return true;
         }
 
+        private bool TryPublishGroupedCommands(
+            IReadOnlyList<GeneratedDispatchGroupExecutorV2.Member> members,
+            int activeCount,
+            out BurstContextResult failure)
+        {
+            var transaction = _transactionControl[0];
+            for (uint commandIndex = 0; commandIndex < transaction.CommandCount; commandIndex++)
+            {
+                var command = _commands[(int)commandIndex];
+                if (command.Kind != NativeBurstDispatchCommandKindV2.Effect
+                    || (ulong)command.PayloadOffset + command.PayloadSize > transaction.CommandPayloadByteCount)
+                {
+                    failure = BurstContextResult.InvalidEncoding;
+                    return false;
+                }
+
+                var participantIndex = -1;
+                for (var index = 0; index < activeCount; index++)
+                {
+                    var first = _targetOrdinalBaseOffsets[index];
+                    var span = _targetOrdinalSpans[index];
+                    if (command.TargetOrdinal < first || command.TargetOrdinal - first >= span) continue;
+                    participantIndex = index;
+                    break;
+                }
+                if (participantIndex < 0)
+                {
+                    failure = BurstContextResult.InvalidEncoding;
+                    return false;
+                }
+
+                var localCommand = new NativeBurstDispatchCommandV2(
+                    command.Kind,
+                    command.TargetOrdinal - _targetOrdinalBaseOffsets[participantIndex],
+                    command.OperationId,
+                    command.PayloadOffset,
+                    command.PayloadSize);
+                var adapter = members[participantIndex].Host.GeneratedDispatchAdapter;
+                if (adapter == null)
+                {
+                    failure = BurstContextResult.InvalidHandle;
+                    return false;
+                }
+                if (!adapter.TryPublishGroupCommand(
+                        members[participantIndex].NodeIndex,
+                        in localCommand,
+                        _commandPayloadBytes.AsReadOnly(),
+                        out failure))
+                {
+                    return false;
+                }
+            }
+            failure = BurstContextResult.Success;
+            return true;
+        }
+
         private bool TryValidateTransaction(out BurstContextResult failure)
         {
             var transaction = _transactionControl[0];
@@ -532,7 +596,11 @@ namespace AIBT
         {
             uint total = 0;
             for (uint index = 0; index < dispatchCase.BindingCount; index++)
-                total = checked(total + _bindings[(int)(dispatchCase.FirstBinding + index)].PrimaryValueSize);
+            {
+                var binding = _bindings[(int)(dispatchCase.FirstBinding + index)];
+                if (binding.Kind <= NativeBurstDispatchBindingKindV2.SnapshotRead)
+                    total = checked(total + binding.PrimaryValueSize);
+            }
             return total;
         }
 
@@ -558,7 +626,11 @@ namespace AIBT
                     if (dispatchCase.BindingCount > maxBindings) maxBindings = dispatchCase.BindingCount;
                     uint liveValues = 0;
                     for (uint bindingIndex = 0; bindingIndex < dispatchCase.BindingCount; bindingIndex++)
-                        liveValues = checked(liveValues + catalog.Bindings[(int)(dispatchCase.FirstBinding + bindingIndex)].PrimaryValueSize);
+                    {
+                        var binding = catalog.Bindings[(int)(dispatchCase.FirstBinding + bindingIndex)];
+                        if (binding.Kind <= NativeBurstDispatchBindingKindV2.SnapshotRead)
+                            liveValues = checked(liveValues + binding.PrimaryValueSize);
+                    }
                     if (liveValues > maxLiveValues) maxLiveValues = liveValues;
                 }
 

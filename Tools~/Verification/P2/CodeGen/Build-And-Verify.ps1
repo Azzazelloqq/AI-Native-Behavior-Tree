@@ -64,7 +64,7 @@ try {
     $actualHash = (Get-FileHash -LiteralPath $dllA -Algorithm SHA256).Hash.ToLowerInvariant()
     $expectedHash = (Get-Content -Raw -LiteralPath $analyzerHashFile).Trim().ToLowerInvariant()
     Require ($actualHash -eq $expectedHash) "Analyzer hash mismatch: expected $expectedHash, actual $actualHash."
-    Require ((Get-FileHash -LiteralPath $abiFixture -Algorithm SHA256).Hash -eq 'A6E3844F1EFE96E71B4E392321570F0EDD0C1143F0A5A5726F3FE988FA6635B4') 'Accepted 352-record ABI v2 fixture hash differs.'
+    Require ((Get-FileHash -LiteralPath $abiFixture -Algorithm SHA256).Hash -eq 'BD92DAD388CAB8293E973709B1C3FF2DC7CB1EA909033F2F765BDEAC071F49E8') 'Accepted P7-041 ABI v2 fixture hash differs.'
 
     $meta = Get-Content -Raw -LiteralPath $analyzerMeta
     Require ($meta -match '(?m)^guid: 31a3f09584684895a0a72916d3ad4de0$') 'Analyzer meta GUID differs.'
@@ -178,7 +178,7 @@ namespace AIBT.CodeGen.InvalidAnalyzerProbe
     Require ([int]$run.total -gt 0 -and [int]$run.passed -eq [int]$run.total -and [int]$run.failed -eq 0 -and [int]$run.skipped -eq 0) 'Clean Unity contract tests did not all pass.'
     $requiredTests = @(
         'PublicSurface_MatchesAcceptedV2ManifestLineForLine',
-        'PublicSurfaceV2_ChangesOnlyEnterAndTickOpaqueSizePins',
+        'PublicSurfaceV2_ChangesOnlyAcceptedGeneratedCatalogExecutorMembers',
         'PinnedLayouts_ContextPrefixes_AndDefaultOpaqueValues_FailClosed',
         'ProductionGenerator_EmitsOnlyApprovedMetadataBoundary',
         'Authority_ExactlyMatchesCanonicalAuthoringBuiltIns',

@@ -83,4 +83,53 @@ namespace AIBT.Tests.CodeGen.GenerationP7039
         public static void Abort(in ExternalTreeWriterConfig config, ref ExternalTreeWriterMemory memory, ref BurstAbortContext context, BurstNodeAbortReason reason) { }
         public static void Exit(in ExternalTreeWriterConfig config, ref ExternalTreeWriterMemory memory, ref BurstExitContext context, BurstNodeExitReason reason) { }
     }
+
+    // P7-041 fixture: consumes the same external Tree-scope fact as the reader above and publishes
+    // one ordinary generated EffectCommand. Returning Running keeps the host suitable for proving
+    // the next-safe-barrier behavior of a pipelined scheduler wave.
+    public partial struct ExternalTreeEffectConfig
+    {
+        [AibtConfigField("target", "GeneratedHandle", 1u)]
+        [AibtBlackboardBinding("live-target", BurstBlackboardAccess.Read, BlackboardScope.Tree, "Float32", 1u)]
+        public BlackboardReadHandle<float> Target;
+
+        [AibtConfigField("hit", "GeneratedHandle", 1u)]
+        [AibtCommandBinding("hit", "Int32", 1u)]
+        public CommandHandle<int> Hit;
+
+        [AibtConfigField("value", "UInt32", 1u)]
+        public uint Value;
+    }
+
+    public partial struct ExternalTreeEffectMemory { }
+
+    [AibtNodeDocumentation(
+        "Emits a typed effect after an externally-fed target becomes active.", "Tests",
+        "Verify public production-world effect delivery after a native dispatch commit.",
+        "Not production.", "external-tree-effect")]
+    [AibtBurstNode(
+        "aibt.tests.external-tree-effect", 1u, BurstNodeKind.Action,
+        typeof(ExternalTreeEffectConfig), typeof(ExternalTreeEffectMemory), NodeMemoryLifetime.Activation,
+        true, BurstCancellationMode.AbortOnly, BurstNodeCost.Trivial,
+        BurstNodeStatusMask.Failure | BurstNodeStatusMask.Running)]
+    public partial struct ExternalTreeEffectNode
+    {
+        public static void Enter(in ExternalTreeEffectConfig config, ref ExternalTreeEffectMemory memory, ref BurstEnterContext context) { }
+
+        public static NodeStatus Tick(in ExternalTreeEffectConfig config, ref ExternalTreeEffectMemory memory, ref BurstTickContext context)
+        {
+            if (ExternalTreeWriteFixtureShard.BurstAccess.TryRead(ref context, config.Target, out var target)
+                != BurstContextResult.Success)
+                return NodeStatus.Failure;
+            if (target <= 0f) return NodeStatus.Running;
+            var value = unchecked((int)config.Value);
+            return ExternalTreeWriteFixtureShard.BurstAccess.TryEmit(ref context, config.Hit, in value)
+                == BurstContextResult.Success
+                ? NodeStatus.Running
+                : NodeStatus.Failure;
+        }
+
+        public static void Abort(in ExternalTreeEffectConfig config, ref ExternalTreeEffectMemory memory, ref BurstAbortContext context, BurstNodeAbortReason reason) { }
+        public static void Exit(in ExternalTreeEffectConfig config, ref ExternalTreeEffectMemory memory, ref BurstExitContext context, BurstNodeExitReason reason) { }
+    }
 }

@@ -33,6 +33,13 @@ prerequisite: current batch benchmarks use precomputed leaf statuses, while prod
 Burst dispatch is not connected to lifecycle-machine populations. P7-037 now owns that prerequisite
 and precedes P7-033/P7-034/P7-035; no scheduler production code has started.
 
+2026-09-07 update: fresh P7-034 planning found that the completed native path accepts live inputs
+through P7-039 but still has no consumer-facing committed-effect delivery or documented
+input/scheduler/effect frame phase. The owner approved ADR AIBT-041 and P7-041 as the narrow
+prerequisite: it adds a public typed world bridge without exposing native command buffers, changing
+scheduler semantics or adding a generic compiled-tree asset pipeline. P7-034 now consumes P7-041;
+P7-035 measures that exact public path.
+
 ## Required reading order
 
 1. Repository `AGENTS.md`.
@@ -1369,3 +1376,22 @@ is available to it but not a hard dependency). `P7-035` (Player benchmark) and `
 review) both remain blocked on it. Owner priority stands: `P7-034` next, picked up by a separate
 session/user with its own gameplay-design context -- this session stops here and does not continue it.
 `P7-040` (hot-reload/blackboard-defaults gap) remains a separate, unsequenced `Draft` card.
+
+2026-09-13 update: `P7-041` is **done**. It adds the intentionally narrow public production-world
+bridge: game code stages safe P7-039 inputs and receives bounded, ordered, post-commit typed effects
+without native command-buffer, Job or generated-offset access. `P7-034` is **done** on that bridge:
+the importable Swarm Arena scene has one generated reactive tree and deterministic
+Patrol/Pursue/Flee/Attack/Return phases, live trace attachment, and Normal plus PipelinedJobs agents
+sharing one scheduler. Focused bridge tests passed 6/6, generated lifecycle proof 12/12, and
+`AIBT.Editor.Tests` 436/436; static verification and package diff check passed. Full host-project
+EditMode final retry completed all 1,806 tests and reported only two embedded-package `PackageInfo`
+context failures plus one unrelated `LocalSaveSystem` autosave failure; these are documented in
+P7-041 and were not masked. Current
+assignable frontier is `P7-035` (release Player benchmark); `P7-036` follows it. `P7-040` remains
+independent and unsequenced.
+
+2026-09-13 follow-up: owner review of the runnable Swarm Arena required a legible population and
+scheduler showcase before P7-035. P7-034's sample now uses instanced state-group presentation,
+64/256/512 explicit controls and public live telemetry; post-start cohort changes wait for the common
+safe idle barrier, never joining/leaving an in-flight pipelined group. Unity MCP verified 256 and 512
+with zero host failures. These are Editor observability facts, not replacement Player measurements.

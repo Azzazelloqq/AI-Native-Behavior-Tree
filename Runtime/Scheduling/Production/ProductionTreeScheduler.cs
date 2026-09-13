@@ -117,6 +117,7 @@ namespace AIBT
         private double _fixedBudgetMicroseconds;
         private Func<double> _budgetProvider;
         private SchedulerJobsCapabilities? _jobsCapabilities;
+        private ProductionTreeWorld _worldBridge;
 
         public ProductionTreeScheduler() => _compareDue = CompareDue;
 
@@ -160,6 +161,19 @@ namespace AIBT
         }
 
         public bool IsRegistered(ProductionTreeHost host) => host != null && _byHost.ContainsKey(host);
+
+        internal bool TryAttachWorldBridge(ProductionTreeWorld world)
+        {
+            if (world == null) throw new ArgumentNullException(nameof(world));
+            if (_worldBridge != null && !ReferenceEquals(_worldBridge, world)) return false;
+            _worldBridge = world;
+            return true;
+        }
+
+        internal void DetachWorldBridge(ProductionTreeWorld world)
+        {
+            if (ReferenceEquals(_worldBridge, world)) _worldBridge = null;
+        }
 
         /// <summary>Looks up the profile a registered host was assigned. Returns false, not a default profile, when the host is not registered with this scheduler.</summary>
         public bool TryGetProfile(ProductionTreeHost host, out SchedulingProfile profile)
@@ -311,7 +325,11 @@ namespace AIBT
             }
             LastFrameAllocatedBudgetMicroseconds = unbounded ? double.PositiveInfinity : frozenAllowance;
 
+            var worldBridge = _worldBridge;
+            worldBridge?.CaptureInputs();
             AdvancePipelinedRuns(unbounded, ref remaining);
+            worldBridge?.DeliverEffects();
+            worldBridge?.FlushIdleInputs();
 
             _due.Clear();
             for (var index = 0; index < _registrations.Count; index++)
@@ -324,7 +342,11 @@ namespace AIBT
                 }
                 if (!registration.InFlight && registration.Eligible) _due.Add(registration);
             }
-            if (_due.Count == 0) return;
+            if (_due.Count == 0)
+            {
+                worldBridge?.DeliverEffects();
+                return;
+            }
             _due.Sort(_compareDue);
 
             var dueIndex = 0;
@@ -394,6 +416,7 @@ namespace AIBT
 
                 dueIndex = DriveForcedJobsGroup(dueIndex, unbounded, frozenAllowance, ref remaining);
             }
+            worldBridge?.DeliverEffects();
         }
 
         /// <summary>

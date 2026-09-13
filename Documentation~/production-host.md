@@ -54,8 +54,24 @@ BudgetYielded/ExecutionResumed and actual leaf Exit/Abort reasons. Writer leases
 between budget segments. Capacity remains caller-supplied and trace overflow follows the existing
 channel contract; tracing does not change tree outcomes.
 
-## Scope
+## Generated catalog, external facts and effects
 
-This host supports Immediate/Budgeted. Population-level BatchedJobsSameFrame/PipelinedJobs,
-automatic restart/pooling, and migration/hot-reload wiring are separate work. A working callback
-adapter is still required; this component does not itself provide gameplay Actions.
+The generated-catalog bootstrap overload owns the package's generated dispatch adapter. It can be
+registered with `ProductionTreeScheduler` for Immediate, Budgeted, BatchedJobsSameFrame or an
+explicitly permitted `PipelinedJobs` profile. The scheduler remains the sole population-level
+owner; a host is never driven both by its own `Update` and by a scheduler.
+
+For ordinary Unity-facing gameplay, use `ProductionTreeWorld` rather than reading native command
+buffers. A participant stages Unity facts, the world flushes them only at the host's safe Tree-scope
+external-write boundary, then receives already committed `ProductionTreeEffect` values on the main
+thread. `TryResolveExternalTreeWrite<T>` and `TryWriteExternalTreeValue<T>` are deliberately
+limited to the generated-catalog bootstrap path, Tree scope, and slots no tree node writes; see
+`ADR-P7-039` and `blackboard-v1.md`.
+
+`TryConfigureEffectDelivery` must be called before generated bootstrap when the consumer needs
+typed effects. The host's bounded queue is drained by `TryDrainEffects`; effect delivery is a
+post-commit public boundary, not a license to inspect generated dispatch storage. Pipelined hosts
+may deliver and accept new facts at their next idle barrier, never into an in-flight native wave.
+
+Automatic restart/pooling and migration/hot-reload wiring remain separate work. A delegate-based
+host still requires its caller-owned adapter; it does not itself provide gameplay Actions.
