@@ -1,0 +1,14 @@
+{
+    "schema": "aibt-p7-035-swarm-arena-windows-build-v1",
+    "unityVersion": "6000.5.8f1",
+    "target": "StandaloneWindows64",
+    "architecture": "x86_64",
+    "result": "Succeeded",
+    "totalErrors": 0,
+    "totalWarnings": 1,
+    "outputBytes": 782733446,
+    "scriptingBackend": "IL2CPP",
+    "burstEnabled": true,
+    "developmentBuild": false,
+    "output": "C:\\Users\\User\\AppData\\Local\\Temp\\aibt-p7-035-swarm-arena-player-4318087fc20d4cbb944ee23f470c688b\\Build\\Windows-x64\\AIBTP7035SwarmArenaBenchmark.exe"
+}

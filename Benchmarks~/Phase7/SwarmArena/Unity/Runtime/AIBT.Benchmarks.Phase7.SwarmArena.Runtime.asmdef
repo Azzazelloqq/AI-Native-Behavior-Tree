@@ -1,0 +1,15 @@
+{
+  "name": "AIBT.Benchmarks.Phase7.SwarmArena.Runtime",
+  "rootNamespace": "AIBT.Benchmarks.Phase7.SwarmArena",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring",
+    "AIBT.Samples.SwarmArena.Catalog",
+    "AIBT.Samples.SwarmArena.Nodes",
+    "Unity.Burst",
+    "Unity.Collections"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

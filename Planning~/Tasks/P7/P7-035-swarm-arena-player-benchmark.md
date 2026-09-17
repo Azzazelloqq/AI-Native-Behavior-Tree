@@ -1,6 +1,12 @@
 # P7-035 — Swarm Arena deterministic Player benchmark
 
-Status: `Draft`
+Status: `Done`
+
+## Outcome
+
+The complete 60-cell release Windows x64 IL2CPP/Burst Player matrix completed and is recorded in
+`Planning~/Evidence/P7-035/`. The report retains raw per-frame samples, build proof and validated
+aggregates. It is measurement evidence only: it changes no scheduler default, profile or workload.
 
 ## Objective
 

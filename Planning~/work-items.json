@@ -2111,7 +2111,7 @@
       "id": "P7-035",
       "phase": 7,
       "title": "Swarm Arena deterministic Player benchmark",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-035-swarm-arena-player-benchmark.md",
       "dependsOn": ["P4-008", "P7-024", "P7-033", "P7-034", "P7-037", "P7-038"],

@@ -1,0 +1,3 @@
+# Regeneratable Player builds and duplicate driver outputs stay local.
+*
+!.gitignore

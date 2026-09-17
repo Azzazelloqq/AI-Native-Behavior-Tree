@@ -1,0 +1,14 @@
+{
+  "name": "AIBT.Benchmarks.Phase7.SwarmArena.Editor",
+  "rootNamespace": "AIBT.Benchmarks.Phase7.SwarmArena.Editor",
+  "references": [
+    "AIBT.Benchmarks.Phase7.SwarmArena.Runtime",
+    "Unity.Burst"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}
