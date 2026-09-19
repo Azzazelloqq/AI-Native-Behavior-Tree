@@ -84,6 +84,11 @@ To inspect complete production-node examples, import **Showcase Trees** from Uni
 open **AIBT > Graph Editor**, and pass either imported `.aibt.json` path to the window's public
 `OpenFromPath` API (or an MCP/editor integration that calls it). Each tree includes a saved layout.
 
+To run the production-boundary gameplay sample, import **Swarm Arena** from the same package's
+**Samples** tab, then open its imported `SwarmArena.unity` scene. Its sample README describes the
+controls, live telemetry, debugger attachment, and the boundary between live orientation and Player
+benchmark evidence.
+
 - [Scope](Documentation~/scope.md)
 - [Architecture](Documentation~/architecture.md)
 - [Execution and scheduling](Documentation~/execution-and-scheduling.md)

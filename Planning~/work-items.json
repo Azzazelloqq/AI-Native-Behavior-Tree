@@ -2125,7 +2125,7 @@
       "id": "P7-036",
       "phase": 7,
       "title": "Swarm Arena UX and node-library review",
-      "status": "draft",
+      "status": "done",
       "kind": "review",
       "card": "Planning~/Tasks/P7/P7-036-swarm-arena-ux-and-node-review.md",
       "dependsOn": ["P7-034", "P7-035"],

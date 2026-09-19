@@ -1,6 +1,14 @@
 # P7-036 — Swarm Arena UX and node-library review
 
-Status: `Draft`
+Status: `Done`
+
+## Outcome
+
+The completed review is recorded in `Planning~/Evidence/P7-036/verification.md`. It verifies the
+clean-consumer package/sample payload, authored tree/layout, Graph Editor reload, live profile and
+trace/profiler observability, documented MCP custom-node path, and the frozen P7-035 Player handoff.
+No Swarm Arena custom node has the independent reuse evidence required for stdlib promotion, and no
+scheduler, default profile, workload or planner constant changed.
 
 ## Objective
 

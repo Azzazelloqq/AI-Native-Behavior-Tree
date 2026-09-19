@@ -6,6 +6,12 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- Release-Player evidence for Swarm Arena and its consumer UX/node-library review: the completed
+  P7-035 Windows x64 IL2CPP/Burst matrix remains the only performance source, while P7-036 verifies
+  the sample's onboarding, graph/layout, scheduler/debugger and MCP custom-node paths. No default
+  scheduler/profile behavior or sample gameplay node was promoted or changed. See
+  `Planning~/Evidence/P7-035/` and `Planning~/Evidence/P7-036/verification.md`.
+
 - `ProductionTreeWorld` is an optional Unity-facing frame bridge for a shared
   `ProductionTreeScheduler`: ordinary game code stages safe external Tree-scope facts and receives
   bounded, ordered, committed typed effects without reading native command buffers or handling Jobs.

@@ -1395,3 +1395,11 @@ scheduler showcase before P7-035. P7-034's sample now uses instanced state-group
 64/256/512 explicit controls and public live telemetry; post-start cohort changes wait for the common
 safe idle barrier, never joining/leaving an in-flight pipelined group. Unity MCP verified 256 and 512
 with zero host failures. These are Editor observability facts, not replacement Player measurements.
+
+2026-09-17 update: `P7-035` is **done** with its frozen 60-cell release Windows x64 IL2CPP/Burst
+Player matrix (five populations, six policies, rendering on/off; 20-second warmup plus 60-second
+measurement per cell). `P7-036` is also **done**: clean-consumer package/sample payload evidence,
+authored-tree/layout review, live Graph Editor/profile/trace/profiler walkthrough, the documented MCP
+custom-node gate and Player-handoff wording were verified. No sample node has two independent tree
+usages, so no stdlib promotion or implementation follow-up was created; no scheduler/profile/workload
+constant changed. See `Planning~/Evidence/P7-035/` and `Planning~/Evidence/P7-036/verification.md`.

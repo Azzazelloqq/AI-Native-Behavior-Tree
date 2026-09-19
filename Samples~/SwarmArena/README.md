@@ -3,7 +3,9 @@
 `Swarm Arena` is a gameplay sample for the public production boundary. It is not a benchmark and
 does not make an FPS or scalability claim.
 
-Open `SwarmArena.unity` and press Play. The scripted loop advances every four seconds:
+In Unity Package Manager, select **AI-Native Behavior Tree**, open its **Samples** tab, and import
+**Swarm Arena**. Then open the imported `SwarmArena.unity` scene and press Play. The scripted loop
+advances every four seconds:
 
 ```text
 patrol -> beacon pursuit -> danger flee -> attack with cooldown -> return to patrol
@@ -52,7 +54,18 @@ Attach Selected Agent Trace**. It opens the existing read-only trace timeline on
 
 ## P7-035 handoff
 
-P7-035 uses this exact fixed seed (`7034`), tree/catalog, scripted phases and low/high population
-buttons in a release Player. Its results must record Player hardware/build settings and separately
-measure P7-039 input writes plus immediate and pipelined latency. Editor overlay timing is not
-benchmark evidence.
+P7-035 uses this exact fixed seed (`7034`), tree/catalog, scripted phases and five fixed population
+points in a release Player. Its results record Player hardware/build settings and separately measure
+P7-039 input writes plus immediate and pipelined latency. Editor overlay timing is not benchmark
+evidence.
+
+To reproduce the canonical matrix from an AIBT source checkout, run the following from the package
+root and retain its JSON, build evidence, and Player log together:
+
+```powershell
+pwsh -File Benchmarks~/Phase7/SwarmArena/Run-SwarmArenaPlayerBenchmark.ps1
+```
+
+The default is the complete 60-cell matrix in a release Windows x64 IL2CPP/Burst Player and takes a
+long-running unattended session. `-PlayerCellLimit` is a diagnostic smoke-run option only; it is not
+canonical benchmark evidence.
