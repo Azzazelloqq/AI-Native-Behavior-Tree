@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="38" result="Passed" total="38" passed="38" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0,1841179">
+  <test-suite type="TestSuite" id="1000" name="AIBT-P7040-01018d8ec7ef4fc7a8d4ae002120caad" fullname="AIBT-P7040-01018d8ec7ef4fc7a8d4ae002120caad" runstate="Runnable" testcasecount="1454" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.184118" total="38" passed="38" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="2822" name="AIBT.Runtime.Tests.dll" fullname="C:/Users/User/AppData/Local/Temp/AIBT-P7040-01018d8ec7ef4fc7a8d4ae002120caad/Library/ScriptAssemblies/AIBT.Runtime.Tests.dll" runstate="Runnable" testcasecount="707" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.159197" total="38" passed="38" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="28312" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="2823" name="AIBT" fullname="AIBT" runstate="Runnable" testcasecount="707" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.153544" total="38" passed="38" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="2824" name="Tests" fullname="AIBT.Tests" runstate="Runnable" testcasecount="707" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.149868" total="38" passed="38" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="2825" name="Runtime" fullname="AIBT.Tests.Runtime" runstate="Runnable" testcasecount="707" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.143715" total="38" passed="38" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="2829" name="NativeExecution" fullname="AIBT.Tests.Runtime.NativeExecution" runstate="Runnable" testcasecount="209" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.133031" total="38" passed="38" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestSuite" id="2837" name="HotReload" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload" runstate="Runnable" testcasecount="38" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.130092" total="38" passed="38" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-suite type="TestFixture" id="2632" name="NativeHotReloadAutoDeterminismTests" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadAutoDeterminismTests" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadAutoDeterminismTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.055567" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2633" name="TrySelect_WithIdenticalInputs_PicksIdenticallyAcrossAFullRestart" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadAutoDeterminismTests.TrySelect_WithIdenticalInputs_PicksIdenticallyAcrossAFullRestart" methodname="TrySelect_WithIdenticalInputs_PicksIdenticallyAcrossAFullRestart" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadAutoDeterminismTests" runstate="Runnable" seed="1115767517" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.044160" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2634" name="WorkEstimator_ReseededAfterReload_MatchesAPlainFreshEstimatorForTheSameObservations" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadAutoDeterminismTests.WorkEstimator_ReseededAfterReload_MatchesAPlainFreshEstimatorForTheSameObservations" methodname="WorkEstimator_ReseededAfterReload_MatchesAPlainFreshEstimatorForTheSameObservations" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadAutoDeterminismTests" runstate="Runnable" seed="1963535995" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000482" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="TestFixture" id="2635" name="NativeHotReloadBlackboardTests" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.041191" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2650" name="ExcludedSubtree_DoesNotOwnOrResetTreeValue" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.ExcludedSubtree_DoesNotOwnOrResetTreeValue" methodname="ExcludedSubtree_DoesNotOwnOrResetTreeValue" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="465336702" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.018134" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2636" name="FreshInstance_ReadsDeclaredNonzeroDefault" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.FreshInstance_ReadsDeclaredNonzeroDefault" methodname="FreshInstance_ReadsDeclaredNonzeroDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="30425583" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000538" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2651" name="FullRestart_UsesNewDefaultInsteadOfOldLiveValue" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.FullRestart_UsesNewDefaultInsteadOfOldLiveValue" methodname="FullRestart_UsesNewDefaultInsteadOfOldLiveValue" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="294756806" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000797" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2648" name="LiveValue_MigratesEveryByteToNewOffset" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.LiveValue_MigratesEveryByteToNewOffset" methodname="LiveValue_MigratesEveryByteToNewOffset" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="342316752" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001838" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2652" name="RejectedActivePathMigration_PreservesOldValueAndExecution" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.RejectedActivePathMigration_PreservesOldValueAndExecution" methodname="RejectedActivePathMigration_PreservesOldValueAndExecution" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="741849120" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001484" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2649" name="RemovedKey_DoesNotOverwriteAnotherKeysDefault" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.RemovedKey_DoesNotOverwriteAnotherKeysDefault" methodname="RemovedKey_DoesNotOverwriteAnotherKeysDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="186011210" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000804" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2638" name="ReorderedSlots_MigrateByStableKey_AndNewKeyUsesDefault" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.ReorderedSlots_MigrateByStableKey_AndNewKeyUsesDefault" methodname="ReorderedSlots_MigrateByStableKey_AndNewKeyUsesDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="709630770" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001011" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2637" name="RunningNode_WritesOnce_ThenReadsItsValueAfterMigration" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.RunningNode_WritesOnce_ThenReadsItsValueAfterMigration" methodname="RunningNode_WritesOnce_ThenReadsItsValueAfterMigration" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="1396531336" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001073" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-suite type="ParameterizedMethod" id="2646" name="UnprovenOrIncompatibleSlot_UsesNewDefault" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.012014" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+                    <properties />
+                    <test-case id="2639" name="UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;type&quot;)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;type&quot;)" methodname="UnprovenOrIncompatibleSlot_UsesNewDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="2070441352" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001008" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2640" name="UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;version&quot;)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;version&quot;)" methodname="UnprovenOrIncompatibleSlot_UsesNewDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="2040908" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000598" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2641" name="UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;size&quot;)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;size&quot;)" methodname="UnprovenOrIncompatibleSlot_UsesNewDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="2017968696" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000633" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2642" name="UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;alignment&quot;)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;alignment&quot;)" methodname="UnprovenOrIncompatibleSlot_UsesNewDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="11829692" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000659" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2643" name="UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;scope&quot;)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;scope&quot;)" methodname="UnprovenOrIncompatibleSlot_UsesNewDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="1379056851" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000969" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2644" name="UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;registered&quot;)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;registered&quot;)" methodname="UnprovenOrIncompatibleSlot_UsesNewDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="1505498052" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.002678" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2645" name="UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;enum&quot;)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(&quot;enum&quot;)" methodname="UnprovenOrIncompatibleSlot_UsesNewDefault" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="2047749119" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000663" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                  </test-suite>
+                  <test-case id="2647" name="UnwrittenCompatibleKey_KeepsOldDefaultAsItsLiveValue" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnwrittenCompatibleKey_KeepsOldDefaultAsItsLiveValue" methodname="UnwrittenCompatibleKey_KeepsOldDefaultAsItsLiveValue" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests" runstate="Runnable" seed="1324576664" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000930" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="TestFixture" id="2653" name="NativeHotReloadFullRestartTests" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadFullRestartTests" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadFullRestartTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.004034" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2654" name="Restart_AbortsActiveOldInstance_ConstructsFreshOwnersFromNewProgram" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadFullRestartTests.Restart_AbortsActiveOldInstance_ConstructsFreshOwnersFromNewProgram" methodname="Restart_AbortsActiveOldInstance_ConstructsFreshOwnersFromNewProgram" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadFullRestartTests" runstate="Runnable" seed="486979010" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001195" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2656" name="Restart_DrivenToCompletionAfterRestart_ProducesTheSameResultAsAFreshInstance" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadFullRestartTests.Restart_DrivenToCompletionAfterRestart_ProducesTheSameResultAsAFreshInstance" methodname="Restart_DrivenToCompletionAfterRestart_ProducesTheSameResultAsAFreshInstance" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadFullRestartTests" runstate="Runnable" seed="919750016" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001121" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2655" name="Restart_OldInstanceNeverBegunAnUpdate_StillRestartsCleanly" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadFullRestartTests.Restart_OldInstanceNeverBegunAnUpdate_StillRestartsCleanly" methodname="Restart_OldInstanceNeverBegunAnUpdate_StillRestartsCleanly" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadFullRestartTests" runstate="Runnable" seed="232004851" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000700" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="TestFixture" id="2657" name="NativeHotReloadStateMigrationTests" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.027870" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-suite type="ParameterizedMethod" id="2662" name="Cooldown_PreservesDeadlineOnlyForMigratingNodes" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Cooldown_PreservesDeadlineOnlyForMigratingNodes" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.007881" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                    <properties />
+                    <test-case id="2658" name="Cooldown_PreservesDeadlineOnlyForMigratingNodes(20,False,False,Failure)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Cooldown_PreservesDeadlineOnlyForMigratingNodes(20,False,False,Failure)" methodname="Cooldown_PreservesDeadlineOnlyForMigratingNodes" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="887023163" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.003307" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2659" name="Cooldown_PreservesDeadlineOnlyForMigratingNodes(110,False,False,Success)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Cooldown_PreservesDeadlineOnlyForMigratingNodes(110,False,False,Success)" methodname="Cooldown_PreservesDeadlineOnlyForMigratingNodes" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1740171532" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000623" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2660" name="Cooldown_PreservesDeadlineOnlyForMigratingNodes(20,True,False,Success)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Cooldown_PreservesDeadlineOnlyForMigratingNodes(20,True,False,Success)" methodname="Cooldown_PreservesDeadlineOnlyForMigratingNodes" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1476057280" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000586" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2661" name="Cooldown_PreservesDeadlineOnlyForMigratingNodes(20,False,True,Success)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Cooldown_PreservesDeadlineOnlyForMigratingNodes(20,False,True,Success)" methodname="Cooldown_PreservesDeadlineOnlyForMigratingNodes" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1266689452" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.002477" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                  </test-suite>
+                  <test-case id="2676" name="Migrate_NoStructuralChange_CopiesFrameGenerationAndCompositeCursorVerbatim" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migrate_NoStructuralChange_CopiesFrameGenerationAndCompositeCursorVerbatim" methodname="Migrate_NoStructuralChange_CopiesFrameGenerationAndCompositeCursorVerbatim" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1013689738" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.003136" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2677" name="Migrate_ReorderedChildrenMidFlight_ResetsCompositeCursorInsteadOfCopyingAStaleValue" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migrate_ReorderedChildrenMidFlight_ResetsCompositeCursorInsteadOfCopyingAStaleValue" methodname="Migrate_ReorderedChildrenMidFlight_ResetsCompositeCursorInsteadOfCopyingAStaleValue" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="210021435" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.003104" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-suite type="ParameterizedMethod" id="2671" name="Migration_ResumesTheAgreedCallbackOrder" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.008729" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+                    <properties />
+                    <test-case id="2663" name="Migration_ResumesTheAgreedCallbackOrder(False,False,False)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder(False,False,False)" methodname="Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="179416862" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001366" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2664" name="Migration_ResumesTheAgreedCallbackOrder(False,True,False)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder(False,True,False)" methodname="Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="256574252" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000820" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2665" name="Migration_ResumesTheAgreedCallbackOrder(True,False,False)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder(True,False,False)" methodname="Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="683856829" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000596" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2666" name="Migration_ResumesTheAgreedCallbackOrder(True,True,False)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder(True,True,False)" methodname="Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1978658285" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000605" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2667" name="Migration_ResumesTheAgreedCallbackOrder(False,False,True)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder(False,False,True)" methodname="Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="712965553" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001623" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2668" name="Migration_ResumesTheAgreedCallbackOrder(False,True,True)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder(False,True,True)" methodname="Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1443027800" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000710" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2669" name="Migration_ResumesTheAgreedCallbackOrder(True,False,True)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder(True,False,True)" methodname="Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="328947671" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000776" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2670" name="Migration_ResumesTheAgreedCallbackOrder(True,True,True)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Migration_ResumesTheAgreedCallbackOrder(True,True,True)" methodname="Migration_ResumesTheAgreedCallbackOrder" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1711360321" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000721" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                  </test-suite>
+                  <test-case id="2672" name="NestedStructuralChanges_CancelTheActivePathOnceAtTheOutermostOwner" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.NestedStructuralChanges_CancelTheActivePathOnceAtTheOutermostOwner" methodname="NestedStructuralChanges_CancelTheActivePathOnceAtTheOutermostOwner" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1276668432" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001365" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-suite type="ParameterizedMethod" id="2675" name="Reorder_AfterTerminalTick_PreservesPendingExitReason" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Reorder_AfterTerminalTick_PreservesPendingExitReason" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.002184" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                    <properties />
+                    <test-case id="2673" name="Reorder_AfterTerminalTick_PreservesPendingExitReason(Success)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Reorder_AfterTerminalTick_PreservesPendingExitReason(Success)" methodname="Reorder_AfterTerminalTick_PreservesPendingExitReason" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1210227478" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.001029" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                    </test-case>
+                    <test-case id="2674" name="Reorder_AfterTerminalTick_PreservesPendingExitReason(Failure)" fullname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests.Reorder_AfterTerminalTick_PreservesPendingExitReason(Failure)" methodname="Reorder_AfterTerminalTick_PreservesPendingExitReason" classname="AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadStateMigrationTests" runstate="Runnable" seed="1398021925" result="Passed" start-time="2026-09-19 11:31:30Z" end-time="2026-09-19 11:31:30Z" duration="0.000566" asserts="0">
+                      <properties>
+                        <property name="retryIteration" value="0" />
+                        <property name="repeatIteration" value="0" />
+                      </properties>
+                      <output><![CDATA[Saving results to: C:/Users/User/AppData/LocalLow/DefaultCompany/AIBT-P7040-01018d8ec7ef4fc7a8d4ae002120caad\TestResults.xml
+]]></output>
+                    </test-case>
+                  </test-suite>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

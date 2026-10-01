@@ -447,9 +447,9 @@ namespace AIBT.Mcp.Authoring
         /// </summary>
         private static string ResolveNewTreePath(string projectRoot, string relativePath)
         {
-            if (string.IsNullOrEmpty(relativePath) || !relativePath.EndsWith(".aibt.json", StringComparison.Ordinal))
+            if (!TreeSourcePaths.IsTree(relativePath))
             {
-                throw new McpToolException(McpAuthoringDiagnostics.InvalidCreatePath, "Path must be a non-empty relative path ending in '.aibt.json'.");
+                throw new McpToolException(McpAuthoringDiagnostics.InvalidCreatePath, "Path must be a non-empty relative path ending in '.aibt' or '.aibt.json'.");
             }
 
             var combined = System.IO.Path.GetFullPath(System.IO.Path.Combine(projectRoot, relativePath));

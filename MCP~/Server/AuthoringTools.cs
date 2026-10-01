@@ -25,7 +25,7 @@ public static class AuthoringTools
     public static string CreateTree(
         [Description("New tree's stable ID.")] string treeId,
         [Description("Human-readable tree name.")] string name,
-        [Description("Relative path under the project's Assets folder, ending in '.aibt.json'. Must not already exist.")] string path,
+        [Description("Relative path under the project's Assets folder, ending in '.aibt' (preferred) or '.aibt.json'. Must not already exist.")] string path,
         [Description("Root node definition JSON: {id, typeId, typeVersion, parameters?, displayName?, description?, tags?}.")] string rootNodeJson,
         [Description("Optional initial tree-scoped blackboard keys JSON array: [{id, valueType, description?}, ...].")] string blackboardJson = "",
         [Description("Optional tree description.")] string description = "",

@@ -32,22 +32,9 @@ namespace AIBT.Editor.Organization
     /// </summary>
     public static class LayoutPersistenceController
     {
-        private const string TreeSuffix = ".aibt.json";
-        private const string LayoutSuffix = ".aibt.layout.json";
-
         public static string LayoutPathFor(string treeJsonPath)
         {
-            if (treeJsonPath == null)
-            {
-                throw new ArgumentNullException(nameof(treeJsonPath));
-            }
-
-            if (!treeJsonPath.EndsWith(TreeSuffix, StringComparison.Ordinal))
-            {
-                throw new ArgumentException("Expected a path ending in '.aibt.json'.", nameof(treeJsonPath));
-            }
-
-            return treeJsonPath.Substring(0, treeJsonPath.Length - TreeSuffix.Length) + LayoutSuffix;
+            return TreeSourcePaths.LayoutPathFor(treeJsonPath);
         }
 
         public static LayoutLoadResult Load(string treeJsonPath, TreeDocument semanticTree)

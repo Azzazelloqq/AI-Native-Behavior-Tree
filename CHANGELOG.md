@@ -4,6 +4,13 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Fixed
+
+- P7-040: V1 native hot reload initializes declared Tree-blackboard defaults and migrates compatible
+  built-in live values by stable key across slot relocation. New/incompatible keys use new defaults;
+  subtree exclusions preserve shared Tree values and full restart uses defaults. Registered values
+  without V1 schema proof default conservatively. Production-host/P7-039 storage is outside this fix.
+
 ### Added
 
 - Release-Player evidence for Swarm Arena and its consumer UX/node-library review: the completed

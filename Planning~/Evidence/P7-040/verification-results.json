@@ -1,0 +1,119 @@
+{
+  "task": "P7-040",
+  "baseCommit": "3f04417",
+  "unity": "6000.7.0a6",
+  "testFramework": "1.9.0",
+  "environment": "Isolated local UPM package project; full and baseline runs with graphics enabled and the existing hard-coded fixture path populated",
+  "runs": [
+    {
+      "name": "pre_fix",
+      "total": 14,
+      "passed": 1,
+      "failed": 13,
+      "skipped": 0,
+      "start": "2026-09-19 11:28:58Z",
+      "end": "2026-09-19 11:28:58Z",
+      "failures": [
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.ExcludedSubtree_DoesNotOwnOrResetTreeValue",
+          "message": "  Expected: 91\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.FreshInstance_ReadsDeclaredNonzeroDefault",
+          "message": "  Expected: 17\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.FullRestart_UsesNewDefaultInsteadOfOldLiveValue",
+          "message": "  Expected: 27\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.RemovedKey_DoesNotOverwriteAnotherKeysDefault",
+          "message": "  Expected: 27\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.ReorderedSlots_MigrateByStableKey_AndNewKeyUsesDefault",
+          "message": "  Expected: 72\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.RunningNode_WritesOnce_ThenReadsItsValueAfterMigration",
+          "message": "  Expected: 91\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(\"type\")",
+          "message": "  Expected: 27\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(\"version\")",
+          "message": "  Expected: 27\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(\"size\")",
+          "message": "  Expected: 27\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(\"alignment\")",
+          "message": "  Expected: 27\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(\"scope\")",
+          "message": "  Expected: 27\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(\"registered\")",
+          "message": "  Expected: 27\n  But was:  0\n"
+        },
+        {
+          "name": "AIBT.Tests.Runtime.NativeExecution.HotReload.NativeHotReloadBlackboardTests.UnprovenOrIncompatibleSlot_UsesNewDefault(\"enum\")",
+          "message": "  Expected: 27\n  But was:  0\n"
+        }
+      ]
+    },
+    {
+      "name": "focused",
+      "total": 38,
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0,
+      "start": "2026-09-19 11:31:30Z",
+      "end": "2026-09-19 11:31:30Z",
+      "failures": []
+    },
+    {
+      "name": "full",
+      "total": 1454,
+      "passed": 1453,
+      "failed": 1,
+      "skipped": 0,
+      "start": "2026-09-19 11:34:05Z",
+      "end": "2026-09-19 11:34:23Z",
+      "failures": [
+        {
+          "name": "AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests.EmittedMetadata_MaterializesConsumerDescriptorAndCompilesCanonicalV2Artifact",
+          "message": "  String lengths are both 64. Strings differ at index 0.\n  Expected: \"fd9981267da9ae772387ee95da79903f129676df64d89c1ec8a1a0b67c09d345\"\n  But was:  \"60dc5c1232aa887a48b062a66942089836c9d2cb8860581c51f08e47f8d33712\"\n  -----------^\n"
+        }
+      ]
+    },
+    {
+      "name": "baseline",
+      "total": 1438,
+      "passed": 1437,
+      "failed": 1,
+      "skipped": 0,
+      "start": "2026-09-19 11:35:09Z",
+      "end": "2026-09-19 11:36:00Z",
+      "failures": [
+        {
+          "name": "AIBT.Tests.CodeGen.Generation.GeneratedArtifactContractTests.EmittedMetadata_MaterializesConsumerDescriptorAndCompilesCanonicalV2Artifact",
+          "message": "  String lengths are both 64. Strings differ at index 0.\n  Expected: \"fd9981267da9ae772387ee95da79903f129676df64d89c1ec8a1a0b67c09d345\"\n  But was:  \"60dc5c1232aa887a48b062a66942089836c9d2cb8860581c51f08e47f8d33712\"\n  -----------^\n"
+        }
+      ]
+    }
+  ],
+  "staticVerification": "Passed: 7 schemas, 146 work items",
+  "diffCheck": "Passed",
+  "fullRunPersistentAllocationWarning": 112,
+  "baselinePersistentAllocationWarning": 112,
+  "focusedLeakWarning": false,
+  "player": "Not run",
+  "productionHostReload": "Out of approved scope"
+}

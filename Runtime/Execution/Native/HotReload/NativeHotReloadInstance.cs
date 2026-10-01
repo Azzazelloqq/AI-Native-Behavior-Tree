@@ -138,11 +138,13 @@ namespace AIBT
                 return false;
             }
 
-            var created = NativeLifecycleMachineV1.TryCreate(
+            var created = TryInitializeTreeDefaults(program, execLease.View.TreeBlackboard, out failure);
+            var machine = default(NativeLifecycleMachineV1);
+            if (created) created = NativeLifecycleMachineV1.TryCreate(
                 nodes, children, bindings,
                 execLease.View.NodeMemory, execLease.View.Frames, execLease.View.Generations,
                 control, configuration, cooldownInitialized, parallelBranches,
-                out var machine, out failure);
+                out machine, out failure);
 
             arenaOwner.TryReleaseExecutionLease(execLease, out _);
             programOwner.TryReleaseReadLease(execProgramLease, out _);
@@ -168,6 +170,33 @@ namespace AIBT
                 CooldownInitialized = cooldownInitialized,
                 ParallelBranches = parallelBranches,
             };
+            failure = default;
+            return true;
+        }
+
+        // V1 already carries compiled slot/default metadata. Initialize here rather than changing
+        // the general-purpose arena factory or introducing V2 ownership into this reload path.
+        private static bool TryInitializeTreeDefaults(
+            CompiledProgram program, NativeArray<byte> destination, out NativeRuntimeFailureV1 failure)
+        {
+            foreach (var slot in program.BlackboardSlots)
+            {
+                if (slot.Scope != BlackboardScope.Tree) continue;
+                if ((ulong)slot.Offset + slot.Size > (uint)destination.Length
+                    || (ulong)slot.DefaultValueOffset + slot.Size > (uint)program.DefaultValueBlob.Count)
+                {
+                    failure = new NativeRuntimeFailureV1(
+                        NativeRuntimeDiagnosticCodeV1.BlackboardInvalidSlot,
+                        NativeResourceKindV1.InstanceTreeBlackboard);
+                    return false;
+                }
+            }
+            foreach (var slot in program.BlackboardSlots)
+            {
+                if (slot.Scope != BlackboardScope.Tree) continue;
+                for (uint offset = 0; offset < slot.Size; offset++)
+                    destination[(int)(slot.Offset + offset)] = program.DefaultValueBlob[(int)(slot.DefaultValueOffset + offset)];
+            }
             failure = default;
             return true;
         }

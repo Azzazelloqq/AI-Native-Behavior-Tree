@@ -217,3 +217,26 @@ the real, unmodified `6000.5.8f1` Editor) drove real `NativeProgramImageOwnerV1`
   acceptance-criteria mapping above.
 - Only `NativeInstanceArenaOwnerV1`'s V1 (non-blackboard) construction path was exercised; V2
   (`TryCreateV2`, blackboard-bearing) fresh construction and migration were not exercised.
+
+## P7-040 addendum: Tree values in the V1 reload mechanism
+
+Accepted by the owner on 2026-09-19, with implementation explicitly authorized after scope and plan
+review. The V1 factories and ownership model remain unchanged. `NativeHotReloadInstance.TryBuild`
+initializes Tree bytes from `CompiledProgram.BlackboardSlots` and `DefaultValueBlob` under its
+existing execution lease. All ranges are checked before the first default write.
+
+Compatible migration overlays live values by stable key when both slots are Tree-scoped and their
+built-in type/version, enum contract, size and alignment match the known built-in layout. Slot
+indices, byte offsets and declared defaults may change. An unchanged live value equal to its old
+default is still preserved when the new default changes. New/incompatible keys retain new defaults;
+removed keys are discarded. V1 lacks registered schema/equality metadata, so registered values
+retain declared defaults rather than being copied on size/type-ID assumptions alone.
+
+Tree keys belong to the instance, not an individual writer or subtree. Node exclusions do not reset
+compatible Tree values. Full restart constructs fresh defaults. Migration does not mutate/dispose
+the old instance or invoke application callbacks; existing active-path rejection remains unchanged.
+
+This decision does not add V2 versions/revision, observer/RNG migration, or production-host reload.
+P7-039 external writes use `GeneratedTreeDispatchAdapterV2`'s separate storage; this fix does not
+claim to migrate that storage. Verification and limits are recorded in
+[P7-040 evidence](../../Planning~/Evidence/P7-040/README.md).

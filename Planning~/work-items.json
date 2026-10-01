@@ -2190,7 +2190,7 @@
       "id": "P7-040",
       "phase": 7,
       "title": "Native hot reload never migrates or defaults Tree-scope blackboard",
-      "status": "draft",
+      "status": "done",
       "kind": "implementation",
       "card": "Planning~/Tasks/P7/P7-040-native-hot-reload-blackboard-defaults-gap.md",
       "dependsOn": ["P7-012", "P2-007"],

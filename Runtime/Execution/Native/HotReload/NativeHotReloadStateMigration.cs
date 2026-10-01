@@ -121,6 +121,11 @@ namespace AIBT
             var newGenerations = newExecLease.View.Generations;
             var newMemory = newExecLease.View.NodeMemory;
 
+            // Tree values are instance-wide, independent of the node/subtree exclusion set.
+            // New and incompatible keys keep the defaults installed by TryBuild.
+            CopyCompatibleTreeValues(oldProgram, newProgram,
+                oldExecLease.View.TreeBlackboard, newExecLease.View.TreeBlackboard);
+
             uint migratedCount = 0, resetCount = 0, droppedCount = 0, cursorResetCount = 0;
             foreach (var pair in classification.NodeVerdicts)
             {
@@ -238,6 +243,41 @@ namespace AIBT
             report = NativeHotReloadMigrationReport.Migrated(migratedCount, resetCount, droppedCount, cursorResetCount);
             failure = default;
             return true;
+        }
+
+        private static void CopyCompatibleTreeValues(
+            CompiledProgram oldProgram, CompiledProgram newProgram,
+            NativeArray<byte> oldValues, NativeArray<byte> newValues)
+        {
+            var oldSlots = new Dictionary<ulong, CompiledBlackboardSlotRecord>();
+            foreach (var slot in oldProgram.BlackboardSlots)
+                if (slot.Scope == BlackboardScope.Tree) oldSlots.Add(slot.StableKeyId, slot);
+
+            foreach (var slot in newProgram.BlackboardSlots)
+            {
+                if (slot.Scope != BlackboardScope.Tree
+                    || !oldSlots.TryGetValue(slot.StableKeyId, out var oldSlot)
+                    || oldSlot.TypeId != slot.TypeId || oldSlot.TypeVersion != slot.TypeVersion
+                    || oldSlot.EnumContractId != slot.EnumContractId
+                    || oldSlot.Size != slot.Size || oldSlot.Alignment != slot.Alignment
+                    || !HasKnownBuiltInLayout(slot)) continue;
+
+                for (uint offset = 0; offset < slot.Size; offset++)
+                    newValues[(int)(slot.Offset + offset)] = oldValues[(int)(oldSlot.Offset + offset)];
+            }
+        }
+
+        private static bool HasKnownBuiltInLayout(CompiledBlackboardSlotRecord slot)
+        {
+            // V1 has no registered schema/equality descriptors. Matching sizes alone cannot
+            // establish registered-type compatibility, so those slots retain declared defaults.
+            for (var raw = (int)BlackboardValueType.Bool; raw <= (int)BlackboardValueType.AssetId; raw++)
+            {
+                if (!BuiltInBlackboardTypes.TryGet((BlackboardValueType)raw, out var type)
+                    || type.TypeId != slot.TypeId) continue;
+                return type.Version == slot.TypeVersion && type.Size == slot.Size && type.Alignment == slot.Alignment;
+            }
+            return false;
         }
 
         private static void CopyNodeMemory(

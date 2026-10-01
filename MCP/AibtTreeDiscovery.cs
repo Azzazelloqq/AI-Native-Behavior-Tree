@@ -33,17 +33,17 @@ namespace AIBT.Mcp
             /// <summary>Resolves the absolute source path for a tree by ID, for authoring tools that need to write it back.</summary>
             public bool TryFindPath(TreeId treeId, out string path)
             {
+                path = null;
                 for (var index = 0; index < Trees.Count; index++)
                 {
                     if (Trees[index].TreeId == treeId)
                     {
+                        if (path != null) { path = null; return false; }
                         path = TreePaths[index];
-                        return true;
                     }
                 }
 
-                path = null;
-                return false;
+                return path != null;
             }
         }
 
@@ -58,7 +58,7 @@ namespace AIBT.Mcp
                 return new ScanResult(trees, treePaths, skipped);
             }
 
-            var files = Directory.GetFiles(rootDirectory, "*.aibt.json", SearchOption.AllDirectories);
+            var files = TreeSourcePaths.FindFiles(rootDirectory);
             System.Array.Sort(files, System.StringComparer.Ordinal);
 
             for (var index = 0; index < files.Length; index++)

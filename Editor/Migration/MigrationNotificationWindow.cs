@@ -136,7 +136,7 @@ namespace AIBT.Editor.Migration
             var paths = new List<string>();
             if (!Directory.Exists(rootDirectory)) return (documents, paths);
 
-            var files = Directory.GetFiles(rootDirectory, "*.aibt.json", SearchOption.AllDirectories);
+            var files = TreeSourcePaths.FindFiles(rootDirectory);
             System.Array.Sort(files, System.StringComparer.Ordinal);
 
             foreach (var file in files)
