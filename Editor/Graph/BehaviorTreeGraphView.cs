@@ -92,8 +92,9 @@ namespace AIBT.Editor.Graph
                     continue;
                 }
 
-                foreach (var childId in node.Children)
+                for (var childIndex = 0; childIndex < node.Children.Count; childIndex++)
                 {
+                    var childId = node.Children[childIndex];
                     if (!_nodesById.TryGetValue(childId, out var childView))
                     {
                         continue;
@@ -104,6 +105,8 @@ namespace AIBT.Editor.Graph
                     parentView.OutputPort.Connect(edge);
                     childView.InputPort.Connect(edge);
                     AddElement(edge);
+                    childView.extensionContainer.Add(new Label("Order: " + (childIndex + 1)));
+                    childView.RefreshExpandedState();
                 }
             }
         }

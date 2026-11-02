@@ -145,6 +145,58 @@ namespace AIBT.Editor.Editing
             return Rebuild(document, newNodes);
         }
 
+        internal static TreeDocument RemoveParameter(TreeDocument document, NodeId nodeId, string parameterName)
+        {
+            var node = FindNode(document, nodeId)
+                ?? throw new ArgumentException($"Node '{nodeId}' does not exist.", nameof(nodeId));
+            var parameters = new SemanticObject(node.Parameters.Properties.Where(property =>
+                !string.Equals(property.Name, parameterName, StringComparison.Ordinal)));
+            var nodes = new List<NodeDocument>(document.Nodes);
+            ReplaceInList(nodes, node.WithParameters(parameters));
+            return Rebuild(document, nodes);
+        }
+
+        internal static TreeDocument SetBlackboardKey(TreeDocument document, BlackboardKeyDefinition key)
+        {
+            var keys = document.Blackboard.ToList();
+            var index = keys.FindIndex(existing => existing.Id == key.Id);
+            if (index < 0) keys.Add(key);
+            else keys[index] = key;
+            return Rebuild(document, document.Nodes, keys);
+        }
+
+        internal static TreeDocument RemoveBlackboardKey(TreeDocument document, string id)
+        {
+            return Rebuild(document, document.Nodes, document.Blackboard.Where(key => key.Id != id));
+        }
+
+        internal static TreeDocument SetBinding(TreeDocument document, NodeId nodeId, string bindingId, string keyId)
+        {
+            var node = FindNode(document, nodeId)
+                ?? throw new ArgumentException($"Node '{nodeId}' does not exist.", nameof(nodeId));
+            var bindings = node.Bindings?.Values.ToDictionary(pair => pair.Key, pair => pair.Value)
+                ?? new Dictionary<string, string>();
+            if (keyId == null) bindings.Remove(bindingId);
+            else bindings[bindingId] = keyId;
+            var nodes = new List<NodeDocument>(document.Nodes);
+            ReplaceInList(nodes, node.WithBindings(bindings.Count == 0 ? null : new NodeBindingMap(bindings)));
+            return Rebuild(document, nodes);
+        }
+
+        internal static TreeDocument SetRoot(TreeDocument document, NodeId nodeId)
+        {
+            if (FindNode(document, nodeId) == null)
+                throw new ArgumentException($"Node '{nodeId}' does not exist.", nameof(nodeId));
+            var nodes = new List<NodeDocument>();
+            foreach (var node in document.Nodes)
+                nodes.Add(node.Children.Contains(nodeId)
+                    ? node.WithChildren(node.Children.Where(child => child != nodeId))
+                    : node);
+            return new TreeDocument(document.Format, document.FormatVersion, document.TreeId, document.Name,
+                nodeId, nodes, document.Blackboard, document.Description, document.Tags, document.Metadata,
+                new Revision(document.Revision.Value + 1), document.AgentContract, document.SharedContract);
+        }
+
         private static void ReplaceInList(List<NodeDocument> nodes, NodeDocument updated)
         {
             for (var index = 0; index < nodes.Count; index++)
@@ -197,7 +249,7 @@ namespace AIBT.Editor.Editing
             return result;
         }
 
-        private static TreeDocument Rebuild(TreeDocument source, IEnumerable<NodeDocument> nodes)
+        private static TreeDocument Rebuild(TreeDocument source, IEnumerable<NodeDocument> nodes, IEnumerable<BlackboardKeyDefinition> blackboard = null)
         {
             return new TreeDocument(
                 source.Format,
@@ -206,7 +258,7 @@ namespace AIBT.Editor.Editing
                 source.Name,
                 source.Root,
                 nodes,
-                source.Blackboard,
+                blackboard ?? source.Blackboard,
                 source.Description,
                 source.Tags,
                 source.Metadata,

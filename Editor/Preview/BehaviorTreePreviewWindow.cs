@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using AIBT.Authoring;
 using AIBT.Editor.Graph;
+using AIBT.Editor.Registry;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -29,6 +30,8 @@ namespace AIBT.Editor.Preview
         private Label _statusLabel;
         private ScrollView _blackboardView;
         private Button _playButton;
+        private ToolbarToggle _allowManaged;
+        private ToolbarToggle _allowNondeterministic;
 
         private TreeDocument _document;
         private string _sourceId;
@@ -90,7 +93,13 @@ namespace AIBT.Editor.Preview
             _document = document ?? throw new ArgumentNullException(nameof(document));
             _sourceId = sourceId ?? throw new ArgumentNullException(nameof(sourceId));
             _isPlaying = false;
-            ReferencePreviewDriver.TryCreate(_document, _sourceId, out _driver, out _diagnostics);
+            if (_playButton != null) _playButton.text = "Play";
+            var policy = new ReferenceCompilationPolicy(
+                allowManagedNodes: _allowManaged != null && _allowManaged.value,
+                allowMainThreadNodes: _allowManaged != null && _allowManaged.value,
+                requireDeterministicNodes: _allowNondeterministic == null || !_allowNondeterministic.value);
+            ReferencePreviewDriver.TryCreate(_document, _sourceId,
+                ProjectLeafExtensionDiscovery.DiscoverViaTypeCache(), policy, out _driver, out _diagnostics);
             _breakpoints.Clear();
             Refresh();
         }
@@ -118,6 +127,12 @@ namespace AIBT.Editor.Preview
             _playButton = new ToolbarButton(OnPlayClicked) { text = "Play" };
             toolbar.Add(_playButton);
             toolbar.Add(new ToolbarButton(OnRestartClicked) { text = "Restart" });
+            _allowManaged = new ToolbarToggle { text = "Allow managed", tooltip = "Allow project managed and main-thread nodes to run in this reference preview." };
+            _allowNondeterministic = new ToolbarToggle { text = "Allow random", tooltip = "Allow nondeterministic nodes in this reference preview." };
+            _allowManaged.RegisterValueChangedCallback(_ => ReloadForPolicyChange());
+            _allowNondeterministic.RegisterValueChangedCallback(_ => ReloadForPolicyChange());
+            toolbar.Add(_allowManaged);
+            toolbar.Add(_allowNondeterministic);
             rootVisualElement.Add(toolbar);
 
             _statusLabel = new Label("No document loaded.");
@@ -135,6 +150,11 @@ namespace AIBT.Editor.Preview
 
             _blackboardView = new ScrollView { style = { width = 260 } };
             body.Add(_blackboardView);
+        }
+
+        private void ReloadForPolicyChange()
+        {
+            if (_document != null) LoadDocument(_document, _sourceId);
         }
 
         private void OnLoadClicked()
@@ -192,7 +212,7 @@ namespace AIBT.Editor.Preview
         {
             if (_document != null)
             {
-                _graphView.Populate(_document, ReferencePreviewDriver.CreatePreviewNodeRegistry());
+                _graphView.Populate(_document, _driver?.Registry ?? ReferencePreviewDriver.CreatePreviewNodeRegistry());
                 AttachBreakpointMenus();
             }
 

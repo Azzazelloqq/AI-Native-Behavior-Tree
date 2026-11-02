@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using AIBT.Editor.Registry;
 using AIBT.Mcp;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -46,6 +47,16 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
             {
                 Directory.Delete(_projectRoot, recursive: true);
             }
+        }
+
+        [Test]
+        public void NodeSearchWorksFromTheBridgeWorkerThread()
+        {
+            ProjectNodeCatalogCache.Refresh();
+            var response = System.Threading.Tasks.Task.Run(() => Dispatch("search_nodes", new JObject { ["keyword"] = "inverter" }, "Read"))
+                .GetAwaiter().GetResult();
+            Assert.That(response["error"], Is.Null, response.ToString());
+            Assert.That(((JArray)response["result"]["entries"]).Any(entry => (string)entry["typeId"] == "aibt.core.inverter"), Is.True);
         }
 
         [Test]

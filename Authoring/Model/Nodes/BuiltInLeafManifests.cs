@@ -57,15 +57,14 @@ namespace AIBT.Authoring
 
         private sealed class WaitBehavior : IReferenceLeafBehavior
         {
-            private uint _elapsed;
-
-            public void Enter(ref ReferenceLeafContext context) => _elapsed = 0;
+            public void Enter(ref ReferenceLeafContext context) => context.Memory.Clear();
 
             public NodeStatus Tick(ref ReferenceLeafContext context)
             {
                 var ticks = ReadUInt32(context.Configuration, 0);
-                _elapsed++;
-                return _elapsed >= ticks ? NodeStatus.Success : NodeStatus.Running;
+                var elapsed = unchecked(ReadUInt32(context.Memory, 0) + 1u);
+                WriteUInt32(context.Memory, elapsed);
+                return elapsed >= ticks ? NodeStatus.Success : NodeStatus.Running;
             }
 
             public void Abort(ref ReferenceLeafContext context, NodeAbortReason reason) { }
@@ -123,5 +122,13 @@ namespace AIBT.Authoring
 
         private static uint ReadUInt32(ReadOnlySpan<byte> source, int offset)
             => (uint)(source[offset] | (source[offset + 1] << 8) | (source[offset + 2] << 16) | (source[offset + 3] << 24));
+
+        private static void WriteUInt32(Span<byte> target, uint value)
+        {
+            target[0] = (byte)value;
+            target[1] = (byte)(value >> 8);
+            target[2] = (byte)(value >> 16);
+            target[3] = (byte)(value >> 24);
+        }
     }
 }

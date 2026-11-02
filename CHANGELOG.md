@@ -6,12 +6,22 @@ All notable changes to this project will be documented here. The project follows
 
 ### Fixed
 
+- Reference preview now isolates behavior state per node, executes built-in leaves, and supports
+  project reference providers. Built-in Wait keeps its counter in node memory.
+- Integration fixture lookup works when AIBT is installed as a Unity package.
+
 - P7-040: V1 native hot reload initializes declared Tree-blackboard defaults and migrates compatible
   built-in live values by stable key across slot relocation. New/incompatible keys use new defaults;
   subtree exclusions preserve shared Tree values and full restart uses defaults. Registered values
   without V1 schema proof default conservatively. Production-host/P7-039 storage is outside this fix.
 
 ### Added
+
+- Experimental graph editing supports draft creation, structural edits, separate semantic and layout
+  history, project node discovery, tree-scoped blackboard variables and generated-node bindings. An
+  explicit native compilation check reports compiler diagnostics without claiming Player execution.
+- The trace timeline can attach to any selected bootstrapped production host. Source highlighting
+  remains unavailable until the matching program and graph are supplied explicitly.
 
 - Release-Player evidence for Swarm Arena and its consumer UX/node-library review: the completed
   P7-035 Windows x64 IL2CPP/Burst matrix remains the only performance source, while P7-036 verifies

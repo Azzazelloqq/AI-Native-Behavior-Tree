@@ -47,7 +47,7 @@ namespace AIBT.Editor.Graph
 
         public Port OutputPort { get; }
 
-        private static string ReadableTitle(string typeId)
+        internal static string ReadableTitle(string typeId)
         {
             var leaf = typeId.Substring(typeId.LastIndexOf('.') + 1).Replace('-', ' ').Replace('_', ' ');
             return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(leaf);

@@ -149,6 +149,191 @@ namespace AIBT.Tests.Editor.Graph
         }
 
         [UnityTest]
+        public IEnumerator OpeningATreePreservesSelectionAcrossDeferredWindowInitialization()
+        {
+            IEnumerator Check(BehaviorTreeGraphWindow window, string path)
+            {
+                window.OpenFromPath(path, BuildRegistry());
+                var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
+                var selected = view.NodesById[new NodeId("root")];
+                view.AddToSelection(selected);
+                yield return null;
+                yield return null;
+                Assert.That(view.NodesById[new NodeId("root")], Is.SameAs(selected));
+                Assert.That(view.selection, Does.Contain(selected));
+            }
+            return WithRenderedScratchWindow(Check);
+        }
+
+        [UnityTest]
+        public IEnumerator EditingNodeParameterAndSavingCompletesADraft()
+        {
+            IEnumerator Check(BehaviorTreeGraphWindow window, string path)
+            {
+                var root = new NodeDocument(new NodeId("root"), "aibt.core.inverter", 1,
+                    parameters: SemanticObject.Empty, tags: TagSet.Empty);
+                var tree = new TreeDocument(TreeDocument.CurrentFormat, 1, new TreeId("tree.test.window"), "Window",
+                    root.Id, new[] { root }, tags: TagSet.Empty, metadata: SemanticObject.Empty);
+                File.WriteAllBytes(path, CanonicalTreeJson.Serialize(tree).Utf8);
+                var registry = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
+                Assert.That(registry.TryGet("aibt.stdlib.wait", out var wait), Is.True);
+                window.OpenFromPath(path, registry);
+                yield return null;
+                window.AddChildTo(root.Id, wait.Manifest);
+                var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
+                var child = window.Document.Nodes.Single(node => node.Id != root.Id);
+                view.ClearSelection();
+                view.AddToSelection(view.NodesById[child.Id]);
+                using (var mouseUp = MouseUpEvent.GetPooled())
+                {
+                    mouseUp.target = view;
+                    view.SendEvent(mouseUp);
+                }
+                yield return null;
+                var field = window.rootVisualElement.Query<TextField>().ToList().Single(item => item.label == "ticks *");
+                field.Focus();
+                yield return null;
+                field.value = "3";
+                var save = window.rootVisualElement.Q<Button>("aibt-save-tree");
+                save.Focus();
+                yield return null;
+                Submit(save);
+                yield return null;
+                var parsed = CanonicalTreeJson.Parse(File.ReadAllBytes(path), path);
+                Assert.That(parsed.Success, Is.True);
+                var options = new ReferenceCompilerOptions("trees/window.aibt.json", ReferenceCompilationPolicy.Phase1,
+                    new CompiledCompilerVersion(1, 0, 0, 0));
+                var compilation = ReferenceCompiler.Compile(parsed.Document, registry, options);
+                Assert.That(compilation.Success, Is.True, Messages(compilation.Diagnostics));
+            }
+            return WithRenderedScratchWindow(Check);
+        }
+
+        [UnityTest]
+        public IEnumerator NativeCheckCompilesCompleteV2TreeAndReportsIncompleteTree()
+        {
+            IEnumerator Check(BehaviorTreeGraphWindow window, string path)
+            {
+                var root = new NodeDocument(new NodeId("root"), "aibt.core.inverter", 1,
+                    parameters: SemanticObject.Empty, tags: TagSet.Empty);
+                var tree = TreeDocument.CreateVersion2(new TreeId("tree.test.native-check"), "Native check", root.Id,
+                    new[] { root }, null, null, tags: TagSet.Empty, metadata: SemanticObject.Empty);
+                File.WriteAllBytes(path, CanonicalTreeJson.Serialize(tree).Utf8);
+                window.OpenFromPath(path, NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry);
+                yield return null;
+                Submit(window.rootVisualElement.Q<Button>("aibt-check-native"));
+                var result = window.rootVisualElement.Q<Label>("aibt-native-validation");
+                Assert.That(result.text, Does.StartWith("Native compilation:"));
+                Assert.That(NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry.TryGet("aibt.stdlib.wait", out var wait), Is.True);
+                window.AddChildTo(root.Id, wait.Manifest);
+                var child = window.Document.Nodes.Single(node => node.Id != root.Id);
+                var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
+                view.AddToSelection(view.NodesById[child.Id]);
+                using (var mouseUp = MouseUpEvent.GetPooled()) { mouseUp.target = view; view.SendEvent(mouseUp); }
+                yield return null;
+                var field = window.rootVisualElement.Query<TextField>().ToList().Single(item => item.label == "ticks *");
+                field.Focus();
+                field.value = "3";
+                window.rootVisualElement.Q<Button>("aibt-check-native").Focus();
+                yield return null;
+                Submit(window.rootVisualElement.Q<Button>("aibt-check-native"));
+                Assert.That(result.text, Does.StartWith("Native program compiled."), result.text);
+                Submit(window.rootVisualElement.Q<Button>("aibt-save-tree"));
+                yield return null;
+            }
+            return WithRenderedScratchWindow(Check);
+        }
+
+        [UnityTest]
+        public IEnumerator LayoutMovementCanBeUndoneAndRedone()
+        {
+            IEnumerator Check(BehaviorTreeGraphWindow window, string path)
+            {
+                window.OpenFromPath(path, BuildRegistry());
+                yield return null;
+                var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
+                var root = view.NodesById[new NodeId("root")];
+                root.SetPosition(new Rect(240, 120, 0, 0));
+                view.graphViewChanged(new GraphViewChange { movedElements = new System.Collections.Generic.List<GraphElement> { root } });
+                yield return null;
+                Submit(window.rootVisualElement.Q<Button>("aibt-undo-layout"));
+                for (var frame = 0; frame < 20 && Vector2.Distance(root.GetPosition().position, Vector2.zero) > 1; frame++)
+                    yield return null;
+                AssertStoredPosition(root, Vector2.zero);
+                Submit(window.rootVisualElement.Q<Button>("aibt-redo-layout"));
+                for (var frame = 0; frame < 20 && Vector2.Distance(root.GetPosition().position, new Vector2(240, 120)) > 1; frame++)
+                    yield return null;
+                AssertStoredPosition(root, new Vector2(240, 120));
+            }
+            return WithRenderedScratchWindow(Check);
+        }
+
+        [UnityTest]
+        public IEnumerator SavingLayoutPersistsPositionsWithoutChangingTree()
+        {
+            IEnumerator Check(BehaviorTreeGraphWindow window, string path)
+            {
+                var semanticBytes = File.ReadAllBytes(path);
+                window.OpenFromPath(path, BuildRegistry());
+                yield return null;
+                var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
+                view.NodesById[new NodeId("root")].SetPosition(new Rect(410, 220, 0, 0));
+                var button = window.rootVisualElement.Q<Button>("aibt-save-layout");
+                using (var submit = NavigationSubmitEvent.GetPooled())
+                {
+                    submit.target = button;
+                    button.SendEvent(submit);
+                }
+                yield return null;
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(semanticBytes));
+                Assert.That(File.Exists(LayoutPersistenceController.LayoutPathFor(path)), Is.True);
+                window.OpenFromPath(path, BuildRegistry());
+                yield return null;
+                AssertStoredPosition(view.NodesById[new NodeId("root")], new Vector2(410, 220));
+            }
+            return WithRenderedScratchWindow(Check);
+        }
+
+        [UnityTest]
+        public IEnumerator SavingLayoutAfterRemovingBranchPreservesNotesAndSurvivingGroupMembers()
+        {
+            IEnumerator Check(BehaviorTreeGraphWindow window, string path)
+            {
+                var tree = ParseFixture();
+                var root = tree.Root;
+                var removed = new NodeId("guard");
+                var placements = tree.Nodes.ToDictionary(node => node.Id,
+                    node => new LayoutNodePlacement(new LayoutPoint(0, 0)));
+                var groups = new System.Collections.Generic.Dictionary<string, LayoutGroup>
+                {
+                    ["group"] = new LayoutGroup("Group", new[] { root, removed })
+                };
+                var notes = new System.Collections.Generic.Dictionary<string, LayoutNote>
+                {
+                    ["note"] = new LayoutNote("Keep", new LayoutPoint(0, 0), new LayoutPoint(100, 50))
+                };
+                LayoutPersistenceController.Save(path, new LayoutDocument(tree.TreeId, LayoutDirection.TopToBottom, placements, groups, notes));
+                var edited = AIBT.Editor.Editing.SemanticEditOperations.RemoveNode(tree, removed);
+                File.WriteAllBytes(path, CanonicalTreeJson.Serialize(edited).Utf8);
+
+                window.OpenFromPath(path, BuildRegistry());
+                yield return null;
+                var button = window.rootVisualElement.Q<Button>("aibt-save-layout");
+                using (var submit = NavigationSubmitEvent.GetPooled())
+                {
+                    submit.target = button;
+                    button.SendEvent(submit);
+                }
+                yield return null;
+                var layout = CanonicalLayoutJson.Parse(File.ReadAllBytes(LayoutPersistenceController.LayoutPathFor(path)), null, edited);
+                Assert.That(layout.Success, Is.True, Messages(layout.Diagnostics));
+                Assert.That(layout.Document.Groups["group"].MemberNodeIds, Is.EquivalentTo(new[] { root }));
+                Assert.That(layout.Document.Notes["note"].Text, Is.EqualTo("Keep"));
+            }
+            return WithRenderedScratchWindow(Check);
+        }
+
+        [UnityTest]
         public IEnumerator MissingLayoutUsesDefaultWithoutCreatingFile()
         {
             IEnumerator Check(BehaviorTreeGraphWindow window, string path)
@@ -187,23 +372,51 @@ namespace AIBT.Tests.Editor.Graph
             }
             finally
             {
+                if (window.hasUnsavedChanges) window.DiscardChanges();
                 window.Close();
                 Directory.Delete(directory, true);
             }
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void InvalidInputClearsPreviousGraphAndDisplaysDiagnostics(bool invalidLayout)
+        private static void Submit(Button button)
+        {
+            using (var submit = NavigationSubmitEvent.GetPooled())
+            {
+                submit.target = button;
+                button.SendEvent(submit);
+            }
+        }
+
+        [Test]
+        public void InvalidTreeClearsPreviousGraphAndDisplaysDiagnostics()
         {
             WithScratchWindow((window, path) =>
             {
                 window.OpenFromPath(path, BuildRegistry());
-                File.WriteAllText(invalidLayout ? LayoutPersistenceController.LayoutPathFor(path) : path, "{");
+                File.WriteAllText(path, "{");
                 window.OpenFromPath(path, BuildRegistry());
                 Assert.That(window.rootVisualElement.Q<BehaviorTreeGraphView>().NodesById, Is.Empty);
                 Assert.That(window.Diagnostics.Count, Is.GreaterThan(0));
                 Assert.That(window.rootVisualElement.Q<Label>("aibt-graph-diagnostics").text, Is.Not.Empty);
+            });
+        }
+
+        [Test]
+        public void InvalidLayoutShowsDiagnosticButStillDisplaysTree()
+        {
+            WithScratchWindow((window, path) =>
+            {
+                var layoutPath = LayoutPersistenceController.LayoutPathFor(path);
+                File.WriteAllText(layoutPath, "{ invalid layout }");
+                var originalLayout = File.ReadAllBytes(layoutPath);
+
+                window.OpenFromPath(path, BuildRegistry());
+
+                Assert.That(window.Document, Is.Not.Null);
+                Assert.That(window.rootVisualElement.Q<BehaviorTreeGraphView>().NodesById.Count, Is.EqualTo(4));
+                Assert.That(window.Diagnostics.Count, Is.GreaterThan(0));
+                Assert.That(window.rootVisualElement.Q<Label>("aibt-graph-diagnostics").text, Is.Not.Empty);
+                Assert.That(File.ReadAllBytes(layoutPath), Is.EqualTo(originalLayout));
             });
         }
 

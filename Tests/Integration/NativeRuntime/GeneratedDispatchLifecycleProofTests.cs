@@ -9,6 +9,7 @@ using AIBT.Execution.Burst.Dispatch;
 using AIBT.Tests.CodeGen.Generation;
 using NUnit.Framework;
 using Unity.Collections;
+using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.TestTools.Constraints;
 using GcAllocIs = UnityEngine.TestTools.Constraints.Is;
@@ -923,9 +924,9 @@ namespace AIBT.Tests.Integration.NativeRuntime
         private static GeneratedCompiledProgramV2 CompileFixture(GeneratedShardMetadataArtifact artifact)
         {
             const string sourceId = "Tests/Fixtures/P2/CodeGen/generated-tree-v2.aibt.json";
-            var path = Path.Combine(
-                Application.dataPath,
-                "AIBT/Tests/Fixtures/P2/CodeGen/generated-tree-v2.aibt.json");
+            var package = PackageInfo.FindForAssembly(typeof(GeneratedDispatchLifecycleProofTests).Assembly);
+            var root = package == null ? Path.Combine(Application.dataPath, "AIBT") : package.resolvedPath;
+            var path = Path.Combine(root, "Tests/Fixtures/P2/CodeGen/generated-tree-v2.aibt.json");
             var parsed = CanonicalTreeJson.Parse(File.ReadAllText(path), sourceId);
             Assert.That(parsed.Success, Is.True, Diagnostics(parsed.Diagnostics));
             var options = new ReferenceCompilerOptions(

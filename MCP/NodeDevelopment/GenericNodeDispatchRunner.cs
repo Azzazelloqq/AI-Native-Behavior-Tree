@@ -3,6 +3,7 @@ using System.Reflection;
 using AIBT;
 using AIBT.Authoring;
 using AIBT.Burst;
+using AIBT.Editor.Registry;
 using AIBT.Execution.Burst.Dispatch;
 using Unity.Collections;
 

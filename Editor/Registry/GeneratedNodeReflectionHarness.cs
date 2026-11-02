@@ -4,7 +4,7 @@ using System.Reflection;
 using AIBT.Authoring;
 using AIBT.Burst;
 
-namespace AIBT.Mcp.NodeDevelopment
+namespace AIBT.Editor.Registry
 {
     internal readonly struct GeneratedShardReflection
     {

@@ -211,9 +211,9 @@ namespace AIBT
         internal bool TryGet(ulong nodeTypeId, uint nodeTypeVersion, out IReferenceLeafHandler handler)
             => _handlers.TryGetValue(new HandlerKey(nodeTypeId, nodeTypeVersion), out handler);
 
-        internal static ReferenceLeafRegistry CreatePhase1Fixtures()
+        internal static ReferenceLeafRegistry CreatePhase1Fixtures(IEnumerable<ReferenceLeafBinding> additional = null)
         {
-            return new ReferenceLeafRegistry(new[]
+            var bindings = new List<ReferenceLeafBinding>
             {
                 Fixture("aibt.test.success", NodeStatus.Success),
                 Fixture("aibt.test.failure", NodeStatus.Failure),
@@ -224,7 +224,9 @@ namespace AIBT
                     new ReferenceAsyncActionHandler(new ReferenceAsyncCommandContract(
                         new CommandType(StableHash.Fnv1A64("aibt.test.command.async-start"), 1),
                         new CommandType(StableHash.Fnv1A64("aibt.test.command.async-cancel"), 1)))),
-            });
+            };
+            if (additional != null) bindings.AddRange(additional);
+            return new ReferenceLeafRegistry(bindings);
         }
 
         private static ReferenceLeafBinding Fixture(string canonicalTypeId, NodeStatus status)

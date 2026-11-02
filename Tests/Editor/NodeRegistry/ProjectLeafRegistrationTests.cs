@@ -1,8 +1,11 @@
 using System;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Burst;
+using AIBT.Editor.Registry;
 using AIBT.Mcp.Authoring;
 using NUnit.Framework;
+using UnityEditor;
 
 namespace AIBT.Tests.Editor.NodeRegistry
 {
@@ -19,6 +22,102 @@ namespace AIBT.Tests.Editor.NodeRegistry
     public sealed class ProjectLeafRegistrationTests
     {
         private const string CustomLeafTypeId = "example.project.doubling-counter";
+
+        [Test]
+        public void ProjectCatalogCombinesManagedAndGeneratedNodesWithBuiltIns()
+        {
+            var shard = TypeCache.GetTypesWithAttribute<AibtCatalogShardAttribute>()
+                .Single(type => type.Assembly.GetName().Name == "AIBT.NodeDevelopment.ShardFixture");
+            var catalog = ProjectNodeCatalog.Build(new[] { shard }, new IReferenceLeafBehaviorProvider[] { new DoublingCounterLeafProvider() });
+            Assert.That(catalog.Problems, Is.Empty);
+            Assert.That(catalog.Registry.TryGet(CustomLeafTypeId, out _), Is.True);
+            Assert.That(catalog.Registry.TryGet("aibt.tests.node-development-condition", out _), Is.True);
+            Assert.That(catalog.Generated.ContainsKey("aibt.tests.node-development-condition"), Is.True);
+            Assert.That(catalog.Registry.TryGet("aibt.core.inverter", out _), Is.True);
+        }
+
+        [Test]
+        public void ProjectCatalogReportsBrokenAndConflictingShardsWithoutLosingBuiltIns()
+        {
+            var shard = TypeCache.GetTypesWithAttribute<AibtCatalogShardAttribute>()
+                .Single(type => type.Assembly.GetName().Name == "AIBT.NodeDevelopment.ShardFixture");
+            var broken = ProjectNodeCatalog.Build(new[] { typeof(ProjectLeafRegistrationTests) }, Array.Empty<IReferenceLeafBehaviorProvider>());
+            Assert.That(broken.Problems, Is.Not.Empty);
+            Assert.That(broken.Registry.TryGet("aibt.core.inverter", out _), Is.True);
+            var duplicate = ProjectNodeCatalog.Build(new[] { shard, shard }, Array.Empty<IReferenceLeafBehaviorProvider>());
+            Assert.That(duplicate.Problems, Is.Not.Empty);
+            Assert.That(duplicate.Registry.TryGet("aibt.core.inverter", out _), Is.True);
+            Assert.That(duplicate.Registry.TryGet("aibt.tests.node-development-condition", out _), Is.False);
+        }
+
+        [Test]
+        public void MatchingGeneratedAndReferenceContractsKeepTheReferenceBinding()
+        {
+            var shard = TypeCache.GetTypesWithAttribute<AibtCatalogShardAttribute>()
+                .Single(type => type.Assembly.GetName().Name == "AIBT.NodeDevelopment.ShardFixture");
+            Assert.That(GeneratedNodeReflectionHarness.TryReflectMetadata(shard, out var metadata, out var failure), Is.True, failure);
+            Assert.That(GeneratedNodeReflectionHarness.TryMaterializeArtifact(metadata, out var artifact, out failure), Is.True, failure);
+            var manifest = artifact.Nodes.Single().Manifest;
+            var catalog = ProjectNodeCatalog.Build(new[] { shard }, new IReferenceLeafBehaviorProvider[] { new DescriptorProvider(manifest) });
+            Assert.That(catalog.Problems, Is.Empty);
+            Assert.That(catalog.Registry.TryGet(manifest.TypeId, out var entry), Is.True);
+            Assert.That(entry.HasReferenceHandlerBinding, Is.True);
+            Assert.That(catalog.Generated.ContainsKey(manifest.TypeId), Is.True);
+        }
+
+        [Test]
+        public void PreviewCreatesIndependentBehaviorsForParallelNodesOfTheSameType()
+        {
+            var rootId = new NodeId("root");
+            var firstId = new NodeId("first");
+            var secondId = new NodeId("second");
+            var root = new NodeDocument(rootId, "aibt.core.parallel", 1, new[] { firstId, secondId },
+                new SemanticObject(new[] { new SemanticProperty("policy", SemanticValue.FromString("require-all-success")) }), tags: TagSet.Empty);
+            var first = new NodeDocument(firstId, CustomLeafTypeId, 1, parameters: SemanticObject.Empty, tags: TagSet.Empty);
+            var second = new NodeDocument(secondId, CustomLeafTypeId, 1, parameters: SemanticObject.Empty, tags: TagSet.Empty);
+            var document = new TreeDocument(TreeDocument.CurrentFormat, 1, new TreeId("tree.test.parallel-reference"), "Parallel",
+                rootId, new[] { root, first, second }, tags: TagSet.Empty, metadata: SemanticObject.Empty);
+            Assert.That(ReferencePreviewDriver.TryCreate(document, "trees/parallel-reference.aibt.json",
+                new IReferenceLeafBehaviorProvider[] { new DoublingCounterLeafProvider() }, out var preview, out var diagnostics),
+                Is.True, string.Join("; ", diagnostics.Select(d => d.Message)));
+            Assert.That(preview.RunTick().Progress, Is.EqualTo(ReferencePreviewProgress.Waiting));
+            Assert.That(preview.RunTick().Progress, Is.EqualTo(ReferencePreviewProgress.Waiting));
+            Assert.That(preview.RunTick().RootResult, Is.EqualTo(NodeStatus.Success));
+        }
+
+        [Test]
+        public void PreviewRestartRecreatesNodeBehaviorAndRejectedRestartKeepsActiveState()
+        {
+            var provider = new PersistentCounterProvider();
+            Assert.That(ReferencePreviewDriver.TryCreate(SingleLeafTree(), "trees/restart-reference.aibt.json",
+                new IReferenceLeafBehaviorProvider[] { provider }, out var preview, out var diagnostics),
+                Is.True, string.Join("; ", diagnostics.Select(d => d.Message)));
+            Assert.That(preview.RunTick().Progress, Is.EqualTo(ReferencePreviewProgress.Waiting));
+            Assert.That(preview.Restart().Progress, Is.EqualTo(ReferencePreviewProgress.Rejected));
+            Assert.That(preview.ActiveNodeIds, Does.Contain(new NodeId("leaf")));
+            Assert.That(preview.RunTick().RootResult, Is.EqualTo(NodeStatus.Success));
+            Assert.That(preview.Restart().Progress, Is.EqualTo(ReferencePreviewProgress.Completed));
+            Assert.That(preview.RunTick().Progress, Is.EqualTo(ReferencePreviewProgress.Waiting));
+            Assert.That(preview.RunTick().RootResult, Is.EqualTo(NodeStatus.Success));
+        }
+
+        [Test]
+        public void AutomaticProjectCatalogExcludesTestOnlyGeneratedShards()
+        {
+            var catalog = ProjectNodeCatalog.Discover();
+            Assert.That(catalog.Problems, Is.Empty, string.Join("; ", catalog.Problems));
+            Assert.That(catalog.Registry.TryGet("aibt.tests.node-development-condition", out _), Is.False);
+            Assert.That(catalog.Registry.TryGet("aibt.core.inverter", out _), Is.True);
+        }
+
+        [Test]
+        public void CachedProjectCatalogCanBeReadFromTheMcpWorkerThread()
+        {
+            ProjectNodeCatalogCache.Refresh();
+            var expected = ProjectNodeCatalogCache.Current.Registry.Hash;
+            var actual = System.Threading.Tasks.Task.Run(() => ProjectNodeCatalogCache.Current.Registry.Hash).GetAwaiter().GetResult();
+            Assert.That(actual, Is.EqualTo(expected));
+        }
 
         [Test]
         public void ProjectExtension_AttachesABindingAndIsDiscoverableThroughTheSameRegistry()
@@ -136,6 +235,29 @@ namespace AIBT.Tests.Editor.NodeRegistry
         }
 
         // Project-style: implemented using only the new public contract, no internal AIBT type.
+        private sealed class DescriptorProvider : IReferenceLeafBehaviorProvider
+        {
+            internal DescriptorProvider(NodeManifest manifest) { Manifest = manifest; }
+            public NodeManifest Manifest { get; }
+            public IReferenceLeafBehavior CreateBehavior() => new DoublingCounterLeafBehavior();
+        }
+
+        private sealed class PersistentCounterProvider : IReferenceLeafBehaviorProvider
+        {
+            internal PersistentCounterProvider() { }
+            public NodeManifest Manifest => new DoublingCounterLeafProvider().Manifest;
+            public IReferenceLeafBehavior CreateBehavior() => new PersistentCounterBehavior();
+        }
+
+        private sealed class PersistentCounterBehavior : IReferenceLeafBehavior
+        {
+            private int _ticks;
+            public void Enter(ref ReferenceLeafContext context) { }
+            public NodeStatus Tick(ref ReferenceLeafContext context) => ++_ticks >= 2 ? NodeStatus.Success : NodeStatus.Running;
+            public void Abort(ref ReferenceLeafContext context, NodeAbortReason reason) { }
+            public void Exit(ref ReferenceLeafContext context, NodeExitReason reason) { }
+        }
+
         private sealed class DoublingCounterLeafProvider : IReferenceLeafBehaviorProvider
         {
             // Deliberately no public parameterless constructor: UnityEditor.TypeCache scans every

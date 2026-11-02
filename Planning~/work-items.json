@@ -4,6 +4,151 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P8-008",
+      "phase": 8,
+      "title": "Attach to a selected production host trace",
+      "status": "in_progress",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-008-selected-host-trace.md",
+      "dependsOn": [
+        "P7-010",
+        "P7-034"
+      ],
+      "owns": [
+        "Editor/Trace/",
+        "Tests/Editor/Trace/"
+      ]
+    },
+    {
+      "id": "P8-007",
+      "phase": 8,
+      "title": "Validate generated native trees from the graph",
+      "status": "in_progress",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-007-generated-compilation-validation.md",
+      "dependsOn": [
+        "P7-008",
+        "P7-009"
+      ],
+      "owns": [
+        "Editor/Registry/",
+        "Editor/Graph/",
+        "Tests/Editor/NodeRegistry/"
+      ]
+    },
+    {
+      "id": "P8-005",
+      "phase": 8,
+      "title": "Execute built-in and project reference leaves in preview",
+      "status": "in_progress",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-005-reference-preview-project-nodes.md",
+      "dependsOn": [
+        "P3-009",
+        "P7-008",
+        "P7-028"
+      ],
+      "owns": [
+        "Authoring/Execution/",
+        "Authoring/HotReload/",
+        "Authoring/Model/Nodes/BuiltInLeafManifests.cs",
+        "Runtime/Execution/Reference/Leaves/",
+        "Editor/Preview/",
+        "Tests/Editor/Preview/",
+        "Tests/Editor/NodeRegistry/",
+        "Planning~/Tasks/P8/P8-005-reference-preview-project-nodes.md"
+      ]
+    },
+    {
+      "id": "P8-004",
+      "phase": 8,
+      "title": "Discover project nodes in human authoring",
+      "status": "in_progress",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-004-project-node-catalog.md",
+      "dependsOn": [
+        "P7-008",
+        "P7-009"
+      ],
+      "owns": [
+        "Editor/Registry/",
+        "Editor/Graph/",
+        "MCP/Authoring/",
+        "MCP/NodeDevelopment/",
+        "Tests/Editor/NodeRegistry/",
+        "Planning~/Tasks/P8/P8-004-project-node-catalog.md"
+      ]
+    },
+    {
+      "id": "P8-003",
+      "phase": 8,
+      "title": "Refresh generated-program fixture after built-in catalog expansion",
+      "status": "in_progress",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-003-refresh-generated-program-fixture.md",
+      "dependsOn": [
+        "P7-028"
+      ],
+      "owns": [
+        "Tests/Fixtures/P2/CodeGen/generated-compiled-v2.json",
+        "Planning~/Tasks/P8/P8-003-refresh-generated-program-fixture.md"
+      ]
+    },
+    {
+      "id": "P8-002",
+      "phase": 8,
+      "title": "Resolve integration fixtures in installed packages",
+      "status": "in_progress",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-002-package-fixture-resolution.md",
+      "dependsOn": [
+        "P7-037"
+      ],
+      "owns": [
+        "Tests/Integration/NativeRuntime/GeneratedDispatchLifecycleProofTests.cs",
+        "Planning~/Tasks/P8/P8-002-package-fixture-resolution.md"
+      ]
+    },
+    {
+      "id": "P8-001",
+      "phase": 8,
+      "title": "Editable graph with saved drafts",
+      "status": "in_progress",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-001-graph-draft-editing.md",
+      "dependsOn": [
+        "P3-003",
+        "P3-005",
+        "P3-006",
+        "P7-025"
+      ],
+      "owns": [
+        "Editor/Graph/",
+        "Editor/Editing/",
+        "Editor/Organization/",
+        "Tests/Editor/Graph/",
+        "Planning~/Tasks/P8/"
+      ]
+    },
+    {
+      "id": "P8-006",
+      "phase": 8,
+      "title": "Blackboard authoring in the graph",
+      "status": "in_progress",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-006-blackboard-graph-authoring.md",
+      "dependsOn": [
+        "P7-008",
+        "P7-028"
+      ],
+      "owns": [
+        "Editor/Graph/",
+        "Editor/Editing/",
+        "Editor/Registry/",
+        "Tests/Editor/Graph/"
+      ]
+    },
+    {
       "id": "P0-001",
       "phase": 0,
       "title": "Validate exact Unity toolchain",

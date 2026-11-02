@@ -1,14 +1,12 @@
 namespace AIBT.Authoring
 {
-    // Pairs a project-authored leaf's NodeManifest with its public IReferenceLeafBehavior factory
-    // (P7-008, applying ADR-P6-017). A project implements this once per custom leaf type with a
-    // public parameterless constructor -- mirrors ICustomMcpToolProvider's own shape
-    // (MCP/CustomTools/, P6-010), which MCP/Authoring/ProjectLeafExtensionDiscovery.cs discovers
-    // via UnityEditor.TypeCache the same way.
+    /// <summary>Provides a project leaf contract and creates independent reference behaviors.</summary>
     public interface IReferenceLeafBehaviorProvider
     {
+        /// <summary>The stable contract for this leaf type.</summary>
         NodeManifest Manifest { get; }
 
+        /// <summary>Creates a fresh behavior instance for one node in one reference tree instance.</summary>
         IReferenceLeafBehavior CreateBehavior();
     }
 }

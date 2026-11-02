@@ -11,15 +11,8 @@ namespace AIBT.Authoring
     /// <c>BeginUpdate</c>/<c>AdvanceOneStep</c>/<c>Restart</c> API; this class only translates its
     /// internal contracts to a public shape that <c>AIBT.Editor</c> (which has no internals
     /// visibility into <c>AIBT.Runtime</c>) can consume.
-    /// <para>
-    /// The executable node-behavior set is fixed to the already-shipped Phase 1 fixture/built-in
-    /// registries (<c>ReferenceLeafRegistry.CreatePhase1Fixtures()</c> and the sibling
-    /// <c>CreatePhase1BuiltIns()</c> composite/decorator/parallel registries already used by the
-    /// headless behavior-case runner). AIBT ships no production per-project leaf-behavior
-    /// registration mechanism yet, so only trees built from built-in composites/decorators and the
-    /// <c>aibt.test.success</c>/<c>aibt.test.failure</c>/<c>aibt.test.running</c> fixture leaves can
-    /// be previewed; this is a known limitation, not a silent weakening (see the P3-009 evidence).
-    /// </para>
+    /// Built-in and fixture leaves are supported. Project reference leaves may be supplied through
+    /// providers; generated native-only leaves require a reference behavior to run in this preview.
     /// </summary>
     public sealed class ReferencePreviewDriver
     {
@@ -29,6 +22,7 @@ namespace AIBT.Authoring
         private readonly PreviewTraceSink _traceSink;
         private readonly IReadOnlyDictionary<uint, NodeId> _nodeIdByRuntimeIndex;
         private readonly IReadOnlyDictionary<ulong, string> _blackboardKeyNames;
+        private readonly IReadOnlyList<ReferencePreviewLeafFactoryHandler> _leafFactories;
         private ulong _updateId;
         private bool _hasOpenTick;
 
@@ -36,12 +30,16 @@ namespace AIBT.Authoring
             ReferenceExecutionMachine machine,
             PreviewTraceSink traceSink,
             IReadOnlyDictionary<uint, NodeId> nodeIdByRuntimeIndex,
-            IReadOnlyDictionary<ulong, string> blackboardKeyNames)
+            IReadOnlyDictionary<ulong, string> blackboardKeyNames,
+            NodeRegistry registry,
+            IReadOnlyList<ReferencePreviewLeafFactoryHandler> leafFactories)
         {
             _machine = machine;
             _traceSink = traceSink;
             _nodeIdByRuntimeIndex = nodeIdByRuntimeIndex;
             _blackboardKeyNames = blackboardKeyNames;
+            Registry = registry;
+            _leafFactories = leafFactories;
         }
 
         /// <summary>
@@ -55,12 +53,64 @@ namespace AIBT.Authoring
             string sourceId,
             out ReferencePreviewDriver driver,
             out DiagnosticCollection diagnostics)
+            => TryCreate(document, sourceId, Array.Empty<IReferenceLeafBehaviorProvider>(), out driver, out diagnostics);
+
+        /// <summary>Creates a reference preview with independently instantiated project leaf behaviors.</summary>
+        public static bool TryCreate(
+            TreeDocument document,
+            string sourceId,
+            IEnumerable<IReferenceLeafBehaviorProvider> projectProviders,
+            out ReferencePreviewDriver driver,
+            out DiagnosticCollection diagnostics)
+            => TryCreate(document, sourceId, projectProviders, ReferenceCompilationPolicy.Phase1, out driver, out diagnostics);
+
+        /// <summary>Creates a reference preview with project behaviors and an explicit compilation policy.</summary>
+        public static bool TryCreate(
+            TreeDocument document,
+            string sourceId,
+            IEnumerable<IReferenceLeafBehaviorProvider> projectProviders,
+            ReferenceCompilationPolicy policy,
+            out ReferencePreviewDriver driver,
+            out DiagnosticCollection diagnostics)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
             if (string.IsNullOrEmpty(sourceId)) throw new ArgumentException("A source ID is required.", nameof(sourceId));
+            if (projectProviders == null) throw new ArgumentNullException(nameof(projectProviders));
+            if (policy == null) throw new ArgumentNullException(nameof(policy));
 
-            var registry = ReferencePreviewFixtureEnvironment.CreateNodeRegistry();
-            var options = new ReferenceCompilerOptions(sourceId, ReferenceCompilationPolicy.Phase1, CompilerVersion);
+            var builder = NodeRegistryBuilder.CreateWithBuiltIns().AddTestFixtures();
+            var providers = new List<ReferencePreviewLeafRegistration>();
+            foreach (var builtin in BuiltInLeafManifests.All)
+            {
+                builder.TryGetProjectLeafBehavior(builtin.Manifest.TypeId, out var behavior);
+                providers.Add(new ReferencePreviewLeafRegistration(builtin.Manifest, builtin, behavior));
+            }
+            foreach (var provider in projectProviders)
+            {
+                if (provider == null) throw new ArgumentException("Project providers cannot contain null.", nameof(projectProviders));
+                try
+                {
+                    var manifest = provider.Manifest;
+                    var behavior = provider.CreateBehavior();
+                    builder.AddProjectExtension(manifest, behavior);
+                    providers.Add(new ReferencePreviewLeafRegistration(manifest, provider, behavior));
+                }
+                catch (Exception exception)
+                {
+                    driver = null;
+                    diagnostics = new DiagnosticCollection(new[] { NodeRegistryDiagnostics.InvalidBinding(provider.GetType().FullName, exception.Message) });
+                    return false;
+                }
+            }
+            var built = builder.Build();
+            if (!built.Success)
+            {
+                driver = null;
+                diagnostics = built.Diagnostics;
+                return false;
+            }
+            var registry = built.Registry;
+            var options = new ReferenceCompilerOptions(sourceId, policy, CompilerVersion);
             var compilation = ReferenceCompiler.Compile(document, registry, options);
             if (!compilation.Success)
             {
@@ -82,10 +132,11 @@ namespace AIBT.Authoring
             }
 
             var traceSink = new PreviewTraceSink();
+            var leaves = ReferencePreviewFixtureEnvironment.CreateLeafRegistry(providers, out var leafFactories);
             var machine = new ReferenceExecutionMachine(
                 compilation.Program,
                 new TreeInstanceId(1),
-                ReferencePreviewFixtureEnvironment.CreateLeafRegistry(),
+                leaves,
                 traceSink,
                 ReferencePreviewFixtureEnvironment.CreateMemoryCompositeRegistry(),
                 ReferencePreviewFixtureEnvironment.CreateReactiveCompositeRegistry(),
@@ -94,7 +145,7 @@ namespace AIBT.Authoring
                 RegisteredBlackboardRegistry.Empty,
                 ReferencePreviewFixtureEnvironment.CreateObserverRegistry());
 
-            driver = new ReferencePreviewDriver(machine, traceSink, nodeIdByRuntimeIndex, blackboardKeyNames);
+            driver = new ReferencePreviewDriver(machine, traceSink, nodeIdByRuntimeIndex, blackboardKeyNames, registry, leafFactories);
             diagnostics = compilation.Diagnostics;
             return true;
         }
@@ -106,6 +157,9 @@ namespace AIBT.Authoring
         /// divergent registry-construction path.
         /// </summary>
         public static NodeRegistry CreatePreviewNodeRegistry() => ReferencePreviewFixtureEnvironment.CreateNodeRegistry();
+
+        /// <summary>The exact node contracts used to compile this preview.</summary>
+        public NodeRegistry Registry { get; }
 
         /// <summary>The terminal root status, if the tree instance has reached one.</summary>
         public NodeStatus? TerminalResult => _machine.TerminalResult;
@@ -225,7 +279,11 @@ namespace AIBT.Authoring
         public ReferencePreviewEnvelope Restart()
         {
             var envelope = Deliver(_machine.Restart());
-            _traceSink.ResetActive();
+            if (envelope.Progress == ReferencePreviewProgress.Completed)
+            {
+                foreach (var factory in _leafFactories) factory.Reset();
+                _traceSink.ResetActive();
+            }
             return envelope;
         }
 

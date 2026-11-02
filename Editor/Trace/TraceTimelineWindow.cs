@@ -60,6 +60,18 @@ namespace AIBT.Editor.Trace
             _session = session ?? throw new ArgumentNullException(nameof(session));
         }
 
+        internal void AttachUnmappedSession(NativeExecutionDebuggerSession session)
+        {
+            _document = null;
+            _registry = null;
+            _nodeIdByRuntimeIndex = new Dictionary<uint, NodeId>();
+            _targetActiveNodeIds.Clear();
+            _highlightAlphaByNode.Clear();
+            _graphView.ClearDocument();
+            AttachSession(session);
+            Refresh();
+        }
+
         /// <summary>The timeline built from the last <see cref="Refresh"/>.</summary>
         public TraceTimelineModel CurrentModel => _model;
 
@@ -180,7 +192,8 @@ namespace AIBT.Editor.Trace
                 ? "Channel faulted -- trace is incomplete."
                 : "Channel full / events dropped (" + _model.DroppedCount + ") -- trace is not the complete history.";
 
-            _statusLabel.text = "steps=" + _model.Steps.Count + " diagnostics=" + _model.Diagnostics.Count;
+            _statusLabel.text = "steps=" + _model.Steps.Count + " diagnostics=" + _model.Diagnostics.Count
+                + (_document == null ? " — source graph is not mapped to this host." : string.Empty);
 
             RefreshScrubControl();
             RefreshDiagnostics();

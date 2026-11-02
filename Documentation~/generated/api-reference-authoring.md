@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Authoring`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-117 public type(s).
+118 public type(s).
 
 ---
 
@@ -581,7 +581,7 @@ A type's own summary line is shown where an XML-doc `<summary>` exists in source
 
 ### `AIBT.Authoring.HotReloadPreviewDriver`
 
-Drives a hot-reloadable instance of the accepted Phase 1 managed reference executor (<c>ReferenceExecutionMachine</c>, internal to <c>AIBT.Runtime</c>) for the Editor workflow (<c>P5-008</c>), so <c>AIBT.Editor</c> (no internals visibility into <c>AIBT.Runtime</c>) can trigger and observe a real reload without crossing the assembly boundary itself. This type owns no reload semantics of its own: every classification and state transition is a direct call into <c>HotReloadCompatibilityClassifier</c>/<c>HotReloadStateMigration</c> (<c>P5-003</c>/<c>P5-005</c>/<c>P5-006</c>), mirroring exactly how <see cref="ReferencePreviewDriver"/> crosses the same boundary for stepping. <para> Same fixed Phase 1 fixture/built-in node-behavior set as <see cref="ReferencePreviewDriver"/> (<see cref="ReferencePreviewFixtureEnvironment"/>) -- and the same known limitation: AIBT ships no production per-project leaf-behavior registration mechanism yet. </para>
+Drives a hot-reloadable instance of the accepted Phase 1 managed reference executor (<c>ReferenceExecutionMachine</c>, internal to <c>AIBT.Runtime</c>) for the Editor workflow (<c>P5-008</c>), so <c>AIBT.Editor</c> (no internals visibility into <c>AIBT.Runtime</c>) can trigger and observe a real reload without crossing the assembly boundary itself. This type owns no reload semantics of its own: every classification and state transition is a direct call into <c>HotReloadCompatibilityClassifier</c>/<c>HotReloadStateMigration</c> (<c>P5-003</c>/<c>P5-005</c>/<c>P5-006</c>), mirroring exactly how <see cref="ReferencePreviewDriver"/> crosses the same boundary for stepping. <para> Uses the built-in and fixture reference leaves. Unlike <see cref="ReferencePreviewDriver"/>, this hot-reload workflow does not currently accept project reference leaf providers. </para>
 
 - `METHOD AIBT.Authoring.NodeRegistry CreatePreviewNodeRegistry()`
 - `METHOD System.Boolean TryCreate(AIBT.Authoring.TreeDocument,System.String,AIBT.Authoring.HotReloadPreviewDriver&,AIBT.DiagnosticCollection&)`
@@ -607,6 +607,8 @@ What one <see cref="HotReloadPreviewDriver.TryReload"/> call actually did -- the
 ---
 
 ### `AIBT.Authoring.IReferenceLeafBehaviorProvider`
+
+Provides a project leaf contract and creates independent reference behaviors.
 
 - `METHOD AIBT.IReferenceLeafBehavior CreateBehavior()`
 - `PROPERTY AIBT.Authoring.NodeManifest Manifest`
@@ -1101,7 +1103,7 @@ One blackboard slot as observed at an inspection boundary.
 
 ### `AIBT.Authoring.ReferencePreviewDriver`
 
-Drives the accepted Phase 1 managed reference executor (<c>ReferenceExecutionMachine</c>, internal to <c>AIBT.Runtime</c>) for editor preview/stepping, so in-editor stepping semantics cannot drift from the accepted headless oracle. This type owns no execution semantics of its own: every state transition is a direct call into the existing machine's public <c>BeginUpdate</c>/<c>AdvanceOneStep</c>/<c>Restart</c> API; this class only translates its internal contracts to a public shape that <c>AIBT.Editor</c> (which has no internals visibility into <c>AIBT.Runtime</c>) can consume. <para> The executable node-behavior set is fixed to the already-shipped Phase 1 fixture/built-in registries (<c>ReferenceLeafRegistry.CreatePhase1Fixtures()</c> and the sibling <c>CreatePhase1BuiltIns()</c> composite/decorator/parallel registries already used by the headless behavior-case runner). AIBT ships no production per-project leaf-behavior registration mechanism yet, so only trees built from built-in composites/decorators and the <c>aibt.test.success</c>/<c>aibt.test.failure</c>/<c>aibt.test.running</c> fixture leaves can be previewed; this is a known limitation, not a silent weakening (see the P3-009 evidence). </para>
+Drives the accepted Phase 1 managed reference executor (<c>ReferenceExecutionMachine</c>, internal to <c>AIBT.Runtime</c>) for editor preview/stepping, so in-editor stepping semantics cannot drift from the accepted headless oracle. This type owns no execution semantics of its own: every state transition is a direct call into the existing machine's public <c>BeginUpdate</c>/<c>AdvanceOneStep</c>/<c>Restart</c> API; this class only translates its internal contracts to a public shape that <c>AIBT.Editor</c> (which has no internals visibility into <c>AIBT.Runtime</c>) can consume. Built-in and fixture leaves are supported. Project reference leaves may be supplied through providers; generated native-only leaves require a reference behavior to run in this preview.
 
 - `METHOD AIBT.Authoring.NodeRegistry CreatePreviewNodeRegistry()`
 - `METHOD AIBT.Authoring.ReferencePreviewEnvelope BeginTick(System.Int64)`
@@ -1110,6 +1112,9 @@ Drives the accepted Phase 1 managed reference executor (<c>ReferenceExecutionMac
 - `METHOD AIBT.Authoring.ReferencePreviewEnvelope StepAtomic()`
 - `METHOD AIBT.Authoring.ReferencePreviewInspection CaptureInspection()`
 - `METHOD System.Boolean TryCreate(AIBT.Authoring.TreeDocument,System.String,AIBT.Authoring.ReferencePreviewDriver&,AIBT.DiagnosticCollection&)`
+- `METHOD System.Boolean TryCreate(AIBT.Authoring.TreeDocument,System.String,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.IReferenceLeafBehaviorProvider>,AIBT.Authoring.ReferenceCompilationPolicy,AIBT.Authoring.ReferencePreviewDriver&,AIBT.DiagnosticCollection&)`
+- `METHOD System.Boolean TryCreate(AIBT.Authoring.TreeDocument,System.String,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.IReferenceLeafBehaviorProvider>,AIBT.Authoring.ReferencePreviewDriver&,AIBT.DiagnosticCollection&)`
+- `PROPERTY AIBT.Authoring.NodeRegistry Registry`
 - `PROPERTY System.Boolean HasOpenTick`
 - `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NodeId> ActiveNodeIds`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> TerminalResult`
@@ -1359,6 +1364,18 @@ Mirrors <c>ReferenceTraceEventKind</c> (internal, Runtime) across the assembly b
 - `PROPERTY System.Boolean Success`
 - `PROPERTY System.Byte[] SemanticHash`
 - `PROPERTY System.Byte[] Utf8`
+
+---
+
+### `AIBT.Authoring.TreeSourcePaths`
+
+Source-container names only; both extensions contain the same canonical JSON.
+
+- `FIELD System.String Extension`
+- `FIELD System.String LegacyExtension`
+- `METHOD System.Boolean IsTree(System.String)`
+- `METHOD System.String LayoutPathFor(System.String)`
+- `METHOD System.String[] FindFiles(System.String)`
 
 ---
 

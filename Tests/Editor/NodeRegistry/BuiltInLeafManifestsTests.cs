@@ -73,6 +73,40 @@ namespace AIBT.Tests.Editor.NodeRegistry
         }
 
         [Test]
+        public void ParallelWaitNodesKeepIndependentElapsedTicks()
+        {
+            var (registry, behavior) = BuildRegistryAndBehavior(BuiltInLeafManifests.WaitTypeId);
+            var rootId = new NodeId("root");
+            var shortId = new NodeId("short");
+            var longId = new NodeId("long");
+            var root = new NodeDocument(rootId, "aibt.core.parallel", 1, new[] { shortId, longId },
+                new SemanticObject(new[] { new SemanticProperty("policy", SemanticValue.FromString("require-all-success")) }), tags: TagSet.Empty);
+            NodeDocument Wait(NodeId id, ulong ticks) => new NodeDocument(id, BuiltInLeafManifests.WaitTypeId, 1,
+                parameters: new SemanticObject(new[] { new SemanticProperty("ticks", SemanticValue.FromUInt64(ticks)) }), tags: TagSet.Empty);
+            var document = new TreeDocument(TreeDocument.CurrentFormat, 1, new TreeId("tree.test.parallel-wait"), "Parallel waits",
+                rootId, new[] { root, Wait(shortId, 2), Wait(longId, 3) }, tags: TagSet.Empty, metadata: SemanticObject.Empty);
+            var options = new ReferenceCompilerOptions("trees/parallel-wait.aibt.json", ReferenceCompilationPolicy.Phase1,
+                new CompiledCompilerVersion(1, 0, 0, 0));
+            var compilation = ReferenceCompiler.Compile(document, registry, options);
+            Assert.That(compilation.Success, Is.True, string.Join("; ", compilation.Diagnostics.Select(d => d.Message)));
+            var leaves = new ReferenceLeafRegistry(new[] { new ReferenceLeafBinding(
+                StableHash.Fnv1A64(BuiltInLeafManifests.WaitTypeId), 1, new ProjectReferenceLeafHandlerAdapter(behavior)) });
+            var machine = new ReferenceExecutionMachine(compilation.Program, new TreeInstanceId(1), leaves, null,
+                ReferenceMemoryCompositeRegistry.CreatePhase1BuiltIns(), ReferenceReactiveCompositeRegistry.CreatePhase1BuiltIns(),
+                ReferenceDecoratorRegistry.CreatePhase1BuiltIns(), ReferenceParallelRegistry.CreatePhase1BuiltIns(),
+                RegisteredBlackboardRegistry.Empty, ReferenceObserverConditionRegistry.Empty);
+            Assert.That(machine.Update(new ReferenceUpdateContext(1, new Revision(1), 0)).Progress, Is.EqualTo(ReferenceExecutionProgress.Waiting));
+            Assert.That(machine.Update(new ReferenceUpdateContext(2, new Revision(2), 0)).Progress, Is.EqualTo(ReferenceExecutionProgress.Waiting));
+            var third = machine.Update(new ReferenceUpdateContext(3, new Revision(3), 0));
+            Assert.That(third.RootResult, Is.EqualTo(NodeStatus.Success));
+            Assert.That(ReferencePreviewDriver.TryCreate(document, "trees/parallel-wait.aibt.json", out var preview, out var diagnostics),
+                Is.True, string.Join("; ", diagnostics.Select(d => d.Message)));
+            Assert.That(preview.RunTick().Progress, Is.EqualTo(ReferencePreviewProgress.Waiting));
+            Assert.That(preview.RunTick().Progress, Is.EqualTo(ReferencePreviewProgress.Waiting));
+            Assert.That(preview.RunTick().RootResult, Is.EqualTo(NodeStatus.Success));
+        }
+
+        [Test]
         public void Wait_RunsForTheConfiguredTickCountThenSucceeds_ThroughTheRealUnmodifiedMachine()
         {
             var (registry, behavior) = BuildRegistryAndBehavior(BuiltInLeafManifests.WaitTypeId);
@@ -90,6 +124,35 @@ namespace AIBT.Tests.Editor.NodeRegistry
 
             Assert.That(third.Progress, Is.EqualTo(ReferenceExecutionProgress.Completed));
             Assert.That(third.RootResult, Is.EqualTo(NodeStatus.Success));
+        }
+
+        [Test]
+        public void HotReloadPreviewRunsTheBuiltInWaitLeaf()
+        {
+            var root = new NodeDocument(new NodeId("root"), BuiltInLeafManifests.WaitTypeId, 1,
+                parameters: new SemanticObject(new[] { new SemanticProperty("ticks", SemanticValue.FromUInt64(2)) }), tags: TagSet.Empty);
+            var document = new TreeDocument(TreeDocument.CurrentFormat, 1, new TreeId("tree.test.hot-reload-wait"), "Wait",
+                root.Id, new[] { root }, tags: TagSet.Empty, metadata: SemanticObject.Empty);
+            Assert.That(HotReloadPreviewDriver.TryCreate(document, "trees/hot-reload-wait.aibt.json", out var driver, out var diagnostics),
+                Is.True, string.Join("; ", diagnostics.Select(d => d.Message)));
+            Assert.That(driver.RunOneTick(), Is.Null);
+            Assert.That(driver.RunOneTick(), Is.EqualTo(NodeStatus.Success));
+        }
+
+        [TestCase(0u, NodeStatus.Failure)]
+        [TestCase(100u, NodeStatus.Success)]
+        public void RandomConditionPreviewRequiresAnExplicitNondeterministicPolicy(uint chance, NodeStatus expected)
+        {
+            var root = new NodeDocument(new NodeId("root"), BuiltInLeafManifests.RandomConditionTypeId, 1,
+                parameters: new SemanticObject(new[] { new SemanticProperty("success-chance-percent", SemanticValue.FromUInt64(chance)) }), tags: TagSet.Empty);
+            var document = new TreeDocument(TreeDocument.CurrentFormat, 1, new TreeId("tree.test.random-preview"), "Random",
+                root.Id, new[] { root }, tags: TagSet.Empty, metadata: SemanticObject.Empty);
+            Assert.That(ReferencePreviewDriver.TryCreate(document, "trees/random-preview.aibt.json", out _, out _), Is.False);
+            var policy = new ReferenceCompilationPolicy(requireDeterministicNodes: false);
+            Assert.That(ReferencePreviewDriver.TryCreate(document, "trees/random-preview.aibt.json",
+                Array.Empty<IReferenceLeafBehaviorProvider>(), policy, out var preview, out var diagnostics),
+                Is.True, string.Join("; ", diagnostics.Select(d => d.Message)));
+            Assert.That(preview.RunTick().RootResult, Is.EqualTo(expected));
         }
 
         [Test]

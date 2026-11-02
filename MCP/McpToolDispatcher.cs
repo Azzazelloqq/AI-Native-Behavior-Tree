@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Editor.Registry;
 using AIBT.Mcp.Authoring;
 using AIBT.Mcp.CustomTools;
 using AIBT.Mcp.Migration;

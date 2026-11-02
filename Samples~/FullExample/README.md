@@ -25,28 +25,13 @@ reload (`P7-012`), which explicitly does support migrating an active instance.
 
 ## A real, disclosed limitation this sample ran into
 
+The notes below describe the state when this sample was built. A production host and scheduling
+API were added later; see `Documentation~/production-host.md`. The separate hot-reload preview
+still uses the built-in/fixture registry. The ordinary reference preview now accepts project
+reference leaf providers.
+
 The original intent for this sample (per `P7-013`'s own card) was to combine a **custom** node, an
-**explicit scheduling-policy choice**, and a hot-reload pass in one example. Neither of the first
-two is achievable through public API today, confirmed directly while building this sample rather
-than assumed:
-
-- **No public production entry point exists to drive a compiled tree with an explicit scheduling
-  policy at all.** `SchedulingPolicyDriver` and every native-backend execution type are `internal`
-  (confirmed against `Planning~/Evidence/P7-001/public-api-current.txt`, this package's own
-  verified-complete public-surface dump — zero matches). `P7-010`'s own accepted decision names what
-  a future production host looks like, but no implementation card for it exists yet.
-- **The one public tree-preview entry point cannot run a custom node either.** Both
-  `AIBT.Authoring.ReferencePreviewDriver` and `AIBT.Authoring.HotReloadPreviewDriver` (the type this
-  sample actually uses) compile exclusively against a fixed built-in/fixture registry
-  (`ReferencePreviewFixtureEnvironment.CreateNodeRegistry()`) -- their own doc comments say so
-  directly: "AIBT ships no production per-project leaf-behavior registration mechanism yet." That
-  statement is now stale relative to `P7-008`'s own new public `IReferenceLeafBehavior` extension
-  point, but neither preview driver has been updated to accept a project's own registered leaves, so
-  there is still no way to preview a custom node live through either one.
-
-This sample therefore demonstrates the hot-reload pass alone, on the fixed built-in/fixture node
-set both preview drivers already support -- a real, complete, live-verified example of what `P5-008`
-actually ships today, rather than a fabricated one pretending the custom-node/policy gaps don't
-exist. Widening `ReferencePreviewDriver`/`HotReloadPreviewDriver` to accept a project's own
-`IReferenceLeafBehavior` registrations is recommended as a real follow-up card, not attempted here
-(out of `P7-013`'s own Allowed-changes, which does not include editing those production files).
+**explicit scheduling-policy choice**, and a hot-reload pass in one example. It demonstrates only
+the hot-reload pass with built-in/fixture nodes; the later production host and scheduler are shown
+in Swarm Arena. The hot-reload preview still does not accept project reference leaves. Supporting
+them there requires a defined migration contract for project-managed state.

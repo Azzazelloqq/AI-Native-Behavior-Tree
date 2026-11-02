@@ -63,5 +63,22 @@ namespace AIBT.Editor.Organization
             _redoStack.RemoveAt(_redoStack.Count - 1);
             return Current;
         }
+
+        // New semantic nodes need positions in older layout snapshots too. Retaining placements
+        // for removed nodes lets semantic undo restore their previous positions.
+        internal void IncludeNodes(IReadOnlyDictionary<NodeId, LayoutNodePlacement> nodes)
+        {
+            LayoutDocument Include(LayoutDocument source)
+            {
+                var placements = new Dictionary<NodeId, LayoutNodePlacement>(source.Nodes);
+                foreach (var pair in nodes)
+                    if (!placements.ContainsKey(pair.Key)) placements.Add(pair.Key, pair.Value);
+                return new LayoutDocument(source.TreeId, source.Direction, placements, source.Groups, source.Notes, source.Reroutes);
+            }
+
+            Current = Include(Current);
+            for (var index = 0; index < _undoStack.Count; index++) _undoStack[index] = Include(_undoStack[index]);
+            for (var index = 0; index < _redoStack.Count; index++) _redoStack[index] = Include(_redoStack[index]);
+        }
     }
 }

@@ -21,11 +21,11 @@ worker-thread concurrency. The root succeeds after every branch succeeds.
 
 1. Import **Showcase Trees** through Unity Package Manager, or use these source paths in an embedded package.
 2. Open **AIBT > Graph Editor**.
-3. Call `BehaviorTreeGraphWindow.OpenFromPath` with either `.aibt.json` path and the built-in registry.
-   The neighboring `.aibt.layout.json` is loaded automatically.
+3. Select an imported tree in the project tree browser, or choose **Open Tree** and select the file.
+   The neighboring `.aibt.layout.json` is loaded automatically when valid.
 
-The current graph window has no file picker; call this public API from an Editor integration or MCP.
-
-The viewer is read-only. Node movement is temporary; reopening restores the committed layout.
+The experimental graph window supports initial editing, saving incomplete drafts, and explicitly
+saving node positions with **Save Layout**. Project node contracts are discovered automatically;
+the preview and live debugging workflows are not yet integrated into this window.
 Both examples target the reference compiler and the native production catalog. Runtime hosting and
 scheduler selection are documented separately in `Documentation~/production-host.md`.

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Editor.Registry;
 using AIBT.Mcp.Authoring;
 using Newtonsoft.Json.Linq;
 

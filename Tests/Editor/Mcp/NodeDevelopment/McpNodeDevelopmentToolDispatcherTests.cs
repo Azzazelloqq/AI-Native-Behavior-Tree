@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using AIBT.Editor.Registry;
 using AIBT.Mcp;
 using AIBT.Mcp.NodeDevelopment;
 using Newtonsoft.Json.Linq;

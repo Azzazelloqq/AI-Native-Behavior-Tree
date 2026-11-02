@@ -14,9 +14,8 @@ namespace AIBT.Authoring
     /// (<c>P5-003</c>/<c>P5-005</c>/<c>P5-006</c>), mirroring exactly how <see cref="ReferencePreviewDriver"/>
     /// crosses the same boundary for stepping.
     /// <para>
-    /// Same fixed Phase 1 fixture/built-in node-behavior set as <see cref="ReferencePreviewDriver"/>
-    /// (<see cref="ReferencePreviewFixtureEnvironment"/>) -- and the same known limitation: AIBT
-    /// ships no production per-project leaf-behavior registration mechanism yet.
+    /// Uses the built-in and fixture reference leaves. Unlike <see cref="ReferencePreviewDriver"/>,
+    /// this hot-reload workflow does not currently accept project reference leaf providers.
     /// </para>
     /// </summary>
     public sealed class HotReloadPreviewDriver

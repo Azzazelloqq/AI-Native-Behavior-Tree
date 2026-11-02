@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using AIBT.Authoring;
 using UnityEditor;
 
-namespace AIBT.Mcp.Authoring
+namespace AIBT.Editor.Registry
 {
     /// <summary>
     /// Discovers a project's own <see cref="IReferenceLeafBehaviorProvider"/> implementations and
@@ -11,25 +11,26 @@ namespace AIBT.Mcp.Authoring
     /// discovery-facing MCP tools (<c>aibt_search_nodes</c>, <c>aibt_get_node_contract</c>) see a
     /// project's own registered nodes -- closing the P6-012 gate's own live-reproduced gap
     /// (P7-008, applying ADR-P6-017). Split the same way P6-010's
-    /// <see cref="CustomTools.CustomMcpToolProviderDiscovery"/> is: <see cref="DiscoverViaTypeCache"/>
+    /// the MCP custom tool discovery is: <see cref="DiscoverViaTypeCache"/>
     /// is the only assembly-scanning call (Editor-only, via UnityEditor.TypeCache -- this asmdef
     /// already restricts includePlatforms to Editor), while <see cref="AddDiscovered"/> is pure and
     /// independently testable without needing TypeCache in a test.
     /// </summary>
     internal static class ProjectLeafExtensionDiscovery
     {
-        internal static IReadOnlyList<IReferenceLeafBehaviorProvider> DiscoverViaTypeCache()
+        internal static IReadOnlyList<IReferenceLeafBehaviorProvider> DiscoverViaTypeCache(ICollection<string> problems = null)
         {
             var providers = new List<IReferenceLeafBehaviorProvider>();
             foreach (var type in TypeCache.GetTypesDerivedFrom<IReferenceLeafBehaviorProvider>())
             {
-                if (type.IsAbstract || type.IsInterface)
+                if (type.IsAbstract || type.IsInterface || type.DeclaringType == typeof(BuiltInLeafManifests))
                 {
                     continue;
                 }
 
                 if (type.GetConstructor(Type.EmptyTypes) == null)
                 {
+                    if (type.IsVisible) problems?.Add("Node provider " + type.FullName + " requires a public parameterless constructor.");
                     continue;
                 }
 
@@ -37,13 +38,9 @@ namespace AIBT.Mcp.Authoring
                 {
                     providers.Add((IReferenceLeafBehaviorProvider)Activator.CreateInstance(type));
                 }
-                catch (Exception)
+                catch (Exception exception)
                 {
-                    // A single bad provider must not take every other one -- or the built-ins --
-                    // down with it. Nothing currently surfaces this as a diagnostic (P6-010's own
-                    // ICustomMcpToolProvider path does, via CustomMcpToolProviderDiscovery.Build's
-                    // diagnostics; this path has no discovery-tool-facing diagnostics channel to
-                    // report into yet).
+                    problems?.Add("Could not create node provider " + type.FullName + ": " + exception.Message);
                 }
             }
 
@@ -52,7 +49,7 @@ namespace AIBT.Mcp.Authoring
 
         // Pure: adds every discovered provider's manifest+behavior into the given builder via the
         // same public AddProjectExtension path a project itself would use.
-        internal static NodeRegistryBuilder AddDiscovered(NodeRegistryBuilder builder, IEnumerable<IReferenceLeafBehaviorProvider> providers)
+        internal static NodeRegistryBuilder AddDiscovered(NodeRegistryBuilder builder, IEnumerable<IReferenceLeafBehaviorProvider> providers, ICollection<string> problems = null)
         {
             foreach (var provider in providers)
             {
@@ -65,11 +62,9 @@ namespace AIBT.Mcp.Authoring
                 {
                     builder.AddProjectExtension(provider.Manifest, provider.CreateBehavior());
                 }
-                catch (Exception)
+                catch (Exception exception)
                 {
-                    // A malformed provider (null manifest/behavior, etc.) must not take every
-                    // other provider or the built-ins down with it -- mirrors DiscoverViaTypeCache's
-                    // own per-provider isolation above.
+                    problems?.Add("Invalid node provider " + provider.GetType().FullName + ": " + exception.Message);
                 }
             }
 
@@ -82,8 +77,7 @@ namespace AIBT.Mcp.Authoring
         // itself fails validation.
         internal static NodeRegistryBuildResult BuildWithBuiltInsAndProjectExtensions()
         {
-            var combined = AddDiscovered(NodeRegistryBuilder.CreateWithBuiltIns(), DiscoverViaTypeCache()).Build();
-            return combined.Success ? combined : NodeRegistryBuilder.CreateWithBuiltIns().Build();
+            return ProjectNodeCatalogCache.Current.BuildResult;
         }
     }
 }
