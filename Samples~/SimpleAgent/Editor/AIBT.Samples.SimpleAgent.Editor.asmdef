@@ -1,0 +1,13 @@
+{
+  "name": "AIBT.Samples.SimpleAgent.Editor",
+  "rootNamespace": "AIBT.Samples.SimpleAgent.Editor",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Agents",
+    "AIBT.Samples.SimpleAgent"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false
+}

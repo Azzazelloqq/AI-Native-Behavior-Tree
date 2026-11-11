@@ -1,0 +1,72 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "samples.simple.guard",
+  "name": "Guard",
+  "description": "Patrols a route, chases a target while it is visible, then returns to the route.",
+  "root": "priority",
+  "blackboard": {
+    "target-visible": { "type": "Bool", "typeVersion": 1, "scope": "tree", "default": false },
+    "target-position": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } },
+    "waypoint": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } }
+  },
+  "nodes": {
+    "priority": {
+      "type": "aibt.core.memory-selector",
+      "typeVersion": 1,
+      "displayName": "Chase or patrol",
+      "children": ["chase", "patrol"]
+    },
+    "chase": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "displayName": "Chase",
+      "children": ["sees-target", "alert-on", "run-to-target"]
+    },
+    "sees-target": {
+      "type": "aibt.unity.is-true",
+      "typeVersion": 1,
+      "displayName": "Sees target?",
+      "parameters": { "key": "target-visible", "interrupt": "both" }
+    },
+    "alert-on": {
+      "type": "samples.simple.set-alert",
+      "typeVersion": 1,
+      "parameters": { "visible": true }
+    },
+    "run-to-target": {
+      "type": "aibt.unity.move-towards",
+      "typeVersion": 1,
+      "displayName": "Run to target",
+      "parameters": { "target": "target-position", "speed": 3.0, "stop-distance": 1.2, "keep-height": true }
+    },
+    "patrol": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "displayName": "Patrol",
+      "children": ["alert-off", "next-waypoint", "walk-to-waypoint", "look-around"]
+    },
+    "alert-off": {
+      "type": "samples.simple.set-alert",
+      "typeVersion": 1,
+      "parameters": { "visible": false }
+    },
+    "next-waypoint": {
+      "type": "samples.simple.next-waypoint",
+      "typeVersion": 1,
+      "parameters": { "destination": "waypoint" }
+    },
+    "walk-to-waypoint": {
+      "type": "aibt.unity.move-towards",
+      "typeVersion": 1,
+      "displayName": "Walk to waypoint",
+      "parameters": { "target": "waypoint", "speed": 2.0, "stop-distance": 0.1, "keep-height": true }
+    },
+    "look-around": {
+      "type": "aibt.unity.wait-seconds",
+      "typeVersion": 1,
+      "displayName": "Look around",
+      "parameters": { "seconds": 0.8 }
+    }
+  }
+}

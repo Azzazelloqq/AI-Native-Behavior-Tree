@@ -44,6 +44,13 @@ namespace AIBT.Authoring
         UInt64,
         StringEnum,
         Float32,
+
+        // Managed-only parameter types (P9-001, ADR-P9-001). They are valid only on Managed or
+        // MainThread manifests, are never packed into the configuration blob, and are delivered
+        // to the managed leaf from the authored document by its host.
+        Int32,
+        String,
+        BlackboardKey,
     }
 
     public enum NodeAccessMode : byte
@@ -313,6 +320,70 @@ namespace AIBT.Authoring
         public NodeParameterCondition RequiredWhen { get; }
 
         public NodeParameterCondition ForbiddenUnless { get; }
+
+        /// <summary>
+        /// For a <see cref="NodeParameterType.BlackboardKey"/> parameter: the canonical blackboard
+        /// type ID the named key must have, or null when any key type is accepted.
+        /// </summary>
+        public string BlackboardValueType { get; private set; }
+
+        /// <summary>
+        /// The value a managed leaf uses when the authored node omits this optional parameter, or
+        /// null when the contract declares none. Informational for editors; packed Burst
+        /// configuration never reads it.
+        /// </summary>
+        public SemanticValue DefaultValue { get; private set; }
+
+        /// <summary>True for the managed-only types that are never packed into configuration.</summary>
+        public bool IsManagedOnly => IsManagedOnlyType(Type);
+
+        public static bool IsManagedOnlyType(NodeParameterType type)
+            => type == NodeParameterType.Int32 || type == NodeParameterType.String || type == NodeParameterType.BlackboardKey;
+
+        /// <summary>Returns a copy that requires the named blackboard key to have the given type.</summary>
+        public NodeParameterContract WithBlackboardValueType(string canonicalTypeId)
+        {
+            if (Type != NodeParameterType.BlackboardKey)
+            {
+                throw new InvalidOperationException("Only a blackboard-key parameter can constrain a blackboard value type.");
+            }
+
+            if (string.IsNullOrWhiteSpace(canonicalTypeId))
+            {
+                throw new ArgumentException("A canonical blackboard type ID is required.", nameof(canonicalTypeId));
+            }
+
+            var copy = Copy();
+            copy.BlackboardValueType = canonicalTypeId;
+            return copy;
+        }
+
+        /// <summary>Returns a copy that documents the value used when the parameter is omitted.</summary>
+        public NodeParameterContract WithDefault(SemanticValue value)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            if (Required)
+            {
+                throw new InvalidOperationException("A required parameter cannot declare a default value.");
+            }
+
+            var copy = Copy();
+            copy.DefaultValue = value;
+            return copy;
+        }
+
+        private NodeParameterContract Copy()
+        {
+            return new NodeParameterContract(Name, Type, Required, Minimum, _allowedValues, RequiredWhen, ForbiddenUnless)
+            {
+                BlackboardValueType = BlackboardValueType,
+                DefaultValue = DefaultValue,
+            };
+        }
     }
 
     public sealed class NodeAccessContract

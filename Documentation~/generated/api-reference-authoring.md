@@ -899,22 +899,31 @@ Declarative migration for one node type from <see cref="SourceVersion"/> to <see
 
 ### `AIBT.Authoring.NodeParameterContract`
 
+- `METHOD AIBT.Authoring.NodeParameterContract WithBlackboardValueType(System.String)`
+- `METHOD AIBT.Authoring.NodeParameterContract WithDefault(AIBT.Authoring.SemanticValue)`
+- `METHOD System.Boolean IsManagedOnlyType(AIBT.Authoring.NodeParameterType)`
 - `METHOD System.Void .ctor(System.String,AIBT.Authoring.NodeParameterType,System.Boolean,System.Nullable`1<System.UInt64>,System.Collections.Generic.IEnumerable`1<System.String>,AIBT.Authoring.NodeParameterCondition,AIBT.Authoring.NodeParameterCondition)`
 - `PROPERTY AIBT.Authoring.NodeParameterCondition ForbiddenUnless`
 - `PROPERTY AIBT.Authoring.NodeParameterCondition RequiredWhen`
 - `PROPERTY AIBT.Authoring.NodeParameterType Type`
+- `PROPERTY AIBT.Authoring.SemanticValue DefaultValue`
+- `PROPERTY System.Boolean IsManagedOnly`
 - `PROPERTY System.Boolean Required`
 - `PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> AllowedValues`
 - `PROPERTY System.Nullable`1<System.UInt64> Minimum`
+- `PROPERTY System.String BlackboardValueType`
 - `PROPERTY System.String Name`
 
 ---
 
 ### `AIBT.Authoring.NodeParameterType`
 
+- `FIELD AIBT.Authoring.NodeParameterType BlackboardKey`
 - `FIELD AIBT.Authoring.NodeParameterType Boolean`
 - `FIELD AIBT.Authoring.NodeParameterType Float32`
+- `FIELD AIBT.Authoring.NodeParameterType Int32`
 - `FIELD AIBT.Authoring.NodeParameterType StringEnum`
+- `FIELD AIBT.Authoring.NodeParameterType String`
 - `FIELD AIBT.Authoring.NodeParameterType UInt32`
 - `FIELD AIBT.Authoring.NodeParameterType UInt64`
 - `FIELD System.Byte value__`

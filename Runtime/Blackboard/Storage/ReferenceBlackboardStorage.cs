@@ -256,6 +256,66 @@ namespace AIBT
             return WriteBytes(slotIndex, slot, value, binding.Equality);
         }
 
+        /// <summary>
+        /// Resolves a compiled slot by stable key for the managed agent layer (P9-001), which
+        /// addresses blackboard values by authored key instead of a per-node declared ordinal.
+        /// </summary>
+        internal bool TryFindSlot(ulong stableKeyId, out uint slotIndex, out BlackboardTypeDescriptor type)
+        {
+            for (var index = 0; index < _program.BlackboardSlots.Count; index++)
+            {
+                var slot = _program.BlackboardSlots[index];
+                if (slot.StableKeyId != stableKeyId) continue;
+                slotIndex = (uint)index;
+                return TryResolveType(slot, _registeredTypes, out type, out _);
+            }
+
+            slotIndex = CompiledIndex.Invalid;
+            type = default;
+            return false;
+        }
+
+        /// <summary>Reads a built-in slot directly by index; same validation as a declared node read.</summary>
+        internal BlackboardStorageResult TryReadSlot(uint slotIndex, out BlackboardValue value)
+        {
+            value = default;
+            if (slotIndex >= _slotVersions.Length)
+                return Fail(BlackboardStorageDiagnosticCodes.InvalidSlot, "The blackboard slot index is outside the compiled program.");
+            var slot = _program.BlackboardSlots[(int)slotIndex];
+            if (!TryResolveType(slot, _registeredTypes, out var builtIn, out _))
+                return Fail(BlackboardStorageDiagnosticCodes.MissingTypeBinding, "The slot type binding is unavailable.");
+            if (builtIn.ValueType == BlackboardValueType.Registered)
+                return Fail(BlackboardStorageDiagnosticCodes.TypeMismatch, "Registered slots must be read through the registered byte contract.");
+            if (!BlackboardBuiltInCodec.TryDecode(builtIn, Slice(_arena, slot.Offset, slot.Size), out value))
+                return Fail(BlackboardStorageDiagnosticCodes.InvalidValue, "The slot contains invalid bytes for its declared built-in type.");
+            var version = _slotVersions[slotIndex];
+            return BlackboardStorageResult.ForSlot(slotIndex, slot.StableKeyId, version, version);
+        }
+
+        /// <summary>Writes a built-in slot directly by index; same validation as a declared node write.</summary>
+        internal BlackboardStorageResult TryWriteSlot(uint slotIndex, BlackboardValue value)
+        {
+            if (slotIndex >= _slotVersions.Length)
+                return Fail(BlackboardStorageDiagnosticCodes.InvalidSlot, "The blackboard slot index is outside the compiled program.");
+            var slot = _program.BlackboardSlots[(int)slotIndex];
+            if (!TryResolveType(slot, _registeredTypes, out var builtIn, out _)
+                || builtIn.ValueType == BlackboardValueType.Registered
+                || value.Type != builtIn.ValueType)
+            {
+                return Fail(BlackboardStorageDiagnosticCodes.TypeMismatch, "The write value does not match the compiled slot type.");
+            }
+
+            if (builtIn.ValueType == BlackboardValueType.Enum32
+                && (!value.TryGetEnum32(out var enumValue) || enumValue.ContractTypeId != slot.EnumContractId))
+            {
+                return Fail(BlackboardStorageDiagnosticCodes.TypeMismatch, "The enum write contract does not match the compiled slot contract.");
+            }
+
+            if (!BlackboardBuiltInCodec.TryEncode(value, builtIn, out var bytes))
+                return Fail(BlackboardStorageDiagnosticCodes.InvalidValue, "The write value is invalid for its declared built-in type.");
+            return WriteBytes(slotIndex, slot, bytes, null);
+        }
+
         internal BlackboardResetResult Reset()
         {
             var changedSlots = new List<uint>();

@@ -90,7 +90,7 @@ namespace AIBT.Authoring
             var statusValues = CopyAndSortStatuses(possibleStatuses);
             var exampleValues = CopyExamples(examples);
 
-            ValidateConfiguration(parameterValues, configuration);
+            ValidateConfiguration(parameterValues, configuration, executionDomain);
             ValidateConditions(parameterValues);
 
             if (replacementTypeId != null && !NodeTypeIdRules.IsValid(replacementTypeId))
@@ -316,16 +316,22 @@ namespace AIBT.Authoring
 
         private static void ValidateConfiguration(
             IReadOnlyList<NodeParameterContract> parameters,
-            NodeConfigurationDescriptor configuration)
+            NodeConfigurationDescriptor configuration,
+            NodeExecutionDomain executionDomain)
         {
+            // A Burst manifest packs every parameter (unchanged contract). A Managed or MainThread
+            // manifest may leave a parameter unpacked: its host delivers the authored value to the
+            // leaf directly (P9-001). The managed-only parameter types are never packed.
+            var packsEveryParameter = executionDomain == NodeExecutionDomain.Burst;
             var scalarFieldCount = 0;
             for (var fieldIndex = 0; fieldIndex < configuration.Fields.Count; fieldIndex++)
                 if (!configuration.Fields[fieldIndex].IsGeneratedHandle) scalarFieldCount++;
-            if (parameters.Count != scalarFieldCount)
+            if (packsEveryParameter && parameters.Count != scalarFieldCount)
             {
                 throw new ArgumentException("Every parameter must have exactly one configuration packing field.", nameof(configuration));
             }
 
+            var packedParameterCount = 0;
             for (var index = 0; index < parameters.Count; index++)
             {
                 var found = false;
@@ -338,11 +344,34 @@ namespace AIBT.Authoring
                     }
                 }
 
-                if (!found)
+                if (parameters[index].IsManagedOnly)
+                {
+                    if (packsEveryParameter)
+                    {
+                        throw new ArgumentException("Int32, String and BlackboardKey parameters are valid only on Managed or MainThread manifests.", nameof(parameters));
+                    }
+
+                    if (found)
+                    {
+                        throw new ArgumentException("Int32, String and BlackboardKey parameters cannot declare a configuration packing field.", nameof(configuration));
+                    }
+
+                    continue;
+                }
+
+                if (found)
+                {
+                    packedParameterCount++;
+                }
+                else if (packsEveryParameter)
                 {
                     throw new ArgumentException("Configuration packing fields must match parameter names.", nameof(configuration));
                 }
+            }
 
+            if (packedParameterCount != scalarFieldCount)
+            {
+                throw new ArgumentException("Configuration packing fields must match parameter names.", nameof(configuration));
             }
 
             for (var fieldIndex = 0; fieldIndex < configuration.Fields.Count; fieldIndex++)

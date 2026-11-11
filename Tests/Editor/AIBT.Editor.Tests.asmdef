@@ -4,6 +4,7 @@
   "references": [
     "AIBT.Runtime",
     "AIBT.Authoring",
+    "AIBT.Agents",
     "AIBT.Editor",
     "AIBT.Mcp",
     "AIBT.Consumer.Nodes",

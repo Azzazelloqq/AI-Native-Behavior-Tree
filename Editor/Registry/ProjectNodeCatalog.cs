@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AIBT.Agents;
 using AIBT.Authoring;
 using AIBT.Burst;
 using UnityEditor;
@@ -24,8 +25,17 @@ namespace AIBT.Editor.Registry
         internal IReadOnlyDictionary<string, GeneratedNodeDescriptor> Generated { get; }
         internal RegisteredBlackboardTypeCatalog RegisteredTypes { get; }
 
+        /// <summary>
+        /// True when the tree uses a managed (main-thread) node, so it runs in a BehaviorTreeAgent
+        /// and is validated with the managed layer's policy instead of the native one.
+        /// </summary>
+        internal bool UsesManagedNodes(TreeDocument document)
+            => document.Nodes.Any(node => Registry.TryGet(node.TypeId, out var entry)
+                && entry.Manifest.ExecutionDomain != NodeExecutionDomain.Burst);
+
         internal DiagnosticCollection ValidateAuthoring(TreeDocument document, ReferenceCompilerOptions options)
         {
+            if (UsesManagedNodes(document)) options = ManagedTreeProgram.CreateOptions(options.SourceId);
             var validation = new DiagnosticCollection(TreeValidator.Validate(document, Registry,
                 options.Policy.CreateValidationOptions(options.SourceId), RegisteredTypes));
             if (validation.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)) return validation;
@@ -45,7 +55,7 @@ namespace AIBT.Editor.Registry
                 .Select(assembly => assembly.name), StringComparer.Ordinal);
             var shards = TypeCache.GetTypesWithAttribute<AibtCatalogShardAttribute>()
                 .Where(type => playerAssemblies.Contains(type.Assembly.GetName().Name));
-            return Build(shards, ProjectLeafExtensionDiscovery.DiscoverViaTypeCache(problems), problems);
+            return Build(shards, ProjectLeafExtensionDiscovery.DiscoverViaTypeCache(problems), problems, ManagedNodeCatalog.Default);
         }
 
         internal static IReadOnlyList<Type> RuntimeCatalogTypes()
@@ -66,10 +76,17 @@ namespace AIBT.Editor.Registry
         }
 
         internal static ProjectNodeCatalog Build(IEnumerable<Type> shards,
-            IEnumerable<IReferenceLeafBehaviorProvider> providers, List<string> problems = null)
+            IEnumerable<IReferenceLeafBehaviorProvider> providers, List<string> problems = null, ManagedNodeSet managed = null)
         {
             problems = problems ?? new List<string>();
             var builder = ProjectLeafExtensionDiscovery.AddDiscovered(NodeRegistryBuilder.CreateWithBuiltIns(), providers, problems);
+            if (managed != null)
+            {
+                // Managed nodes (BtAction/BtCondition classes) run in a BehaviorTreeAgent; they are
+                // listed here so the graph, validation and node search see them like any other node.
+                managed.AddTo(builder);
+                problems.AddRange(managed.Problems);
+            }
             var references = builder.Build();
             if (!references.Success) return Fallback(references, problems);
             var generated = new Dictionary<string, GeneratedNodeDescriptor>(StringComparer.Ordinal);

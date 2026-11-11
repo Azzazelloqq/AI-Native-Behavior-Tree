@@ -10,6 +10,17 @@ little-endian packing; see [Burst ABI v2](burst-node-abi-v2.md). The prior enum 
 existing manifests retain their identities and bytes. Older tools reject the unknown parameter
 kind rather than attempting to reinterpret it.
 
+The additive AIBT-045 parameter extension introduces `int32`, `string` and `blackboard-key`. They
+are valid only on `Managed` or `MainThread` manifests and are never packed into the configuration
+blob; the managed host delivers the authored value to the node. A `Managed` or `MainThread`
+manifest may likewise leave a `boolean`, `uint32`, `uint64`, `string-enum` or `float32` parameter
+unpacked. Every `Burst` manifest still packs each parameter in exactly one configuration field,
+and all existing manifests retain their identities and bytes. A `blackboard-key` value MUST name
+a Tree-scope key declared by the tree, and MUST match the parameter's `valueType` when the
+contract states one. An optional parameter MAY document the value used when it is omitted
+(`default`); this is informational and never read by packed configuration. See
+[ADR P9-001](../decisions/ADR-P9-001-managed-agent-layer.md).
+
 Every node type has:
 
 - canonical string type ID using reverse-domain or project-qualified naming;

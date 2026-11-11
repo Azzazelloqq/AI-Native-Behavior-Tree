@@ -1,0 +1,9 @@
+{
+  "name": "AIBT.Samples.SimpleAgent",
+  "rootNamespace": "AIBT.Samples.SimpleAgent",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Agents"
+  ],
+  "autoReferenced": false
+}

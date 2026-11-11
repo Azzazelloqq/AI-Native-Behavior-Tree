@@ -551,6 +551,48 @@ namespace AIBT.Editor.Graph
                     field.RegisterValueChangedCallback(evt => SetParameter(node.Id, parameter.Name, SemanticValue.FromString(evt.newValue)));
                     _inspector.Add(field);
                 }
+                else if (parameter.Type == NodeParameterType.String)
+                {
+                    var field = new TextField(label) { isDelayed = true };
+                    if (value != null && value.TryGetString(out var text)) field.SetValueWithoutNotify(text);
+                    else if (parameter.DefaultValue != null && parameter.DefaultValue.TryGetString(out var fallback)) field.SetValueWithoutNotify(fallback);
+                    field.RegisterValueChangedCallback(evt => SetParameter(node.Id, parameter.Name, SemanticValue.FromString(evt.newValue ?? string.Empty)));
+                    _inspector.Add(field);
+                }
+                else if (parameter.Type == NodeParameterType.Int32)
+                {
+                    var field = new IntegerField(label) { isDelayed = true };
+                    var shown = value ?? parameter.DefaultValue;
+                    if (shown != null && shown.TryGetInt64(out var signed)) field.SetValueWithoutNotify((int)signed);
+                    else if (shown != null && shown.TryGetUInt64(out var unsigned)) field.SetValueWithoutNotify((int)unsigned);
+                    field.RegisterValueChangedCallback(evt => SetParameter(node.Id, parameter.Name, SemanticValue.FromInt64(evt.newValue)));
+                    _inspector.Add(field);
+                }
+                else if (parameter.Type == NodeParameterType.BlackboardKey)
+                {
+                    // Offer only keys whose type the parameter accepts; an empty first entry clears it.
+                    var choices = new List<string> { string.Empty };
+                    choices.AddRange(Document.Blackboard
+                        .Where(key => key.Scope == BlackboardScope.Tree && (parameter.BlackboardValueType == null
+                            || key.Type.CanonicalTypeId == parameter.BlackboardValueType))
+                        .Select(key => key.Id));
+                    var current = value != null && value.TryGetString(out var keyId) ? keyId : string.Empty;
+                    if (!choices.Contains(current)) choices.Add(current);
+                    var field = new PopupField<string>(label, choices, choices.IndexOf(current),
+                        choice => string.IsNullOrEmpty(choice) ? "(none)" : choice, choice => string.IsNullOrEmpty(choice) ? "(none)" : choice);
+                    field.RegisterValueChangedCallback(evt =>
+                    {
+                        if (string.IsNullOrEmpty(evt.newValue))
+                        {
+                            _session.Apply(document => SemanticEditOperations.RemoveParameter(document, node.Id, parameter.Name));
+                            _view.schedule.Execute(RefreshSession);
+                        }
+                        else SetParameter(node.Id, parameter.Name, SemanticValue.FromString(evt.newValue));
+                    });
+                    _inspector.Add(field);
+                    if (parameter.BlackboardValueType != null)
+                        _inspector.Add(new Label("Blackboard key of type " + parameter.BlackboardValueType) { style = { fontSize = 10, opacity = 0.7f } });
+                }
                 else
                 {
                     var field = new TextField(label);

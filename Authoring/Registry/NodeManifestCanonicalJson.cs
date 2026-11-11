@@ -91,12 +91,28 @@ namespace AIBT.Authoring
                     contract["forbiddenUnless"] = ConditionJson(parameter.ForbiddenUnless);
                 }
 
-                contract["packing"] = new JObject
+                if (parameter.BlackboardValueType != null)
                 {
-                    ["offset"] = field.Offset,
-                    ["size"] = field.Size,
-                    ["alignment"] = field.Alignment,
-                };
+                    contract["valueType"] = parameter.BlackboardValueType;
+                }
+
+                if (parameter.DefaultValue != null)
+                {
+                    contract["default"] = DefaultValueJson(parameter.DefaultValue);
+                }
+
+                // An unpacked parameter of a Managed or MainThread manifest has no packing entry
+                // (P9-001); every Burst parameter keeps its entry, so existing bytes are unchanged.
+                if (field != null)
+                {
+                    contract["packing"] = new JObject
+                    {
+                        ["offset"] = field.Offset,
+                        ["size"] = field.Size,
+                        ["alignment"] = field.Alignment,
+                    };
+                }
+
                 parameters.Add(parameter.Name, contract);
             }
 
@@ -181,7 +197,17 @@ namespace AIBT.Authoring
                 }
             }
 
-            throw new InvalidOperationException("The manifest configuration descriptor is incomplete.");
+            return null;
+        }
+
+        private static JToken DefaultValueJson(SemanticValue value)
+        {
+            if (value.TryGetBoolean(out var boolean)) return new JValue(boolean);
+            if (value.TryGetInt64(out var signed)) return new JValue(signed);
+            if (value.TryGetUInt64(out var unsigned)) return new JValue(unsigned);
+            if (value.TryGetNumber(out var number)) return new JValue(number);
+            if (value.TryGetString(out var text)) return new JValue(text);
+            throw new InvalidOperationException("A parameter default must be a boolean, number or string.");
         }
 
         private static JObject ConditionJson(NodeParameterCondition condition)
@@ -360,6 +386,12 @@ namespace AIBT.Authoring
                     return "string-enum";
                 case NodeParameterType.Float32:
                     return "float32";
+                case NodeParameterType.Int32:
+                    return "int32";
+                case NodeParameterType.String:
+                    return "string";
+                case NodeParameterType.BlackboardKey:
+                    return "blackboard-key";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, null);
             }

@@ -1,0 +1,11 @@
+{
+  "name": "AIBT.Agents",
+  "rootNamespace": "AIBT",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Authoring"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": false
+}

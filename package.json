@@ -18,6 +18,11 @@
   ],
   "samples": [
     {
+      "displayName": "Simple Agent",
+      "description": "One BehaviorTreeAgent component, three ordinary C# node classes and a guard that patrols, chases and returns.",
+      "path": "Samples~/SimpleAgent"
+    },
+    {
       "displayName": "First Agent",
       "description": "Editor-prepared tree, Float32 custom Action, typed inputs, committed effects and live graph tracing.",
       "path": "Samples~/FirstAgent"

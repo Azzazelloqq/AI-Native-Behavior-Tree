@@ -4,6 +4,22 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Managed agent layer
+
+- Add `BehaviorTreeAgent`: assign an `.aibt` tree to one component and press Play. It compiles
+  the tree once per asset and runs it on the existing reference executor, with automatic restart
+  and no generated catalog, runtime asset or host wiring.
+- Write nodes as ordinary classes: `BtAction` and `BtCondition` with `[BtNode]`, public fields as
+  parameters and `BbKey<T>` fields as blackboard keys. Nodes may use the agent's GameObject.
+- Read and write the blackboard by key name from gameplay code through `AgentBlackboard`.
+- Add opt-in condition interrupts (`interrupt: self | lower-priority | both`) so a memory selector
+  or sequence chooses again when a condition's answer changes, without restarting a running
+  branch every tick the way a reactive composite does.
+- Add starter `aibt.unity.*` nodes (log, wait-seconds, succeed, fail, idle, blackboard set and
+  compare, move-towards, look-at, is-within-distance) and the importable Simple Agent sample.
+- Import `.aibt` as a Player-loadable `BehaviorTreeSource`. Add managed-only node parameter types
+  `int32`, `string` and `blackboard-key`; Burst manifests and existing bytes are unchanged.
+
 ### CLI and MCP
 
 - Share project node contracts/policy across discovery, authoring and validation; refresh an open

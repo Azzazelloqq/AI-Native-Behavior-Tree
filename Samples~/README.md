@@ -1,5 +1,8 @@
 # Samples
 
+Start with [`SimpleAgent`](SimpleAgent/README.md): one `BehaviorTreeAgent` component, three small
+node classes and a guard that patrols, chases and returns. It needs no generated catalog.
+
 Start with [`ShowcaseTrees`](ShowcaseTrees/README.md): two readable production-node trees with saved
 layouts. Open **AIBT > Graph Editor**, then pass either `.aibt.json` path to `OpenFromPath` through
 your Editor integration or MCP. The current graph window has no file-picker control.

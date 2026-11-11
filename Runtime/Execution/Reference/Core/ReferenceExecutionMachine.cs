@@ -57,6 +57,7 @@ namespace AIBT
         private bool _abortForReactiveReset;
         private bool _abortForTimeout;
         private int _timeoutOwnerDepth = -1;
+        private RuntimeNodeIndex _requestedReevaluation = RuntimeNodeIndex.Invalid;
 
         internal ReferenceExecutionMachine(
             CompiledProgram program,
@@ -503,6 +504,7 @@ namespace AIBT
                 _cumulativeUpdateSteps = 0;
                 ClearAbortTraversal();
                 _reactiveResetOwnerDepth = -1;
+                _requestedReevaluation = RuntimeNodeIndex.Invalid;
                 return Deliver(Envelope(ReferenceExecutionProgress.Completed, null, 0));
             }
             finally
@@ -546,7 +548,8 @@ namespace AIBT
             }
             else
             {
-                if (!PrepareExpiredTimeoutForNewUpdate()) PrepareReactiveResetForNewUpdate();
+                if (!PrepareRequestedReevaluationForNewUpdate()
+                    && !PrepareExpiredTimeoutForNewUpdate()) PrepareReactiveResetForNewUpdate();
             }
 
             return Envelope(ReferenceExecutionProgress.Suspended, null, 0);
@@ -580,6 +583,57 @@ namespace AIBT
             {
                 _isExecuting = false;
             }
+        }
+
+        /// <summary>
+        /// Resolves a Tree-scope slot by stable key for the managed agent layer (P9-001). Unlike a
+        /// declared node access this addresses the key itself, so it is available to gameplay code
+        /// and to managed leaves whose key is an authored parameter rather than a manifest constant.
+        /// </summary>
+        internal bool TryFindBlackboardSlot(ulong stableKeyId, out uint slotIndex, out BlackboardTypeDescriptor type)
+        {
+            slotIndex = CompiledIndex.Invalid;
+            type = default;
+            return _blackboard != null && _blackboard.TryFindSlot(stableKeyId, out slotIndex, out type);
+        }
+
+        /// <summary>Reads the current value of a slot. Reading never changes execution state.</summary>
+        internal bool TryReadBlackboardSlot(uint slotIndex, out BlackboardValue value)
+        {
+            value = default;
+            return _blackboard != null && _blackboard.TryReadSlot(slotIndex, out value).Success;
+        }
+
+        /// <summary>
+        /// Writes a slot by index. Inside a leaf callback the write is recorded exactly like a
+        /// declared node write (trace event, immediate observer queueing). Between updates it is an
+        /// external write: the value is stored at once and its change is published to observers at
+        /// the start of the next update, the same deferral <see cref="ResetBlackboard"/> uses. A
+        /// budget-suspended update is not a safe boundary and refuses the write, mirroring the
+        /// native host's idle-barrier rule (ADR-P7-039). A refused or invalid write never faults
+        /// the instance; the caller decides how to report it.
+        /// </summary>
+        internal bool TryWriteBlackboardSlot(uint slotIndex, BlackboardValue value, RuntimeNodeIndex writerNodeIndex)
+        {
+            if (_blackboard == null) return false;
+            if (_isExecuting)
+            {
+                var recorded = _blackboard.TryWriteSlot(slotIndex, value);
+                if (!recorded.Success) return false;
+                RecordBlackboardWrite(writerNodeIndex, recorded);
+                return true;
+            }
+
+            if (_hasOpenUpdate) return false;
+            var result = _blackboard.TryWriteSlot(slotIndex, value);
+            if (!result.Success) return false;
+            if (result.Changed)
+            {
+                _pendingResetChanges.Add(new BlackboardSlotChange(
+                    result.SlotIndex, result.StableKeyId, result.OldVersion, result.NewVersion));
+            }
+
+            return true;
         }
 
         private ReferenceExecutionEnvelope AdvanceOneStepCore()
@@ -635,6 +689,7 @@ namespace AIBT
 
             if (_memoryCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out var compositeHandler))
             {
+                if (frame.ReactiveResetPending) return ResetMemoryCompositeForReevaluation(frame, node);
                 return AdvanceMemoryComposite(frame, node, compositeHandler);
             }
 
@@ -1289,6 +1344,87 @@ namespace AIBT
             }
 
             return AdvanceMemoryComposite(frame, node, handler);
+        }
+
+        /// <summary>
+        /// Asks an active memory composite to abandon its running child and choose again from its
+        /// first child at the start of the next update (P9-001). This is the managed agent layer's
+        /// interrupt: memory composites keep their running child across updates, so a watched
+        /// condition that changed needs an explicit request, unlike reactive composites which
+        /// reevaluate on every update. Valid only between updates, for a memory composite on the
+        /// active path; the caller falls back to a full restart when it returns false. The
+        /// shallowest pending request wins because it already covers every deeper one.
+        /// </summary>
+        internal bool TryRequestReevaluation(RuntimeNodeIndex compositeNodeIndex)
+        {
+            if (_isExecuting || _hasOpenUpdate || _faulted || _stopped || _terminalResult.HasValue) return false;
+            var depth = FindActiveDepth(compositeNodeIndex);
+            if (depth < 0 || _frames.Count <= depth + 1) return false;
+            var node = _program.Nodes[(int)compositeNodeIndex.Value];
+            if (!_memoryCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out _)) return false;
+            if (_requestedReevaluation.IsValid)
+            {
+                var pendingDepth = FindActiveDepth(_requestedReevaluation);
+                if (pendingDepth >= 0 && pendingDepth <= depth) return true;
+            }
+
+            _requestedReevaluation = compositeNodeIndex;
+            return true;
+        }
+
+        private int FindActiveDepth(RuntimeNodeIndex nodeIndex)
+        {
+            for (var depth = 0; depth < _frames.Count; depth++)
+            {
+                if (_frames[depth].NodeIndex == nodeIndex) return depth;
+            }
+
+            return -1;
+        }
+
+        private bool PrepareRequestedReevaluationForNewUpdate()
+        {
+            var requested = _requestedReevaluation;
+            _requestedReevaluation = RuntimeNodeIndex.Invalid;
+            if (!requested.IsValid) return false;
+            var depth = FindActiveDepth(requested);
+            if (depth < 0 || _frames.Count <= depth + 1) return false;
+
+            // A reactive composite above the requested one restarts this whole subtree in this
+            // update anyway, through the normative reactive reset.
+            for (var above = 0; above < depth; above++)
+            {
+                var ancestor = _program.Nodes[(int)_frames[above].NodeIndex.Value];
+                if (_reactiveCompositeRegistry.TryGet(ancestor.NodeTypeId, ancestor.NodeTypeVersion, out _)) return false;
+            }
+
+            var owner = _frames[depth];
+            _reactiveResetOwnerDepth = depth;
+            owner.ReactiveResetPending = true;
+            owner.HasPendingChildResult = false;
+            owner.PendingChildNodeIndex = RuntimeNodeIndex.Invalid;
+            BeginAbortTraversal(depth + 1, NodeAbortReason.Explicit, owner.NodeIndex, forReactiveReset: true);
+            return true;
+        }
+
+        private ReferenceExecutionEnvelope ResetMemoryCompositeForReevaluation(ReferenceFrame frame, CompiledNodeRecord node)
+        {
+            if (_frames[_frames.Count - 1] != frame)
+            {
+                return Fault(
+                    ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                    "A requested reevaluation cannot run while the previous subtree is still active.",
+                    frame.NodeIndex);
+            }
+
+            WriteCompositeCursor(node, 0);
+            frame.HasPendingChildResult = false;
+            frame.PendingChildNodeIndex = RuntimeNodeIndex.Invalid;
+            frame.ReactiveResetPending = false;
+            frame.State = ReferenceFrameState.Running;
+            _reactiveResetOwnerDepth = -1;
+            ClearAbortTraversal();
+            return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
         }
 
         private void PrepareReactiveResetForNewUpdate(int startDepth = 0)

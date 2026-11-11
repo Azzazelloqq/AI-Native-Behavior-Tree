@@ -44,5 +44,6 @@ This file records accepted direction. Detailed ADR files may be introduced when 
 | AIBT-042 | Editor-prepared, catalog-pinned consumer programs, finite Float32 configuration and shared graph debugging; see [ADR P8-009](decisions/ADR-P8-009-consumer-workflow.md). | Accepted |
 | AIBT-043 | CLI and MCP share operations; explicit client requests start/recover one Editor bridge; see [ADR P8-010](decisions/ADR-P8-010-cli-and-managed-bridge.md). | Accepted |
 | AIBT-044 | Shared agent catalogs, explicit execution backends, native preparation/trace and expected-outcome node checks; see [ADR P8-011](decisions/ADR-P8-011-agent-consumer-completion.md). | Accepted |
+| AIBT-045 | A managed agent layer (`AIBT.Agents`) runs a tree on the reference executor from one component with ordinary C# node classes, named blackboard access, managed-only unpacked parameter types and opt-in condition interrupts for memory composites; see [ADR P9-001](decisions/ADR-P9-001-managed-agent-layer.md). | Accepted |
 
 Normative details are in `Documentation~/specifications/`. An implementation may change them only through an accepted decision and corresponding specification update.

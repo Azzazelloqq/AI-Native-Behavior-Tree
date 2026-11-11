@@ -39,10 +39,22 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "required", "packing"],
+        "required": ["type", "required"],
+        "allOf": [
+          {
+            "if": { "properties": { "type": { "enum": ["int32", "string", "blackboard-key"] } } },
+            "then": { "not": { "required": ["packing"] } }
+          },
+          {
+            "if": { "required": ["valueType"] },
+            "then": { "properties": { "type": { "const": "blackboard-key" } } }
+          }
+        ],
         "properties": {
-          "type": { "enum": ["boolean", "uint32", "uint64", "string-enum", "float32"] },
+          "type": { "enum": ["boolean", "uint32", "uint64", "string-enum", "float32", "int32", "string", "blackboard-key"] },
           "required": { "type": "boolean" },
+          "valueType": { "type": "string", "minLength": 1 },
+          "default": { "type": ["boolean", "number", "string"] },
           "minimum": { "type": "integer", "minimum": 0 },
           "allowedValues": {
             "type": "array",

@@ -610,6 +610,12 @@ namespace AIBT.Authoring
                         constraintMessage ?? "Parameter has the wrong exact semantic type.",
                         ParameterPointer(node.Id, contract.Name), document.TreeId, node.Id));
                 }
+                else if (contract.Type == NodeParameterType.BlackboardKey
+                    && !ValidateBlackboardKeyParameter(document, value, contract, out var keyMessage))
+                {
+                    diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.ParameterConstraint, keyMessage,
+                        ParameterPointer(node.Id, contract.Name), document.TreeId, node.Id));
+                }
             }
 
             if (string.Equals(node.TypeId, BuiltInNodeManifests.ParallelTypeId, StringComparison.Ordinal))
@@ -659,9 +665,58 @@ namespace AIBT.Authoring
                     }
                     constraintMessage = "String parameter is not one of the manifest's allowed values.";
                     return false;
+                case NodeParameterType.Int32:
+                    if (value.TryGetInt64(out var int32)) return int32 >= int.MinValue && int32 <= int.MaxValue;
+                    return value.TryGetUInt64(out var unsignedInt32) && unsignedInt32 <= int.MaxValue;
+                case NodeParameterType.String:
+                    return value.TryGetString(out _);
+                case NodeParameterType.BlackboardKey:
+                    if (!value.TryGetString(out var keyId)) return false;
+                    if (string.IsNullOrEmpty(keyId))
+                    {
+                        constraintMessage = "A blackboard-key parameter must name a blackboard key.";
+                        return false;
+                    }
+                    return true;
                 default:
                     return false;
             }
+        }
+
+        // A blackboard-key parameter (P9-001) is the managed layer's per-node equivalent of a
+        // manifest access declaration: the authored value must name a key this tree declares, and
+        // match the value type the leaf's contract expects when it states one.
+        private static bool ValidateBlackboardKeyParameter(
+            TreeDocument document,
+            SemanticValue value,
+            NodeParameterContract contract,
+            out string message)
+        {
+            message = null;
+            value.TryGetString(out var keyId);
+            for (var index = 0; index < document.Blackboard.Count; index++)
+            {
+                var key = document.Blackboard[index];
+                if (key == null || !string.Equals(key.Id, keyId, StringComparison.Ordinal)) continue;
+                if (key.Scope != BlackboardScope.Tree)
+                {
+                    message = "A blackboard-key parameter must name a Tree-scope key.";
+                    return false;
+                }
+
+                if (contract.BlackboardValueType != null
+                    && !string.Equals(key.Type.CanonicalTypeId, contract.BlackboardValueType, StringComparison.Ordinal))
+                {
+                    message = "Blackboard key '" + keyId + "' has type " + key.Type.CanonicalTypeId
+                        + " but this parameter requires " + contract.BlackboardValueType + ".";
+                    return false;
+                }
+
+                return true;
+            }
+
+            message = "Parameter names blackboard key '" + keyId + "', which this tree does not declare.";
+            return false;
         }
 
         private static void ValidateParallel(

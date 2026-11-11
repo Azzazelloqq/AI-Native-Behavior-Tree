@@ -117,6 +117,8 @@ Hosts an authoring graph over an AIBT tree document.
 
 ### `AIBT.Editor.Graph.BehaviorTreeImporter`
 
+Imports an <c>.aibt</c> tree. The main object is a Player-loadable <see cref="BehaviorTreeSource"/> that a <see cref="BehaviorTreeAgent"/> runs directly; the Editor-only <see cref="BehaviorTreeAsset"/> summary is kept as a sub-object.
+
 - `METHOD System.Void .ctor()`
 - `METHOD System.Void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext)`
 

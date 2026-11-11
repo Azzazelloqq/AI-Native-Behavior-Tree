@@ -4,6 +4,7 @@
   "references": [
     "AIBT.Runtime",
     "AIBT.Authoring",
+    "AIBT.Agents",
     "Newtonsoft.Json",
     "Unity.Collections"
   ],
