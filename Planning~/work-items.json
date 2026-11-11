@@ -4,6 +4,42 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P9-006", "phase": 9, "title": "User guide and consumer acceptance", "status": "draft", "kind": "integration",
+      "card": "Planning~/Tasks/P9/P9-006-user-guide-and-acceptance.md",
+      "dependsOn": ["P9-001", "P9-002", "P9-003", "P9-004", "P9-005"],
+      "owns": ["README.md", "Samples~/README.md", "Planning~/Evidence/P9-006/"]
+    },
+    {
+      "id": "P9-005", "phase": 9, "title": "Shorter native node declarations", "status": "draft", "kind": "implementation",
+      "card": "Planning~/Tasks/P9/P9-005-native-authoring-sugar.md",
+      "dependsOn": ["P9-004"],
+      "owns": ["Planning~/Evidence/P9-005/"]
+    },
+    {
+      "id": "P9-004", "phase": 9, "title": "Native agent facade and automatic preparation", "status": "draft", "kind": "implementation",
+      "card": "Planning~/Tasks/P9/P9-004-native-agent-facade.md",
+      "dependsOn": ["P9-001"],
+      "owns": ["Planning~/Evidence/P9-004/"]
+    },
+    {
+      "id": "P9-003", "phase": 9, "title": "Graph editor usability and live debugging", "status": "draft", "kind": "implementation",
+      "card": "Planning~/Tasks/P9/P9-003-graph-editor-ux.md",
+      "dependsOn": ["P9-001"],
+      "owns": ["Editor/Graph/Styles/", "Planning~/Evidence/P9-003/"]
+    },
+    {
+      "id": "P9-002", "phase": 9, "title": "Ready-made node library", "status": "draft", "kind": "implementation",
+      "card": "Planning~/Tasks/P9/P9-002-node-library.md",
+      "dependsOn": ["P9-001"],
+      "owns": ["Agents/Nodes/", "Planning~/Evidence/P9-002/"]
+    },
+    {
+      "id": "P9-001", "phase": 9, "title": "Managed agent layer", "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P9/P9-001-managed-agent-layer.md",
+      "dependsOn": ["P3-009", "P7-008", "P7-028"],
+      "owns": ["Agents/", "Samples~/SimpleAgent/", "Planning~/Evidence/P9-001/"]
+    },
+    {
       "id": "P8-012", "phase": 8, "title": "Patrol and pursuit consumer research", "status": "review", "kind": "spike",
       "card": "Planning~/Tasks/P8/P8-012-patrol-pursuit-research.md",
       "dependsOn": ["P7-016"],
