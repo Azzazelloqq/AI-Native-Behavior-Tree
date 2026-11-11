@@ -25,7 +25,7 @@ namespace AIBT.Tests.CodeGen.Contracts
         }
 
         [Test]
-        public void PublicSurfaceV2_ChangesOnlyAcceptedGeneratedCatalogExecutorMembers()
+        public void PublicSurfaceV2_ChangesOnlyAcceptedAdditiveMembersAndContextLayouts()
         {
             var v1 = ReadFixture("ExpectedPublicAbiV1.txt");
             var v2 = ReadFixture("ExpectedPublicAbiV2.txt");
@@ -33,9 +33,9 @@ namespace AIBT.Tests.CodeGen.Contracts
             var v2Lines = v2.TrimEnd('\n').Split('\n');
 
             Assert.That(v1Lines, Has.Length.EqualTo(352), "The independently accepted ABI v1 snapshot must remain intact.");
-            Assert.That(v2Lines, Has.Length.EqualTo(356),
+            Assert.That(v2Lines, Has.Length.EqualTo(357),
                 "ADR AIBT-038 (P7-037) adds the executor type and its two dispatch members; ADR AIBT-041 "
-                + "adds its one typed effect-descriptor lookup. No other Burst ABI line may drift.");
+                + "adds its one typed effect-descriptor lookup; AIBT-042 adds one Float32 configuration reader. No other Burst ABI line may drift.");
 
             const string enterV1 = "T|struct|AIBT.Burst.BurstEnterContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=24,charset=Ansi";
             const string enterV2 = "T|struct|AIBT.Burst.BurstEnterContext|abstract=False|sealed=True|layout=Sequential,pack=8,size=0,charset=Ansi";
@@ -58,6 +58,8 @@ namespace AIBT.Tests.CodeGen.Contracts
             var reconstructed = new List<string>(v1Lines.Length + executorLines.Length);
             foreach (var line in v1Lines)
             {
+                if (line.StartsWith("M|static|TryReadMemoryBoolean|", StringComparison.Ordinal))
+                    reconstructed.Add("M|static|TryReadFloat32|return=AIBT.Burst.BurstContextResult|generic=0|params=ref:AIBT.Burst.BurstConfigurationReader:reader:optional=False,value:System.UInt32:fieldOrdinal:optional=False,value:System.UInt32:elementIndex:optional=False,out:System.Single:value:optional=False");
                 if (line == insertBeforeAnchor) reconstructed.AddRange(executorLines);
                 if (line == enterV1) reconstructed.Add(enterV2);
                 else if (line == tickV1) reconstructed.Add(tickV2);
@@ -66,7 +68,7 @@ namespace AIBT.Tests.CodeGen.Contracts
 
             Assert.That(reconstructed, Is.EqualTo(v2Lines),
                 "Every public signature, enum value, and non-context layout record must remain ABI v1-exact "
-                + "except the two opaque-size pins and AIBT-038's new executor interface.");
+                + "except the two opaque-size pins, AIBT-038's executor interface and AIBT-042's Float32 configuration reader.");
         }
 
         [Test]

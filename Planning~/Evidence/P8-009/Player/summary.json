@@ -1,0 +1,122 @@
+[
+  {
+    "population": 16,
+    "policy": "Immediate",
+    "medianMicroseconds": 69.15,
+    "p95Microseconds": 83.19999999999999,
+    "inputToResultLatencyFrames": [
+      1
+    ],
+    "logicalUpdatesIncludingWarmup": 3840,
+    "effectsIncludingWarmup": 3840,
+    "markerMedianMicroseconds": {
+      "AIBT.Production.Scheduler.Frame": 72.3,
+      "AIBT.Production.Inputs.Sample": 0.1,
+      "AIBT.Production.Inputs.Flush": 0.9,
+      "AIBT.Production.Effects.Deliver": 0.4,
+      "AIBT.Native.LifecycleTick": 2.0,
+      "AIBT.Production.GeneratedDispatch": 53.95,
+      "AIBT.Production.Trace.Record": 8.7
+    }
+  },
+  {
+    "population": 16,
+    "policy": "BatchedJobsSameFrame",
+    "medianMicroseconds": 132.9,
+    "p95Microseconds": 415.8,
+    "inputToResultLatencyFrames": [
+      1
+    ],
+    "logicalUpdatesIncludingWarmup": 3840,
+    "effectsIncludingWarmup": 3840,
+    "markerMedianMicroseconds": {
+      "AIBT.Production.Scheduler.Frame": 139.1,
+      "AIBT.Production.Inputs.Sample": 0.1,
+      "AIBT.Production.Inputs.Flush": 1.3,
+      "AIBT.Production.Effects.Deliver": 0.6,
+      "AIBT.Native.LifecycleTick": 2.0,
+      "AIBT.Production.GeneratedDispatch": 0.0,
+      "AIBT.Production.Trace.Record": 10.6
+    }
+  },
+  {
+    "population": 16,
+    "policy": "PipelinedJobs",
+    "medianMicroseconds": 27.150000000000002,
+    "p95Microseconds": 110.0,
+    "inputToResultLatencyFrames": [
+      5
+    ],
+    "logicalUpdatesIncludingWarmup": 1280,
+    "effectsIncludingWarmup": 1264,
+    "markerMedianMicroseconds": {
+      "AIBT.Production.Scheduler.Frame": 31.25,
+      "AIBT.Production.Inputs.Sample": 0.1,
+      "AIBT.Production.Inputs.Flush": 1.0,
+      "AIBT.Production.Effects.Deliver": 0.4,
+      "AIBT.Native.LifecycleTick": 1.3,
+      "AIBT.Production.GeneratedDispatch": 0.0,
+      "AIBT.Production.Trace.Record": 3.7
+    }
+  },
+  {
+    "population": 128,
+    "policy": "Immediate",
+    "medianMicroseconds": 545.45,
+    "p95Microseconds": 670.7999999999995,
+    "inputToResultLatencyFrames": [
+      1
+    ],
+    "logicalUpdatesIncludingWarmup": 30720,
+    "effectsIncludingWarmup": 30720,
+    "markerMedianMicroseconds": {
+      "AIBT.Production.Scheduler.Frame": 570.8,
+      "AIBT.Production.Inputs.Sample": 0.4,
+      "AIBT.Production.Inputs.Flush": 6.8,
+      "AIBT.Production.Effects.Deliver": 2.7,
+      "AIBT.Native.LifecycleTick": 15.5,
+      "AIBT.Production.GeneratedDispatch": 424.7,
+      "AIBT.Production.Trace.Record": 74.35
+    }
+  },
+  {
+    "population": 128,
+    "policy": "BatchedJobsSameFrame",
+    "medianMicroseconds": 1161.5,
+    "p95Microseconds": 1623.0,
+    "inputToResultLatencyFrames": [
+      1
+    ],
+    "logicalUpdatesIncludingWarmup": 30720,
+    "effectsIncludingWarmup": 30720,
+    "markerMedianMicroseconds": {
+      "AIBT.Production.Scheduler.Frame": 1198.9499999999998,
+      "AIBT.Production.Inputs.Sample": 0.6,
+      "AIBT.Production.Inputs.Flush": 8.1,
+      "AIBT.Production.Effects.Deliver": 4.5,
+      "AIBT.Native.LifecycleTick": 945.6500000000001,
+      "AIBT.Production.GeneratedDispatch": 0.0,
+      "AIBT.Production.Trace.Record": 97.7
+    }
+  },
+  {
+    "population": 128,
+    "policy": "PipelinedJobs",
+    "medianMicroseconds": 288.04999999999995,
+    "p95Microseconds": 873.7,
+    "inputToResultLatencyFrames": [
+      5
+    ],
+    "logicalUpdatesIncludingWarmup": 10240,
+    "effectsIncludingWarmup": 10112,
+    "markerMedianMicroseconds": {
+      "AIBT.Production.Scheduler.Frame": 319.05,
+      "AIBT.Production.Inputs.Sample": 0.6,
+      "AIBT.Production.Inputs.Flush": 7.3,
+      "AIBT.Production.Effects.Deliver": 2.1,
+      "AIBT.Native.LifecycleTick": 0.0,
+      "AIBT.Production.GeneratedDispatch": 0.0,
+      "AIBT.Production.Trace.Record": 42.650000000000006
+    }
+  }
+]

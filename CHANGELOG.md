@@ -4,7 +4,38 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### CLI and MCP
+
+- Share project node contracts/policy across discovery, authoring and validation; refresh an open
+  graph's catalog without losing drafts/Undo/layout. Preserve explicit reference/native backends.
+- Add command schemas, native catalog inspection and hash-checked runtime asset preparation,
+  plus read-only host/trace snapshots with incomplete-history disclosure. Resolve documentation
+  from actual UPM package roots and generate project docs outside package caches.
+- Replace inconclusive node scaffolds with source-controlled expected-outcome native cases.
+  Verify scalar inputs/configuration and optional exact effects; expose behavior proof separately
+  from dispatch proof. Applied Burst nodes are runtime-capable; case data stays Editor-only.
+
+- Add a command-driven CLI and shared MCP connection client, explicit on-demand Editor bridge
+  startup/recovery, health checks, bounded waits and one bridge owner across window/reload/CLI.
+  Existing tools and permissions remain available; unknown mutation outcomes are never replayed.
+
+### Consumer workflow
+
+- Prepare a catalog-pinned compiled runtime asset in the graph Editor; create one explicitly owned
+  `ProductionTreeProgram` shared by multiple hosts without runtime JSON compilation or reflection.
+- Add finite Float32 node parameters throughout manifests, generation, validation, packing and the
+  inspector, with an additive ABI v2 configuration reader. Existing contracts retain their bytes.
+- Expose idempotent permanent host `Stop()` using existing cancellation/disposal semantics.
+- Share the authoring graph with preview and verified selected-host trace; preserve layout and
+  detach on source changes. Drag ports to connect/reparent with explicit semantic child order.
+- Add the importable First Agent sample with Editor preparation, typed input, movement effects,
+  source debugging and explicit shutdown. Fix selective asset opening on current Unity versions.
+
 ### Fixed
+
+- Align generated-v2 blackboard default blobs for mixed-width values in all scopes and the
+  semantic projection. Bool followed by Float32/Float3/Int64 no longer fails native preparation
+  or exposes unaligned defaults; canonical ordering and zero padding are preserved.
 
 - Reference preview now isolates behavior state per node, executes built-in leaves, and supports
   project reference providers. Built-in Wait keeps its counter in node memory.

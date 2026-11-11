@@ -64,7 +64,7 @@ try {
     $actualHash = (Get-FileHash -LiteralPath $dllA -Algorithm SHA256).Hash.ToLowerInvariant()
     $expectedHash = (Get-Content -Raw -LiteralPath $analyzerHashFile).Trim().ToLowerInvariant()
     Require ($actualHash -eq $expectedHash) "Analyzer hash mismatch: expected $expectedHash, actual $actualHash."
-    Require ((Get-FileHash -LiteralPath $abiFixture -Algorithm SHA256).Hash -eq 'BD92DAD388CAB8293E973709B1C3FF2DC7CB1EA909033F2F765BDEAC071F49E8') 'Accepted P7-041 ABI v2 fixture hash differs.'
+    Require ((Get-FileHash -LiteralPath $abiFixture -Algorithm SHA256).Hash -eq '226AE0E89AA93E6BFEEEC72CD4522FB5066F8800C0D43596CF11CBA6E5C39122') 'Accepted AIBT-042 ABI v2 fixture hash differs.'
 
     $meta = Get-Content -Raw -LiteralPath $analyzerMeta
     Require ($meta -match '(?m)^guid: 31a3f09584684895a0a72916d3ad4de0$') 'Analyzer meta GUID differs.'

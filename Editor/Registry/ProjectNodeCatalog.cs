@@ -24,6 +24,17 @@ namespace AIBT.Editor.Registry
         internal IReadOnlyDictionary<string, GeneratedNodeDescriptor> Generated { get; }
         internal RegisteredBlackboardTypeCatalog RegisteredTypes { get; }
 
+        internal DiagnosticCollection ValidateAuthoring(TreeDocument document, ReferenceCompilerOptions options)
+        {
+            var validation = new DiagnosticCollection(TreeValidator.Validate(document, Registry,
+                options.Policy.CreateValidationOptions(options.SourceId), RegisteredTypes));
+            if (validation.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)) return validation;
+            var nativeOnly = document.Nodes.Any(node => Registry.TryGet(node.TypeId, out var entry) && !entry.HasReferenceHandlerBinding);
+            return nativeOnly
+                ? GeneratedCompiledProgramV2Compiler.Compile(document, Generated.Values, RegisteredTypes, options).Diagnostics
+                : ReferenceCompiler.Compile(document, Registry, options).Diagnostics;
+        }
+
         internal static ProjectNodeCatalog Initial()
             => new ProjectNodeCatalog(NodeRegistryBuilder.CreateWithBuiltIns().Build(), Array.Empty<string>());
 
@@ -35,6 +46,23 @@ namespace AIBT.Editor.Registry
             var shards = TypeCache.GetTypesWithAttribute<AibtCatalogShardAttribute>()
                 .Where(type => playerAssemblies.Contains(type.Assembly.GetName().Name));
             return Build(shards, ProjectLeafExtensionDiscovery.DiscoverViaTypeCache(problems), problems);
+        }
+
+        internal static IReadOnlyList<Type> RuntimeCatalogTypes()
+        {
+            var playerAssemblies = new HashSet<string>(CompilationPipeline.GetAssemblies(AssembliesType.PlayerWithoutTestAssemblies)
+                .Select(assembly => assembly.name), StringComparer.Ordinal);
+            return TypeCache.GetTypesWithAttribute<AibtCatalogSetAttribute>()
+                .Where(type => playerAssemblies.Contains(type.Assembly.GetName().Name))
+                .OrderBy(type => type.AssemblyQualifiedName, StringComparer.Ordinal).ToArray();
+        }
+
+        internal static ProjectNodeCatalog ForCatalog(Type type)
+        {
+            var declaration = type.GetCustomAttributesData().Single(attribute => attribute.AttributeType == typeof(AibtCatalogSetAttribute));
+            var shards = ((IEnumerable<System.Reflection.CustomAttributeTypedArgument>)declaration.ConstructorArguments[2].Value)
+                .Select(argument => (Type)argument.Value);
+            return Build(shards, Array.Empty<IReferenceLeafBehaviorProvider>());
         }
 
         internal static ProjectNodeCatalog Build(IEnumerable<Type> shards,
@@ -58,7 +86,11 @@ namespace AIBT.Editor.Registry
                     }
                     // This generated shard is already represented by CreateWithBuiltIns().
                     if (shard.Assembly.GetName().Name == "AIBT.Authoring.BuiltInLeaves" &&
-                        artifact.ShardId == "aibt.stdlib.built-in-leaves") continue;
+                        artifact.ShardId == "aibt.stdlib.built-in-leaves")
+                    {
+                        foreach (var node in artifact.Nodes) generated.Add(node.Manifest.TypeId, node);
+                        continue;
+                    }
                     foreach (var entry in artifact.RegisteredTypes.Entries)
                     {
                         var identity = entry.CanonicalTypeId + "\0" + entry.Version;

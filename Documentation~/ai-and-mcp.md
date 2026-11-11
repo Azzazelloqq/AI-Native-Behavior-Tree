@@ -6,6 +6,15 @@ MCP is a transport. AI usability comes from strict contracts, discoverability, s
 
 The core remains model- and vendor-neutral.
 
+Current command/native workflows and exact supported limits are in [CLI and MCP setup](cli.md).
+Use `list_operations`/`get_operation_schema` rather than inspecting handler source. Native
+preparation and live host tracing reuse the Editor baker and non-blocking trace reader.
+
+For command-driven agents, start with [CLI and MCP setup](cli.md). CLI and MCP share the
+Editor operation dispatcher. Explicit client requests can start/recover the bridge in an
+already-open Editor; manual Start is optional for this path (AIBT-043). MCP resources and custom
+tool discovery remain available. Neither adapter is a runtime dependency.
+
 ## Information available to an agent
 
 - project manifest and supported capabilities;

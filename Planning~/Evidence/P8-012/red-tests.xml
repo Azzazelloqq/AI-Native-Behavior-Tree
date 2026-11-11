@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Failed(Child)" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0,1492274">
+  <test-suite type="TestSuite" id="1000" name="aibt-consumer-regression-f860f09afe8e45c1808b5eb8951c344d" fullname="aibt-consumer-regression-f860f09afe8e45c1808b5eb8951c344d" runstate="Runnable" testcasecount="1517" result="Failed" site="Child" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.149227" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1716" name="AIBT.Editor.Tests.dll" fullname="C:/Users/User/AppData/Local/Temp/aibt-consumer-regression-f860f09afe8e45c1808b5eb8951c344d/Library/ScriptAssemblies/AIBT.Editor.Tests.dll" runstate="Runnable" testcasecount="499" result="Failed" site="Child" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.125072" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="38764" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1717" name="AIBT" fullname="AIBT" runstate="Runnable" testcasecount="499" result="Failed" site="Child" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.123814" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1718" name="Tests" fullname="AIBT.Tests" runstate="Runnable" testcasecount="499" result="Failed" site="Child" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.122935" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1722" name="Editor" fullname="AIBT.Tests.Editor" runstate="Runnable" testcasecount="479" result="Failed" site="Child" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.121970" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="1753" name="BlackboardScopes" fullname="AIBT.Tests.Editor.BlackboardScopes" runstate="Runnable" testcasecount="14" result="Failed" site="Child" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.109373" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="1670" name="GeneratedScopeCompilerTests" fullname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests" classname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests" runstate="Runnable" testcasecount="14" result="Failed" site="Child" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.108431" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-suite type="ParameterizedMethod" id="1674" name="CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder" fullname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests.CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder" classname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests" runstate="Runnable" testcasecount="3" result="Failed" site="Child" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.103090" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="1671" name="CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder(Tree)" fullname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests.CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder(Tree)" methodname="CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder" classname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests" runstate="Runnable" seed="391486593" result="Failed" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.077955" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  AIBT3017: Generated compiled v2 construction failed: The default-value range must fit 32 bits and satisfy the slot alignment.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests.CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder (AIBT.BlackboardScope scope) [0x00168] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Editor\BlackboardScopes\GeneratedScopeCompilerTests.cs:45
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="1672" name="CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder(Agent)" fullname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests.CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder(Agent)" methodname="CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder" classname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests" runstate="Runnable" seed="913324499" result="Failed" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.008813" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  AIBT3017: Generated compiled v2 construction failed: The default-value range must fit 32 bits and satisfy the slot alignment.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests.CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder (AIBT.BlackboardScope scope) [0x00168] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Editor\BlackboardScopes\GeneratedScopeCompilerTests.cs:45
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="1673" name="CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder(Shared)" fullname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests.CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder(Shared)" methodname="CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder" classname="AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests" runstate="Runnable" seed="1763262312" result="Failed" start-time="2026-11-07 07:10:37Z" end-time="2026-11-07 07:10:37Z" duration="0.006630" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  AIBT3017: Generated compiled v2 construction failed: The default-value range must fit 32 bits and satisfy the slot alignment.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+AIBT2043: No node in this tree declares Write access to this Tree-scope key.
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AIBT.Tests.Editor.BlackboardScopes.GeneratedScopeCompilerTests.CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder (AIBT.BlackboardScope scope) [0x00168] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Editor\BlackboardScopes\GeneratedScopeCompilerTests.cs:45
+]]></stack-trace>
+                    </failure>
+                    <output><![CDATA[Saving results to: C:/Users/User/AppData/LocalLow/DefaultCompany/aibt-consumer-regression-f860f09afe8e45c1808b5eb8951c344d\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

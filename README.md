@@ -2,6 +2,14 @@
 
 **AIBT** is a deterministic behavior-tree authoring, compilation, and reference-execution package for Unity, designed for humans and AI agents.
 
+Command-driven agents: [CLI and MCP setup](Documentation~/cli.md). Both adapters reuse the same
+Editor operations; CLI can start/recover the bridge in an already-open project without a manual
+Start click. MCP remains available for protocol clients and custom project tools.
+
+Agents can inspect operation schemas, edit/validate project-native trees, prepare a catalog-pinned
+runtime asset and inspect a specific host's bounded native trace. Reference simulation remains a
+separate backend. Expected-outcome node cases report behavior proof separately from dispatch.
+
 The project targets a future Burst-compatible, zero-GC-per-tick production path; a readable visual editor; machine-readable contracts; reproducible performance research; and an optional MCP integration. DOTS Entities is not required.
 
 Phase 2 adds the generated Burst dispatch and fixed-capacity native executor while preserving the Phase 1 semantic oracle. The initialized native paths have focused zero-GC evidence, Windows x64 and Android ARM64 each have an actual non-Development IL2CPP/Burst build, and the single-thread Web backend passes Chrome and Firefox conformance. Device performance, Safari/mobile Web, automatic policy selection, and any performance default or threshold are not claimed.
@@ -80,6 +88,15 @@ Additional platforms and Unity versions are supported only after validation by t
 
 ## Documentation
 
+Start with [First production agent](Documentation~/consumer-quickstart.md): the **First Agent**
+sample prepares a runtime asset in the Editor, runs a generated Float32-configured Action without
+Authoring in its gameplay assembly, and connects live tracing to the source graph.
+
+The graph now provides **Prepare Runtime**, **Preview** and **Debug Selected**. Dragging ports
+connects/reparents children in explicit append order; moving nodes never changes execution order.
+Shared preview/trace annotations preserve the authoring graph's layout and detach on source edits.
+Native-only project nodes still require reference providers for preview.
+
 ### Graph Editor (experimental)
 
 Open **AIBT > Graph Editor**. **New** creates an unsaved version 2 tree with a sequence root; select a node
@@ -101,7 +118,8 @@ Float2 and Float3 variables with optional defaults. IDs are stable and also serv
 nodes expose compatible blackboard bindings in the selected node panel. Removing a variable leaves
 its existing bindings visible for repair. Existing version 1 trees are not automatically migrated;
 generated bindings require version 2. Agent/shared contracts and other value types remain read-only
-in this editor. Unified live debugging is not yet available here.
+in this editor. **Debug Selected** maps a matching live host onto this graph; **Preview** shares
+the same view with the reference controls.
 
 For a running agent, select its GameObject with a bootstrapped `ProductionTreeHost` and open
 **AIBT > Attach Selected Host Trace**. The timeline reads the host's existing channel without

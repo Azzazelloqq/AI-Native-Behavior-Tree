@@ -4,6 +4,12 @@ This specification fixes semantic requirements shared by reference, Burst, manag
 
 ## Node identity
 
+The additive AIBT-042 parameter extension introduces `float32` alongside `boolean`, `uint32`,
+`uint64` and `string-enum`. It uses the existing canonical finite Float32 rules and four-byte
+little-endian packing; see [Burst ABI v2](burst-node-abi-v2.md). The prior enum values and all
+existing manifests retain their identities and bytes. Older tools reject the unknown parameter
+kind rather than attempting to reinterpret it.
+
 Every node type has:
 
 - canonical string type ID using reverse-domain or project-qualified naming;

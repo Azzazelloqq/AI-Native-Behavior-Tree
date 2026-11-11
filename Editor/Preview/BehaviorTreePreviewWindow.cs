@@ -27,6 +27,9 @@ namespace AIBT.Editor.Preview
         private readonly HashSet<NodeId> _breakpoints = new HashSet<NodeId>();
 
         private BehaviorTreeGraphView _graphView;
+        private BehaviorTreeGraphView _standaloneGraphView;
+        private BehaviorTreeGraphWindow _sharedWindow;
+        private readonly Dictionary<BehaviorTreeNode, ContextualMenuManipulator> _breakpointMenus = new Dictionary<BehaviorTreeNode, ContextualMenuManipulator>();
         private Label _statusLabel;
         private ScrollView _blackboardView;
         private Button _playButton;
@@ -50,6 +53,7 @@ namespace AIBT.Editor.Preview
         /// <summary>Loads a document from disk (never mutated) and prepares a fresh driver for it.</summary>
         public void LoadFromPath(string path)
         {
+            DetachFromGraph();
             var bytes = File.ReadAllBytes(path);
             var result = CanonicalTreeJson.Parse(bytes, path);
             if (!result.Success)
@@ -90,6 +94,7 @@ namespace AIBT.Editor.Preview
         /// </summary>
         public void LoadDocument(TreeDocument document, string sourceId)
         {
+            DetachFromGraph();
             _document = document ?? throw new ArgumentNullException(nameof(document));
             _sourceId = sourceId ?? throw new ArgumentNullException(nameof(sourceId));
             _isPlaying = false;
@@ -104,6 +109,37 @@ namespace AIBT.Editor.Preview
             Refresh();
         }
 
+        internal void AttachToGraph(BehaviorTreeGraphWindow window, string sourceId)
+        {
+            window.ReleaseExecutionView();
+            LoadDocument(window.Document, sourceId);
+            _sharedWindow = window;
+            _sharedWindow.ViewInvalidated += DetachFromGraph;
+            ClearBreakpointMenus();
+            _graphView = window.View;
+            _standaloneGraphView.style.display = DisplayStyle.None;
+            Refresh();
+        }
+
+        private void DetachFromGraph()
+        {
+            if (_sharedWindow == null) return;
+            _isPlaying = false;
+            if (_playButton != null) _playButton.text = "Play";
+            ClearBreakpointMenus();
+            foreach (var node in _graphView.NodesById.Values) SetBorder(node, Color.clear, 0f);
+            _sharedWindow.ViewInvalidated -= DetachFromGraph;
+            _sharedWindow = null;
+            _graphView = _standaloneGraphView;
+            _standaloneGraphView.style.display = DisplayStyle.Flex;
+        }
+
+        private void ClearBreakpointMenus()
+        {
+            foreach (var pair in _breakpointMenus) pair.Key.RemoveManipulator(pair.Value);
+            _breakpointMenus.Clear();
+        }
+
         private void OnEnable()
         {
             BuildLayout();
@@ -112,6 +148,7 @@ namespace AIBT.Editor.Preview
 
         private void OnDisable()
         {
+            DetachFromGraph();
             EditorApplication.update -= OnEditorUpdate;
         }
 
@@ -145,6 +182,7 @@ namespace AIBT.Editor.Preview
             rootVisualElement.Add(body);
 
             _graphView = new BehaviorTreeGraphView { name = "aibt-preview-graph-view" };
+            _standaloneGraphView = _graphView;
             _graphView.style.flexGrow = 1;
             body.Add(_graphView);
 
@@ -154,7 +192,8 @@ namespace AIBT.Editor.Preview
 
         private void ReloadForPolicyChange()
         {
-            if (_document != null) LoadDocument(_document, _sourceId);
+            if (_sharedWindow != null) AttachToGraph(_sharedWindow, _sourceId);
+            else if (_document != null) LoadDocument(_document, _sourceId);
         }
 
         private void OnLoadClicked()
@@ -212,7 +251,11 @@ namespace AIBT.Editor.Preview
         {
             if (_document != null)
             {
-                _graphView.Populate(_document, _driver?.Registry ?? ReferencePreviewDriver.CreatePreviewNodeRegistry());
+                if (_sharedWindow == null)
+                {
+                    ClearBreakpointMenus();
+                    _graphView.Populate(_document, _driver?.Registry ?? ReferencePreviewDriver.CreatePreviewNodeRegistry());
+                }
                 AttachBreakpointMenus();
             }
 
@@ -225,8 +268,9 @@ namespace AIBT.Editor.Preview
         {
             foreach (var pair in _graphView.NodesById)
             {
+                if (_breakpointMenus.ContainsKey(pair.Value)) continue;
                 var nodeId = pair.Key;
-                pair.Value.AddManipulator(new ContextualMenuManipulator(menuEvent =>
+                var manipulator = new ContextualMenuManipulator(menuEvent =>
                 {
                     var isBreakpoint = _breakpoints.Contains(nodeId);
                     menuEvent.menu.AppendAction(
@@ -237,7 +281,9 @@ namespace AIBT.Editor.Preview
                             else _breakpoints.Add(nodeId);
                             RefreshHighlighting();
                         });
-                }));
+                });
+                _breakpointMenus.Add(pair.Value, manipulator);
+                pair.Value.AddManipulator(manipulator);
             }
         }
 

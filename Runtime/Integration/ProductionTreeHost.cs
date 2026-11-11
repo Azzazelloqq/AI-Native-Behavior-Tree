@@ -63,6 +63,8 @@ namespace AIBT
 
         /// <summary>The instance-owned trace channel, available until destruction.</summary>
         public NativeTraceChannelOwnerV1 TraceChannelOwner { get; private set; }
+        /// <summary>The exact immutable program used by this host, including its source debug map.</summary>
+        public CompiledProgram Program { get; private set; }
         /// <summary>Terminal root result, retained without automatic restart.</summary>
         public NodeStatus? LastRootResult { get; private set; }
         /// <summary>The failure that stopped this host; None before any failure.</summary>
@@ -253,6 +255,7 @@ namespace AIBT
                 return false;
             }
             _dispatch = dispatch;
+            Program = program;
             _clock = clock ?? ReadScaledTime;
             TraceChannelOwner = owner;
             _recorder = new NativeTraceRecorderV1(owner, new NativeHash256V1(program.Header.CompiledContentHash), instanceId);
@@ -893,12 +896,16 @@ namespace AIBT
             Debug.LogError("AIBT ProductionTreeHost: " + failure.Code + ": " + detail, this);
         }
 
-        private void OnDestroy()
+        /// <summary>Permanently stops this host, cancels active work and releases its storage. Reentrant calls finish cleanup after the current callback.</summary>
+        public void Stop()
         {
+            if (_destroyRequested) return;
             _destroyRequested = true;
             _owner?.TryUnregister(this);
             if (!_driving) DisposeHost();
         }
+
+        private void OnDestroy() => Stop();
 
         private void DisposeHost()
         {

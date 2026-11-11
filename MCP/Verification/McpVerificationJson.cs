@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AIBT.Authoring;
 using AIBT.Mcp.Authoring;
 using Newtonsoft.Json.Linq;
@@ -72,6 +73,19 @@ namespace AIBT.Mcp.Verification
                 default: throw new McpToolException(McpVerificationDiagnostics.MalformedArguments, "Unknown blackboardNaming policy value: " + value);
             }
         }
+
+        internal static ReferenceCompilationPolicy ToCompilationPolicy(ProjectPolicySnapshot snapshot)
+            => new ReferenceCompilationPolicy(
+                maxTreeDepth: snapshot.MaxTreeDepth, maxNodesPerTree: snapshot.MaxNodesPerTree,
+                allowManagedNodes: snapshot.AllowManagedNodes, allowMainThreadNodes: snapshot.AllowMainThreadNodes,
+                requireTreeDescription: snapshot.RequireTreeDescription, requireNodeDescriptions: snapshot.RequireNodeDescriptions,
+                blackboardNaming: ToBlackboardNaming(snapshot.BlackboardNaming), forbiddenNodeTypes: snapshot.ForbiddenNodeTypes,
+                requireDeterministicNodes: snapshot.RequireDeterministicNodes, allowSideEffects: snapshot.AllowSideEffects,
+                unreachableNodes: ToUnreachableNodePolicy(snapshot.UnreachableNodes), supportsAgentScope: snapshot.SupportsAgentScope,
+                supportsSharedScope: snapshot.SupportsSharedScope,
+                warningsAsErrors: snapshot.WarningsAsErrors.Where(code => DiagnosticCode.TryParse(code, out _)).Select(code => new DiagnosticCode(code)),
+                maxEstimatedCost: snapshot.MaxEstimatedCost, forbidUnboundedRepeaters: snapshot.ForbidUnboundedRepeaters,
+                requireEventDrivenServices: snapshot.RequireEventDrivenServices);
 
         internal readonly struct SimulateStep
         {

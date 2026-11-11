@@ -20,9 +20,9 @@ namespace AIBT.Mcp.Documentation
             builder.Append("Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command.\n\n");
 
             builder.Append("## 1. Connect\n\n");
-            builder.Append("Start the Unity-side bridge from the open Editor (`AIBT/MCP/Bridge` -> Start), then launch the AI client ");
-            builder.Append("with the external server configured (`dotnet run --project <path to>/MCP~/Server`), per `ADR-P6-001`. ");
-            builder.Append("The client and the Editor must be on the same machine; the bridge must be running before the server process starts.\n\n");
+            builder.Append("Use CLI as the command entry point: see [CLI and MCP setup](../cli.md). Open the selected Unity project, then run `aibt --project <UnityProject> mcp ensure`; ");
+            builder.Append("commands start/recover its Editor bridge on demand. MCP clients can launch the built CLI with `mcp serve`, or retain direct server configuration with `AIBT_PROJECT_PATH` and explicit `AIBT_MCP_PERMISSIONS`. ");
+            builder.Append("The client and Editor must be on the same machine. No manual Start is needed for this path; closed or unresponsive Unity produces a bounded error.\n\n");
 
             builder.Append("## 2. Discover\n\n");
             builder.Append("Call ").Append(Tool("get_project_manifest")).Append(" for capabilities, project policy, and the tree/revision listing; ");
@@ -50,15 +50,23 @@ namespace AIBT.Mcp.Documentation
             builder.Append("## 5. Add a custom node\n\n");
             builder.Append("The generate-compile-apply gate: ").Append(Tool("generate_node")).Append(" (stages a new node from a template), ");
             builder.Append(Tool("preview_node_diff")).Append(" (inspect the staged source before compiling), ");
-            builder.Append(Tool("generate_node_tests_and_manifest")).Append(" (stages a paired test scaffold), ");
+            builder.Append(Tool("generate_node_tests_and_manifest")).Append(" (stages expected-outcome cases consumed by native test-node), ");
             builder.Append(Tool("analyze_and_compile_node")).Append(" (two-call, non-blocking compile check -- call with `mode='start'`, then poll with `mode='check'`), ");
-            builder.Append(Tool("test_node")).Append(" (proves the compiled shard is registry-materializable), and finally ");
+            builder.Append(Tool("test_node")).Append(" (reports registry/dispatch proof separately from expected-outcome behaviorProven), and finally ");
             builder.Append(Tool("apply_node")).Append(" (the only step that persists into the real project). ");
-            builder.Append("Nothing before `apply_node` touches the real project.\n\n");
+            builder.Append("Before `apply_node`, changes stay in the quarantined staging directory.\n\n");
 
             builder.Append("## 6. Custom project tools\n\n");
             builder.Append("Call ").Append(Tool("list_custom_tools")).Append(" to discover any project-registered custom tools, and ");
             builder.Append(Tool("call_custom_tool")).Append(" to invoke one by name.\n");
+
+            builder.Append("\n## 7. Native consumer workflow\n\n");
+            builder.Append("Use ").Append(Tool("list_operations")).Append(" and ").Append(Tool("get_operation_schema")).Append(" for bridge argument schemas and permissions. ");
+            builder.Append(Tool("inspect_tree")).Append(" returns the source and current contentHash; ").Append(Tool("runtime_catalogs")).Append(" lists generated catalogs. ");
+            builder.Append(Tool("prepare_runtime")).Append(" prepares a native asset under Assets with source-hash, dry-run and explicit overwrite preconditions. ");
+            builder.Append("After starting the game's own integration, ").Append(Tool("runtime_hosts")).Append(" identifies hosts and ").Append(Tool("read_trace")).Append(" reads bounded native history without completing jobs. ");
+            builder.Append("Reference compile/simulate are separate from native preparation/execution. ").Append(Tool("migrate_document")).Append(" persists registered document migrations. ");
+            builder.Append("Project documentation is generated under Assets/AIBT-Documentation; runtime resources resolve the installed package root.\n");
 
             return builder.ToString();
         }

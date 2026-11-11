@@ -35,6 +35,10 @@ namespace AIBT.Editor.Editing
             Func<TreeDocument, TreeDocument> edit,
             NodeRegistry registry,
             ReferenceCompilerOptions options)
+            => Apply(before, edit, candidate => ReferenceCompiler.Compile(candidate, registry, options).Diagnostics);
+
+        internal static SemanticEditResult Apply(TreeDocument before, Func<TreeDocument, TreeDocument> edit,
+            Func<TreeDocument, DiagnosticCollection> validate)
         {
             if (before == null)
             {
@@ -46,12 +50,12 @@ namespace AIBT.Editor.Editing
                 throw new ArgumentNullException(nameof(edit));
             }
 
+            if (validate == null) throw new ArgumentNullException(nameof(validate));
             var candidate = edit(before);
-            var compileResult = ReferenceCompiler.Compile(candidate, registry, options);
+            var diagnostics = validate(candidate);
 
-            return compileResult.Success
-                ? new SemanticEditResult(candidate, compileResult.Diagnostics, accepted: true)
-                : new SemanticEditResult(before, compileResult.Diagnostics, accepted: false);
+            var accepted = !System.Linq.Enumerable.Any(diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+            return new SemanticEditResult(accepted ? candidate : before, diagnostics, accepted);
         }
     }
 }

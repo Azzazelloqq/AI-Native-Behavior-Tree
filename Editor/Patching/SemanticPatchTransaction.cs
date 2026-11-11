@@ -19,6 +19,10 @@ namespace AIBT.Editor.Patching
             IReadOnlyList<Func<TreeDocument, TreeDocument>> operations,
             NodeRegistry registry,
             ReferenceCompilerOptions options)
+            => Apply(before, expectedRevision, operations, candidate => ReferenceCompiler.Compile(candidate, registry, options).Diagnostics);
+
+        internal static SemanticPatchResult Apply(TreeDocument before, ulong expectedRevision,
+            IReadOnlyList<Func<TreeDocument, TreeDocument>> operations, Func<TreeDocument, DiagnosticCollection> validate)
         {
             if (before == null) throw new ArgumentNullException(nameof(before));
             if (operations == null) throw new ArgumentNullException(nameof(operations));
@@ -33,7 +37,7 @@ namespace AIBT.Editor.Patching
                 return new SemanticPatchResult(before, accepted: false, new DiagnosticCollection(new[] { mismatch }), SemanticDiff.Empty);
             }
 
-            var result = Editing.SemanticEditTransaction.Apply(before, Compose(operations), registry, options);
+            var result = Editing.SemanticEditTransaction.Apply(before, Compose(operations), validate);
             var diff = result.Accepted ? SemanticDiff.Between(before, result.Document) : SemanticDiff.Empty;
             return new SemanticPatchResult(result.Document, result.Accepted, result.Diagnostics, diff);
         }

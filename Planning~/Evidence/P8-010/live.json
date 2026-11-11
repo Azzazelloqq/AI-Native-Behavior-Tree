@@ -1,0 +1,13 @@
+{
+  "healthyEnsureReusesEndpoint": true,
+  "permissionDenial": true,
+  "dryRunDoesNotPersist": true,
+  "staleHashDoesNotMutate": true,
+  "cliAuthorValidateCompile": true,
+  "staleEndpointRecovery": true,
+  "unresponsiveEndpointRecovery": true,
+  "domainReloadReconnect": true,
+  "realMcpStdioInitializeListCall": true,
+  "mcpToolCount": 29,
+  "mcpExit": 0
+}

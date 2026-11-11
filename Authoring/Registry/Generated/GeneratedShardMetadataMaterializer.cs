@@ -318,7 +318,7 @@ namespace AIBT.Authoring
         private static string[] Strings(JArray value) => value.Select(item => (string)item).ToArray();
         private static NodeParameterType ParameterType(string value)
         {
-            switch (value) { case "boolean": return NodeParameterType.Boolean; case "uint32": return NodeParameterType.UInt32; case "uint64": return NodeParameterType.UInt64; case "string-enum": return NodeParameterType.StringEnum; default: throw Unknown("parameter type", value); }
+            switch (value) { case "boolean": return NodeParameterType.Boolean; case "uint32": return NodeParameterType.UInt32; case "uint64": return NodeParameterType.UInt64; case "float32": return NodeParameterType.Float32; case "string-enum": return NodeParameterType.StringEnum; default: throw Unknown("parameter type", value); }
         }
         private static NodeBehaviorKind Behavior(string value)
         {

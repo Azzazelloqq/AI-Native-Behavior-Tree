@@ -6,6 +6,8 @@
     "AIBT.Authoring",
     "AIBT.Editor",
     "AIBT.Mcp",
+    "AIBT.Consumer.Nodes",
+    "AIBT.Consumer.Catalog",
     "Unity.Burst",
     "Unity.Collections"
   ],

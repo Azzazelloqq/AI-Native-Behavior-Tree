@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Profiling;
 
 namespace AIBT
 {
@@ -24,6 +25,9 @@ namespace AIBT
     [RequireComponent(typeof(ProductionTreeScheduler))]
     public sealed class ProductionTreeWorld : MonoBehaviour
     {
+        private static readonly ProfilerMarker SampleMarker = new ProfilerMarker("AIBT.Production.Inputs.Sample");
+        private static readonly ProfilerMarker FlushMarker = new ProfilerMarker("AIBT.Production.Inputs.Flush");
+        private static readonly ProfilerMarker EffectsMarker = new ProfilerMarker("AIBT.Production.Effects.Deliver");
         private readonly List<IProductionTreeWorldParticipant> _participants =
             new List<IProductionTreeWorldParticipant>();
         private ProductionTreeScheduler _scheduler;
@@ -79,12 +83,14 @@ namespace AIBT
 
         internal void CaptureInputs()
         {
+            using var scope = SampleMarker.Auto();
             for (var index = 0; index < _participants.Count; index++)
                 _participants[index].SampleInputs();
         }
 
         internal void FlushIdleInputs()
         {
+            using var scope = FlushMarker.Auto();
             for (var index = 0; index < _participants.Count; index++)
             {
                 var participant = _participants[index];
@@ -97,6 +103,7 @@ namespace AIBT
 
         internal void DeliverEffects()
         {
+            using var scope = EffectsMarker.Auto();
             for (var index = 0; index < _participants.Count; index++)
             {
                 var participant = _participants[index];

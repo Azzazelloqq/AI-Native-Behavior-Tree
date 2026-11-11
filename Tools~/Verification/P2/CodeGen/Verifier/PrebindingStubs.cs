@@ -30,6 +30,11 @@ namespace AIBT
 
     public static class StableHash
     {
+        public static string Sha256Hex(byte[] bytes)
+        {
+            using var sha = SHA256.Create();
+            return Convert.ToHexString(sha.ComputeHash(bytes)).ToLowerInvariant();
+        }
         public static ulong Fnv1A64(string value)
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
@@ -574,15 +579,43 @@ namespace AIBT.Authoring
         private void Raw(byte[] bytes) => stream.Write(bytes, 0, bytes.Length);
     }
 
-    internal sealed class StubNodeRegistry
+    internal sealed class NodeRegistryEntry
     {
-        internal StubNodeRegistry(string hash) => Hash = hash;
+        internal NodeRegistryEntry(NodeManifest manifest) { Manifest = manifest; }
+        internal NodeManifest Manifest { get; }
+        internal ulong NumericTypeId => AIBT.StableHash.Fnv1A64(Manifest.TypeId);
+    }
+
+    // This standalone harness checks dispatch layout translation with surrogate manifests.
+    // The real runtime authority/registry handshake is covered by the Unity contract suite.
+    internal static class RuntimeBuiltInCatalogAuthorityVerifier
+    {
+        internal static NodeRegistryEntry[] RebuildAuthorityEntries() => Array.Empty<NodeRegistryEntry>();
+    }
+
+    internal static class NodeManifestCanonicalJson
+    {
+        internal static byte[] SerializeRegistryUtf8(NodeRegistryEntry[] entries)
+            => Encoding.UTF8.GetBytes(string.Join(";", Array.ConvertAll(entries, entry => entry.Manifest.TypeId + ":" + entry.Manifest.Version)));
+    }
+
+    internal sealed class StubNodeRegistry : IEnumerable<NodeRegistryEntry>
+    {
+        private readonly List<NodeRegistryEntry> entries;
+        internal StubNodeRegistry(string hash, IEnumerable<GeneratedNodeDescriptor> descriptors)
+        {
+            Hash = hash;
+            entries = new List<NodeRegistryEntry>();
+            foreach (var descriptor in descriptors) entries.Add(new NodeRegistryEntry(descriptor.Manifest));
+        }
         internal string Hash { get; }
+        public IEnumerator<NodeRegistryEntry> GetEnumerator() => entries.GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     internal sealed class StubNodeRegistryResult
     {
-        internal StubNodeRegistryResult(string hash) { Success = true; Registry = new StubNodeRegistry(hash); }
+        internal StubNodeRegistryResult(string hash, IEnumerable<GeneratedNodeDescriptor> descriptors) { Success = true; Registry = new StubNodeRegistry(hash, descriptors); }
         internal bool Success { get; }
         internal StubNodeRegistry Registry { get; }
     }
@@ -593,7 +626,7 @@ namespace AIBT.Authoring
         {
             using var sha = SHA256.Create();
             var text = string.Join(";", nodes);
-            return new StubNodeRegistryResult(Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(text))).ToLowerInvariant());
+            return new StubNodeRegistryResult(Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(text))).ToLowerInvariant(), nodes);
         }
     }
 }

@@ -1,0 +1,56 @@
+{
+  "format": "aibt.layout",
+  "formatVersion": 1,
+  "treeId": "research.patrol",
+  "direction": "topToBottom",
+  "nodes": {
+    "route": {
+      "position": {
+        "x": 1450,
+        "y": 220
+      }
+    },
+    "priority": {
+      "position": {
+        "x": 700,
+        "y": 0
+      }
+    },
+    "chase": {
+      "position": {
+        "x": 0,
+        "y": 220
+      }
+    },
+    "return-fallback": {
+      "position": {
+        "x": 700,
+        "y": 220
+      }
+    },
+    "return": {
+      "position": {
+        "x": 700,
+        "y": 440
+      }
+    },
+    "return-needed": {
+      "position": {
+        "x": 450,
+        "y": 660
+      }
+    },
+    "go-back": {
+      "position": {
+        "x": 800,
+        "y": 660
+      }
+    },
+    "clear-return": {
+      "position": {
+        "x": 1150,
+        "y": 660
+      }
+    }
+  }
+}

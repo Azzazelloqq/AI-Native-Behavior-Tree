@@ -1,0 +1,170 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using AIBT;
+using AIBT.Samples.FirstAgent;
+using Unity.Profiling;
+using UnityEngine;
+
+public sealed class ConsumerProbe : MonoBehaviour
+{
+    public ProductionTreeAsset Tree;
+    private readonly List<Cell> _cells = new List<Cell>();
+    private static readonly string[] MarkerNames = {
+        "AIBT.Production.Scheduler.Frame", "AIBT.Production.Inputs.Sample", "AIBT.Production.Inputs.Flush",
+        "AIBT.Production.Effects.Deliver", "AIBT.Native.LifecycleTick", "AIBT.Production.GeneratedDispatch",
+        "AIBT.Production.Trace.Record" };
+
+    private IEnumerator Start()
+    {
+        Application.targetFrameRate = -1;
+        QualitySettings.vSyncCount = 0;
+        var agent = FindFirstObjectByType<FirstAgent>();
+        var deadline = Time.realtimeSinceStartupAsDouble + 15d;
+        while (agent.Host == null || !agent.Host.LastRootResult.HasValue)
+        {
+            if (Time.realtimeSinceStartupAsDouble > deadline) { Fail("First Agent did not finish."); yield break; }
+            yield return null;
+        }
+        if (agent.Host.LastRootResult != NodeStatus.Success || agent.transform.position.x < 4.7f || agent.transform.position.x > 5.01f)
+        { Fail("Unexpected First Agent outcome: " + agent.Host.LastRootResult + ", x=" + agent.transform.position.x); yield break; }
+        var reachedX = agent.transform.position.x;
+        Destroy(agent.gameObject);
+        yield return null;
+
+        foreach (var population in new[] { 16, 128 })
+        foreach (var policy in new[] { SchedulingPolicy.Immediate, SchedulingPolicy.BatchedJobsSameFrame, SchedulingPolicy.PipelinedJobs })
+        {
+            if (!Tree.TryCreateProgram(FirstAgentCatalog.TryCreateRuntimeCatalog, out var program, out var failure))
+            { Fail("Cannot restore prepared tree: " + failure); yield break; }
+            var root = new GameObject("measured world");
+            var world = root.AddComponent<ProductionTreeWorld>();
+            var scheduler = root.GetComponent<ProductionTreeScheduler>();
+            if (!SchedulerJobsCapabilities.TryCreate(5000d, 20000d, 32u, 32u, 32u, true, out var capabilities, out var capabilityError))
+            { Fail("Capabilities: " + capabilityError); yield break; }
+            scheduler.SetJobsCapabilities(capabilities);
+            if (!SchedulingProfile.TryCreate("aibt.consumer.measurement", 0, 1u, null, null,
+                policy == SchedulingPolicy.PipelinedJobs, policy, out var profile, out var profileError))
+            { Fail("Profile: " + profileError); yield break; }
+            var participants = new List<Participant>();
+            for (var index = 0; index < population; index++)
+            {
+                var host = new GameObject("measured agent").AddComponent<ProductionTreeHost>();
+                host.transform.SetParent(root.transform);
+                if (!program.TryBootstrap(host, out var hostFailure, effectCapacity: 4))
+                { Fail("Host bootstrap: " + hostFailure.Code); yield break; }
+                var participant = new Participant(host);
+                if (!world.TryRegister(participant, profile, out var error)) { Fail("Registration: " + error); yield break; }
+                participants.Add(participant);
+            }
+            for (var frame = 0; frame < 60; frame++) yield return null;
+            var recorders = new ProfilerRecorder[MarkerNames.Length];
+            for (var index = 0; index < recorders.Length; index++)
+                recorders[index] = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, MarkerNames[index], 1,
+                    ProfilerRecorderOptions.StartImmediately | ProfilerRecorderOptions.WrapAroundWhenCapacityReached | ProfilerRecorderOptions.SumAllSamplesInFrame);
+            var samples = new List<Frame>();
+            for (var frame = 0; frame < 180; frame++)
+            {
+                yield return null;
+                var values = new long[recorders.Length];
+                for (var index = 0; index < values.Length; index++) values[index] = recorders[index].LastValue;
+                samples.Add(new Frame { schedulerMicroseconds = scheduler.LastFrameConsumedMicroseconds, markerNanoseconds = values });
+            }
+            var valid = new bool[recorders.Length];
+            for (var index = 0; index < recorders.Length; index++) { valid[index] = recorders[index].Valid; recorders[index].Dispose(); }
+            ulong updates = 0; long effects = 0;
+            foreach (var participant in participants)
+            {
+                if (participant.Host.LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None || participant.Host.LastRootResult.HasValue)
+                { Fail("Measured host faulted or stopped unexpectedly."); yield break; }
+                updates += participant.Host.TotalUpdates;
+                effects += participant.Effects;
+                participant.Distance = 0f;
+            }
+            var requestedFrame = Time.frameCount;
+            var latency = new int[participants.Count];
+            for (var index = 0; index < latency.Length; index++) latency[index] = -1;
+            var remaining = participants.Count;
+            while (remaining > 0)
+            {
+                yield return null;
+                if (Time.frameCount - requestedFrame > 256) { Fail("Input-to-result latency exceeded the probe timeout."); yield break; }
+                for (var index = 0; index < participants.Count; index++)
+                {
+                    if (latency[index] >= 0 || !participants[index].Host.LastRootResult.HasValue) continue;
+                    if (participants[index].Host.LastRootResult != NodeStatus.Success) { Fail("Distance update did not reach Success."); yield break; }
+                    latency[index] = Time.frameCount - requestedFrame;
+                    remaining--;
+                }
+            }
+            foreach (var participant in participants)
+            {
+                world.TryUnregister(participant);
+                participant.Host.Stop();
+            }
+            if (!program.TryDispose(out var disposeFailure)) { Fail("Shared catalog retained after shutdown: " + disposeFailure); yield break; }
+            program.Dispose();
+            Destroy(root);
+            _cells.Add(new Cell { population = population, policy = policy.ToString(), warmupFrames = 60,
+                measuredFrames = 180, logicalUpdatesIncludingWarmup = updates, effectsIncludingWarmup = effects,
+                inputToResultLatencyFrames = latency, recorderValid = valid, frames = samples.ToArray() });
+            yield return null;
+        }
+        var report = new Report { unityVersion = Application.unityVersion, development = Debug.isDebugBuild,
+            platform = Application.platform.ToString(), cpu = SystemInfo.processorType, cpuCount = SystemInfo.processorCount,
+            firstAgentReachedX = reachedX, markerNames = MarkerNames, cells = _cells.ToArray() };
+        File.WriteAllText(Argument("-aibtReport"), JsonUtility.ToJson(report, true));
+        Debug.Log("AIBT_CONSUMER_PLAYER_OK|cells=" + _cells.Count);
+        Application.Quit(0);
+    }
+
+    private static string Argument(string key)
+    {
+        var args = Environment.GetCommandLineArgs(); var index = Array.IndexOf(args, key);
+        if (index < 0 || index + 1 >= args.Length) throw new ArgumentException(key);
+        return args[index + 1];
+    }
+    private static void Fail(string message) { Debug.LogError("AIBT_CONSUMER_PLAYER_FAIL|" + message); Application.Quit(1); }
+
+    private sealed class Participant : IProductionTreeWorldParticipant
+    {
+        private readonly ProductionTreeHost.ExternalTreeWriteHandle<float> _handle;
+        public ProductionTreeHost Host { get; }
+        internal long Effects;
+        internal float Distance = 100f;
+        internal Participant(ProductionTreeHost host)
+        {
+            Host = host;
+            if (!host.TryResolveExternalTreeWrite("distance", NativeBlackboardTypeIdV2.BuiltIn(BuiltInBlackboardTypes.Float32), out _handle, out var failure))
+                throw new InvalidOperationException(failure.Code.ToString());
+        }
+        public void SampleInputs() { }
+        public bool TryFlushInputs(out NativeRuntimeFailureV1 failure) => Host.TryWriteExternalTreeValue(_handle, Distance, out _, out failure);
+        public void Receive(in ProductionTreeEffect effect)
+        {
+            if (!effect.TryGetFloat32(out var speed) || speed != 1.5f) throw new InvalidOperationException("Wrong Float32 effect.");
+            Effects++;
+        }
+    }
+    [Serializable] private sealed class Report
+    {
+        public string unityVersion, platform, cpu;
+        public bool development;
+        public int cpuCount;
+        public float firstAgentReachedX;
+        public string[] markerNames;
+        public Cell[] cells;
+    }
+    [Serializable] private sealed class Cell
+    {
+        public int population, warmupFrames, measuredFrames;
+        public string policy;
+        public ulong logicalUpdatesIncludingWarmup;
+        public long effectsIncludingWarmup;
+        public bool[] recorderValid;
+        public int[] inputToResultLatencyFrames;
+        public Frame[] frames;
+    }
+    [Serializable] private sealed class Frame { public double schedulerMicroseconds; public long[] markerNanoseconds; }
+}

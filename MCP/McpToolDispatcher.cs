@@ -36,9 +36,25 @@ namespace AIBT.Mcp
             var tool = (string)request["tool"];
             var args = request["args"] as JObject ?? new JObject();
             var granted = ParseGranted(request["grantedCategories"] as JArray);
+            try { McpOperationCatalog.ValidateIfGranted(tool, args, granted); }
+            catch (McpToolException exception) { return Error(exception.Code.Value, exception.Message); }
 
             switch (tool)
             {
+                case "list_operations":
+                    return WithPermission(granted, McpPermissionCategory.Read, McpOperationCatalog.List);
+                case "get_operation_schema":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpOperationCatalog.Describe((string)args["operation"]));
+                case "inspect_tree":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpRuntimeTools.InspectTree(projectRoot, args));
+                case "runtime_catalogs":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpEditorThread.Invoke(McpRuntimeTools.Catalogs));
+                case "prepare_runtime":
+                    return WithPermission(granted, McpPermissionCategory.Compilation, () => McpEditorThread.Invoke(() => McpRuntimeTools.Prepare(projectRoot, args)));
+                case "runtime_hosts":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpEditorThread.Invoke(McpRuntimeTools.Hosts));
+                case "read_trace":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpEditorThread.Invoke(() => McpRuntimeTools.Trace(args)));
                 case "get_project_manifest":
                     return WithPermission(granted, McpPermissionCategory.Read, () => GetProjectManifest(projectRoot));
                 case "search_nodes":
@@ -219,19 +235,23 @@ namespace AIBT.Mcp
             var query = new NodeCatalogQuery(registryResult.Registry);
             var typeId = (string)args["typeId"];
 
-            return query.TryGetContract(typeId, out var contract)
-                ? new JObject { ["found"] = true, ["manifest"] = contract }
-                : new JObject { ["found"] = false };
+            if (!query.TryGetContract(typeId, out var contract)) return new JObject { ["found"] = false };
+            var result = new JObject { ["found"] = true, ["manifest"] = contract };
+            if (ProjectNodeCatalogCache.Current.Generated.TryGetValue(typeId, out var native))
+                result["behaviorCaseContract"] = NativeNodeBehaviorChecks.Contract(native);
+            return result;
         }
 
-        // Fixed allowlist -- the request supplies only a key, never a path, so there is no
-        // path-traversal surface. This assumes AIBT lives at "<Assets>/AIBT" (true for this
-        // repository's own embedded-package layout; a real Package Manager registry install
-        // would need a different root resolution -- disclosed as a known simplification, not
-        // silently generalized).
+        // Requests select fixed resource keys, never filesystem paths.
         private static readonly Dictionary<string, string> StaticResourceAllowlist = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["ai-and-mcp"] = "Documentation~/ai-and-mcp.md",
+            ["workflow"] = "Documentation~/generated/workflow-guide.md",
+            ["recipes"] = "Documentation~/generated/recipes.md",
+            ["anti-patterns"] = "Documentation~/generated/anti-patterns.md",
+            ["cli"] = "Documentation~/cli.md",
+            ["consumer-quickstart"] = "Documentation~/consumer-quickstart.md",
+            ["node-catalog"] = null,
             ["schema.behavior-case"] = "Schemas~/behavior-case.schema.json",
             ["schema.layout"] = "Schemas~/layout.schema.json",
             ["schema.node-manifest"] = "Schemas~/node-manifest.schema.json",
@@ -243,15 +263,14 @@ namespace AIBT.Mcp
         private static JObject GetStaticResource(string projectRoot, JObject args)
         {
             var key = (string)args["key"];
+            if (key == "node-catalog")
+                return new JObject { ["found"] = true, ["key"] = key, ["content"] = Documentation.McpNodeCatalogDocumentGenerator.Generate(ProjectNodeCatalogCache.Current.Registry) };
             if (key == null || !StaticResourceAllowlist.TryGetValue(key, out var relativePath))
             {
                 return new JObject { ["found"] = false, ["availableKeys"] = new JArray(StaticResourceAllowlist.Keys) };
             }
 
-            // projectRoot is Application.dataPath (".../Assets"); AIBT lives at "Assets/AIBT" in
-            // this repository's embedded-package layout (unlike .aibt/policy.json, which is a
-            // per-consuming-project file expected at the project root, sibling to Assets/).
-            var fullPath = System.IO.Path.Combine(projectRoot, "AIBT", relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar));
+            var fullPath = System.IO.Path.Combine(McpPackageResources.Root, relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar));
             if (!System.IO.File.Exists(fullPath))
             {
                 return new JObject { ["found"] = false };

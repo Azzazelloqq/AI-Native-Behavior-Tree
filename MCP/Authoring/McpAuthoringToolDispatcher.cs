@@ -6,6 +6,7 @@ using AIBT.Editor.Editing;
 using AIBT.Editor.Layout;
 using AIBT.Editor.Organization;
 using AIBT.Editor.Patching;
+using AIBT.Editor.Registry;
 using Newtonsoft.Json.Linq;
 
 namespace AIBT.Mcp.Authoring
@@ -36,6 +37,8 @@ namespace AIBT.Mcp.Authoring
                 : new List<BlackboardKeyDefinition>();
             var description = args["description"]?.Value<string>();
             var dryRun = args["dryRun"]?.Value<bool>() ?? false;
+            if ((int?)args["formatVersion"] is int requestedVersion && requestedVersion != 1 && requestedVersion != 2)
+                throw new McpToolException(McpAuthoringDiagnostics.MalformedArguments, "formatVersion must be 1 or 2.");
 
             var path = ResolveNewTreePath(projectRoot, relativePath);
 
@@ -43,7 +46,8 @@ namespace AIBT.Mcp.Authoring
             // GeneratedScopeCompiler's own already-enforced rule (formatVersion == 2 required
             // whenever Agent/Shared or extended bindings are used) -- an ordinary tree-scope-only
             // document keeps writing v1 exactly as before, no blanket "default to v2".
-            var hasExtendedScope = blackboard.Any(key => key.Scope == BlackboardScope.Agent || key.Scope == BlackboardScope.Shared);
+            var hasExtendedScope = blackboard.Any(key => key.Scope == BlackboardScope.Agent || key.Scope == BlackboardScope.Shared)
+                || (int?)args["formatVersion"] == 2 || ProjectNodeCatalogCache.Current.Generated.ContainsKey(rootNode.TypeId);
             var document = hasExtendedScope
                 ? TreeDocument.CreateVersion2(
                     treeId,
@@ -69,17 +73,18 @@ namespace AIBT.Mcp.Authoring
                     metadata: SemanticObject.Empty);
 
             var (registry, options) = BuildRegistryAndOptions(projectRoot, path);
-            var compilation = ReferenceCompiler.Compile(document, registry, options);
+            var diagnostics = ProjectNodeCatalogCache.Current.ValidateAuthoring(document, options);
+            var success = !diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
 
             var response = new JObject
             {
-                ["accepted"] = compilation.Success,
+                ["accepted"] = success,
                 ["contentHash"] = ComputeSemanticHash(document),
                 ["path"] = path,
-                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(compilation.Diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(diagnostics),
             };
 
-            if (compilation.Success && !dryRun)
+            if (success && !dryRun)
             {
                 var writeDiagnostics = TreeDocumentPersistence.Save(path, document);
                 if (writeDiagnostics.Count > 0)
@@ -360,7 +365,9 @@ namespace AIBT.Mcp.Authoring
             }
 
             var (registry, options) = BuildRegistryAndOptions(projectRoot, path);
-            var result = SemanticPatchTransaction.Apply(document, document.Revision.Value, operations, registry, options);
+            var catalog = ProjectNodeCatalogCache.Current;
+            var result = SemanticPatchTransaction.Apply(document, document.Revision.Value, operations,
+                candidate => catalog.ValidateAuthoring(candidate, options));
 
             if (result.Accepted && !dryRun)
             {
@@ -393,7 +400,7 @@ namespace AIBT.Mcp.Authoring
         /// own semantic-hash concept in canonical-json-v1.md already establishes) rather than
         /// hashing a second time.
         /// </summary>
-        private static string ComputeSemanticHash(TreeDocument document)
+        internal static string ComputeSemanticHash(TreeDocument document)
         {
             var serialized = CanonicalTreeJson.Serialize(document);
             if (!serialized.Success)
@@ -420,7 +427,7 @@ namespace AIBT.Mcp.Authoring
 
         private static char ToHexChar(int value) => (char)(value < 10 ? '0' + value : 'a' + value - 10);
 
-        private static (TreeDocument Document, string Path) LoadTreeOrThrow(string projectRoot, JObject args)
+        internal static (TreeDocument Document, string Path) LoadTreeOrThrow(string projectRoot, JObject args)
         {
             var treeId = new TreeId(RequireString(args, "treeId"));
             var scan = AibtTreeDiscovery.Scan(projectRoot);
@@ -479,11 +486,11 @@ namespace AIBT.Mcp.Authoring
         /// </summary>
         private static (NodeRegistry Registry, ReferenceCompilerOptions Options) BuildRegistryAndOptions(string projectRoot, string absolutePath)
         {
-            var buildResult = NodeRegistryBuilder.CreateWithBuiltIns().Build();
+            var buildResult = ProjectNodeCatalogCache.Current.BuildResult;
             var sourceId = ToLogicalSourceId(projectRoot, absolutePath);
             var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
             var policy = ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out _)
-                ? new ReferenceCompilationPolicy(supportsAgentScope: snapshot.SupportsAgentScope, supportsSharedScope: snapshot.SupportsSharedScope)
+                ? AIBT.Mcp.Verification.McpVerificationJson.ToCompilationPolicy(snapshot)
                 : ReferenceCompilationPolicy.Phase1;
             var options = new ReferenceCompilerOptions(sourceId, policy, CompilerVersion);
             return (buildResult.Registry, options);

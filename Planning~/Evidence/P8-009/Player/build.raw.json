@@ -1,0 +1,9 @@
+{
+    "unityVersion": "6000.7.0b1",
+    "result": "Succeeded",
+    "scriptingBackend": "IL2CPP",
+    "errors": 0,
+    "warnings": 2,
+    "development": true,
+    "burst": true
+}

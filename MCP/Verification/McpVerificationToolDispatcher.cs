@@ -4,6 +4,7 @@ using System.Linq;
 using AIBT.Authoring;
 using AIBT.Authoring.Migration;
 using AIBT.Editor.Layout;
+using AIBT.Editor.Registry;
 using AIBT.Mcp.Authoring;
 using Newtonsoft.Json.Linq;
 
@@ -25,7 +26,7 @@ namespace AIBT.Mcp.Verification
         internal static JObject Validate(string projectRoot, JObject args)
         {
             var (loadedDocument, path) = LoadTreeOrThrow(projectRoot, args);
-            var registry = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
+            var registry = ProjectNodeCatalogCache.Current.Registry;
             var document = ApplyMigrations(loadedDocument, registry, out var migrationDiagnostics);
 
             var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
@@ -39,7 +40,7 @@ namespace AIBT.Mcp.Verification
                     McpVerificationJson.ToValidationPolicy(snapshot))
                 : new ValidationOptions(ToLogicalSourceId(projectRoot, path));
 
-            var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options).Concat(migrationDiagnostics));
+            var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options, ProjectNodeCatalogCache.Current.RegisteredTypes).Concat(migrationDiagnostics));
 
             return new JObject
             {
@@ -54,14 +55,14 @@ namespace AIBT.Mcp.Verification
         internal static JObject Compile(string projectRoot, JObject args)
         {
             var (loadedDocument, path) = LoadTreeOrThrow(projectRoot, args);
-            var registry = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
+            var registry = ProjectNodeCatalogCache.Current.Registry;
             var document = ApplyMigrations(loadedDocument, registry, out var migrationDiagnostics);
 
             // P7-018: mirrors Validate's already-established project-policy read exactly -- never
             // touches ReferenceCompilationPolicy.Phase1's own shared default (still false/false).
             var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
             var policy = ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out _)
-                ? new ReferenceCompilationPolicy(supportsAgentScope: snapshot.SupportsAgentScope, supportsSharedScope: snapshot.SupportsSharedScope)
+                ? McpVerificationJson.ToCompilationPolicy(snapshot)
                 : ReferenceCompilationPolicy.Phase1;
             var options = new ReferenceCompilerOptions(ToLogicalSourceId(projectRoot, path), policy, CompilerVersion);
 

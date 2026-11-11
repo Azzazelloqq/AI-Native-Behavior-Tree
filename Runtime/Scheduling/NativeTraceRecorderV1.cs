@@ -1,4 +1,5 @@
 using AIBT.Burst;
+using Unity.Profiling;
 
 namespace AIBT.Runtime.Scheduling
 {
@@ -21,6 +22,7 @@ namespace AIBT.Runtime.Scheduling
     /// </summary>
     internal sealed class NativeTraceRecorderV1
     {
+        private static readonly ProfilerMarker RecordMarker = new ProfilerMarker("AIBT.Production.Trace.Record");
         private readonly NativeTraceChannelOwnerV1 _owner;
         private readonly NativeHash256V1 _semanticHash;
         private readonly ulong _treeInstanceId;
@@ -39,6 +41,7 @@ namespace AIBT.Runtime.Scheduling
         /// <summary>Acquires a writer lease and records the update boundary -- a recorder-level hook, not a step result, per the ADR's mapping table.</summary>
         internal void RecordUpdateStarted(ulong updateId)
         {
+            using var scope = RecordMarker.Auto();
             _rootExitRecorded = false;
             _hasLease = _owner.TryAcquireWriter(out _lease, out _);
             if (_hasLease) Append(updateId, NativeTraceEventKindV1.UpdateStarted, CompiledIndex.Invalid);
@@ -56,6 +59,7 @@ namespace AIBT.Runtime.Scheduling
         /// </summary>
         internal void RecordStep(ulong updateId, NativeLifecycleStepResultV1 step)
         {
+            using var scope = RecordMarker.Auto();
             if (!_hasLease) return;
             switch (step.Kind)
             {
@@ -94,6 +98,7 @@ namespace AIBT.Runtime.Scheduling
         /// </summary>
         internal void RecordDispatchCompletion(ulong updateId, NativeLifecycleStepResultV1 dispatchStep, NodeStatus status)
         {
+            using var scope = RecordMarker.Auto();
             if (!_hasLease) return;
             switch (dispatchStep.Phase)
             {
@@ -124,6 +129,7 @@ namespace AIBT.Runtime.Scheduling
         /// <summary>Records the update boundary and releases the writer lease -- symmetric with <see cref="RecordUpdateStarted"/>.</summary>
         internal void RecordUpdateEnded(ulong updateId, bool hasRootStatus, NodeStatus rootStatus)
         {
+            using var scope = RecordMarker.Auto();
             if (!_hasLease) return;
             AppendNode(updateId, NativeTraceEventKindV1.UpdateCompleted, CompiledIndex.Invalid, rootStatus, includeStatus: hasRootStatus);
             ReleaseWriter();
@@ -131,12 +137,14 @@ namespace AIBT.Runtime.Scheduling
 
         internal void RecordBudgetYielded(ulong updateId)
         {
+            using var scope = RecordMarker.Auto();
             if (_hasLease) Append(updateId, NativeTraceEventKindV1.BudgetYielded, CompiledIndex.Invalid);
             ReleaseWriter();
         }
 
         internal void RecordExecutionResumed(ulong updateId)
         {
+            using var scope = RecordMarker.Auto();
             _hasLease = _owner.TryAcquireWriter(out _lease, out _);
             if (_hasLease) Append(updateId, NativeTraceEventKindV1.ExecutionResumed, CompiledIndex.Invalid);
         }

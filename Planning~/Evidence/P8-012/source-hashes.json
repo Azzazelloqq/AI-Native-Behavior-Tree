@@ -1,0 +1,22 @@
+{
+  "Authoring/Compilation/Generated/GeneratedCompiledProgramV2.cs": "3f1f78729c935c512860e4067611ffab7c05f19a1eb071e8ec26848a467bc138",
+  "Tests/Editor/BlackboardScopes/GeneratedScopeCompilerTests.cs": "d1afe2ced05e8713be4e624a44b40ef042cf551de458715713db20ec8a71f985",
+  "Spikes~\\PatrolPursuit\\README.md": "4cadd373f1495186df9ac336cf5a37241cbb32d2f1918e87dc991cc2ddfdd406",
+  "Spikes~\\PatrolPursuit\\USER_GUIDE.ru.md": "8ec48c2e771d664a5e9cda2a964f2dcd8d7a79bad8691de697dc4a145dbe2d35",
+  "Spikes~\\PatrolPursuit\\Verify-Observation.py": "47f9d287a5b09b8f4b0e76f10929944995337b880dfb6cbc2fa1288703dc16a1",
+  "Spikes~\\PatrolPursuit\\Catalog\\AIBT.PatrolResearch.Catalog.asmdef": "9ee4411143f4b0925cdbf2344af83026f7cda9eaa1875f75c235cefd8edb1d41",
+  "Spikes~\\PatrolPursuit\\Catalog\\PatrolCatalog.cs": "eea2ad7d5764d6684049b144bd81e9eb04ac41da1b57de8d93ff6fa54e109675",
+  "Spikes~\\PatrolPursuit\\Editor\\AIBT.PatrolResearch.Editor.asmdef": "4d152093a2fa80e58876642c9a5d8de6a83ea7480e56e32811138a8b56e22275",
+  "Spikes~\\PatrolPursuit\\Editor\\ResearchSetup.cs": "8af76a468899064e22de5307a81bb42a72e0c94e760acf851941fba1476e0d5c",
+  "Spikes~\\PatrolPursuit\\Nodes\\AIBT.PatrolResearch.Nodes.asmdef": "2e89a24f5bd94e2e29b254a37df70feb27090de1b350e5ca17f7b669296c3e44",
+  "Spikes~\\PatrolPursuit\\Nodes\\PatrolNodes.cs": "70f103a2d16c8031ec747416900914da73c832cc2d53df8995b27418f356fceb",
+  "Spikes~\\PatrolPursuit\\Runtime\\AIBT.PatrolResearch.asmdef": "35167e214544036092a8b34b3392e22b0aa5b43406e2dfdefa9df4099e372a28",
+  "Spikes~\\PatrolPursuit\\Runtime\\ResearchActor.cs": "d2ae4682e1cc90bf3c4d8ea77c4a65f5b8a589ea702353b4b5d20051ad3cdacb",
+  "Spikes~\\PatrolPursuit\\Runtime\\ResearchScene.cs": "ed51704f0254e117fe110e65ae79d3459d9576d092f0ae3ed93d367c4bb1fd31",
+  "Spikes~\\PatrolPursuit\\Trees\\patrol.aibt.json": "b143856765833d60a4795d9176544eb9e4e991d1cb6a3c0c2ed0e01ab0816385",
+  "Spikes~\\PatrolPursuit\\Trees\\patrol.aibt.layout.json": "8bfd484231967b7aff56bfebb3220dfdbb047c05c4d79f7f77ae82c26bc77dce",
+  "Spikes~\\PatrolPursuit\\Trees\\runner.aibt.json": "790199df09a09c8b02e540959f999c8eb49c9afd319948bfcaa8d21518cfa4dd",
+  "Spikes~\\PatrolPursuit\\Trees\\runner.aibt.layout.json": "15ffd06d18ea997f3310dae675391a8481c0267828596102cf1c038a893d7d2d",
+  "Spikes~\\PatrolPursuit\\Trees\\wander.aibt.json": "4d46d4047e2fbeebee196370f1ad94a5767602c2191d7bc452cffbf1949efac8",
+  "Spikes~\\PatrolPursuit\\Trees\\wander.aibt.layout.json": "56832ee3e05b1ca3b35a7ac3a041975540e4d75918c4dc57296e118ad41e0aa0"
+}

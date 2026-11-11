@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../Client/*.cs" Link="Client/%(Filename)%(Extension)" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
   </ItemGroup>

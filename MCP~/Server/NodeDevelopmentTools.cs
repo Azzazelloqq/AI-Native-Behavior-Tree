@@ -66,9 +66,9 @@ public static class NodeDevelopmentTools
         => BridgeClient.SendRequest("preview_node_diff", new JsonObject());
 
     [McpServerTool(Name = "aibt_generate_node_tests_and_manifest")]
-    [Description("Generates a paired test scaffold for the currently-staged node into the same staging slot. Manifest data needs no separate artifact -- it is inherent in generate-node's own attributes. The scaffold is an honest placeholder pending P6-022's generic native-dispatch test harness, not a fake working test.")]
-    public static string GenerateNodeTestsAndManifest()
-        => BridgeClient.SendRequest("generate_node_tests_and_manifest", new JsonObject());
+    [Description("Generates source-controlled behavior-case data consumed by test_node through native dispatch. Condition templates supply contract-based success/failure cases; casesJson can provide explicit configuration, inputs, expectedStatus and optional expectedEffects. Other templates require caller-authored cases; an empty set is not behavior proof. Manifest remains attribute-generated.")]
+    public static string GenerateNodeTestsAndManifest(string casesJson = "")
+        => BridgeClient.SendRequest("generate_node_tests_and_manifest", casesJson.Length == 0 ? new JsonObject() : new JsonObject { ["cases"] = JsonNode.Parse(casesJson) });
 
     [McpServerTool(Name = "aibt_analyze_and_compile_node")]
     [Description("Non-blocking compilation: mode='start' captures staged content and requests a new compilation, returning attemptId. Poll mode='check' with that attemptId while status is 'pending' or 'still-compiling'. The attempt survives domain reload; 'compiled' returns contentHash for test/apply, and 'failed' returns diagnostics. Changed staging, superseded attempts or an Editor restart require a fresh start. Log offsets are not accepted as compilation proof.")]
@@ -84,8 +84,10 @@ public static class NodeDevelopmentTools
     [McpServerTool(Name = "aibt_test_node")]
     [Description("Checks the staged node's compiled metadata and registry materialization. dispatchProven reports native dispatch verification for supported binding types; unsupported bindings return a reason. Requires the contentHash from a successful analyze-and-compile check; changed staged content is rejected.")]
     public static string TestNode(
-        [Description("contentHash from the last successful aibt_analyze_and_compile_node check.")] string expectedContentHash)
-        => BridgeClient.SendRequest("test_node", new JsonObject { ["expectedContentHash"] = expectedContentHash });
+        [Description("contentHash from the last successful aibt_analyze_and_compile_node check.")] string expectedContentHash,
+        [Description("Optional explicit behavior-case JSON array; otherwise uses staged generated case data.")] string casesJson = "")
+        => BridgeClient.SendRequest("test_node", casesJson.Length == 0 ? new JsonObject { ["expectedContentHash"] = expectedContentHash }
+            : new JsonObject { ["expectedContentHash"] = expectedContentHash, ["cases"] = JsonNode.Parse(casesJson) });
 
     [McpServerTool(Name = "aibt_apply_node")]
     [Description("The only step that persists a generated node into the real project. Re-verifies the staged content's hash and re-runs the compile-clean/registry-valid check itself immediately before moving the files -- never trusts a prior claim or session state. Rejected with a structured diagnostic if the recheck fails.")]

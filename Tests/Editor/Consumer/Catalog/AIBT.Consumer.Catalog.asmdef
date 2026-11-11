@@ -1,0 +1,8 @@
+{
+  "name": "AIBT.Consumer.Catalog",
+  "references": ["AIBT.Runtime", "AIBT.Consumer.Nodes", "Unity.Burst"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false,
+  "analyzers": ["GUID:31a3f09584684895a0a72916d3ad4de0"]
+}

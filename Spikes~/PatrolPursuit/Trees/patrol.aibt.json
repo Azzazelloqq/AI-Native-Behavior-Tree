@@ -1,0 +1,151 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "research.patrol",
+  "name": "Patrol Research",
+  "root": "priority",
+  "blackboard": {
+    "route-offset": {
+      "type": "Float3",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      }
+    },
+    "dt": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0.0
+    },
+    "target-visible": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": false
+    },
+    "return-required": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": false
+    },
+    "candidate": {
+      "type": "Int32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0
+    },
+    "target-a": {
+      "type": "Float3",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      }
+    },
+    "target-b": {
+      "type": "Float3",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      }
+    }
+  },
+  "nodes": {
+    "route": {
+      "type": "research.move",
+      "typeVersion": 1,
+      "parameters": {
+        "speed": 1.8,
+        "radius": 0.2,
+        "mode": 1,
+        "continuous": true
+      },
+      "bindings": {
+        "offset": "route-offset",
+        "dt": "dt"
+      }
+    },
+    "priority": {
+      "type": "aibt.core.reactive-selector",
+      "typeVersion": 1,
+      "children": [
+        "chase",
+        "return-fallback",
+        "route"
+      ]
+    },
+    "chase": {
+      "type": "research.chase",
+      "typeVersion": 1,
+      "parameters": {
+        "speed": 3.2,
+        "radius": 0.6,
+        "lose-distance": 9.0
+      },
+      "bindings": {
+        "candidate": "candidate",
+        "target-a": "target-a",
+        "target-b": "target-b",
+        "dt": "dt",
+        "return-required": "return-required"
+      }
+    },
+    "return-fallback": {
+      "type": "aibt.core.failer",
+      "typeVersion": 1,
+      "children": [
+        "return"
+      ]
+    },
+    "return": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "return-needed",
+        "go-back",
+        "clear-return"
+      ]
+    },
+    "return-needed": {
+      "type": "research.fact",
+      "typeVersion": 1,
+      "bindings": {
+        "fact": "return-required"
+      }
+    },
+    "go-back": {
+      "type": "research.move",
+      "typeVersion": 1,
+      "parameters": {
+        "speed": 2.6,
+        "radius": 0.2,
+        "mode": 3,
+        "continuous": false
+      },
+      "bindings": {
+        "offset": "route-offset",
+        "dt": "dt"
+      }
+    },
+    "clear-return": {
+      "type": "research.set-flag",
+      "typeVersion": 1,
+      "parameters": {
+        "value": false
+      },
+      "bindings": {
+        "flag": "return-required"
+      }
+    }
+  }
+}

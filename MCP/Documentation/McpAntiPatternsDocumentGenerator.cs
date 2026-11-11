@@ -22,8 +22,8 @@ namespace AIBT.Mcp.Documentation
 
             Entry(
                 builder,
-                "Don't expect a trace or compare-trace MCP tool.",
-                "No production code anywhere wires a real running native tree's lifecycle into a trace channel yet -- `P6-008` found this and spun the question off into `P6-015` (still `Draft`) rather than build against a false premise.");
+                "Don't confuse reference simulation with live native trace.",
+                "Use runtime_hosts and read_trace for a specific native instance/program. Trace reads never complete jobs; available=false means retry later, complete=false means dropped/faulted history. Reference simulation is a separate backend. No compare-trace operation is exposed.");
 
             Entry(
                 builder,
@@ -32,8 +32,8 @@ namespace AIBT.Mcp.Documentation
 
             Entry(
                 builder,
-                "Don't request Agent or Shared blackboard scope over MCP.",
-                "`aibt_set_blackboard_keys` only supports tree-scoped, built-in-scalar-typed keys today. The real project policy (`ReferenceCompilationPolicy.Phase1`) has `SupportsAgentScope`/`SupportsSharedScope` both `false` in production, so a request for either scope is rejected (`P6-006`'s disclosed finding; deciding whether to support this is `P6-014`, still `Draft`).");
+                "Don't assume scope support bypasses contracts and policy.",
+                "Blackboard tools accept built-in scalar keys; Agent/Shared require v2, canonical defaults, matching contracts and enabled project policy. Enum32/Registered authoring is not exposed by these tools. Phase1 scope defaults remain false.");
 
             return builder.ToString();
         }

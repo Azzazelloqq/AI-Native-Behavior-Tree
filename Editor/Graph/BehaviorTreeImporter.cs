@@ -18,7 +18,11 @@ namespace AIBT.Editor.Graph
         }
 
         [OnOpenAsset(0)]
+#if UNITY_6000_7_OR_NEWER
+        private static bool OpenTree(UnityEngine.EntityId instanceId, int line)
+#else
         private static bool OpenTree(int instanceId, int line)
+#endif
         {
             var path = AssetDatabase.GetAssetPath(instanceId);
             if (!TreeSourcePaths.IsTree(path)) return false;

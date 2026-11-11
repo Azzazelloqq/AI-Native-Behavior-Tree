@@ -1,5 +1,10 @@
 # Production tree host
 
+For the Editor-prepared asset and shared-program route, start with
+[First production agent](consumer-quickstart.md). `ProductionTreeHost.Stop()` now exposes the same
+permanent, idempotent cancellation/release path as destruction. Stop hosts before disposing their
+shared program; reentrant cleanup finishes after the current callback.
+
 `ProductionTreeHost` owns one compiled native tree and its trace channel on a GameObject.
 Call `TryBootstrap` once before its first Update. Runtime does not compile authored JSON or depend
 on Editor/Authoring; supply an already compiled program and a caller-owned dispatch adapter.

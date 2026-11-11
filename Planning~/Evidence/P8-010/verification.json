@@ -1,0 +1,32 @@
+{
+  "dotnet": "10.0.300",
+  "unity": "6000.7.0b1",
+  "full": {
+    "skipped": 0,
+    "passed": 1500,
+    "total": 1500,
+    "failed": 0
+  },
+  "transportContracts": {
+    "failed": 0,
+    "passed": 16
+  },
+  "cliBuild": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "mcpBuild": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "static": {
+    "passed": true,
+    "schemas": 7,
+    "workItems": 156
+  },
+  "nativeAllocationWarning": {
+    "note": "Same full-suite shutdown warning as pre-CLI and original baseline; not a new Player or runtime claim.",
+    "persistentAllocations": 112
+  },
+  "fullResultsSha256": "8e8d1e165fd2f2b1c96e458c7f67c7da73a256d927f37b14c3b19e78984d8522"
+}

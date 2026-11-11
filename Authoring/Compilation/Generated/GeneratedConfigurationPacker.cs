@@ -91,6 +91,10 @@ namespace AIBT.Authoring
                     if (field.Size != 8 || !TryUnsigned(value, ulong.MaxValue, out var uint64)) return false;
                     WriteU64(bytes, field.Offset, uint64);
                     return true;
+                case GeneratedFieldEncoding.Float32BitsLE:
+                    if (field.Size != 4 || !Float32Parameter.TryRead(value, out var float32)) return false;
+                    WriteU32(bytes, field.Offset, Float32Parameter.Bits(float32));
+                    return true;
                 default:
                     return false;
             }

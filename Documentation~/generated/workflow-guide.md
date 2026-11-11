@@ -4,7 +4,7 @@ Reflects the actual registered MCP tools (see `AIBT.Mcp.McpBuiltInTools`), not a
 
 ## 1. Connect
 
-Start the Unity-side bridge from the open Editor (`AIBT/MCP/Bridge` -> Start), then launch the AI client with the external server configured (`dotnet run --project <path to>/MCP~/Server`), per `ADR-P6-001`. The client and the Editor must be on the same machine; the bridge must be running before the server process starts.
+Use CLI as the command entry point: see [CLI and MCP setup](../cli.md). Open the selected Unity project, then run `aibt --project <UnityProject> mcp ensure`; commands start/recover its Editor bridge on demand. MCP clients can launch the built CLI with `mcp serve`, or retain direct server configuration with `AIBT_PROJECT_PATH` and explicit `AIBT_MCP_PERMISSIONS`. The client and Editor must be on the same machine. No manual Start is needed for this path; closed or unresponsive Unity produces a bounded error.
 
 ## 2. Discover
 
@@ -20,8 +20,12 @@ Run `aibt_validate` and `aibt_compile` against a tree, `aibt_simulate` to step i
 
 ## 5. Add a custom node
 
-The generate-compile-apply gate: `aibt_generate_node` (stages a new node from a template), `aibt_preview_node_diff` (inspect the staged source before compiling), `aibt_generate_node_tests_and_manifest` (stages a paired test scaffold), `aibt_analyze_and_compile_node` (two-call, non-blocking compile check -- call with `mode='start'`, then poll with `mode='check'`), `aibt_test_node` (proves the compiled shard is registry-materializable), and finally `aibt_apply_node` (the only step that persists into the real project). Nothing before `apply_node` touches the real project.
+The generate-compile-apply gate: `aibt_generate_node` (stages a new node from a template), `aibt_preview_node_diff` (inspect the staged source before compiling), `aibt_generate_node_tests_and_manifest` (stages expected-outcome cases consumed by native test-node), `aibt_analyze_and_compile_node` (two-call, non-blocking compile check -- call with `mode='start'`, then poll with `mode='check'`), `aibt_test_node` (reports registry/dispatch proof separately from expected-outcome behaviorProven), and finally `aibt_apply_node` (the only step that persists into the real project). Before `apply_node`, changes stay in the quarantined staging directory.
 
 ## 6. Custom project tools
 
 Call `aibt_list_custom_tools` to discover any project-registered custom tools, and `aibt_call_custom_tool` to invoke one by name.
+
+## 7. Native consumer workflow
+
+Use `aibt_list_operations` and `aibt_get_operation_schema` for bridge argument schemas and permissions. `aibt_inspect_tree` returns the source and current contentHash; `aibt_runtime_catalogs` lists generated catalogs. `aibt_prepare_runtime` prepares a native asset under Assets with source-hash, dry-run and explicit overwrite preconditions. After starting the game's own integration, `aibt_runtime_hosts` identifies hosts and `aibt_read_trace` reads bounded native history without completing jobs. Reference compile/simulate are separate from native preparation/execution. `aibt_migrate_document` persists registered document migrations. Project documentation is generated under Assets/AIBT-Documentation; runtime resources resolve the installed package root.

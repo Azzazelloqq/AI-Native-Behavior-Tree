@@ -358,6 +358,8 @@ namespace AIBT.Authoring
                     return "uint64";
                 case NodeParameterType.StringEnum:
                     return "string-enum";
+                case NodeParameterType.Float32:
+                    return "float32";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, null);
             }

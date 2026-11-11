@@ -143,7 +143,7 @@ namespace AIBT.Authoring
                         configurationFieldOrdinal,
                         TranslateBindingKind(binding.Kind),
                         scope,
-                        NativeBurstDispatchBindingPhaseMaskV2.None,
+                        binding.Kind == GeneratedBindingKind.EffectCommand ? NativeBurstDispatchBindingPhaseMaskV2.Execute : NativeBurstDispatchBindingPhaseMaskV2.None,
                         type.NumericTypeId,
                         type.Version,
                         bindingCursor + (uint)bindingIndex,
@@ -202,7 +202,7 @@ namespace AIBT.Authoring
                     binding.Kind == GeneratedBindingKind.AsyncOperation
                     || binding.Kind == GeneratedBindingKind.Completion
                     || binding.Types.Count != 1
-                    || binding.Types[0].Role != GeneratedTypeRole.Value
+                    || binding.Types[0].Role != (binding.Kind == GeneratedBindingKind.EffectCommand ? GeneratedTypeRole.EffectPayload : GeneratedTypeRole.Value)
                     || binding.Types[0].RegisteredDescriptor.IsValid))
                 throw new NotSupportedException(
                     "Node '" + node.Manifest.TypeId + "' uses an Async/Completion binding or a Registered value type, outside this translator's proven scope (ADR-P6-022).");

@@ -1,0 +1,599 @@
+{
+  "patrol": {
+    "inspect": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "tree": {
+            "format": "aibt.tree",
+            "formatVersion": 2,
+            "treeId": "research.patrol",
+            "name": "Patrol Research",
+            "root": "priority",
+            "blackboard": {
+              "candidate": {
+                "type": "Int32",
+                "default": 0
+              },
+              "dt": {
+                "type": "Float32",
+                "default": 0
+              },
+              "return-required": {
+                "type": "Bool",
+                "default": false
+              },
+              "route-offset": {
+                "type": "Float3",
+                "default": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              "target-a": {
+                "type": "Float3",
+                "default": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              "target-b": {
+                "type": "Float3",
+                "default": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              "target-visible": {
+                "type": "Bool",
+                "default": false
+              }
+            },
+            "nodes": {
+              "chase": {
+                "type": "research.chase",
+                "typeVersion": 1,
+                "parameters": {
+                  "lose-distance": 9,
+                  "radius": 0.6,
+                  "speed": 3.2
+                },
+                "bindings": {
+                  "candidate": "candidate",
+                  "dt": "dt",
+                  "return-required": "return-required",
+                  "target-a": "target-a",
+                  "target-b": "target-b"
+                }
+              },
+              "clear-return": {
+                "type": "research.set-flag",
+                "typeVersion": 1,
+                "parameters": {
+                  "value": false
+                },
+                "bindings": {
+                  "flag": "return-required"
+                }
+              },
+              "go-back": {
+                "type": "research.move",
+                "typeVersion": 1,
+                "parameters": {
+                  "continuous": false,
+                  "mode": 3,
+                  "radius": 0.2,
+                  "speed": 2.6
+                },
+                "bindings": {
+                  "dt": "dt",
+                  "offset": "route-offset"
+                }
+              },
+              "priority": {
+                "type": "aibt.core.reactive-selector",
+                "typeVersion": 1,
+                "children": [
+                  "pursuit",
+                  "return-fallback",
+                  "route"
+                ]
+              },
+              "pursuit": {
+                "type": "aibt.core.memory-sequence",
+                "typeVersion": 1,
+                "children": [
+                  "seen",
+                  "chase"
+                ]
+              },
+              "return": {
+                "type": "aibt.core.memory-sequence",
+                "typeVersion": 1,
+                "children": [
+                  "return-needed",
+                  "go-back",
+                  "clear-return"
+                ]
+              },
+              "return-fallback": {
+                "type": "aibt.core.failer",
+                "typeVersion": 1,
+                "children": [
+                  "return"
+                ]
+              },
+              "return-needed": {
+                "type": "research.fact",
+                "typeVersion": 1,
+                "bindings": {
+                  "fact": "return-required"
+                }
+              },
+              "route": {
+                "type": "research.move",
+                "typeVersion": 1,
+                "parameters": {
+                  "continuous": true,
+                  "mode": 1,
+                  "radius": 0.2,
+                  "speed": 1.8
+                },
+                "bindings": {
+                  "dt": "dt",
+                  "offset": "route-offset"
+                }
+              },
+              "seen": {
+                "type": "research.fact",
+                "typeVersion": 1,
+                "bindings": {
+                  "fact": "target-visible"
+                }
+              }
+            }
+          },
+          "contentHash": "e3ede8e9cf4c56a56009a6ee7a0babc9f69019ba2d4746f09f9c95215173e7d0",
+          "sourcePath": "C:/UnityProjects/AIBT-PatrolResearch/Assets\\PatrolResearch\\Trees\\patrol.aibt.json",
+          "registryProblems": [],
+          "referenceAvailable": false
+        }
+      }
+    },
+    "validate": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "valid": true,
+          "policyApplied": false,
+          "diagnostics": [
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/candidate"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/dt"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/return-required"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/route-offset"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/target-a"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/target-b"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/target-visible"
+            }
+          ]
+        }
+      }
+    },
+    "dryRun": {
+      "exitCode": 1,
+      "response": {
+        "result": {
+          "success": false,
+          "backend": "native-generated-v2",
+          "contentHash": "e3ede8e9cf4c56a56009a6ee7a0babc9f69019ba2d4746f09f9c95215173e7d0",
+          "outputPath": "Assets/PatrolResearch/Trees/patrol.runtime.asset",
+          "existingAssetHash": null,
+          "dryRun": true,
+          "catalog": "AIBT.PatrolResearch.PatrolCatalog, AIBT.PatrolResearch.Catalog, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+          "diagnostics": [
+            {
+              "code": "AIBT3017",
+              "severity": "error",
+              "message": "Generated compiled v2 construction failed: The default-value range must fit 32 bits and satisfy the slot alignment.",
+              "treeId": "research.patrol",
+              "documentId": "Assets/PatrolResearch/Trees/patrol.aibt.json"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "Assets/PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/candidate"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "Assets/PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/dt"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "Assets/PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/return-required"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "Assets/PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/route-offset"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "Assets/PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/target-a"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "Assets/PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/target-b"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.patrol",
+              "documentId": "Assets/PatrolResearch/Trees/patrol.aibt.json",
+              "jsonPointer": "/blackboard/target-visible"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "runner": {
+    "inspect": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "tree": {
+            "format": "aibt.tree",
+            "formatVersion": 2,
+            "treeId": "research.runner",
+            "name": "Runner Research",
+            "root": "route",
+            "blackboard": {
+              "dt": {
+                "type": "Float32",
+                "default": 0
+              },
+              "route-offset": {
+                "type": "Float3",
+                "default": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                }
+              }
+            },
+            "nodes": {
+              "route": {
+                "type": "research.move",
+                "typeVersion": 1,
+                "parameters": {
+                  "continuous": true,
+                  "mode": 4,
+                  "radius": 0.2,
+                  "speed": 5
+                },
+                "bindings": {
+                  "dt": "dt",
+                  "offset": "route-offset"
+                }
+              }
+            }
+          },
+          "contentHash": "0f75430c33645ebc7014077d6fd4d688d405de6d524c09a9b249c1b38e0867e8",
+          "sourcePath": "C:/UnityProjects/AIBT-PatrolResearch/Assets\\PatrolResearch\\Trees\\runner.aibt.json",
+          "registryProblems": [],
+          "referenceAvailable": false
+        }
+      }
+    },
+    "validate": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "valid": true,
+          "policyApplied": false,
+          "diagnostics": [
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.runner",
+              "documentId": "PatrolResearch/Trees/runner.aibt.json",
+              "jsonPointer": "/blackboard/dt"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.runner",
+              "documentId": "PatrolResearch/Trees/runner.aibt.json",
+              "jsonPointer": "/blackboard/route-offset"
+            }
+          ]
+        }
+      }
+    },
+    "dryRun": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "success": true,
+          "backend": "native-generated-v2",
+          "contentHash": "0f75430c33645ebc7014077d6fd4d688d405de6d524c09a9b249c1b38e0867e8",
+          "outputPath": "Assets/PatrolResearch/Trees/runner.runtime.asset",
+          "existingAssetHash": null,
+          "dryRun": true,
+          "catalog": "AIBT.PatrolResearch.PatrolCatalog, AIBT.PatrolResearch.Catalog, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+          "diagnostics": [
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.runner",
+              "documentId": "Assets/PatrolResearch/Trees/runner.aibt.json",
+              "jsonPointer": "/blackboard/dt"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.runner",
+              "documentId": "Assets/PatrolResearch/Trees/runner.aibt.json",
+              "jsonPointer": "/blackboard/route-offset"
+            }
+          ]
+        }
+      }
+    },
+    "prepared": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "success": true,
+          "backend": "native-generated-v2",
+          "contentHash": "0f75430c33645ebc7014077d6fd4d688d405de6d524c09a9b249c1b38e0867e8",
+          "outputPath": "Assets/PatrolResearch/Trees/runner.runtime.asset",
+          "existingAssetHash": null,
+          "dryRun": false,
+          "catalog": "AIBT.PatrolResearch.PatrolCatalog, AIBT.PatrolResearch.Catalog, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+          "diagnostics": [
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.runner",
+              "documentId": "Assets/PatrolResearch/Trees/runner.aibt.json",
+              "jsonPointer": "/blackboard/dt"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.runner",
+              "documentId": "Assets/PatrolResearch/Trees/runner.aibt.json",
+              "jsonPointer": "/blackboard/route-offset"
+            }
+          ],
+          "assetGuid": "f8cbf8b5720b6ac4fbd939eadac598fe",
+          "assetHash": "fe4fd91442263cabf38d9e59e1a2f9a1e4a6a2e62a9954c293049a8c5444eed1"
+        }
+      }
+    }
+  },
+  "wander": {
+    "inspect": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "tree": {
+            "format": "aibt.tree",
+            "formatVersion": 2,
+            "treeId": "research.wander",
+            "name": "Wander Research",
+            "root": "route",
+            "blackboard": {
+              "dt": {
+                "type": "Float32",
+                "default": 0
+              },
+              "route-offset": {
+                "type": "Float3",
+                "default": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                }
+              }
+            },
+            "nodes": {
+              "route": {
+                "type": "research.move",
+                "typeVersion": 1,
+                "parameters": {
+                  "continuous": true,
+                  "mode": 5,
+                  "radius": 0.2,
+                  "speed": 1.4
+                },
+                "bindings": {
+                  "dt": "dt",
+                  "offset": "route-offset"
+                }
+              }
+            }
+          },
+          "contentHash": "f46fa76848c78db42c53b86f46e019fda4fa98426d6f6fd4ee5c9da584d52989",
+          "sourcePath": "C:/UnityProjects/AIBT-PatrolResearch/Assets\\PatrolResearch\\Trees\\wander.aibt.json",
+          "registryProblems": [],
+          "referenceAvailable": false
+        }
+      }
+    },
+    "validate": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "valid": true,
+          "policyApplied": false,
+          "diagnostics": [
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.wander",
+              "documentId": "PatrolResearch/Trees/wander.aibt.json",
+              "jsonPointer": "/blackboard/dt"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.wander",
+              "documentId": "PatrolResearch/Trees/wander.aibt.json",
+              "jsonPointer": "/blackboard/route-offset"
+            }
+          ]
+        }
+      }
+    },
+    "dryRun": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "success": true,
+          "backend": "native-generated-v2",
+          "contentHash": "f46fa76848c78db42c53b86f46e019fda4fa98426d6f6fd4ee5c9da584d52989",
+          "outputPath": "Assets/PatrolResearch/Trees/wander.runtime.asset",
+          "existingAssetHash": null,
+          "dryRun": true,
+          "catalog": "AIBT.PatrolResearch.PatrolCatalog, AIBT.PatrolResearch.Catalog, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+          "diagnostics": [
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.wander",
+              "documentId": "Assets/PatrolResearch/Trees/wander.aibt.json",
+              "jsonPointer": "/blackboard/dt"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.wander",
+              "documentId": "Assets/PatrolResearch/Trees/wander.aibt.json",
+              "jsonPointer": "/blackboard/route-offset"
+            }
+          ]
+        }
+      }
+    },
+    "prepared": {
+      "exitCode": 0,
+      "response": {
+        "result": {
+          "success": true,
+          "backend": "native-generated-v2",
+          "contentHash": "f46fa76848c78db42c53b86f46e019fda4fa98426d6f6fd4ee5c9da584d52989",
+          "outputPath": "Assets/PatrolResearch/Trees/wander.runtime.asset",
+          "existingAssetHash": null,
+          "dryRun": false,
+          "catalog": "AIBT.PatrolResearch.PatrolCatalog, AIBT.PatrolResearch.Catalog, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
+          "diagnostics": [
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.wander",
+              "documentId": "Assets/PatrolResearch/Trees/wander.aibt.json",
+              "jsonPointer": "/blackboard/dt"
+            },
+            {
+              "code": "AIBT2043",
+              "severity": "info",
+              "message": "No node in this tree declares Write access to this Tree-scope key.",
+              "treeId": "research.wander",
+              "documentId": "Assets/PatrolResearch/Trees/wander.aibt.json",
+              "jsonPointer": "/blackboard/route-offset"
+            }
+          ],
+          "assetGuid": "45d05b7719491694aaf9bcdccfb0fcd8",
+          "assetHash": "e83cfa1a1695556c434b8042eace4e42e10d56594e1648307441b2bd1a493112"
+        }
+      }
+    }
+  }
+}

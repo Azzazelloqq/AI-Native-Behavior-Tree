@@ -18,6 +18,11 @@
   ],
   "samples": [
     {
+      "displayName": "First Agent",
+      "description": "Editor-prepared tree, Float32 custom Action, typed inputs, committed effects and live graph tracing.",
+      "path": "Samples~/FirstAgent"
+    },
+    {
       "displayName": "Public Burst Nodes",
       "description": "Condition and asynchronous Action nodes using only the public generated Burst API.",
       "path": "Samples~/BurstNodes"

@@ -28,6 +28,7 @@ namespace AIBT.Mcp
         private readonly string _projectRoot;
         private TcpListener _listener;
         private Thread _acceptThread;
+        private volatile TcpClient _activeClient;
         private volatile bool _running;
 
         public McpBridgeListener(string libraryDirectory, string projectRoot)
@@ -68,6 +69,7 @@ namespace AIBT.Mcp
             }
 
             _running = false;
+            _activeClient?.Close();
             McpBridgeAutoRestart.NotifyRunning(false);
             try
             {
@@ -103,7 +105,13 @@ namespace AIBT.Mcp
                     return;
                 }
 
-                ServeClient(client);
+                _activeClient = client;
+                if (!_running) { client.Close(); return; }
+                try { ServeClient(client); }
+                catch (IOException) { }
+                catch (SocketException) { }
+                catch (ObjectDisposedException) { }
+                finally { _activeClient = null; }
             }
         }
 
@@ -120,7 +128,12 @@ namespace AIBT.Mcp
                     string response;
                     try
                     {
-                        response = McpToolDispatcher.Dispatch(line, _projectRoot);
+                        JObject request;
+                        try { request = JObject.Parse(line); }
+                        catch (Newtonsoft.Json.JsonException) { request = null; }
+                        response = request != null && (string)request["tool"] == "bridge_status"
+                            ? new JObject { ["result"] = new JObject { ["formatVersion"] = 1, ["processId"] = System.Diagnostics.Process.GetCurrentProcess().Id, ["projectPath"] = _projectRoot.Replace('\\', '/') } }.ToString(Newtonsoft.Json.Formatting.None)
+                            : McpToolDispatcher.Dispatch(line, _projectRoot);
                     }
                     catch (Exception ex)
                     {
@@ -145,6 +158,8 @@ namespace AIBT.Mcp
             }.ToString(Newtonsoft.Json.Formatting.Indented);
             File.WriteAllText(_discoveryFilePath, json);
         }
+
+        internal void RefreshDiscovery() => WriteDiscoveryFile();
 
         private void RemoveDiscoveryFile()
         {

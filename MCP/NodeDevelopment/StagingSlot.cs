@@ -233,7 +233,6 @@ namespace AIBT.Mcp.NodeDevelopment
                 + "  \"name\": \"" + name + "\",\n"
                 + "  \"rootNamespace\": \"" + name + "\",\n"
                 + "  \"references\": [\"AIBT.Runtime\"],\n"
-                + "  \"includePlatforms\": [\"Editor\"],\n"
                 + "  \"autoReferenced\": false,\n"
                 + "  \"analyzers\": [\"GUID:" + AnalyzerGuid + "\"]\n"
                 + "}\n";
@@ -278,7 +277,6 @@ namespace AIBT.Mcp.NodeDevelopment
                 + "  \"name\": \"AIBT.Generated.Staging\",\n"
                 + "  \"rootNamespace\": \"AIBT.Generated.Staging\",\n"
                 + "  \"references\": [\"AIBT.Runtime\"],\n"
-                + "  \"includePlatforms\": [\"Editor\"],\n"
                 + "  \"autoReferenced\": false,\n"
                 + "  \"analyzers\": [\"GUID:" + AnalyzerGuid + "\"]\n"
                 + "}\n";
@@ -299,7 +297,6 @@ namespace AIBT.Mcp.NodeDevelopment
                 + "  \"name\": \"AIBT.Generated.Staging.Catalog\",\n"
                 + "  \"rootNamespace\": \"AIBT.Generated.Staging.Catalog\",\n"
                 + "  \"references\": [\"AIBT.Runtime\", \"AIBT.Generated.Staging\", \"Unity.Burst\"],\n"
-                + "  \"includePlatforms\": [\"Editor\"],\n"
                 + "  \"autoReferenced\": false,\n"
                 + "  \"analyzers\": [\"GUID:" + AnalyzerGuid + "\"]\n"
                 + "}\n";

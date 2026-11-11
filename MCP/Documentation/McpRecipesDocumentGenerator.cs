@@ -45,13 +45,13 @@ namespace AIBT.Mcp.Documentation
             builder.Append("2) aibt_preview_node_diff {}\n");
             builder.Append("   -> returns the exact staged file content -- never mutates or compiles anything.\n\n");
             builder.Append("3) aibt_generate_node_tests_and_manifest {}\n");
-            builder.Append("   -> stages a paired test scaffold (an honest placeholder pending P6-022).\n\n");
+            builder.Append("   -> stages threshold-contract success/failure cases consumed by native test_node; custom cases may be supplied explicitly.\n\n");
             builder.Append("4) aibt_analyze_and_compile_node {\"mode\": \"start\"}\n");
             builder.Append("   -> {\"status\": \"pending\", \"attemptId\": \"<id>\"}; requests a new compilation of the captured staged content.\n\n");
             builder.Append("5) aibt_analyze_and_compile_node {\"mode\": \"check\", \"attemptId\": \"<id from step 4>\"}\n");
             builder.Append("   -> repeat while status is 'pending'/'still-compiling', including across domain reload; 'compiled' returns contentHash, 'failed' returns diagnostics. Changed staging or an expired attempt requires a fresh start.\n\n");
             builder.Append("6) aibt_test_node {\"expectedContentHash\": \"<contentHash from step 5>\"}\n");
-            builder.Append("   -> checks metadata and registry materialization; dispatchProven reports whether native dispatch was exercised for the supported binding types.\n\n");
+            builder.Append("   -> checks metadata and dispatchProven separately from behaviorProven; any supplied behavior-case mismatch makes valid=false.\n\n");
             builder.Append("7) aibt_apply_node {\"expectedContentHash\": \"<contentHash from step 5>\", \"destinationPath\": \"MyProject/GeneratedNodes/MyCondition\"}\n");
             builder.Append("   -> the only step that persists into the real project; re-verifies the hash and re-runs the checks itself first.\n");
             builder.Append("```\n\n");

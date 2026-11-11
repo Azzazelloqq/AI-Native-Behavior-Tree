@@ -750,6 +750,10 @@ namespace AIBT.Authoring
                             if (!TryGetUnsigned(value, ulong.MaxValue, out var uint64)) throw PackingFailure(node, field.ParameterName);
                             WriteUInt64(blob, offset, uint64);
                             break;
+                        case NodeParameterType.Float32:
+                            if (!Float32Parameter.TryRead(value, out var float32)) throw PackingFailure(node, field.ParameterName);
+                            WriteUInt32(blob, offset, Float32Parameter.Bits(float32));
+                            break;
                         case NodeParameterType.StringEnum:
                             if (!value.TryGetString(out var text)) throw PackingFailure(node, field.ParameterName);
                             var enumIndex = IndexOf(contract.AllowedValues, text);

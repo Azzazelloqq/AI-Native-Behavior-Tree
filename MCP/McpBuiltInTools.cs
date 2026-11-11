@@ -22,6 +22,7 @@ namespace AIBT.Mcp
             "generate_node", "preview_node_diff", "generate_node_tests_and_manifest",
             "analyze_and_compile_node", "test_node", "apply_node",
             "list_custom_tools", "call_custom_tool",
+            "list_operations", "get_operation_schema", "inspect_tree", "runtime_catalogs", "prepare_runtime", "runtime_hosts", "read_trace", "migrate_document",
         };
     }
 }

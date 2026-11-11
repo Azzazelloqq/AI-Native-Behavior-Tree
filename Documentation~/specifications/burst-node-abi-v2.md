@@ -1,5 +1,20 @@
 # Public Burst node ABI v2
 
+## Additive Float32 configuration (AIBT-042)
+
+The owner-approved [consumer-workflow decision](../decisions/ADR-P8-009-consumer-workflow.md)
+extends the v1 configuration restriction with `float`/`Float32`, version 1. Its manifest parameter
+type is `float32`; configuration packing is the existing four-byte, four-aligned Float32BitsLE
+encoding. Integer JSON tokens and finite JSON numbers are converted to binary32 using the normal
+IEEE rounding conversion. Overflow, NaN and infinities MUST be rejected. Zero MUST encode positive
+zero. No minimum or enum constraint is implied. Generated examples use numeric zero.
+
+`BurstGeneratedRuntimeBridge` adds exactly `TryReadFloat32(ref BurstConfigurationReader reader,
+uint fieldOrdinal, uint elementIndex, out float value)`, returning `BurstContextResult`. The reader
+uses the existing configuration carrier, field gate and canonical-float validation. ABI remains 2;
+all existing public signatures, encodings and existing-contract bytes remain unchanged. An existing
+node changing a parameter type MUST change its node version and provide explicit migration guidance.
+
 This specification is the normative production delta over
 [`burst-node-abi-v1.md`](burst-node-abi-v1.md). Read v1 first. Every v1
 declaration, public name and signature, analyzer rule, capability rule, codec,

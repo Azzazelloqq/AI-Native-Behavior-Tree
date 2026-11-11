@@ -52,6 +52,33 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
         }
 
         [Test]
+        public void StoppingTheBridgeClosesAnIdleConnection()
+        {
+            var listener = new McpBridgeListener(_libraryDir, _projectRoot);
+            listener.Start();
+            try
+            {
+                using (var client = new TcpClient())
+                {
+                    client.Connect("127.0.0.1", listener.Port);
+                    client.ReceiveTimeout = 2000;
+                    listener.Stop();
+                    try
+                    {
+                        using (var reader = new StreamReader(client.GetStream(), Encoding.UTF8))
+                            Assert.That(reader.Read(), Is.EqualTo(-1));
+                    }
+                    catch (IOException exception)
+                    {
+                        Assert.That(exception.InnerException, Is.TypeOf<SocketException>());
+                        Assert.That(((SocketException)exception.InnerException).SocketErrorCode, Is.Not.EqualTo(SocketError.TimedOut));
+                    }
+                }
+            }
+            finally { listener.Stop(); }
+        }
+
+        [Test]
         public void ARealTcpClientCanConnectAndReceiveADispatchedResponse()
         {
             var listener = new McpBridgeListener(_libraryDir, _projectRoot);

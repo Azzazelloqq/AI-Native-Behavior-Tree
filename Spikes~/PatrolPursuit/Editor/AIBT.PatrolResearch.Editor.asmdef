@@ -1,0 +1,1 @@
+{"name":"AIBT.PatrolResearch.Editor","references":["AIBT.Runtime","AIBT.PatrolResearch"],"includePlatforms":["Editor"]}

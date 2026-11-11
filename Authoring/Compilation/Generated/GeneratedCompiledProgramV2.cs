@@ -454,6 +454,7 @@ namespace AIBT.Authoring
             for (var index = 0; index < slots.Count; index++)
             {
                 var slot = slots[index];
+                PadDefaultAlignment(bytes, (uint)slot.Key.Type.RuntimeDescriptor.Alignment);
                 var offset = checked((uint)bytes.Count);
                 bytes.AddRange(slot.DefaultBytes ?? Array.Empty<byte>());
                 var flags = CompiledBlackboardAccessFlags.None;
@@ -584,6 +585,7 @@ namespace AIBT.Authoring
                 var source = canonicalScopeSlots[slotIndex];
                 var layout = source.Key.Type.RuntimeDescriptor;
                 var flags = template.BlackboardSlots[slotIndex].AccessFlags | (observed.Contains((uint)slotIndex) ? CompiledBlackboardAccessFlags.Observed : 0);
+                PadDefaultAlignment(semanticDefaults, (uint)layout.Alignment);
                 var defaultOffset = (uint)semanticDefaults.Count;
                 semanticDefaults.AddRange(source.DefaultBytes ?? new byte[layout.Size]);
                 semanticSlots.Add(new CompiledBlackboardSlotRecord(StableHash.Fnv1A64(source.Key.Id), layout.TypeId, layout.Version,
@@ -675,6 +677,12 @@ namespace AIBT.Authoring
         {
             return manifest.ExecutionDomain == NodeExecutionDomain.Burst ? CompiledNodeFlags.BurstDomain
                 : manifest.ExecutionDomain == NodeExecutionDomain.Managed ? CompiledNodeFlags.ManagedDomain : CompiledNodeFlags.MainThreadDomain;
+        }
+
+        private static void PadDefaultAlignment(List<byte> bytes, uint alignment)
+        {
+            var alignedCount = Align((ulong)bytes.Count, alignment);
+            while ((ulong)bytes.Count < alignedCount) bytes.Add(0);
         }
 
         private static ulong Align(ulong value, uint alignment)

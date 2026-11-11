@@ -633,6 +633,8 @@ namespace AIBT.Authoring
             {
                 case NodeParameterType.Boolean:
                     return value.Kind == SemanticValueKind.Boolean;
+                case NodeParameterType.Float32:
+                    return Float32Parameter.TryRead(value, out _);
                 case NodeParameterType.UInt32:
                     if (!TryGetUnsigned(value, uint.MaxValue, out var uint32)) return false;
                     if (contract.Minimum.HasValue && uint32 < contract.Minimum.Value)

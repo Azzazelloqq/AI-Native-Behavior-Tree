@@ -1,0 +1,6 @@
+{
+  "name": "AIBT.Samples.FirstAgent.Editor",
+  "references": ["AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "AIBT.Samples.FirstAgent", "AIBT.Samples.FirstAgent.Catalog"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

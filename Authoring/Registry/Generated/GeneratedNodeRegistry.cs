@@ -15,8 +15,15 @@ namespace AIBT.Authoring
                 return comparison != 0 ? comparison : left.Manifest.Version.CompareTo(right.Manifest.Version);
             });
             var builder = includeBuiltIns ? NodeRegistryBuilder.CreateWithBuiltIns() : new NodeRegistryBuilder();
+            var builtIns = includeBuiltIns ? builder.Build().Registry : null;
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             for (var index = 0; index < ordered.Count; index++)
+            {
+                var manifest = ordered[index].Manifest;
+                if (seen.Add(manifest.TypeId) && builtIns != null && builtIns.TryGet(manifest.TypeId, out var existing)
+                    && Newtonsoft.Json.Linq.JToken.DeepEquals(NodeManifestCanonicalJson.ToJson(existing.Manifest), NodeManifestCanonicalJson.ToJson(manifest))) continue;
                 builder.AddUserExtension(ordered[index].Manifest);
+            }
             return builder.Build();
         }
     }

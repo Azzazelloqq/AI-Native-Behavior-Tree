@@ -1,0 +1,41 @@
+{
+  "full": {
+    "total": "1497",
+    "passed": "1497",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-11-06 09:07:16Z",
+    "end-time": "2026-11-06 09:07:36Z",
+    "entryPoint": "Tools~/Verification/Run-UnityTests.ps1 -Scope Full -EnableGraphics"
+  },
+  "finalEditor": {
+    "total": "45",
+    "passed": "45",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-11-06 08:55:43Z",
+    "end-time": "2026-11-06 08:55:46Z"
+  },
+  "baseline": {
+    "total": "1481",
+    "passed": "1481",
+    "failed": "0",
+    "skipped": "0",
+    "start-time": "2026-11-06 08:58:26Z",
+    "end-time": "2026-11-06 08:59:14Z"
+  },
+  "roslynAssertions": 1415,
+  "analyzerSha256": "822929049e9df71bf21f98e68249586f68c29ed0e14b5df8fc834e586aceaeca",
+  "nativeAllocationWarning": {
+    "baseline": 112,
+    "full": 112,
+    "finalEditor": 0,
+    "player": 0,
+    "interpretation": "Full-suite warning also reproduces on pre-change source; new consumer/UI subset and Player do not report it."
+  },
+  "publicApi": {
+    "removed": 0,
+    "addedSinceAcceptedBaseline": 213,
+    "note": "Accepted baseline predates earlier P8 work; additions are not all attributable to this task."
+  }
+}

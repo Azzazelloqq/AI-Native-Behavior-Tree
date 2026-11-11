@@ -11,6 +11,21 @@ namespace AibtMcpServer;
 [McpServerResourceType]
 public static class DiscoveryResources
 {
+    [McpServerResource(UriTemplate = "aibt://resource/workflow", Name = "AIBT agent workflow", MimeType = "text/plain")]
+    public static string Workflow() => Fetch("workflow");
+
+    [McpServerResource(UriTemplate = "aibt://resource/recipes", Name = "AIBT agent recipes", MimeType = "text/plain")]
+    public static string Recipes() => Fetch("recipes");
+
+    [McpServerResource(UriTemplate = "aibt://resource/node-catalog", Name = "AIBT project node catalog", MimeType = "text/plain")]
+    public static string NodeCatalog() => Fetch("node-catalog");
+
+    [McpServerResource(UriTemplate = "aibt://resource/cli", Name = "AIBT CLI setup", MimeType = "text/plain")]
+    public static string Cli() => Fetch("cli");
+
+    [McpServerResource(UriTemplate = "aibt://resource/consumer-quickstart", Name = "AIBT runtime integration", MimeType = "text/plain")]
+    public static string ConsumerQuickstart() => Fetch("consumer-quickstart");
+
     [McpServerResource(UriTemplate = "aibt://resource/ai-and-mcp", Name = "AIBT AI-and-MCP contract", MimeType = "text/plain")]
     [Description("Documentation~/ai-and-mcp.md -- the normative AI/MCP contract this server itself implements.")]
     public static string AiAndMcp() => Fetch("ai-and-mcp");

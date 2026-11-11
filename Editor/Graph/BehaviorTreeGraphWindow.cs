@@ -48,6 +48,11 @@ namespace AIBT.Editor.Graph
 
         public DiagnosticCollection Diagnostics { get; private set; }
 
+        public BehaviorTreeGraphView View { get { EnsureView(); return _view; } }
+        internal event Action ViewInvalidated;
+        internal NodeRegistry CurrentRegistry => _registry;
+        internal void ReleaseExecutionView() => ViewInvalidated?.Invoke();
+
         [MenuItem("AIBT/Graph Editor")]
         public static BehaviorTreeGraphWindow ShowWindow()
         {
@@ -61,6 +66,7 @@ namespace AIBT.Editor.Graph
             EnsureView();
             EditorApplication.delayCall -= RestoreDocument;
             if (!ConfirmDiscard()) return;
+            ReleaseExecutionView();
             ResetLayoutChanges();
             _sourcePath = path;
             _sourceGuid = AssetDatabase.AssetPathToGUID(path);
@@ -103,6 +109,7 @@ namespace AIBT.Editor.Graph
         private void OpenDocument(byte[] utf8, string documentId, NodeRegistry registry, string treePath)
         {
             EnsureView();
+            ReleaseExecutionView();
             _view.ClearDocument();
             _nativeValidationLabel.text = string.Empty;
             _nativeValidationLabel.style.display = DisplayStyle.None;
@@ -112,7 +119,7 @@ namespace AIBT.Editor.Graph
             Document = result.Success ? result.Document : null;
             _registry = registry;
             _session = Document != null && registry != null && treePath != null
-                ? new GraphEditSession(Document, registry, CompilerOptions(), utf8)
+                ? new GraphEditSession(Document, registry, CompilerOptions(), utf8, ValidateProjectDocument)
                 : null;
             _draftBytes = null;
             _draftBaseBytes = null;
@@ -158,6 +165,7 @@ namespace AIBT.Editor.Graph
 
         private void OnDisable()
         {
+            ReleaseExecutionView();
             ProjectNodeCatalogCache.Changed -= RefreshCatalog;
             EditorApplication.projectChanged -= ProjectChanged;
             EditorApplication.delayCall -= RestoreDocument;
@@ -178,7 +186,7 @@ namespace AIBT.Editor.Graph
                 {
                     _registry = (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry;
                     var baseline = string.IsNullOrEmpty(_draftBaseBytes) ? null : Convert.FromBase64String(_draftBaseBytes);
-                    _session = new GraphEditSession(result.Document, _registry, CompilerOptions(), baseline);
+                    _session = new GraphEditSession(result.Document, _registry, CompilerOptions(), baseline, ValidateProjectDocument);
                     RefreshSession();
                     RestoreLayoutPositions(savedIds, savedPositions, restoreLayout);
                     return;
@@ -245,7 +253,7 @@ namespace AIBT.Editor.Graph
             _sourceGuid = null;
             ResetLayoutChanges();
             _layoutBaseBytes = null;
-            _session = new GraphEditSession(document, _registry, CompilerOptions(), null);
+            _session = new GraphEditSession(document, _registry, CompilerOptions(), null, ValidateProjectDocument);
             _view.ClearDocument();
             RefreshSession();
         }
@@ -430,6 +438,7 @@ namespace AIBT.Editor.Graph
 
         private void RefreshSession()
         {
+            ReleaseExecutionView();
             var selectedId = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault()?.NodeId;
             var positions = _view.NodesById.ToDictionary(pair => pair.Key,
                 pair => new Rect(NodePosition(pair.Value), pair.Value.GetPosition().size));
@@ -514,6 +523,25 @@ namespace AIBT.Editor.Graph
                     field.SetValueWithoutNotify(value != null && value.TryGetBoolean(out var flag) && flag);
                     field.RegisterValueChangedCallback(evt => SetParameter(node.Id, parameter.Name, SemanticValue.FromBoolean(evt.newValue)));
                     _inspector.Add(field);
+                }
+                else if (parameter.Type == NodeParameterType.Float32)
+                {
+                    var field = new FloatField(label) { isDelayed = true };
+                    if (value != null)
+                    {
+                        if (value.TryGetNumber(out var number)) field.SetValueWithoutNotify((float)number);
+                        else if (value.TryGetInt64(out var signed)) field.SetValueWithoutNotify(signed);
+                        else if (value.TryGetUInt64(out var unsigned)) field.SetValueWithoutNotify(unsigned);
+                    }
+                    field.RegisterValueChangedCallback(evt =>
+                    {
+                        if (!float.IsNaN(evt.newValue) && !float.IsInfinity(evt.newValue))
+                            SetParameter(node.Id, parameter.Name, SemanticValue.FromNumber(evt.newValue == 0f ? 0d : evt.newValue));
+                        else _view.schedule.Execute(RefreshInspector);
+                    });
+                    _inspector.Add(field);
+                    if (value == null)
+                        _inspector.Add(new Button(() => SetParameter(node.Id, parameter.Name, SemanticValue.FromNumber(0d))) { text = "Set " + parameter.Name + " to zero" });
                 }
                 else if (parameter.Type == NodeParameterType.StringEnum)
                 {
@@ -641,7 +669,15 @@ namespace AIBT.Editor.Graph
 
         private void RefreshCatalog()
         {
+            var previous = _projectCatalog;
             _projectCatalog = ProjectNodeCatalogCache.Current;
+            if (_session != null && previous != _projectCatalog && ReferenceEquals(_registry, previous?.Registry))
+            {
+                _registry = _projectCatalog.Registry;
+                _session.RebindRegistry(_registry, ValidateProjectDocument);
+                if (previous.Registry.Hash != _projectCatalog.Registry.Hash || !previous.Problems.SequenceEqual(_projectCatalog.Problems)) RefreshSession();
+                else RefreshValidation();
+            }
             _catalogDiagnostics.text = string.Join("\n", _projectCatalog.Problems);
             _catalogDiagnostics.style.display = _projectCatalog.Problems.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
             _catalog.Clear();
@@ -655,6 +691,11 @@ namespace AIBT.Editor.Graph
             _tag.SetValueWithoutNotify(_tag.choices.Contains(selectedTag) ? selectedTag : "All tags");
             FilterCatalog();
         }
+
+        private DiagnosticCollection ValidateProjectDocument(TreeDocument document)
+            => _projectCatalog != null && ReferenceEquals(_registry, _projectCatalog.Registry)
+                ? _projectCatalog.ValidateAuthoring(document, CompilerOptions())
+                : ReferenceCompiler.Compile(document, _registry, CompilerOptions()).Diagnostics;
 
         private void FilterCatalog()
         {
@@ -685,6 +726,9 @@ namespace AIBT.Editor.Graph
             toolbar.Add(new ToolbarButton(SaveTree) { text = "Save", name = "aibt-save-tree" });
             toolbar.Add(new ToolbarButton(SaveLayout) { text = "Save Layout", name = "aibt-save-layout" });
             toolbar.Add(new ToolbarButton(ValidateNative) { text = "Check Native", name = "aibt-check-native" });
+            toolbar.Add(new ToolbarButton(BakeRuntimeAsset) { text = "Prepare Runtime", name = "aibt-prepare-runtime" });
+            toolbar.Add(new ToolbarButton(PreviewCurrent) { text = "Preview", name = "aibt-preview-current" });
+            toolbar.Add(new ToolbarButton(AttachSelectedHost) { text = "Debug Selected", name = "aibt-debug-selected" });
             toolbar.Add(new ToolbarButton(() => { RefreshCatalog(); if (!string.IsNullOrEmpty(_sourcePath)) OpenFromPath(_sourcePath); }) { text = "Reload" });
             toolbar.Add(new ToolbarButton(() => _view.FrameAll()) { text = "Frame All", name = "aibt-frame-all" });
             rootVisualElement.Add(toolbar);
@@ -739,9 +783,18 @@ namespace AIBT.Editor.Graph
                 { name = "aibt-empty-state", style = { whiteSpace = WhiteSpace.Normal, paddingTop = 12, paddingBottom = 12 } };
             content.Add(_emptyLabel);
             _view = new BehaviorTreeGraphView { name = "aibt-graph-view" };
+            _view.CanConnectNodes = (parent, child) => _session != null && _session.CanConnect(parent, child);
             _view.style.flexGrow = 1;
             _view.graphViewChanged = change =>
             {
+                if (_session != null && change.edgesToCreate != null && change.edgesToCreate.Count > 0)
+                {
+                    foreach (var edge in change.edgesToCreate)
+                        if (edge.output?.node is BehaviorTreeNode parent && edge.input?.node is BehaviorTreeNode child)
+                            _session.TryConnect(parent.NodeId, child.NodeId);
+                    change.edgesToCreate.Clear();
+                    _view.schedule.Execute(RefreshSession);
+                }
                 if (_session != null && change.movedElements != null && change.movedElements.OfType<BehaviorTreeNode>().Any())
                 {
                     _layoutDirty = true;

@@ -96,7 +96,8 @@ namespace AIBT.Authoring
 
         public CompiledHash ComputeHash() => new CompiledHash(StableHash.Sha256Hex(ToCanonicalUtf8()));
 
-        internal ValidationOptions CreateValidationOptions(string documentId)
+        /// <summary>Projects this policy into authoring validation without changing scope or warning rules.</summary>
+        public ValidationOptions CreateValidationOptions(string documentId)
         {
             return new ValidationOptions(
                 documentId,

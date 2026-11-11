@@ -29,7 +29,8 @@ public static class AuthoringTools
         [Description("Root node definition JSON: {id, typeId, typeVersion, parameters?, displayName?, description?, tags?}.")] string rootNodeJson,
         [Description("Optional initial tree-scoped blackboard keys JSON array: [{id, valueType, description?}, ...].")] string blackboardJson = "",
         [Description("Optional tree description.")] string description = "",
-        [Description("If true, validates and reports the result without creating the file.")] bool dryRun = false)
+        [Description("If true, validates and reports the result without creating the file.")] bool dryRun = false,
+        [Description("Tree format version, 1 or 2. Use 2 for native/generated bindings; native roots imply 2.")] int formatVersion = 1)
     {
         var args = new JsonObject
         {
@@ -38,6 +39,7 @@ public static class AuthoringTools
             ["path"] = path,
             ["rootNode"] = JsonNode.Parse(rootNodeJson),
             ["dryRun"] = dryRun,
+            ["formatVersion"] = formatVersion,
         };
         if (blackboardJson.Length > 0) args["blackboard"] = JsonNode.Parse(blackboardJson);
         if (description.Length > 0) args["description"] = description;

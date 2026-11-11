@@ -41,7 +41,7 @@
         "additionalProperties": false,
         "required": ["type", "required", "packing"],
         "properties": {
-          "type": { "enum": ["boolean", "uint32", "uint64", "string-enum"] },
+          "type": { "enum": ["boolean", "uint32", "uint64", "string-enum", "float32"] },
           "required": { "type": "boolean" },
           "minimum": { "type": "integer", "minimum": 0 },
           "allowedValues": {

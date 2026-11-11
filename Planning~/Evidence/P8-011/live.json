@@ -1,0 +1,14 @@
+{
+  "lateGraphCatalogRebound": true,
+  "upmResourcesAndProjectDocumentation": true,
+  "operationSchemas": 37,
+  "nativeEditingValidationReferenceBoundary": true,
+  "nativePrepareDryRunHashAndGuidOverwrite": true,
+  "preparedGameplayExpectedPositionAndRootSuccess": true,
+  "sameGraphNativeHostAttachment": true,
+  "nativeTraceIdentityAndDropDisclosure": true,
+  "mcpNativeTraceAndProjectResources": true,
+  "mcpToolCount": 36,
+  "generatedNativeBehaviorCasesAndCounterexample": true,
+  "appliedRuntimeNodeDiscoveryAndNativeAuthoring": true
+}

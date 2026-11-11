@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Editor`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-51 public type(s).
+52 public type(s).
 
 ---
 
@@ -91,6 +91,7 @@ Importer-owned Editor metadata. The .aibt source is the only authoring authority
 
 Read-only rendering of a canonical <see cref="TreeDocument"/> as a graph. Never mutates the document and never writes to disk. Node movement is presentation-only and transient.
 
+- `METHOD System.Collections.Generic.List`1<UnityEditor.Experimental.GraphView.Port> GetCompatiblePorts(UnityEditor.Experimental.GraphView.Port,UnityEditor.Experimental.GraphView.NodeAdapter)`
 - `METHOD System.Void .ctor()`
 - `METHOD System.Void Populate(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry)`
 - `PROPERTY System.Collections.Generic.IReadOnlyDictionary`2<AIBT.NodeId,AIBT.Editor.Graph.BehaviorTreeNode> NodesById`
@@ -110,6 +111,7 @@ Hosts an authoring graph over an AIBT tree document.
 - `METHOD System.Void SaveChanges()`
 - `PROPERTY AIBT.Authoring.TreeDocument Document`
 - `PROPERTY AIBT.DiagnosticCollection Diagnostics`
+- `PROPERTY AIBT.Editor.Graph.BehaviorTreeGraphView View`
 
 ---
 
@@ -128,6 +130,12 @@ Hosts an authoring graph over an AIBT tree document.
 - `PROPERTY System.String TypeId`
 - `PROPERTY UnityEditor.Experimental.GraphView.Port InputPort`
 - `PROPERTY UnityEditor.Experimental.GraphView.Port OutputPort`
+
+---
+
+### `AIBT.Editor.Graph.ProductionTreeAssetBaker`
+
+- `METHOD AIBT.ProductionTreeAsset Create(AIBT.Authoring.TreeDocument,System.String,System.Type,AIBT.DiagnosticCollection&)`
 
 ---
 

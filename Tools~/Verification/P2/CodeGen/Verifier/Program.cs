@@ -48,6 +48,7 @@ internal static class Program
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/BurstBindingBridgeCoreV2.cs"), Encoding.UTF8),
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/BurstNodeContracts.cs"), Encoding.UTF8),
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/BurstGeneratedRuntimeBridge.cs"), Encoding.UTF8),
+            File.ReadAllText(Path.Combine(packageRoot, "Runtime/Integration/GeneratedDispatch/GeneratedBurstCatalogExecutorV2.cs"), Encoding.UTF8),
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/RuntimeBuiltInCatalogAuthority.cs"), Encoding.UTF8)
         };
         var contracts = await CompileAsync("AIBT.Runtime.Contracts", contractSources, Array.Empty<MetadataReference>(), false, false);
@@ -56,6 +57,7 @@ internal static class Program
 
         VerifyDispatchPrebinding();
         await VerifyValidAndDeterministicGeneration(contractReference);
+        await VerifyFloatConfigurationGeneration(contractReference);
         await VerifyNodeAttributeArgumentTotality(contractReference);
         await VerifyNullAttributeAndStorageLocations(contractReference);
         await VerifyBlackboardScopeTotality(contractReference);
@@ -349,6 +351,18 @@ public partial struct AccessNode
         Require(calls.Any(call => call.Method == "TryReadBoolean" && call.Field == 3u && call.Element == 0u), "generated bool configuration read is absent");
         Require(calls.Any(call => call.Method == "TryReadUInt32" && call.Field == 4u && call.Element == 0u), "generated uint configuration read is absent");
         Require(calls.Any(call => call.Method == "TryReadUInt64" && call.Field == 7u && call.Element == 0u), "generated ulong configuration read is absent");
+    }
+
+    private static async Task VerifyFloatConfigurationGeneration(MetadataReference contracts)
+    {
+        var source = Node("aibt.verifier.float", config: "public partial struct Config { [AibtConfigField(\"radius\",\"Float32\",1u)] public float Radius; }");
+        var node = await CompileAsync("Float.Node", new[] { source }, new[] { contracts }, true, true);
+        RequireClean(node, "float32 node");
+        Require(node.GeneratedSource.Contains("float32", StringComparison.Ordinal), "float32 manifest parameter is missing");
+        var catalog = await CompileAsync("Float.Catalog", new[] { "using AIBT.Burst; [AibtCatalogSet(\"aibt.verifier.float.catalog\",1u,typeof(ProbeShard))] public static partial class FloatCatalog { }" },
+            new[] { contracts, Reference(node) }, true, true);
+        RequireClean(catalog, "float32 catalog");
+        Require(catalog.GeneratedSource.Contains("TryReadFloat32", StringComparison.Ordinal), "float32 dispatch reader is missing");
     }
 
     private static async Task VerifyValidAndDeterministicGeneration(MetadataReference contracts)

@@ -1,0 +1,41 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "research.runner",
+  "name": "Runner Research",
+  "root": "route",
+  "blackboard": {
+    "route-offset": {
+      "type": "Float3",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      }
+    },
+    "dt": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0.0
+    }
+  },
+  "nodes": {
+    "route": {
+      "type": "research.move",
+      "typeVersion": 1,
+      "parameters": {
+        "speed": 8.0,
+        "radius": 0.2,
+        "mode": 4,
+        "continuous": true
+      },
+      "bindings": {
+        "offset": "route-offset",
+        "dt": "dt"
+      }
+    }
+  }
+}

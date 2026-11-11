@@ -18,6 +18,9 @@ param(
     [string] $Scope = 'Full',
 
     [Parameter()]
+    [switch] $EnableGraphics,
+
+    [Parameter()]
     [string] $OutputPath
 )
 
@@ -53,7 +56,6 @@ $logFile = Join-Path $resultRoot "$Mode-$Scope.log"
 
 $arguments = @(
     '-batchmode',
-    '-nographics',
     '-projectPath', ('"{0}"' -f $projectRoot),
     '-runTests',
     '-testPlatform', $Mode,
@@ -61,11 +63,15 @@ $arguments = @(
     '-logFile', ('"{0}"' -f $logFile)
 )
 
+if (-not $EnableGraphics) {
+    $arguments += '-nographics'
+}
+
 if (-not [string]::IsNullOrWhiteSpace($TestFilter)) {
     $arguments += @('-testFilter', $TestFilter)
 }
 
-$process = Start-Process -FilePath $unityExecutable -ArgumentList $arguments -Wait -PassThru -NoNewWindow
+$process = Start-Process -FilePath $unityExecutable -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
 if ($process.ExitCode -ne 0) {
     throw "Unity tests failed with exit code $($process.ExitCode). See '$logFile'."
 }

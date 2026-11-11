@@ -6,15 +6,15 @@ Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command.
 
 The driver assigns `updateId`/`snapshotRevision` itself sequentially starting at 1 and exposes no injection API at all -- only plain `update` steps are supported. A step requesting anything else is rejected with a structured diagnostic (`P6-007`; widening this is `P6-013`, still `Draft`).
 
-## Don't expect a trace or compare-trace MCP tool.
+## Don't confuse reference simulation with live native trace.
 
-No production code anywhere wires a real running native tree's lifecycle into a trace channel yet -- `P6-008` found this and spun the question off into `P6-015` (still `Draft`) rather than build against a false premise.
+Use runtime_hosts and read_trace for a specific native instance/program. Trace reads never complete jobs; available=false means retry later, complete=false means dropped/faulted history. Reference simulation is a separate backend. No compare-trace operation is exposed.
 
 ## Don't assume a fixed revision increment for a domain patch.
 
 `TreeDocument.Revision` is never persisted to `*.aibt.json`; every MCP call reloads a tree fresh from disk. Mutating calls are checked against a computed content hash instead (`ADR-P6-002`). Always use the `contentHash`/`expectedHash` the last *accepted* call actually returned, never a value you computed or assumed.
 
-## Don't request Agent or Shared blackboard scope over MCP.
+## Don't assume scope support bypasses contracts and policy.
 
-`aibt_set_blackboard_keys` only supports tree-scoped, built-in-scalar-typed keys today. The real project policy (`ReferenceCompilationPolicy.Phase1`) has `SupportsAgentScope`/`SupportsSharedScope` both `false` in production, so a request for either scope is rejected (`P6-006`'s disclosed finding; deciding whether to support this is `P6-014`, still `Draft`).
+Blackboard tools accept built-in scalar keys; Agent/Shared require v2, canonical defaults, matching contracts and enabled project policy. Enum32/Registered authoring is not exposed by these tools. Phase1 scope defaults remain false.
 

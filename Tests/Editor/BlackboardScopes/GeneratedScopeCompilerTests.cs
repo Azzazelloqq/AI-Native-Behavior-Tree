@@ -11,6 +11,53 @@ namespace AIBT.Tests.Editor.BlackboardScopes
 {
     public sealed class GeneratedScopeCompilerTests
     {
+        [TestCase(BlackboardScope.Tree)]
+        [TestCase(BlackboardScope.Agent)]
+        [TestCase(BlackboardScope.Shared)]
+        public void CompiledV2_MixedWidthDefaultsRetainAlignedValuesAndCanonicalOrder(BlackboardScope scope)
+        {
+            var descriptor = Descriptor(Array.Empty<GeneratedStorageField>());
+            var node = NodeDocument.CreateVersion2(new NodeId("root"), "example.generated-node", 1, null,
+                parameters: SemanticObject.Empty, tags: TagSet.Empty);
+            var keys = new[]
+            {
+                new BlackboardKeyDefinition("a-flag", "a-flag", BlackboardTypeReference.BuiltIn(BlackboardValueType.Bool), scope, BlackboardDefaultValue.Bool(true)),
+                new BlackboardKeyDefinition("b-time", "b-time", BlackboardTypeReference.BuiltIn(BlackboardValueType.Float32), scope, BlackboardDefaultValue.Float32(2.5f)),
+                new BlackboardKeyDefinition("c-position", "c-position", BlackboardTypeReference.BuiltIn(BlackboardValueType.Float3), scope, BlackboardDefaultValue.Float3(1.25f, -2f, 3.5f)),
+                new BlackboardKeyDefinition("d-wide", "d-wide", BlackboardTypeReference.BuiltIn(BlackboardValueType.Int64), scope, BlackboardDefaultValue.Int64(0x0102030405060708L)),
+                new BlackboardKeyDefinition("e-flag", "e-flag", BlackboardTypeReference.BuiltIn(BlackboardValueType.Bool), scope, BlackboardDefaultValue.Bool(true)),
+            };
+            var expected = new byte[]
+            {
+                1, 0, 0, 0, 0, 0, 32, 64,
+                0, 0, 160, 63, 0, 0, 0, 192, 0, 0, 96, 64,
+                0, 0, 0, 0, 8, 7, 6, 5, 4, 3, 2, 1, 1,
+            };
+            var options = new ReferenceCompilerOptions("mixed-defaults.aibt.json", ReferenceCompilationPolicy.Phase1,
+                new CompiledCompilerVersion(1, 0, 0, 5));
+            TreeDocument Document(IEnumerable<BlackboardKeyDefinition> orderedKeys) => TreeDocument.CreateVersion2(
+                new TreeId("mixed-defaults"), "Mixed defaults", node.Id, new[] { node },
+                scope == BlackboardScope.Agent ? new BlackboardScopeContract("tests.agent", 1) : null,
+                scope == BlackboardScope.Shared ? new BlackboardScopeContract("tests.shared", 1) : null, orderedKeys,
+                tags: TagSet.Empty, metadata: SemanticObject.Empty);
+
+            var result = GeneratedCompiledProgramV2Compiler.Compile(Document(keys), new[] { descriptor }, options);
+            Assert.That(result.Success, Is.True, Diagnostics(result.Diagnostics));
+            Assert.That(result.Program.GetDefaultValueBlobCopy(), Is.EqualTo(expected), "Values and alignment gaps must be preserved, not only accepted by the compiler.");
+            Assert.That(result.Program.Slots.Select(slot => slot.DefaultOffset), Is.EqualTo(new uint[] { 0, 4, 8, 24, 32 }));
+            var native = result.Program.CreateNativeBlackboardBindingV2(new RegisteredBlackboardTypeCatalog(Array.Empty<RegisteredBlackboardTypeCatalogEntry>()));
+            Assert.That(native.Slots.Select(slot => slot.DefaultOffset), Is.EqualTo(new uint[] { 0, 4, 8, 24, 32 }));
+            if (scope == BlackboardScope.Tree)
+            {
+                Assert.That(result.Program.SemanticProgram.DefaultValueBlob, Is.EqualTo(expected));
+                Assert.That(result.Program.SemanticProgram.BlackboardSlots.Select(slot => slot.DefaultValueOffset),
+                    Is.EqualTo(new uint[] { 0, 4, 8, 24, 32 }));
+            }
+            var reordered = GeneratedCompiledProgramV2Compiler.Compile(Document(keys.Reverse()), new[] { descriptor }, options);
+            Assert.That(reordered.Success, Is.True, Diagnostics(reordered.Diagnostics));
+            Assert.That(reordered.Program.GetBytesCopy(), Is.EqualTo(result.Program.GetBytesCopy()));
+        }
+
         [Test]
         public void LayoutAndPacking_AreCanonicalAndZeroPaddingIndependentOfDeclarationOrder()
         {

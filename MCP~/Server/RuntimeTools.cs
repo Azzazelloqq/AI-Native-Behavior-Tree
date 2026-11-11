@@ -1,0 +1,44 @@
+using System.ComponentModel;
+using System.Text.Json.Nodes;
+using ModelContextProtocol.Server;
+
+namespace AibtMcpServer;
+
+[McpServerToolType]
+public static class RuntimeTools
+{
+    [McpServerTool(Name = "aibt_list_operations")]
+    [Description("List shared CLI/bridge operation schemas, explicit permissions and side effects. These schemas describe bridge JSON, not JSON-in-string MCP wrapper parameters.")]
+    public static string ListOperations() => BridgeClient.SendRequest("list_operations", new JsonObject());
+
+    [McpServerTool(Name = "aibt_get_operation_schema")]
+    [Description("Read one operation's actual bridge argument schema, permission and side effect.")]
+    public static string GetOperationSchema(string operation) => BridgeClient.SendRequest("get_operation_schema", new JsonObject { ["operation"] = operation });
+
+    [McpServerTool(Name = "aibt_inspect_tree")]
+    [Description("Read an authored tree and current contentHash before editing/preparing. Reports reference backend availability.")]
+    public static string InspectTree(string treeId) => BridgeClient.SendRequest("inspect_tree", new JsonObject { ["treeId"] = treeId });
+
+    [McpServerTool(Name = "aibt_runtime_catalogs")]
+    [Description("List Player generated catalog identities for native runtime preparation.")]
+    public static string RuntimeCatalogs() => BridgeClient.SendRequest("runtime_catalogs", new JsonObject());
+
+    [McpServerTool(Name = "aibt_prepare_runtime")]
+    [Description("Prepare a native v2 runtime asset using the existing Editor baker. Requires Compilation permission, current source expectedHash and explicit catalog/outputPath. Dry-run reports existingAssetHash; overwrite requires that hash and overwrite=true. Preserves existing asset GUID. Does not restart hosts or modify authored source.")]
+    public static string PrepareRuntime(string treeId, string expectedHash, string catalog, string outputPath,
+        bool dryRun = false, bool overwrite = false, string expectedAssetHash = "")
+        => BridgeClient.SendRequest("prepare_runtime", new JsonObject
+        {
+            ["treeId"] = treeId, ["expectedHash"] = expectedHash, ["catalog"] = catalog, ["outputPath"] = outputPath,
+            ["dryRun"] = dryRun, ["overwrite"] = overwrite, ["expectedAssetHash"] = expectedAssetHash,
+        });
+
+    [McpServerTool(Name = "aibt_runtime_hosts")]
+    [Description("List scene AIBT hosts with stable instance IDs, program hashes and root results. Read-only.")]
+    public static string RuntimeHosts() => BridgeClient.SendRequest("runtime_hosts", new JsonObject());
+
+    [McpServerTool(Name = "aibt_read_trace")]
+    [Description("Read bounded native trace for an exact runtime host instance. Never completes jobs. Busy returns available=false; complete=false discloses dropped/faulted history. Limit 1..512, default 128.")]
+    public static string ReadTrace(ulong instanceId, ulong afterSequence = 0, int limit = 128)
+        => BridgeClient.SendRequest("read_trace", new JsonObject { ["instanceId"] = instanceId, ["afterSequence"] = afterSequence, ["limit"] = limit });
+}

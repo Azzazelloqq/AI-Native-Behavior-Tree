@@ -1,0 +1,61 @@
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Reflection;
+using AIBT;
+using AIBT.Samples.FirstAgent.Editor;
+using Unity.Burst;
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+public static class ConsumerBuild
+{
+    public static void GenerateDocumentation()
+    {
+        var type = Assembly.Load("AIBT.Mcp").GetType("AIBT.Mcp.Documentation.McpApiReferenceGenerator", true);
+        var references = (IReadOnlyDictionary<string, string>)type.GetMethod("Generate", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, null);
+        var directory = Path.Combine(Argument("-aibtPackageRoot"), "Documentation~/generated");
+        foreach (var pair in references)
+        {
+            var suffix = pair.Key.Substring("AIBT.".Length).ToLowerInvariant();
+            File.WriteAllText(Path.Combine(directory, "api-reference-" + suffix + ".md"), pair.Value);
+        }
+        Debug.Log("AIBT_CONSUMER_DOCUMENTATION_OK");
+    }
+
+    public static void Build()
+    {
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        FirstAgentSetup.CreateDemo();
+        var probe = new GameObject("Consumer verification").AddComponent<ConsumerProbe>();
+        probe.Tree = AssetDatabase.LoadAssetAtPath<ProductionTreeAsset>("Assets/AibtFirstAgentDemo/FirstAgent.runtime.asset");
+        const string scene = "Assets/AibtFirstAgentDemo/FirstAgent.unity";
+        EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), scene);
+        PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+        BurstCompiler.Options.EnableBurstCompilation = true;
+        var output = Argument("-aibtPlayerOutput");
+        Directory.CreateDirectory(Path.GetDirectoryName(output));
+        var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = new[] { scene },
+            locationPathName = output, target = BuildTarget.StandaloneWindows64,
+            targetGroup = BuildTargetGroup.Standalone, options = BuildOptions.Development });
+        var evidence = new BuildEvidence { unityVersion = Application.unityVersion, result = report.summary.result.ToString(),
+            errors = report.summary.totalErrors, warnings = report.summary.totalWarnings,
+            development = (report.summary.options & BuildOptions.Development) != 0,
+            scriptingBackend = PlayerSettings.GetScriptingBackend(NamedBuildTarget.Standalone).ToString(),
+            burst = BurstCompiler.Options.EnableBurstCompilation };
+        File.WriteAllText(Argument("-aibtBuildEvidence"), JsonUtility.ToJson(evidence, true));
+        if (report.summary.result != BuildResult.Succeeded) throw new InvalidOperationException("Consumer Player build failed.");
+        Debug.Log("AIBT_CONSUMER_BUILD_OK");
+    }
+    private static string Argument(string key)
+    {
+        var args = Environment.GetCommandLineArgs(); var index = Array.IndexOf(args, key);
+        if (index < 0 || index + 1 >= args.Length) throw new ArgumentException(key);
+        return args[index + 1];
+    }
+    [Serializable] private sealed class BuildEvidence
+    { public string unityVersion, result, scriptingBackend; public int errors, warnings; public bool development, burst; }
+}

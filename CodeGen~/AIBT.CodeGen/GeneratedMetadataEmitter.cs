@@ -161,7 +161,7 @@ namespace AIBT.CodeGen
             foreach (var field in node.Configuration.Fields.Where(field => field.Encoding != 12))
             {
                 json.PropertyName(field.Id); json.BeginObject();
-                json.Property("type", field.Encoding == 0 ? "boolean" : field.Encoding == 6 ? "uint32" : "uint64");
+                json.Property("type", field.Encoding == 0 ? "boolean" : field.Encoding == 6 ? "uint32" : field.Encoding == 9 ? "float32" : "uint64");
                 json.Property("required", true);
                 json.PropertyName("packing"); json.BeginObject(); json.Property("offset", field.Offset); json.Property("size", field.Size); json.Property("alignment", field.Alignment); json.EndObject();
                 json.EndObject();

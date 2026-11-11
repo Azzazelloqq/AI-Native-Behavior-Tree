@@ -1,0 +1,29 @@
+{
+  "unity": "6000.7.0b1",
+  "dotnet": "10.0.300",
+  "full": {
+    "skipped": 0,
+    "total": 1514,
+    "failed": 0,
+    "passed": 1514
+  },
+  "transport": {
+    "passed": 16,
+    "failed": 0
+  },
+  "cliBuild": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "mcpBuild": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "static": {
+    "passed": true,
+    "schemas": 7,
+    "workItems": 157
+  },
+  "originalXmlSha256": "820650d17afbe04434911afdba8db54be475b51f47a6b425e5539210ff1e5669",
+  "existingFullSuitePersistentWarning": 112
+}

@@ -32,6 +32,8 @@ namespace AIBT.Editor.Trace
         private IReadOnlyDictionary<uint, NodeId> _nodeIdByRuntimeIndex = new Dictionary<uint, NodeId>();
 
         private BehaviorTreeGraphView _graphView;
+        private BehaviorTreeGraphView _standaloneGraphView;
+        private BehaviorTreeGraphWindow _sharedWindow;
         private Label _statusLabel;
         private Label _droppedBanner;
         private SliderInt _scrubSlider;
@@ -57,11 +59,13 @@ namespace AIBT.Editor.Trace
         /// <summary>Attaches to a caller-owned debugger session. Never creates or mutates the session/channel.</summary>
         public void AttachSession(NativeExecutionDebuggerSession session)
         {
+            if (_session != session) DetachFromGraph();
             _session = session ?? throw new ArgumentNullException(nameof(session));
         }
 
         internal void AttachUnmappedSession(NativeExecutionDebuggerSession session)
         {
+            DetachFromGraph();
             _document = null;
             _registry = null;
             _nodeIdByRuntimeIndex = new Dictionary<uint, NodeId>();
@@ -70,6 +74,34 @@ namespace AIBT.Editor.Trace
             _graphView.ClearDocument();
             AttachSession(session);
             Refresh();
+        }
+
+        internal void AttachToGraph(BehaviorTreeGraphWindow window, NativeExecutionDebuggerSession session, CompiledProgram program)
+        {
+            if (!window.MatchesProgram(program)) throw new ArgumentException("Source graph does not match the live program.", nameof(program));
+            window.ReleaseExecutionView();
+            AttachSession(session);
+            _sharedWindow = window;
+            _sharedWindow.ViewInvalidated += DetachFromGraph;
+            _graphView = window.View;
+            _standaloneGraphView.style.display = DisplayStyle.None;
+            LoadGraphContext(window.Document, window.CurrentRegistry, program);
+        }
+
+        private void DetachFromGraph()
+        {
+            if (_sharedWindow == null) return;
+            foreach (var node in _graphView.NodesById.Values) SetBorder(node, Color.clear, 0f);
+            _sharedWindow.ViewInvalidated -= DetachFromGraph;
+            _sharedWindow = null;
+            _graphView = _standaloneGraphView;
+            _graphView.ClearDocument();
+            _standaloneGraphView.style.display = DisplayStyle.Flex;
+            _document = null;
+            _registry = null;
+            _nodeIdByRuntimeIndex = new Dictionary<uint, NodeId>();
+            _targetActiveNodeIds.Clear();
+            _highlightAlphaByNode.Clear();
         }
 
         /// <summary>The timeline built from the last <see cref="Refresh"/>.</summary>
@@ -84,6 +116,8 @@ namespace AIBT.Editor.Trace
         /// </summary>
         public void LoadGraphContext(TreeDocument document, NodeRegistry registry, CompiledProgram compiledProgram)
         {
+            if (_sharedWindow != null && (document != _sharedWindow.Document || !_sharedWindow.MatchesProgram(compiledProgram)))
+                throw new ArgumentException("Source graph does not match the attached view.", nameof(document));
             _document = document ?? throw new ArgumentNullException(nameof(document));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
             if (compiledProgram == null) throw new ArgumentNullException(nameof(compiledProgram));
@@ -95,6 +129,7 @@ namespace AIBT.Editor.Trace
             }
 
             _nodeIdByRuntimeIndex = map;
+            if (_sharedWindow == null) _graphView.Populate(document, registry);
             Refresh();
         }
 
@@ -108,6 +143,7 @@ namespace AIBT.Editor.Trace
 
         private void OnDisable()
         {
+            DetachFromGraph();
             EditorApplication.update -= OnEditorUpdate;
         }
 
@@ -158,6 +194,7 @@ namespace AIBT.Editor.Trace
             rootVisualElement.Add(body);
 
             _graphView = new BehaviorTreeGraphView { name = "aibt-trace-graph-view" };
+            _standaloneGraphView = _graphView;
             _graphView.style.flexGrow = 1;
             body.Add(_graphView);
 
@@ -193,7 +230,7 @@ namespace AIBT.Editor.Trace
                 : "Channel full / events dropped (" + _model.DroppedCount + ") -- trace is not the complete history.";
 
             _statusLabel.text = "steps=" + _model.Steps.Count + " diagnostics=" + _model.Diagnostics.Count
-                + (_document == null ? " — source graph is not mapped to this host." : string.Empty);
+                + (_document == null ? " - source graph is not mapped to this host." : string.Empty);
 
             RefreshScrubControl();
             RefreshDiagnostics();
@@ -227,14 +264,6 @@ namespace AIBT.Editor.Trace
         /// </summary>
         private void ApplyHighlight(int stepIndex)
         {
-            // Rebuilding the graph on every highlight (including every live-mode auto-refresh tick)
-            // is the existing, pre-P7-027 behavior -- not made worse here, just called more often in
-            // live mode. Avoiding the rebuild (and preserving pan/zoom) is P7-025's own scope.
-            if (_document != null && _registry != null)
-            {
-                _graphView.Populate(_document, _registry);
-            }
-
             var activeRuntimeIndices = _model.ActiveRuntimeNodeIndicesAtStep(stepIndex);
             _targetActiveNodeIds = new HashSet<NodeId>();
             foreach (var runtimeIndex in activeRuntimeIndices)

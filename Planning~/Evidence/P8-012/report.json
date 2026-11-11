@@ -1,0 +1,1594 @@
+{
+    "unity": "6000.7.0b1",
+    "worldFailure": "None",
+    "completedCycle": true,
+    "alarmConsistent": true,
+    "allHostsRunning": true,
+    "elapsed": 45.0009651184082,
+    "wanderDistance": 15.270023345947266,
+    "wanderArrivals": 7,
+    "events": [
+        {
+            "time": 0.0,
+            "actor": "Patroller",
+            "mode": "PATROL",
+            "target": 0,
+            "distance": 0.0,
+            "position": {
+                "x": -5.0,
+                "y": 0.6000000238418579,
+                "z": -3.0
+            }
+        },
+        {
+            "time": 0.0,
+            "actor": "Runner",
+            "mode": "ROUTE",
+            "target": 0,
+            "distance": 0.0,
+            "position": {
+                "x": -11.0,
+                "y": 0.6000000238418579,
+                "z": 6.0
+            }
+        },
+        {
+            "time": 0.0,
+            "actor": "Wanderer",
+            "mode": "WANDER",
+            "target": 0,
+            "distance": 0.0,
+            "position": {
+                "x": 7.0,
+                "y": 0.6000000238418579,
+                "z": -5.0
+            }
+        },
+        {
+            "time": 0.5811824202537537,
+            "actor": "Patroller",
+            "mode": "CHASE",
+            "target": 1,
+            "distance": 5.1946868896484375,
+            "position": {
+                "x": -5.0,
+                "y": 0.6000000238418579,
+                "z": -1.9582524299621582
+            }
+        },
+        {
+            "time": 2.8734688758850098,
+            "actor": "Patroller",
+            "mode": "RETURN",
+            "target": 1,
+            "distance": 9.004544258117676,
+            "position": {
+                "x": -0.02787686511874199,
+                "y": 0.6000000238418579,
+                "z": -0.8882094025611877
+            }
+        },
+        {
+            "time": 5.225948333740234,
+            "actor": "Patroller",
+            "mode": "PATROL",
+            "target": 1,
+            "distance": 4.782985210418701,
+            "position": {
+                "x": -4.842452049255371,
+                "y": 0.6000000238418579,
+                "z": 2.876798152923584
+            }
+        },
+        {
+            "time": 5.285515785217285,
+            "actor": "Patroller",
+            "mode": "CHASE",
+            "target": 1,
+            "distance": 4.355046272277832,
+            "position": {
+                "x": -4.739884376525879,
+                "y": 0.6000000238418579,
+                "z": 2.8794076442718506
+            }
+        },
+        {
+            "time": 10.479045867919922,
+            "actor": "Patroller",
+            "mode": "RETURN",
+            "target": 1,
+            "distance": 9.000882148742676,
+            "position": {
+                "x": -2.094669818878174,
+                "y": 0.6000000238418579,
+                "z": -1.1937308311462402
+            }
+        },
+        {
+            "time": 10.721250534057617,
+            "actor": "Patroller",
+            "mode": "CHASE",
+            "target": 2,
+            "distance": 5.196283340454102,
+            "position": {
+                "x": -1.8138408660888672,
+                "y": 0.6000000238418579,
+                "z": -0.6314830780029297
+            }
+        }
+    ],
+    "samples": [
+        {
+            "time": 0.0,
+            "patrol": {
+                "x": -5.0,
+                "y": 0.6000000238418579,
+                "z": -3.0
+            },
+            "runner": {
+                "x": -10.895873069763184,
+                "y": 0.6000000238418579,
+                "z": 5.878519058227539
+            },
+            "wander": {
+                "x": 7.0,
+                "y": 0.6000000238418579,
+                "z": -4.9720001220703125
+            },
+            "mode": "PATROL",
+            "alarm": false,
+            "target": 0,
+            "distance": 0.0,
+            "roots": [
+                "NoTerminalResult; updates=1",
+                "NoTerminalResult; updates=1",
+                "NoTerminalResult; updates=1"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 1.000308871269226,
+            "patrol": {
+                "x": -5.624650955200195,
+                "y": 0.6000000238418579,
+                "z": -0.7762260437011719
+            },
+            "runner": {
+                "x": -5.687934398651123,
+                "y": 0.6000000238418579,
+                "z": -0.1974094659090042
+            },
+            "wander": {
+                "x": 7.0,
+                "y": 0.6000000238418579,
+                "z": -3.571566343307495
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 1,
+            "distance": 0.5822657942771912,
+            "roots": [
+                "NoTerminalResult; updates=372",
+                "NoTerminalResult; updates=372",
+                "NoTerminalResult; updates=372"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 2.00146222114563,
+            "patrol": {
+                "x": -2.8140013217926025,
+                "y": 0.6000000238418579,
+                "z": -0.8545279502868652
+            },
+            "runner": {
+                "x": 2.010634422302246,
+                "y": 0.6000000238418579,
+                "z": -0.91969233751297
+            },
+            "wander": {
+                "x": 7.0,
+                "y": 0.6000000238418579,
+                "z": -2.169950246810913
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 1,
+            "distance": 4.825075626373291,
+            "roots": [
+                "NoTerminalResult; updates=1085",
+                "NoTerminalResult; updates=1085",
+                "NoTerminalResult; updates=1085"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 3.0013484954833984,
+            "patrol": {
+                "x": -0.29240885376930237,
+                "y": 0.6000000238418579,
+                "z": -0.6813449263572693
+            },
+            "runner": {
+                "x": 9.805084228515625,
+                "y": 0.6000000238418579,
+                "z": -0.8204261064529419
+            },
+            "wander": {
+                "x": 7.0,
+                "y": 0.6000000238418579,
+                "z": -0.7701109051704407
+            },
+            "mode": "RETURN",
+            "alarm": false,
+            "target": 1,
+            "distance": 10.098450660705566,
+            "roots": [
+                "NoTerminalResult; updates=1764",
+                "NoTerminalResult; updates=1764",
+                "NoTerminalResult; updates=1764"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 4.000758647918701,
+            "patrol": {
+                "x": -2.3393163681030273,
+                "y": 0.6000000238418579,
+                "z": 0.9193403720855713
+            },
+            "runner": {
+                "x": 8.638715744018555,
+                "y": 0.6000000238418579,
+                "z": 5.81363582611084
+            },
+            "wander": {
+                "x": 7.0,
+                "y": 0.6000000238418579,
+                "z": 0.629063069820404
+            },
+            "mode": "RETURN",
+            "alarm": false,
+            "target": 1,
+            "distance": 12.019621849060059,
+            "roots": [
+                "NoTerminalResult; updates=2321",
+                "NoTerminalResult; updates=2321",
+                "NoTerminalResult; updates=2321"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 5.000772476196289,
+            "patrol": {
+                "x": -4.387457847595215,
+                "y": 0.6000000238418579,
+                "z": 2.5209920406341553
+            },
+            "runner": {
+                "x": 0.6390101909637451,
+                "y": 0.6000000238418579,
+                "z": 5.893620491027832
+            },
+            "wander": {
+                "x": 7.0,
+                "y": 0.6000000238418579,
+                "z": 2.0290820598602295
+            },
+            "mode": "RETURN",
+            "alarm": false,
+            "target": 1,
+            "distance": 6.053098678588867,
+            "roots": [
+                "NoTerminalResult; updates=2872",
+                "NoTerminalResult; updates=2872",
+                "NoTerminalResult; updates=2872"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 6.000423908233643,
+            "patrol": {
+                "x": -4.969875812530518,
+                "y": 0.6000000238418579,
+                "z": 4.736873626708984
+            },
+            "runner": {
+                "x": -7.357805252075195,
+                "y": 0.6000000238418579,
+                "z": 5.973582744598389
+            },
+            "wander": {
+                "x": 7.0,
+                "y": 0.6000000238418579,
+                "z": 3.428593873977661
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 1,
+            "distance": 2.689173936843872,
+            "roots": [
+                "NoTerminalResult; updates=3524",
+                "NoTerminalResult; updates=3524",
+                "NoTerminalResult; updates=3524"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 7.001123905181885,
+            "patrol": {
+                "x": -7.72155237197876,
+                "y": 0.6000000238418579,
+                "z": 4.111732006072998
+            },
+            "runner": {
+                "x": -9.892311096191406,
+                "y": 0.6000000238418579,
+                "z": 0.45999008417129517
+            },
+            "wander": {
+                "x": 6.97390079498291,
+                "y": 0.6000000238418579,
+                "z": 4.791346549987793
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 1,
+            "distance": 4.24822473526001,
+            "roots": [
+                "NoTerminalResult; updates=4257",
+                "NoTerminalResult; updates=4257",
+                "NoTerminalResult; updates=4257"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 8.000267028808594,
+            "patrol": {
+                "x": -8.562689781188965,
+                "y": 0.6000000238418579,
+                "z": 1.0567175149917603
+            },
+            "runner": {
+                "x": -8.277036666870117,
+                "y": 0.6000000238418579,
+                "z": -5.868847370147705
+            },
+            "wander": {
+                "x": 5.642662525177002,
+                "y": 0.6000000238418579,
+                "z": 4.361894607543945
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 1,
+            "distance": 6.931453227996826,
+            "roots": [
+                "NoTerminalResult; updates=4982",
+                "NoTerminalResult; updates=4982",
+                "NoTerminalResult; updates=4982"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 9.00058650970459,
+            "patrol": {
+                "x": -6.819538116455078,
+                "y": 0.6000000238418579,
+                "z": -1.3159266710281372
+            },
+            "runner": {
+                "x": -4.910773277282715,
+                "y": 0.6000000238418579,
+                "z": -1.1985453367233276
+            },
+            "wander": {
+                "x": 4.420018672943115,
+                "y": 0.6000000238418579,
+                "z": 3.719228982925415
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 1,
+            "distance": 1.9123706817626953,
+            "roots": [
+                "NoTerminalResult; updates=5722",
+                "NoTerminalResult; updates=5722",
+                "NoTerminalResult; updates=5722"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 10.000893592834473,
+            "patrol": {
+                "x": -3.6201376914978027,
+                "y": 0.6000000238418579,
+                "z": -1.221107840538025
+            },
+            "runner": {
+                "x": 3.090970039367676,
+                "y": 0.6000000238418579,
+                "z": -1.0919992923736572
+            },
+            "wander": {
+                "x": 3.2875161170959473,
+                "y": 0.6000000238418579,
+                "z": 2.8954296112060547
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 1,
+            "distance": 6.7123494148254395,
+            "roots": [
+                "NoTerminalResult; updates=6455",
+                "NoTerminalResult; updates=6455",
+                "NoTerminalResult; updates=6455"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 11.000574111938477,
+            "patrol": {
+                "x": -1.0707648992538452,
+                "y": 0.6000000238418579,
+                "z": -0.1241513043642044
+            },
+            "runner": {
+                "x": 9.835744857788086,
+                "y": 0.6000000238418579,
+                "z": 0.2753673195838928
+            },
+            "wander": {
+                "x": 2.155723810195923,
+                "y": 0.6000000238418579,
+                "z": 2.0721471309661865
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 3.9030699729919434,
+            "roots": [
+                "NoTerminalResult; updates=7144",
+                "NoTerminalResult; updates=7144",
+                "NoTerminalResult; updates=7144"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 12.00016975402832,
+            "patrol": {
+                "x": 0.8394163846969604,
+                "y": 0.6000000238418579,
+                "z": 1.1555657386779785
+            },
+            "runner": {
+                "x": 7.539642333984375,
+                "y": 0.6000000238418579,
+                "z": 5.824624061584473
+            },
+            "wander": {
+                "x": 1.0240267515182495,
+                "y": 0.6000000238418579,
+                "z": 1.2489336729049683
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.20687812566757202,
+            "roots": [
+                "NoTerminalResult; updates=7880",
+                "NoTerminalResult; updates=7880",
+                "NoTerminalResult; updates=7880"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 13.000300407409668,
+            "patrol": {
+                "x": 0.3709993064403534,
+                "y": 0.6000000238418579,
+                "z": 0.7891210913658142
+            },
+            "runner": {
+                "x": -0.4609968662261963,
+                "y": 0.6000000238418579,
+                "z": 5.90462064743042
+            },
+            "wander": {
+                "x": -0.1082749292254448,
+                "y": 0.6000000238418579,
+                "z": 0.4252814054489136
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017334461212158,
+            "roots": [
+                "NoTerminalResult; updates=8644",
+                "NoTerminalResult; updates=8644",
+                "NoTerminalResult; updates=8644"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 14.000964164733887,
+            "patrol": {
+                "x": -0.7552670836448669,
+                "y": 0.6000000238418579,
+                "z": -0.04387199878692627
+            },
+            "runner": {
+                "x": -8.465898513793945,
+                "y": 0.6000000238418579,
+                "z": 5.9846625328063965
+            },
+            "wander": {
+                "x": -1.2411803007125854,
+                "y": 0.6000000238418579,
+                "z": -0.398810476064682
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.60174161195755,
+            "roots": [
+                "NoTerminalResult; updates=9413",
+                "NoTerminalResult; updates=9413",
+                "NoTerminalResult; updates=9413"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 15.000693321228027,
+            "patrol": {
+                "x": -1.7841739654541016,
+                "y": 0.6000000238418579,
+                "z": 0.1012096181511879
+            },
+            "runner": {
+                "x": -9.910808563232422,
+                "y": 0.6000000238418579,
+                "z": -0.6495835781097412
+            },
+            "wander": {
+                "x": -2.301966905593872,
+                "y": 0.6000000238418579,
+                "z": 0.408071905374527
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018919944763184,
+            "roots": [
+                "NoTerminalResult; updates=10176",
+                "NoTerminalResult; updates=10176",
+                "NoTerminalResult; updates=10176"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 16.001005172729492,
+            "patrol": {
+                "x": -2.8985679149627686,
+                "y": 0.6000000238418579,
+                "z": 0.9392691850662231
+            },
+            "runner": {
+                "x": -7.162510871887207,
+                "y": 0.6000000238418579,
+                "z": -5.913452625274658
+            },
+            "wander": {
+                "x": -3.360067844390869,
+                "y": 0.6000000238418579,
+                "z": 1.3254817724227905
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017826199531555,
+            "roots": [
+                "NoTerminalResult; updates=10955",
+                "NoTerminalResult; updates=10955",
+                "NoTerminalResult; updates=10955"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 17.00068473815918,
+            "patrol": {
+                "x": -3.9622108936309814,
+                "y": 0.6000000238418579,
+                "z": 1.8489151000976563
+            },
+            "runner": {
+                "x": -3.7989354133605957,
+                "y": 0.6000000238418579,
+                "z": -1.183740258216858
+            },
+            "wander": {
+                "x": -4.417501926422119,
+                "y": 0.6000000238418579,
+                "z": 2.2423126697540283
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017072200775146,
+            "roots": [
+                "NoTerminalResult; updates=11727",
+                "NoTerminalResult; updates=11727",
+                "NoTerminalResult; updates=11727"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 18.000768661499023,
+            "patrol": {
+                "x": -5.020575046539307,
+                "y": 0.6000000238418579,
+                "z": 2.7653236389160156
+            },
+            "runner": {
+                "x": 4.201020240783691,
+                "y": 0.6000000238418579,
+                "z": -1.0772167444229126
+            },
+            "wander": {
+                "x": -5.475371837615967,
+                "y": 0.6000000238418579,
+                "z": 3.159515142440796
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018530130386353,
+            "roots": [
+                "NoTerminalResult; updates=12506",
+                "NoTerminalResult; updates=12506",
+                "NoTerminalResult; updates=12506"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 19.000415802001953,
+            "patrol": {
+                "x": -5.8145270347595215,
+                "y": 0.6000000238418579,
+                "z": 3.4536077976226807
+            },
+            "runner": {
+                "x": 9.868118286132813,
+                "y": 0.6000000238418579,
+                "z": 1.381927490234375
+            },
+            "wander": {
+                "x": -6.0217976570129395,
+                "y": 0.6000000238418579,
+                "z": 3.5995657444000244
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.25350508093833923,
+            "roots": [
+                "NoTerminalResult; updates=13250",
+                "NoTerminalResult; updates=13250",
+                "NoTerminalResult; updates=13250"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 20.000165939331055,
+            "patrol": {
+                "x": -5.446069240570068,
+                "y": 0.6000000238418579,
+                "z": 3.04641056060791
+            },
+            "runner": {
+                "x": 6.428264141082764,
+                "y": 0.6000000238418579,
+                "z": 5.8357367515563965
+            },
+            "wander": {
+                "x": -5.034115314483643,
+                "y": 0.6000000238418579,
+                "z": 2.607851266860962
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6016978621482849,
+            "roots": [
+                "NoTerminalResult; updates=14027",
+                "NoTerminalResult; updates=14027",
+                "NoTerminalResult; updates=14027"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 21.000789642333984,
+            "patrol": {
+                "x": -4.469028472900391,
+                "y": 0.6000000238418579,
+                "z": 2.042884111404419
+            },
+            "runner": {
+                "x": -1.5763336420059204,
+                "y": 0.6000000238418579,
+                "z": 5.915769577026367
+            },
+            "wander": {
+                "x": -4.045567035675049,
+                "y": 0.6000000238418579,
+                "z": 1.615268349647522
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018096208572388,
+            "roots": [
+                "NoTerminalResult; updates=14795",
+                "NoTerminalResult; updates=14795",
+                "NoTerminalResult; updates=14795"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 22.00033950805664,
+            "patrol": {
+                "x": -3.482562780380249,
+                "y": 0.6000000238418579,
+                "z": 1.0502009391784668
+            },
+            "runner": {
+                "x": -9.572327613830566,
+                "y": 0.6000000238418579,
+                "z": 5.995721817016602
+            },
+            "wander": {
+                "x": -3.058082103729248,
+                "y": 0.6000000238418579,
+                "z": 0.6237524747848511
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6016993522644043,
+            "roots": [
+                "NoTerminalResult; updates=15547",
+                "NoTerminalResult; updates=15547",
+                "NoTerminalResult; updates=15547"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 23.000783920288086,
+            "patrol": {
+                "x": -2.494415521621704,
+                "y": 0.6000000238418579,
+                "z": 0.05781421810388565
+            },
+            "runner": {
+                "x": -9.92939567565918,
+                "y": 0.6000000238418579,
+                "z": -1.7641927003860474
+            },
+            "wander": {
+                "x": -2.0697085857391357,
+                "y": 0.6000000238418579,
+                "z": -0.36865144968032837
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018711924552917,
+            "roots": [
+                "NoTerminalResult; updates=16320",
+                "NoTerminalResult; updates=16320",
+                "NoTerminalResult; updates=16320"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 24.000614166259766,
+            "patrol": {
+                "x": -1.5065791606903076,
+                "y": 0.6000000238418579,
+                "z": -0.9340769648551941
+            },
+            "runner": {
+                "x": -6.0525946617126465,
+                "y": 0.6000000238418579,
+                "z": -5.957874298095703
+            },
+            "wander": {
+                "x": -1.0819427967071533,
+                "y": 0.6000000238418579,
+                "z": -1.360449194908142
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017552018165588,
+            "roots": [
+                "NoTerminalResult; updates=17079",
+                "NoTerminalResult; updates=17079",
+                "NoTerminalResult; updates=17079"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 25.00030517578125,
+            "patrol": {
+                "x": -0.5189993977546692,
+                "y": 0.6000000238418579,
+                "z": -1.925688624382019
+            },
+            "runner": {
+                "x": -2.679426670074463,
+                "y": 0.6000000238418579,
+                "z": -1.169388771057129
+            },
+            "wander": {
+                "x": -0.0943191796541214,
+                "y": 0.6000000238418579,
+                "z": -2.352102041244507
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018153429031372,
+            "roots": [
+                "NoTerminalResult; updates=17838",
+                "NoTerminalResult; updates=17838",
+                "NoTerminalResult; updates=17838"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 26.001256942749023,
+            "patrol": {
+                "x": 0.4698013961315155,
+                "y": 0.6000000238418579,
+                "z": -2.918527603149414
+            },
+            "runner": {
+                "x": 5.327476978302002,
+                "y": 0.6000000238418579,
+                "z": -1.062422275543213
+            },
+            "wander": {
+                "x": 0.8945523500442505,
+                "y": 0.6000000238418579,
+                "z": -3.3450121879577637
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6019156575202942,
+            "roots": [
+                "NoTerminalResult; updates=18603",
+                "NoTerminalResult; updates=18603",
+                "NoTerminalResult; updates=18603"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 27.000886917114258,
+            "patrol": {
+                "x": 1.4574979543685913,
+                "y": 0.6000000238418579,
+                "z": -3.910257339477539
+            },
+            "runner": {
+                "x": 9.90014362335205,
+                "y": 0.6000000238418579,
+                "z": 2.503324508666992
+            },
+            "wander": {
+                "x": 1.8821158409118652,
+                "y": 0.6000000238418579,
+                "z": -4.33660888671875
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017274856567383,
+            "roots": [
+                "NoTerminalResult; updates=19356",
+                "NoTerminalResult; updates=19356",
+                "NoTerminalResult; updates=19356"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 28.000030517578125,
+            "patrol": {
+                "x": 2.4444925785064697,
+                "y": 0.6000000238418579,
+                "z": -4.901279926300049
+            },
+            "runner": {
+                "x": 5.310400485992432,
+                "y": 0.6000000238418579,
+                "z": 5.8465399742126465
+            },
+            "wander": {
+                "x": 2.8692002296447754,
+                "y": 0.6000000238418579,
+                "z": -5.327723503112793
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018560528755188,
+            "roots": [
+                "NoTerminalResult; updates=20145",
+                "NoTerminalResult; updates=20145",
+                "NoTerminalResult; updates=20145"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 29.001131057739258,
+            "patrol": {
+                "x": 2.9774765968322754,
+                "y": 0.6000000238418579,
+                "z": -5.277470111846924
+            },
+            "runner": {
+                "x": -2.6979925632476807,
+                "y": 0.6000000238418579,
+                "z": 5.926812171936035
+            },
+            "wander": {
+                "x": 3.4968020915985107,
+                "y": 0.6000000238418579,
+                "z": -4.974540710449219
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6012197732925415,
+            "roots": [
+                "NoTerminalResult; updates=20930",
+                "NoTerminalResult; updates=20930",
+                "NoTerminalResult; updates=20930"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 30.000713348388672,
+            "patrol": {
+                "x": 3.6557328701019287,
+                "y": 0.6000000238418579,
+                "z": -4.189403533935547
+            },
+            "runner": {
+                "x": -9.814616203308105,
+                "y": 0.6000000238418579,
+                "z": 5.121667385101318
+            },
+            "wander": {
+                "x": 3.8566157817840576,
+                "y": 0.6000000238418579,
+                "z": -3.622175693511963
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017485857009888,
+            "roots": [
+                "NoTerminalResult; updates=21701",
+                "NoTerminalResult; updates=21701",
+                "NoTerminalResult; updates=21701"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 31.000648498535156,
+            "patrol": {
+                "x": 4.057271957397461,
+                "y": 0.6000000238418579,
+                "z": -2.8496968746185303
+            },
+            "runner": {
+                "x": -9.9479341506958,
+                "y": 0.6000000238418579,
+                "z": -2.8766934871673584
+            },
+            "wander": {
+                "x": 4.216555118560791,
+                "y": 0.6000000238418579,
+                "z": -2.269333600997925
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018244624137878,
+            "roots": [
+                "NoTerminalResult; updates=22474",
+                "NoTerminalResult; updates=22474",
+                "NoTerminalResult; updates=22474"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 32.0004768371582,
+            "patrol": {
+                "x": 4.421295166015625,
+                "y": 0.6000000238418579,
+                "z": -1.4980212450027466
+            },
+            "runner": {
+                "x": -5.189978122711182,
+                "y": 0.6000000238418579,
+                "z": -5.745631217956543
+            },
+            "wander": {
+                "x": 4.576456546783447,
+                "y": 0.6000000238418579,
+                "z": -0.9166318774223328
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017380356788635,
+            "roots": [
+                "NoTerminalResult; updates=23218",
+                "NoTerminalResult; updates=23218",
+                "NoTerminalResult; updates=23218"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 33.00124740600586,
+            "patrol": {
+                "x": 4.781911849975586,
+                "y": 0.6000000238418579,
+                "z": -0.1442440301179886
+            },
+            "runner": {
+                "x": -1.5715479850769043,
+                "y": 0.6000000238418579,
+                "z": -1.1540815830230713
+            },
+            "wander": {
+                "x": 4.936694145202637,
+                "y": 0.6000000238418579,
+                "z": 0.43734049797058105
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018289923667908,
+            "roots": [
+                "NoTerminalResult; updates=23990",
+                "NoTerminalResult; updates=23990",
+                "NoTerminalResult; updates=23990"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 34.00031280517578,
+            "patrol": {
+                "x": 5.141597270965576,
+                "y": 0.6000000238418579,
+                "z": 1.207501769065857
+            },
+            "runner": {
+                "x": 6.420289039611816,
+                "y": 0.6000000238418579,
+                "z": -1.0476653575897217
+            },
+            "wander": {
+                "x": 5.29632568359375,
+                "y": 0.6000000238418579,
+                "z": 1.7890111207962036
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017425060272217,
+            "roots": [
+                "NoTerminalResult; updates=24733",
+                "NoTerminalResult; updates=24733",
+                "NoTerminalResult; updates=24733"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 35.000404357910156,
+            "patrol": {
+                "x": 5.353127956390381,
+                "y": 0.6000000238418579,
+                "z": 2.0025112628936768
+            },
+            "runner": {
+                "x": 9.931540489196777,
+                "y": 0.6000000238418579,
+                "z": 3.602849006652832
+            },
+            "wander": {
+                "x": 4.965030670166016,
+                "y": 0.6000000238418579,
+                "z": 2.385697364807129
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.545390784740448,
+            "roots": [
+                "NoTerminalResult; updates=25506",
+                "NoTerminalResult; updates=25506",
+                "NoTerminalResult; updates=25506"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 36.00102615356445,
+            "patrol": {
+                "x": 4.234395503997803,
+                "y": 0.6000000238418579,
+                "z": 2.0432772636413574
+            },
+            "runner": {
+                "x": 4.207302093505859,
+                "y": 0.6000000238418579,
+                "z": 5.857946395874023
+            },
+            "wander": {
+                "x": 3.6480448246002197,
+                "y": 0.6000000238418579,
+                "z": 1.908219337463379
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017040610313416,
+            "roots": [
+                "NoTerminalResult; updates=26283",
+                "NoTerminalResult; updates=26283",
+                "NoTerminalResult; updates=26283"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 37.000614166259766,
+            "patrol": {
+                "x": 2.9005160331726074,
+                "y": 0.6000000238418579,
+                "z": 1.6296216249465942
+            },
+            "runner": {
+                "x": -3.7889912128448486,
+                "y": 0.6000000238418579,
+                "z": 5.937901496887207
+            },
+            "wander": {
+                "x": 2.3324151039123535,
+                "y": 0.6000000238418579,
+                "z": 1.4312349557876587
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017440557479858,
+            "roots": [
+                "NoTerminalResult; updates=27040",
+                "NoTerminalResult; updates=27040",
+                "NoTerminalResult; updates=27040"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 38.000160217285156,
+            "patrol": {
+                "x": 1.5828886032104492,
+                "y": 0.6000000238418579,
+                "z": 1.158752202987671
+            },
+            "runner": {
+                "x": -9.832876205444336,
+                "y": 0.6000000238418579,
+                "z": 4.026589870452881
+            },
+            "wander": {
+                "x": 1.0168427228927612,
+                "y": 0.6000000238418579,
+                "z": 0.9542688131332397
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.601848304271698,
+            "roots": [
+                "NoTerminalResult; updates=27816",
+                "NoTerminalResult; updates=27816",
+                "NoTerminalResult; updates=27816"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 39.00127029418945,
+            "patrol": {
+                "x": 0.2650694251060486,
+                "y": 0.6000000238418579,
+                "z": 0.6816390156745911
+            },
+            "runner": {
+                "x": -9.966349601745605,
+                "y": 0.6000000238418579,
+                "z": -3.981199026107788
+            },
+            "wander": {
+                "x": -0.3007892370223999,
+                "y": 0.6000000238418579,
+                "z": 0.47655683755874634
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018760204315186,
+            "roots": [
+                "NoTerminalResult; updates=28599",
+                "NoTerminalResult; updates=28599",
+                "NoTerminalResult; updates=28599"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 40.00030517578125,
+            "patrol": {
+                "x": -1.0499056577682495,
+                "y": 0.6000000238418579,
+                "z": 0.20495513081550598
+            },
+            "runner": {
+                "x": -5.146019458770752,
+                "y": 0.6000000238418579,
+                "z": -4.647541522979736
+            },
+            "wander": {
+                "x": -1.6156824827194214,
+                "y": 0.6000000238418579,
+                "z": -0.00016228685854002833
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018110513687134,
+            "roots": [
+                "NoTerminalResult; updates=29378",
+                "NoTerminalResult; updates=29378",
+                "NoTerminalResult; updates=29378"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 41.000606536865234,
+            "patrol": {
+                "x": -2.3665242195129395,
+                "y": 0.6000000238418579,
+                "z": -0.2723851501941681
+            },
+            "runner": {
+                "x": -0.4734128415584564,
+                "y": 0.6000000238418579,
+                "z": -1.1394602060317993
+            },
+            "wander": {
+                "x": -2.932248830795288,
+                "y": 0.6000000238418579,
+                "z": -0.4774879813194275
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017569899559021,
+            "roots": [
+                "NoTerminalResult; updates=30165",
+                "NoTerminalResult; updates=30165",
+                "NoTerminalResult; updates=30165"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 42.001094818115234,
+            "patrol": {
+                "x": -3.6833443641662598,
+                "y": 0.6000000238418579,
+                "z": -0.74980229139328
+            },
+            "runner": {
+                "x": 7.529788017272949,
+                "y": 0.6000000238418579,
+                "z": -1.0328924655914307
+            },
+            "wander": {
+                "x": -4.249056816101074,
+                "y": 0.6000000238418579,
+                "z": -0.9549016952514648
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017444133758545,
+            "roots": [
+                "NoTerminalResult; updates=30915",
+                "NoTerminalResult; updates=30915",
+                "NoTerminalResult; updates=30915"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 43.00027084350586,
+            "patrol": {
+                "x": -4.655337333679199,
+                "y": 0.6000000238418579,
+                "z": -0.6052582859992981
+            },
+            "runner": {
+                "x": 9.962841987609863,
+                "y": 0.6000000238418579,
+                "z": 4.698885440826416
+            },
+            "wander": {
+                "x": -5.091731071472168,
+                "y": 0.6000000238418579,
+                "z": -0.19109278917312622
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6016415357589722,
+            "roots": [
+                "NoTerminalResult; updates=31665",
+                "NoTerminalResult; updates=31665",
+                "NoTerminalResult; updates=31665"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 44.00087356567383,
+            "patrol": {
+                "x": -5.456843852996826,
+                "y": 0.6000000238418579,
+                "z": 0.5202901363372803
+            },
+            "runner": {
+                "x": 3.103634834289551,
+                "y": 0.6000000238418579,
+                "z": 5.868983745574951
+            },
+            "wander": {
+                "x": -5.760067939758301,
+                "y": 0.6000000238418579,
+                "z": 1.0400382280349731
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6017332673072815,
+            "roots": [
+                "NoTerminalResult; updates=32439",
+                "NoTerminalResult; updates=32439",
+                "NoTerminalResult; updates=32439"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        },
+        {
+            "time": 45.0009651184082,
+            "patrol": {
+                "x": -6.139349460601807,
+                "y": 0.6000000238418579,
+                "z": 1.742483377456665
+            },
+            "runner": {
+                "x": -4.896691799163818,
+                "y": 0.6000000238418579,
+                "z": 5.948970317840576
+            },
+            "wander": {
+                "x": -6.428062915802002,
+                "y": 0.6000000238418579,
+                "z": 2.2705390453338623
+            },
+            "mode": "CHASE",
+            "alarm": true,
+            "target": 2,
+            "distance": 0.6018291115760803,
+            "roots": [
+                "NoTerminalResult; updates=33205",
+                "NoTerminalResult; updates=33205",
+                "NoTerminalResult; updates=33205"
+            ],
+            "failures": [
+                "None",
+                "None",
+                "None"
+            ]
+        }
+    ]
+}

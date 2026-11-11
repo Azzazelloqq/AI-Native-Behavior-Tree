@@ -43,6 +43,7 @@ namespace AIBT.Authoring
         UInt32,
         UInt64,
         StringEnum,
+        Float32,
     }
 
     public enum NodeAccessMode : byte

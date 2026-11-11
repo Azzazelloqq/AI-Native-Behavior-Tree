@@ -4,6 +4,62 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P8-012", "phase": 8, "title": "Patrol and pursuit consumer research", "status": "review", "kind": "spike",
+      "card": "Planning~/Tasks/P8/P8-012-patrol-pursuit-research.md",
+      "dependsOn": ["P7-016"],
+      "owns": ["Spikes~/PatrolPursuit/", "Planning~/Evidence/P8-012/", "Authoring/Compilation/Generated/GeneratedCompiledProgramV2.cs", "Tests/Editor/BlackboardScopes/GeneratedScopeCompilerTests.cs"]
+    },
+    {
+      "id": "P8-011", "phase": 8, "title": "Complete agent consumer workflow", "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-011-agent-consumer-completion.md",
+      "dependsOn": ["P6-005", "P6-006", "P6-007", "P6-011", "P7-008", "P7-009", "P7-031", "P7-039", "P7-041"],
+      "owns": ["Editor/", "Authoring/Registry/Generated/", "MCP/", "MCP~/", "Tests/Editor/", "Tools~/Verification/P8/", "Documentation~/", "Planning~/Evidence/P8-011/"]
+    },
+    {
+      "id": "P8-010",
+      "phase": 8,
+      "title": "CLI and on-demand Editor bridge",
+      "status": "review",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-010-cli-and-managed-bridge.md",
+      "dependsOn": ["P6-005", "P6-006", "P6-007", "P7-031"],
+      "owns": ["MCP/", "MCP~/", "Tests/Editor/Mcp/", "Tools~/aibt.ps1", "Tools~/Verification/P8/", "Documentation~/", "Planning~/Evidence/P8-010/"]
+    },
+    {
+      "id": "P8-009",
+      "phase": 8,
+      "title": "Complete first consumer workflow",
+      "status": "review",
+      "kind": "implementation",
+      "card": "Planning~/Tasks/P8/P8-009-consumer-workflow.md",
+      "dependsOn": [
+        "P3-003",
+        "P3-005",
+        "P3-006",
+        "P3-009",
+        "P3-011",
+        "P7-030",
+        "P7-033",
+        "P7-037",
+        "P7-039",
+        "P7-041"
+      ],
+      "owns": [
+        "Runtime/Integration/",
+        "Authoring/",
+        "Editor/",
+        "CodeGen~/",
+        "Analyzers/",
+        "Schemas~/",
+        "Tests/",
+        "Samples~/FirstAgent/",
+        "Tools~/Verification/",
+        "Benchmarks~/",
+        "Documentation~/",
+        "Planning~/Evidence/P8-009/"
+      ]
+    },
+    {
       "id": "P8-008",
       "phase": 8,
       "title": "Attach to a selected production host trace",

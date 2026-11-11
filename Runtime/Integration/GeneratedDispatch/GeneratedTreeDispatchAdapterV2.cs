@@ -3,6 +3,7 @@ using AIBT.Burst;
 using AIBT.Execution.Burst.Dispatch;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Profiling;
 
 namespace AIBT
 {
@@ -12,6 +13,7 @@ namespace AIBT
     /// </summary>
     internal sealed class GeneratedTreeDispatchAdapterV2 : IDisposable
     {
+        private static readonly ProfilerMarker DispatchMarker = new ProfilerMarker("AIBT.Production.GeneratedDispatch");
         private readonly GeneratedTreeRuntimeDefinitionV2 _definition;
         private readonly GeneratedBurstCatalogV2 _catalog;
         private readonly TreeInstanceId _treeInstanceId;
@@ -372,6 +374,7 @@ namespace AIBT
             bool scheduled,
             out NodeStatus status)
         {
+            using var scope = DispatchMarker.Auto();
             status = NodeStatus.Running;
             if (_disposed || request.NodeIndex >= _slots.Length)
                 return BurstContextResult.InvalidHandle;

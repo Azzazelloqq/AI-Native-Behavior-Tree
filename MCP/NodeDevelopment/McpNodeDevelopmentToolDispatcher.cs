@@ -115,30 +115,16 @@ namespace AIBT.Mcp.NodeDevelopment
 
             var nodeFileName = Path.GetFileNameWithoutExtension(stagedNodePath);
             var testFileName = nodeFileName + "Tests.cs";
-            // Manifest data needs no separate artifact: it is inherent in the [AibtBurstNode]/
-            // [AibtNodeDocumentation] attributes generate-node already wrote (ai-and-mcp.md's own
-            // "generated from the same metadata" rule) -- confirmed structurally once
-            // analyze-and-compile-node/test-node succeed. Real dispatch-driven test assertions
-            // need a generic native-dispatch workspace translator that does not exist yet
-            // (see P6-022, spun off this session); this scaffold is an honest, disclosed
-            // placeholder, not a fake pretend-working test.
-            var source = "using NUnit.Framework;\n\n"
-                + "namespace AIBT.Generated.Staging\n{\n"
-                + "    [TestFixture]\n    public sealed class " + nodeFileName + "Tests\n    {\n"
-                + "        // TODO: real dispatch-driven assertions need a generic native-dispatch\n"
-                + "        // workspace translator (P6-022, not yet accepted/implemented). Until\n"
-                + "        // then, this node's structural/registry validity is proven by\n"
-                + "        // analyze-and-compile-node and test-node instead of by this file.\n"
-                + "        [Test]\n        public void Placeholder_AwaitingP6022DispatchHarness()\n        {\n"
-                + "            Assert.Inconclusive(\"Real dispatch execution needs P6-022's generic native-dispatch test harness.\");\n"
-                + "        }\n    }\n}\n";
-
+            var cases = args["cases"] as JArray ?? NativeNodeBehaviorChecks.TemplateCases(File.ReadAllText(stagedNodePath));
+            var source = NativeNodeBehaviorChecks.GenerateSource(nodeFileName + "Tests", cases);
             StagingSlot.WriteTests(projectRoot, testFileName, source);
             return new JObject
             {
                 ["fileName"] = testFileName,
                 ["source"] = source,
                 ["manifestNote"] = "Manifest data is inherent in generate-node's own attributes; no separate artifact is produced.",
+                ["caseCount"] = cases.Count,
+                ["behaviorCasesRequired"] = cases.Count == 0,
             };
         }
 
@@ -224,6 +210,12 @@ namespace AIBT.Mcp.NodeDevelopment
                 result["dispatchReason"] = dispatch.Reason;
             }
 
+            var cases = args["cases"] as JArray ?? NativeNodeBehaviorChecks.ReadCases(projectRoot);
+            result["behaviorCaseContract"] = NativeNodeBehaviorChecks.Contract(artifact.Nodes[0]);
+            var behavior = NativeNodeBehaviorChecks.Run(artifact, catalogSetType, cases);
+            result["behavior"] = behavior;
+            result["behaviorProven"] = behavior["behaviorProven"].DeepClone();
+            if (cases.Count > 0 && !(bool)behavior["behaviorProven"]) result["valid"] = false;
             return result;
         }
 

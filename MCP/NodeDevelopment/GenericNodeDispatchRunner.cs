@@ -1,5 +1,8 @@
 using System;
 using System.Reflection;
+using System.Linq;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using AIBT;
 using AIBT.Authoring;
 using AIBT.Burst;
@@ -21,13 +24,15 @@ namespace AIBT.Mcp.NodeDevelopment
     {
         internal readonly struct RunResult
         {
-            private RunResult(bool dispatchProven, string reason, bool enteredSuccessfully, string tickStatus, string callbackFailure)
+            private RunResult(bool dispatchProven, string reason, bool enteredSuccessfully, string tickStatus, string callbackFailure,
+                IReadOnlyDictionary<string, string> effects = null)
             {
                 DispatchProven = dispatchProven;
                 Reason = reason;
                 EnteredSuccessfully = enteredSuccessfully;
                 TickStatus = tickStatus;
                 CallbackFailure = callbackFailure;
+                Effects = effects ?? new Dictionary<string, string>();
             }
 
             internal bool DispatchProven { get; }
@@ -35,14 +40,15 @@ namespace AIBT.Mcp.NodeDevelopment
             internal bool EnteredSuccessfully { get; }
             internal string TickStatus { get; }
             internal string CallbackFailure { get; }
+            internal IReadOnlyDictionary<string, string> Effects { get; }
 
             internal static RunResult OutOfScope(string reason) => new RunResult(false, reason, false, null, null);
 
-            internal static RunResult Proven(bool enteredSuccessfully, string tickStatus, string callbackFailure)
-                => new RunResult(true, null, enteredSuccessfully, tickStatus, callbackFailure);
+            internal static RunResult Proven(bool enteredSuccessfully, string tickStatus, string callbackFailure, IReadOnlyDictionary<string, string> effects = null)
+                => new RunResult(true, null, enteredSuccessfully, tickStatus, callbackFailure, effects);
         }
 
-        internal static RunResult Run(GeneratedShardMetadataArtifact artifact, Type catalogSetType)
+        internal static RunResult Run(GeneratedShardMetadataArtifact artifact, Type catalogSetType, JObject scenario = null)
         {
             // Staging always compiles exactly one node into its own isolated shard (StagingSlot.
             // WriteNode clears any prior pending generation before writing a fresh one), so the
@@ -84,6 +90,7 @@ namespace AIBT.Mcp.NodeDevelopment
                 {
                     using (var request = new ZeroInitializedRequestBuffers(built))
                     {
+                        if (scenario != null) request.ApplyScenario(artifact.Nodes[0], scenario);
                         var phases = built.TargetCase.Phases;
                         var enteredSuccessfully = true;
                         if ((phases & NativeBurstDispatchPhaseMaskV2.Enter) != 0)
@@ -100,7 +107,8 @@ namespace AIBT.Mcp.NodeDevelopment
 
                         var ticked = Execute(owner, request.Views(built, BurstCallbackPhase.Tick), executeImmediate);
                         var tickStatus = ticked.Execution.Code == BurstExecutionCode.Success ? ticked.Status.ToString() : null;
-                        return RunResult.Proven(enteredSuccessfully, tickStatus, ticked.CallbackFailure.ToString());
+                        return RunResult.Proven(enteredSuccessfully, tickStatus, ticked.CallbackFailure.ToString(),
+                            request.ReadEffects(artifact.Nodes[0], ticked.Transaction.CommandCount));
                     }
                 }
                 finally
@@ -169,8 +177,15 @@ namespace AIBT.Mcp.NodeDevelopment
                     // Each binding's own value size (not a uniform guess) -- 64-bit value types
                     // would otherwise overlap the next binding's own live-value slot.
                     var valueSize = built.Shape.ValueFields[(int)(targetCase.FirstBinding + (uint)index)].ElementSize;
-                    _resolvedBindings[index] = new NativeBurstDispatchResolvedBindingV2((uint)index, 0u, totalValueBytes);
-                    totalValueBytes += valueSize;
+                    var binding = built.Shape.Bindings[(int)(targetCase.FirstBinding + (uint)index)];
+                    var live = binding.Kind <= NativeBurstDispatchBindingKindV2.SnapshotRead;
+                    _resolvedBindings[index] = new NativeBurstDispatchResolvedBindingV2((uint)index, (uint)index,
+                        live ? totalValueBytes : NativeBurstDispatchBindingV2.NoOffset);
+                    if (live) totalValueBytes += valueSize;
+                    var handle = built.Shape.ConfigurationFields[(int)(targetCase.FirstConfigurationField + binding.ConfigurationFieldOrdinal)];
+                    var ordinal = BitConverter.GetBytes((uint)index);
+                    if (!BitConverter.IsLittleEndian) Array.Reverse(ordinal);
+                    Copy(ordinal, _configurationBytes, (int)handle.ByteOffset, ordinal.Length);
                 }
                 _bindingValueBytes = Zeroed((int)Math.Max(totalValueBytes, 1u));
 
@@ -219,6 +234,48 @@ namespace AIBT.Mcp.NodeDevelopment
                     _commandPayloadBytes,
                     _operations,
                     _transactionControl);
+            }
+
+            internal void ApplyScenario(GeneratedNodeDescriptor node, JObject scenario)
+            {
+                foreach (var property in ((JObject)scenario["configuration"] ?? new JObject()).Properties())
+                {
+                    var field = node.Configuration.SingleOrDefault(candidate => candidate.FieldId == property.Name);
+                    if (field == null || field.Encoding == GeneratedFieldEncoding.GeneratedHandle)
+                        throw new ArgumentException("Unknown or generated configuration field: " + property.Name);
+                    Copy(NativeBehaviorValues.Encode(field.ValueTypeId, property.Value), _configurationBytes, (int)field.Offset, (int)field.Size);
+                }
+                foreach (var property in ((JObject)scenario["inputs"] ?? new JObject()).Properties())
+                {
+                    var binding = node.Bindings.SingleOrDefault(candidate => candidate.BindingId == property.Name);
+                    if (binding == null || !(binding.IsBlackboard || binding.Kind == GeneratedBindingKind.SnapshotRead))
+                        throw new ArgumentException("Unknown input binding: " + property.Name);
+                    var resolved = _resolvedBindings[(int)binding.Ordinal];
+                    var bytes = NativeBehaviorValues.Encode(binding.Types[0].CanonicalTypeId, property.Value);
+                    Copy(bytes, _bindingValueBytes, (int)resolved.LiveValueOffset, bytes.Length);
+                }
+            }
+
+            internal IReadOnlyDictionary<string, string> ReadEffects(GeneratedNodeDescriptor node, uint count)
+            {
+                var effects = new Dictionary<string, string>();
+                for (var index = 0; index < count; index++)
+                {
+                    var command = _commands[index];
+                    var binding = node.Bindings[(int)command.TargetOrdinal];
+                    var bytes = new byte[(int)command.PayloadSize];
+                    for (var offset = 0; offset < bytes.Length; offset++) bytes[offset] = _commandPayloadBytes[(int)command.PayloadOffset + offset];
+                    if (effects.ContainsKey(binding.BindingId)) throw new NotSupportedException("Behavior checks currently allow one effect per binding per tick.");
+                    effects.Add(binding.BindingId, Convert.ToBase64String(bytes));
+                }
+                return effects;
+            }
+
+            private static void Copy(byte[] source, NativeArray<byte> destination, int offset, int expectedSize)
+            {
+                if (source.Length != expectedSize || offset < 0 || offset + source.Length > destination.Length)
+                    throw new ArgumentException("Behavior value does not match the declared layout.");
+                for (var index = 0; index < source.Length; index++) destination[offset + index] = source[index];
             }
 
             private static NativeArray<byte> Zeroed(int length) => new NativeArray<byte>(length, Allocator.Persistent, NativeArrayOptions.ClearMemory);

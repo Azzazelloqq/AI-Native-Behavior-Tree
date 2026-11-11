@@ -362,7 +362,7 @@ namespace AIBT.Authoring
                     }
 
                     var expectedSize = parameters[parameterIndex].Type == NodeParameterType.UInt64 ? 8u
-                        : parameters[parameterIndex].Type == NodeParameterType.UInt32 ? 4u
+                        : parameters[parameterIndex].Type == NodeParameterType.UInt32 || parameters[parameterIndex].Type == NodeParameterType.Float32 ? 4u
                         : 1u;
                     var expectedAlignment = (byte)expectedSize;
                     if (field.Size != expectedSize || field.Alignment != expectedAlignment)

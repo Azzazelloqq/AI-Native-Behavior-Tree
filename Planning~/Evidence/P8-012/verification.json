@@ -1,0 +1,20 @@
+{
+  "verified": true,
+  "seconds": 45.0009651184082,
+  "firstDetectionSeconds": 0.5811824202537537,
+  "firstLossSeconds": 2.8734688758850098,
+  "firstLossDistance": 9.004544258117676,
+  "firstPatrolResumeSeconds": 5.225948333740234,
+  "returnTransitions": 2,
+  "wanderArrivals": 7,
+  "alarmConsistent": true,
+  "nativeFailures": 0,
+  "fullEditorTests": {
+    "total": 1517,
+    "passed": 1517,
+    "failed": 0,
+    "skipped": 0
+  },
+  "staticVerification": "passed: 7 schemas, 158 work items, JSON, local links, whitespace",
+  "earlierIncompleteObservationsRejected": true
+}

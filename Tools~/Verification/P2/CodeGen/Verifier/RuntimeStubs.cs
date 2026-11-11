@@ -2,6 +2,19 @@ using System;
 
 namespace AIBT
 {
+    public enum ProductionTreeEffectValueKind : byte { None, Int32, Float32, Float3 }
+    public readonly struct ProductionTreeEffectDescriptor
+    {
+        public ProductionTreeEffectDescriptor(ulong stableId, ProductionTreeEffectValueKind valueKind) { StableId = stableId; ValueKind = valueKind; }
+        public ulong StableId { get; }
+        public ProductionTreeEffectValueKind ValueKind { get; }
+    }
+    public sealed class GeneratedBurstCatalogV2
+    {
+        public static bool TryCreate(AIBT.Burst.IGeneratedBurstCatalogExecutorV2 executor, in AIBT.Burst.BurstCatalogHandshake handshake,
+            byte[] layout, Unity.Collections.Allocator allocator, out GeneratedBurstCatalogV2 catalog, out AIBT.Burst.BurstContextResult failure)
+        { catalog = null; failure = default; return false; }
+    }
     internal static class NativeBuiltInBlackboardTypeIdsV1
     {
         internal const ulong Bool = 17851659414560344221UL;
@@ -89,6 +102,7 @@ namespace Unity.Burst
 
 namespace Unity.Collections
 {
+    public enum Allocator { Persistent = 4 }
     [AttributeUsage(AttributeTargets.Field)]
     public sealed class ReadOnlyAttribute : Attribute { }
 

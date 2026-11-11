@@ -485,7 +485,7 @@ namespace AIBT.CodeGen
 
         private static bool AllowedConfigurationField(ITypeSymbol type)
         {
-            if (type.SpecialType == SpecialType.System_Boolean || type.SpecialType == SpecialType.System_UInt32 || type.SpecialType == SpecialType.System_UInt64) return true;
+            if (type.SpecialType == SpecialType.System_Boolean || type.SpecialType == SpecialType.System_UInt32 || type.SpecialType == SpecialType.System_UInt64 || type.SpecialType == SpecialType.System_Single) return true;
             var named = type as INamedTypeSymbol;
             return named != null && named.IsGenericType && named.Name.EndsWith("Handle", StringComparison.Ordinal);
         }
@@ -2168,7 +2168,7 @@ namespace AIBT.CodeGen
             var nodeAttribute = Attribute(node.Type, NodeAttribute)!; var args = nodeAttribute.ConstructorArguments;
             var config = DescribeLayout(node.Config!); var memory = DescribeLayout(node.Memory!);
             var parameters = config.Fields.Where(field => field.Field.Type.SpecialType == SpecialType.System_Boolean
-                    || field.Field.Type.SpecialType == SpecialType.System_UInt32 || field.Field.Type.SpecialType == SpecialType.System_UInt64)
+                    || field.Field.Type.SpecialType == SpecialType.System_UInt32 || field.Field.Type.SpecialType == SpecialType.System_UInt64 || field.Field.Type.SpecialType == SpecialType.System_Single)
                 .OrderBy(field => field.Id, Utf8StringComparer.Instance).ToArray();
             JsonIndent(builder, indent); builder.AppendLine("{");
             JsonProperty(builder, indent + 1, "typeId", node.TypeId, true); JsonNumberProperty(builder, indent + 1, "version", node.Version, true);
@@ -2239,7 +2239,7 @@ namespace AIBT.CodeGen
             return new LayoutDescription(fields, Align(offset, alignment), alignment);
         }
 
-        private static string ParameterType(ITypeSymbol type) => type.SpecialType == SpecialType.System_Boolean ? "boolean" : type.SpecialType == SpecialType.System_UInt32 ? "uint32" : "uint64";
+        private static string ParameterType(ITypeSymbol type) => type.SpecialType == SpecialType.System_Boolean ? "boolean" : type.SpecialType == SpecialType.System_UInt32 ? "uint32" : type.SpecialType == SpecialType.System_Single ? "float32" : "uint64";
         private static string CancellationText(byte value) => value == 0 ? "not-applicable" : value == 1 ? "abort-only" : "command";
         private static string CostText(byte value) => value == 0 ? "trivial" : value == 1 ? "low" : value == 2 ? "medium" : value == 3 ? "high" : "variable";
         private static string[] Statuses(byte mask)

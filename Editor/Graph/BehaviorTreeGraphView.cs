@@ -22,6 +22,22 @@ namespace AIBT.Editor.Graph
 
         public IReadOnlyDictionary<NodeId, BehaviorTreeNode> NodesById => _nodesById;
 
+        internal Func<NodeId, NodeId, bool> CanConnectNodes { get; set; }
+
+        public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapter)
+        {
+            var compatible = new List<Port>();
+            if (CanConnectNodes == null || !(startPort.node is BehaviorTreeNode start)) return compatible;
+            foreach (var port in ports)
+            {
+                if (port.direction == startPort.direction || !(port.node is BehaviorTreeNode other)) continue;
+                var parent = startPort.direction == Direction.Output ? start : other;
+                var child = startPort.direction == Direction.Input ? start : other;
+                if (CanConnectNodes(parent.NodeId, child.NodeId)) compatible.Add(port);
+            }
+            return compatible;
+        }
+
         public BehaviorTreeGraphView()
         {
             SetupZoom(ContentZoomer.DefaultMinScale, ContentZoomer.DefaultMaxScale);
@@ -64,6 +80,8 @@ namespace AIBT.Editor.Graph
                 }
 
                 var view = new BehaviorTreeNode(node, manifest);
+                view.InputPort.SetEnabled(CanConnectNodes != null);
+                view.OutputPort?.SetEnabled(CanConnectNodes != null);
                 AddElement(view);
                 _nodesById[node.Id] = view;
             }

@@ -11,8 +11,6 @@ namespace AIBT.Mcp
     /// </summary>
     public sealed class McpBridgeWindow : EditorWindow
     {
-        private static McpBridgeListener _listener;
-
         private Label _statusLabel;
 
         [MenuItem("AIBT/MCP/Bridge")]
@@ -28,6 +26,8 @@ namespace AIBT.Mcp
             BuildLayout();
             RefreshStatus();
         }
+
+        private void OnInspectorUpdate() => RefreshStatus();
 
         private void BuildLayout()
         {
@@ -47,19 +47,13 @@ namespace AIBT.Mcp
 
         private void OnStartClicked()
         {
-            if (_listener == null)
-            {
-                var libraryDir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "Library"));
-                _listener = new McpBridgeListener(libraryDir, Application.dataPath);
-            }
-
-            _listener.Start();
+            McpBridgeAutoRestart.EnsureRunning();
             RefreshStatus();
         }
 
         private void OnStopClicked()
         {
-            _listener?.Stop();
+            McpBridgeAutoRestart.Stop();
             RefreshStatus();
         }
 
@@ -70,8 +64,9 @@ namespace AIBT.Mcp
                 return;
             }
 
-            _statusLabel.text = _listener != null && _listener.IsRunning
-                ? "Running on port " + _listener.Port
+            var listener = McpBridgeAutoRestart.Listener;
+            _statusLabel.text = listener != null && listener.IsRunning
+                ? "Running on port " + listener.Port
                 : "Stopped";
         }
     }

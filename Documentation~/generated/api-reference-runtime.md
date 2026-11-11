@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-278 public type(s).
+281 public type(s).
 
 ---
 
@@ -479,6 +479,7 @@ _No public members declared directly on this type._
 - `METHOD AIBT.Burst.BurstContextResult TryReadBoolean(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt32,System.Boolean&)`
 - `METHOD AIBT.Burst.BurstContextResult TryReadCommandHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,)`
 - `METHOD AIBT.Burst.BurstContextResult TryReadCompletionHandle(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt64,System.UInt32,)`
+- `METHOD AIBT.Burst.BurstContextResult TryReadFloat32(AIBT.Burst.BurstConfigurationReader&,System.UInt32,System.UInt32,System.Single&)`
 - `METHOD AIBT.Burst.BurstContextResult TryReadMemoryBoolean(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Boolean&)`
 - `METHOD AIBT.Burst.BurstContextResult TryReadMemoryFloat32(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Single&)`
 - `METHOD AIBT.Burst.BurstContextResult TryReadMemoryFloat64(AIBT.Burst.BurstMemoryAccessor&,System.UInt32,System.UInt32,System.Double&)`
@@ -3096,6 +3097,26 @@ An immutable, non-owning job view of one snapshot revision. Payload bytes use th
 
 ---
 
+### `AIBT.ProductionTreeAsset`
+
+Editor-prepared compiled data. The authored tree remains the source of truth.
+
+- `METHOD AIBT.ProductionTreeAsset Create(AIBT.NativeProgramBlackboardBindingV2,AIBT.Burst.BurstCatalogFingerprint)`
+- `METHOD System.Boolean TryCreateProgram(AIBT.ProductionTreeCatalogFactory,AIBT.ProductionTreeProgram&,AIBT.Burst.BurstContextResult&)`
+- `METHOD System.Void .ctor()`
+- `PROPERTY System.String SourceId`
+
+---
+
+### `AIBT.ProductionTreeCatalogFactory`
+
+- `METHOD System.Boolean EndInvoke(AIBT.GeneratedBurstCatalogV2&,AIBT.Burst.BurstContextResult&,System.IAsyncResult)`
+- `METHOD System.Boolean Invoke(Unity.Collections.Allocator,AIBT.GeneratedBurstCatalogV2&,AIBT.Burst.BurstContextResult&)`
+- `METHOD System.IAsyncResult BeginInvoke(Unity.Collections.Allocator,AIBT.GeneratedBurstCatalogV2&,AIBT.Burst.BurstContextResult&,System.AsyncCallback,System.Object)`
+- `METHOD System.Void .ctor(System.Object,System.IntPtr)`
+
+---
+
 ### `AIBT.ProductionTreeEffect`
 
 A committed, main-thread consumable behavior-tree effect.
@@ -3147,6 +3168,8 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `METHOD System.Boolean TryResolveExternalTreeWrite(System.String,AIBT.NativeBlackboardTypeIdV2,,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryWriteExternalTreeValue(AIBT.ProductionTreeHost+ExternalTreeWriteHandle`1<>,,System.Boolean&,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Void .ctor()`
+- `METHOD System.Void Stop()`
+- `PROPERTY AIBT.CompiledProgram Program`
 - `PROPERTY AIBT.NativeRuntimeFailureV1 LastFailure`
 - `PROPERTY AIBT.NativeTraceChannelOwnerV1 TraceChannelOwner`
 - `PROPERTY System.Boolean CanAcceptExternalTreeWrites`
@@ -3155,6 +3178,17 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `PROPERTY System.Nullable`1<System.UInt32> StepBudget`
 - `PROPERTY System.UInt64 InstanceId`
 - `PROPERTY System.UInt64 TotalUpdates`
+
+---
+
+### `AIBT.ProductionTreeProgram`
+
+Shared compiled definition and generated catalog. Dispose after its hosts are destroyed.
+
+- `METHOD System.Boolean TryBootstrap(AIBT.ProductionTreeHost,AIBT.NativeRuntimeFailureV1&,System.Int32,System.Func`1<System.Int64>,System.Nullable`1<AIBT.NativeTraceChannelCapacityV1>)`
+- `METHOD System.Boolean TryDispose(AIBT.Burst.BurstContextResult&)`
+- `METHOD System.Void Dispose()`
+- `PROPERTY AIBT.CompiledProgram Program`
 
 ---
 

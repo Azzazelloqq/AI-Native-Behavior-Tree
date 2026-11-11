@@ -1,0 +1,42 @@
+{
+  "result": {
+    "hosts": [
+      {
+        "instanceId": 3,
+        "objectName": "Wanderer",
+        "scenePath": "Assets/PatrolResearch/PatrolResearch.unity",
+        "active": true,
+        "rootStatus": null,
+        "failure": "None",
+        "updates": 13055,
+        "programHash": "f5ceb7da15f6a15eae384c6c0ecf0ec3c172f6c467cf1a0470b3ed3ab32a34b6",
+        "traceState": "Initialized",
+        "sourceSemanticHash": "e6dbf06a4d4ff4672024cd0100c6add8a8028edc0f899301c3a5e9b0432d2d54"
+      },
+      {
+        "instanceId": 2,
+        "objectName": "Runner",
+        "scenePath": "Assets/PatrolResearch/PatrolResearch.unity",
+        "active": true,
+        "rootStatus": null,
+        "failure": "None",
+        "updates": 13055,
+        "programHash": "b39da471c7837f715bf4e0ff4fa181a4e7d67e8175496373832f25b99affca85",
+        "traceState": "Initialized",
+        "sourceSemanticHash": "56f087e07ec4554afb084e8bc5a0642589398c33b3d8e66bf7195c1ba6c9a184"
+      },
+      {
+        "instanceId": 1,
+        "objectName": "Patroller",
+        "scenePath": "Assets/PatrolResearch/PatrolResearch.unity",
+        "active": true,
+        "rootStatus": null,
+        "failure": "None",
+        "updates": 13055,
+        "programHash": "79dc6a22042666ce0db68b1d8ad77a7404a69e72b9fa5805e9543a9c76255e20",
+        "traceState": "Initialized",
+        "sourceSemanticHash": "7c81f9c2335d441ff54b78cbc5384d9ff97dfe61451d8585e615124be80a1542"
+      }
+    ]
+  }
+}

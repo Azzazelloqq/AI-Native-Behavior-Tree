@@ -10,6 +10,9 @@ namespace AIBT
         private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false, true);
 
         internal static CompiledHash Compute(CompiledProgram program)
+            => new CompiledHash(StableHash.Sha256Hex(Serialize(program)));
+
+        internal static byte[] Serialize(CompiledProgram program)
         {
             if (program == null)
             {
@@ -53,7 +56,7 @@ namespace AIBT
                 WriteBlob(writer, program.DefaultValueBlob);
                 WriteDebugMap(writer, program.DebugMap);
                 writer.Flush();
-                return new CompiledHash(StableHash.Sha256Hex(stream.ToArray()));
+                return stream.ToArray();
             }
         }
 

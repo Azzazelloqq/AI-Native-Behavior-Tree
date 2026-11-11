@@ -35,7 +35,7 @@ Goal: scaffold a new Burst condition node, compile it for real, and persist it i
    -> returns the exact staged file content -- never mutates or compiles anything.
 
 3) aibt_generate_node_tests_and_manifest {}
-   -> stages a paired test scaffold (an honest placeholder pending P6-022).
+   -> stages threshold-contract success/failure cases consumed by native test_node; custom cases may be supplied explicitly.
 
 4) aibt_analyze_and_compile_node {"mode": "start"}
    -> {"status": "pending", "attemptId": "<id>"}; requests a new compilation of the captured staged content.
@@ -44,7 +44,7 @@ Goal: scaffold a new Burst condition node, compile it for real, and persist it i
    -> repeat while status is 'pending'/'still-compiling', including across domain reload; 'compiled' returns contentHash, 'failed' returns diagnostics. Changed staging or an expired attempt requires a fresh start.
 
 6) aibt_test_node {"expectedContentHash": "<contentHash from step 5>"}
-   -> checks metadata and registry materialization; dispatchProven reports whether native dispatch was exercised for the supported binding types.
+   -> checks metadata and dispatchProven separately from behaviorProven; any supplied behavior-case mismatch makes valid=false.
 
 7) aibt_apply_node {"expectedContentHash": "<contentHash from step 5>", "destinationPath": "MyProject/GeneratedNodes/MyCondition"}
    -> the only step that persists into the real project; re-verifies the hash and re-runs the checks itself first.

@@ -1,5 +1,11 @@
 # Burst node authoring
 
+Configuration scalars support `Bool`, `UInt32`, `UInt64` and finite `Float32`, plus generated
+handles. Use `[AibtConfigField("radius", "Float32", 1u)] public float Radius;` for an ordinary
+fractional parameter. The **First Agent** sample demonstrates Float32 parameters and an
+Editor-prepared runtime tree. Existing nodes changing a parameter's type require a new node
+version; old millimetre-based sample contracts are preserved.
+
 Public Burst nodes are declared in a shard assembly and consumed by a separate
 catalog assembly. Both assemblies reference `AIBT.Runtime` and attach the
 packaged `AIBT.CodeGen` analyzer.
