@@ -140,6 +140,22 @@ namespace AIBT.Agents
 
         private static readonly object Gate = new object();
         private static ManagedNodeSet _default;
+        private static ManagedNodeSet _standard;
+
+        /// <summary>
+        /// Only the package's own standard nodes (<c>aibt.unity.*</c>), independent of the project.
+        /// The generated node catalog documents this set.
+        /// </summary>
+        internal static ManagedNodeSet Standard
+        {
+            get
+            {
+                lock (Gate)
+                {
+                    return _standard ?? (_standard = ManagedNodeSet.Create(CollectNodeClasses(typeof(BtNode).Assembly, null)));
+                }
+            }
+        }
 
         internal static ManagedNodeSet Default
         {
@@ -155,7 +171,11 @@ namespace AIBT.Agents
         /// <summary>Discards the cached scan. Statics reset on a domain reload anyway.</summary>
         internal static void Refresh()
         {
-            lock (Gate) _default = null;
+            lock (Gate)
+            {
+                _default = null;
+                _standard = null;
+            }
         }
 
         private static ManagedNodeSet Discover()
@@ -169,32 +189,41 @@ namespace AIBT.Agents
                 // Node classes in a test assembly are fixtures: a test passes them to
                 // ManagedNodeSet.Create itself, so they never leak into a project's node list.
                 if (assembly != own && !IsProjectNodeAssembly(assembly)) continue;
-                Type[] candidates;
-                try
-                {
-                    candidates = assembly.GetTypes();
-                }
-                catch (ReflectionTypeLoadException exception)
-                {
-                    candidates = exception.Types;
-                }
-
-                for (var index = 0; index < candidates.Length; index++)
-                {
-                    var type = candidates[index];
-                    if (type == null || type.IsAbstract || !typeof(BtNode).IsAssignableFrom(type)) continue;
-                    if (!type.IsDefined(typeof(BtNodeAttribute), false))
-                    {
-                        problems.Add(type.FullName + " derives from BtAction or BtCondition but has no [BtNode(\"project.node-name\")] attribute.");
-                        continue;
-                    }
-
-                    classes.Add(type);
-                }
+                classes.AddRange(CollectNodeClasses(assembly, problems));
             }
 
             classes.Sort((left, right) => string.CompareOrdinal(left.FullName, right.FullName));
             return ManagedNodeSet.Create(classes, problems);
+        }
+
+        private static List<Type> CollectNodeClasses(Assembly assembly, List<string> problems)
+        {
+            var classes = new List<Type>();
+            Type[] candidates;
+            try
+            {
+                candidates = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException exception)
+            {
+                candidates = exception.Types;
+            }
+
+            for (var index = 0; index < candidates.Length; index++)
+            {
+                var type = candidates[index];
+                if (type == null || type.IsAbstract || !typeof(BtNode).IsAssignableFrom(type)) continue;
+                if (!type.IsDefined(typeof(BtNodeAttribute), false))
+                {
+                    problems?.Add(type.FullName + " derives from BtAction or BtCondition but has no [BtNode(\"project.node-name\")] attribute.");
+                    continue;
+                }
+
+                classes.Add(type);
+            }
+
+            classes.Sort((left, right) => string.CompareOrdinal(left.FullName, right.FullName));
+            return classes;
         }
 
         private static bool IsProjectNodeAssembly(Assembly assembly)

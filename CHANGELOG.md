@@ -4,6 +4,37 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Standard node library (P9-002)
+
+- Add 38 standard managed `aibt.unity.*` nodes so a common agent needs no custom node: waits
+  (random interval, until a flag, frames), blackboard set/copy/increment/toggle/compare-keys/
+  is-set for Bool, Int32, Float32 and Vector3, random float/int/point and distance, movement
+  (rotate-towards, turn-by, move-direction, keep-distance), optional NavMeshAgent nodes
+  (nav-move-to, nav-stop), Animator trigger/bool/float, set-active, destroy-self, get-position,
+  has-reference, play-audio, raise-event, line-of-sight, random-chance, a shared cooldown
+  (start-cooldown / is-cooldown-ready) and time-since-changed. All are main-thread nodes.
+- Nodes that use a Unity module (AI, Physics, Animation, Audio) compile only when that module is
+  enabled, through version defines in `AIBT.Agents.asmdef`.
+- `BehaviorTreeAgent` gets a **References** list: nodes address other scene objects by name
+  (`reference` parameter; empty means the agent itself), and code can call `SetReference`.
+- `BehaviorTreeAgent.Events`: trees raise named events; gameplay code subscribes by name, or wires
+  **Event Responses** (UnityEvent) in the inspector.
+- Add `BbAnyKey`, a key parameter of any type, and `BtNode.SecondsSinceChanged`,
+  `ResolveGameObject`, `ResolveComponent<T>` and `WarnOnce` for node authors.
+- The node search groups conditions and actions by category.
+- The generated node catalog (`Documentation~/generated/node-catalog.md`) now lists the
+  standard managed nodes alongside the built-ins; empty "when to use" / "when not to use" lines
+  are omitted.
+- Add a package Burst shard `aibt.stdlib.standard-native` (assembly `AIBT.StandardNodes`):
+  `bool-is-true`, `float-at-least`, `set-float` (blackboard through generated bindings) and
+  `wait-microseconds` (host clock). A project `[AibtCatalogSet]` can list it next to its own
+  shards. The nodes are native-only: the reference executor cannot read `GeneratedHandle`
+  bindings, so they have no managed counterpart and `BehaviorTreeAgent` cannot run them.
+- Simple Agent sample: the wanderer and most of the guard use standard nodes (random-point,
+  wait-random, set-active, raise-event, look-at, turn-by), a new scout uses a scene reference,
+  line-of-sight and keep-distance, a beacon reacts to the guard's `spotted` event (raised at
+  most every 3 s through the cooldown nodes), and one custom node remains as the example.
+
 ### Graph editor
 
 - Restyle the graph: grid, minimap, cards with kind accent, readable title, parameter summary,

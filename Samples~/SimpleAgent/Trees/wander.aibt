@@ -3,9 +3,10 @@
   "formatVersion": 2,
   "treeId": "samples.simple.wander",
   "name": "Wander",
-  "description": "Walks to random points, pausing at each.",
+  "description": "Walks to random points around the arena center, pausing at each. Only standard nodes.",
   "root": "wander",
   "blackboard": {
+    "arena-center": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.5, "z": 0.0 } },
     "destination": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } }
   },
   "nodes": {
@@ -16,9 +17,10 @@
       "children": ["pick-point", "walk", "rest"]
     },
     "pick-point": {
-      "type": "samples.simple.pick-random-point",
+      "type": "aibt.unity.random-point",
       "typeVersion": 1,
-      "parameters": { "destination": "destination", "radius": 11.0 }
+      "displayName": "Pick a random point",
+      "parameters": { "result": "destination", "center": "arena-center", "radius": 11.0 }
     },
     "walk": {
       "type": "aibt.unity.move-towards",
@@ -26,9 +28,9 @@
       "parameters": { "target": "destination", "speed": 5.0, "stop-distance": 0.1, "keep-height": true }
     },
     "rest": {
-      "type": "aibt.unity.wait-seconds",
+      "type": "aibt.unity.wait-random",
       "typeVersion": 1,
-      "parameters": { "seconds": 0.2, "random-extra": 0.4 }
+      "parameters": { "min-seconds": 0.2, "max-seconds": 0.6 }
     }
   }
 }

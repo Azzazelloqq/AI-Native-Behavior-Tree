@@ -106,9 +106,28 @@ namespace AIBT.Tests.Editor.Graph
             var groups = tree.OfType<SearchTreeGroupEntry>().Where(entry => entry.level == 1).Select(entry => entry.content.text).ToArray();
             Assert.That(groups, Is.EqualTo(new[] { "Composites (flow)", "Decorators", "Conditions", "Actions" }));
             var items = tree.Where(entry => !(entry is SearchTreeGroupEntry)).ToArray();
-            Assert.That(items.All(entry => entry.level == 2), Is.True);
+            Assert.That(items.All(entry => entry.level == (IsLeaf(entry) ? 3 : 2)), Is.True,
+                "Composites and decorators are listed directly; leaves sit in a category sub-group.");
             Assert.That(items.Select(entry => ((NodeManifest)entry.userData).TypeId), Does.Contain("aibt.stdlib.wait"));
             Assert.That(items.Select(entry => ((NodeManifest)entry.userData).TypeId), Does.Contain("aibt.core.memory-sequence"));
+        }
+
+        [Test]
+        public void NodeSearchListsLeavesUnderTheirCategory()
+        {
+            var tree = NodeSearchProvider.BuildTree(Registry(), "Create Node");
+            for (var index = 0; index < tree.Count; index++)
+            {
+                if (tree[index] is SearchTreeGroupEntry || !IsLeaf(tree[index])) continue;
+                var parent = tree.Take(index).Last(entry => entry is SearchTreeGroupEntry && entry.level == 2);
+                Assert.That(parent.content.text, Is.EqualTo(NodeSearchProvider.CategoryOf((NodeManifest)tree[index].userData)));
+            }
+        }
+
+        private static bool IsLeaf(SearchTreeEntry entry)
+        {
+            var kind = ((NodeManifest)entry.userData).Kind;
+            return kind == NodeBehaviorKind.Action || kind == NodeBehaviorKind.Condition;
         }
 
         [Test]

@@ -43,17 +43,36 @@ namespace AIBT.Editor.Graph
                     .ToList();
                 if (group.Count == 0) continue;
                 entries.Add(new SearchTreeGroupEntry(new GUIContent(GroupTitle(kind)), 1));
-                foreach (var manifest in group)
+                if (kind == NodeBehaviorKind.Composite || kind == NodeBehaviorKind.Decorator)
                 {
-                    var label = titles[manifest.TypeId];
-                    if (group.Count(other => titles[other.TypeId] == label) > 1) label += "  (" + manifest.TypeId + ")";
-                    else if (!string.IsNullOrEmpty(manifest.Category)) label += "  · " + manifest.Category;
-                    entries.Add(new SearchTreeEntry(new GUIContent(label, Indent(), manifest.Summary)) { level = 2, userData = manifest });
+                    // Few structural nodes: one flat list, the category shown after the title.
+                    foreach (var manifest in group) entries.Add(Entry(manifest, Label(manifest, group, titles, true), 2));
+                    continue;
+                }
+
+                // Leaves are many: one sub-group per category (Movement, Blackboard, Animation...).
+                foreach (var category in group.GroupBy(CategoryOf).OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    entries.Add(new SearchTreeGroupEntry(new GUIContent(category.Key), 2));
+                    foreach (var manifest in category) entries.Add(Entry(manifest, Label(manifest, group, titles, false), 3));
                 }
             }
 
             return entries;
         }
+
+        internal static string CategoryOf(NodeManifest manifest)
+            => string.IsNullOrWhiteSpace(manifest.Category) ? "Other" : manifest.Category.Trim();
+
+        private static string Label(NodeManifest manifest, List<NodeManifest> group, Dictionary<string, string> titles, bool withCategory)
+        {
+            var label = titles[manifest.TypeId];
+            if (group.Count(other => titles[other.TypeId] == label) > 1) return label + "  (" + manifest.TypeId + ")";
+            return withCategory && !string.IsNullOrEmpty(manifest.Category) ? label + "  · " + manifest.Category : label;
+        }
+
+        private static SearchTreeEntry Entry(NodeManifest manifest, string label, int level)
+            => new SearchTreeEntry(new GUIContent(label, Indent(), manifest.Summary)) { level = level, userData = manifest };
 
         private static string GroupTitle(NodeBehaviorKind kind)
         {

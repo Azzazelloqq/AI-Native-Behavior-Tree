@@ -263,6 +263,14 @@ namespace AIBT.Agents
                     return true;
                 }
 
+                if (fieldType == typeof(BbAnyKey))
+                {
+                    var optional = settings != null && settings.Optional;
+                    contract = new NodeParameterContract(name, NodeParameterType.BlackboardKey, !optional);
+                    binding = new ParameterBinding(field, name, NodeParameterType.BlackboardKey, null, "\"" + name + "\"");
+                    return true;
+                }
+
                 if (fieldType == typeof(bool))
                 {
                     var value = (bool)defaultValue;
@@ -334,7 +342,7 @@ namespace AIBT.Agents
                     return true;
                 }
 
-                problem = "field type " + fieldType.Name + " is not a supported parameter type. Use bool, int, float, string, an enum or BbKey<T>, or mark the field [BtIgnore].";
+                problem = "field type " + fieldType.Name + " is not a supported parameter type. Use bool, int, float, string, an enum, BbKey<T> or BbAnyKey, or mark the field [BtIgnore].";
                 return false;
             }
 
@@ -370,7 +378,7 @@ namespace AIBT.Agents
                                 + "' names blackboard key '" + keyName + "', which the tree does not declare.");
                         }
 
-                        if (!BbTypes.Accepts(key.ValueType, slotType))
+                        if (key.ValueType != null && !BbTypes.Accepts(key.ValueType, slotType))
                         {
                             throw new InvalidOperationException("Node '" + document.Id.Value + "' parameter '" + Name
                                 + "' needs " + BbTypes.Describe(key.ValueType) + " but blackboard key '" + keyName + "' is " + slotType + ".");

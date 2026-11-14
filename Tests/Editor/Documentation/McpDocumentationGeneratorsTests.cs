@@ -118,6 +118,25 @@ namespace AIBT.Tests.Editor.Documentation
             }
         }
 
+        [Test]
+        public void ThePackageCatalogListsEveryStandardManagedNodeWithItsContract()
+        {
+            var registry = McpNodeCatalogDocumentGenerator.PackageRegistry();
+            var query = new NodeCatalogQuery(registry);
+            var document = McpNodeCatalogDocumentGenerator.Generate(registry);
+            var standard = AIBT.Agents.ManagedNodeCatalog.Standard;
+            Assert.That(standard.Problems, Is.Empty, string.Join("\n", standard.Problems));
+            Assert.That(standard.Types.Count, Is.GreaterThanOrEqualTo(50));
+            foreach (var type in standard.Types)
+            {
+                query.TryGetContract(type.TypeId, out var expectedContract);
+                Assert.That(JToken.DeepEquals(JObject.Parse(ExtractJsonBlockFor(document, type.TypeId)), expectedContract), Is.True, type.TypeId);
+                Assert.That(document, Does.Contain("### `" + type.TypeId + "` (v1)\n\n- **Summary:** " + type.Manifest.Summary));
+            }
+
+            Assert.That(document, Does.Contain("### `aibt.core.memory-sequence`"), "Built-ins are still listed.");
+        }
+
         private static string ExtractJsonBlockFor(string document, string typeId)
         {
             var marker = "### `" + typeId + "`";
@@ -140,6 +159,7 @@ namespace AIBT.Tests.Editor.Documentation
             var documents = new[]
             {
                 McpNodeCatalogDocumentGenerator.Generate(BuiltInRegistry()),
+                McpNodeCatalogDocumentGenerator.Generate(McpNodeCatalogDocumentGenerator.PackageRegistry()),
                 McpWorkflowGuideGenerator.Generate(),
                 McpRecipesDocumentGenerator.Generate(),
                 McpAntiPatternsDocumentGenerator.Generate(),
@@ -180,7 +200,7 @@ namespace AIBT.Tests.Editor.Documentation
         public void CommittedGeneratedFilesMatchAFreshRegeneration()
         {
             var directory = FindGeneratedDocumentationDirectory();
-            AssertFileMatches(Path.Combine(directory, "node-catalog.md"), McpNodeCatalogDocumentGenerator.Generate(BuiltInRegistry()));
+            AssertFileMatches(Path.Combine(directory, "node-catalog.md"), McpNodeCatalogDocumentGenerator.Generate(McpNodeCatalogDocumentGenerator.PackageRegistry()));
             AssertFileMatches(Path.Combine(directory, "workflow-guide.md"), McpWorkflowGuideGenerator.Generate());
             AssertFileMatches(Path.Combine(directory, "recipes.md"), McpRecipesDocumentGenerator.Generate());
             AssertFileMatches(Path.Combine(directory, "anti-patterns.md"), McpAntiPatternsDocumentGenerator.Generate());

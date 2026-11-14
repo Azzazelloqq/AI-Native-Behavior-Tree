@@ -23,5 +23,12 @@
   "precompiledReferences": [
     "Newtonsoft.Json.dll"
   ],
-  "noEngineReferences": false
+  "noEngineReferences": false,
+  "versionDefines": [
+    {
+      "name": "com.unity.modules.ai",
+      "expression": "1.0.0",
+      "define": "AIBT_UNITY_AI"
+    }
+  ]
 }

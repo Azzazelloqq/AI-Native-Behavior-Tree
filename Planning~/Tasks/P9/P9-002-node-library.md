@@ -1,6 +1,8 @@
 # P9-002 — Ready-made node library
 
-Status: `Draft`
+Status: `Review`
+
+Evidence: `Planning~/Evidence/P9-002/README.md`.
 
 ## Authorization and dependencies
 

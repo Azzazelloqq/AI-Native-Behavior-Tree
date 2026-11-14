@@ -55,6 +55,7 @@ namespace AIBT.Agents
         private readonly Dictionary<string, KeySlot> _keys;
         private readonly string[] _keyNames;
         private readonly BlackboardValueType[] _slotTypes;
+        private readonly long[] _slotChangedAt;
         private readonly byte[] _nodeStates;
         private ulong _updateId;
         private long _timeMicroseconds;
@@ -125,6 +126,7 @@ namespace AIBT.Agents
 
             _keys = new Dictionary<string, KeySlot>(StringComparer.Ordinal);
             _slotTypes = new BlackboardValueType[compiled.BlackboardSlots.Count];
+            _slotChangedAt = new long[compiled.BlackboardSlots.Count];
             var names = new List<string>(program.Document.Blackboard.Count);
             for (var index = 0; index < program.Document.Blackboard.Count; index++)
             {
@@ -243,7 +245,11 @@ namespace AIBT.Agents
                 return false;
             }
 
-            if (kept != null)
+            if (kept == null)
+            {
+                for (var index = 0; index < _slotChangedAt.Length; index++) _slotChangedAt[index] = _timeMicroseconds;
+            }
+            else
             {
                 for (var index = 0; index < _keyNames.Length; index++)
                 {
@@ -289,7 +295,19 @@ namespace AIBT.Agents
         internal bool TryRead(uint slot, out BlackboardValue value) => _machine.TryReadBlackboardSlot(slot, out value);
 
         internal bool TryWrite(uint slot, BlackboardValue value)
-            => _machine.TryWriteBlackboardSlot(slot, value, new RuntimeNodeIndex(_currentNode));
+        {
+            var known = _machine.TryReadBlackboardSlot(slot, out var previous);
+            if (!_machine.TryWriteBlackboardSlot(slot, value, new RuntimeNodeIndex(_currentNode))) return false;
+            if ((!known || !previous.Equals(value)) && slot < (uint)_slotChangedAt.Length) _slotChangedAt[slot] = _timeMicroseconds;
+            return true;
+        }
+
+        /// <summary>
+        /// Seconds of tree time since a slot last changed value through a node or gameplay write.
+        /// A key that never changed counts from the tree's start or its last blackboard reset.
+        /// </summary>
+        internal float SecondsSinceChanged(uint slot)
+            => slot < (uint)_slotChangedAt.Length ? (_timeMicroseconds - _slotChangedAt[slot]) / 1000000f : 0f;
 
         internal BlackboardValueType SlotType(uint slot)
             => slot < (uint)_slotTypes.Length ? _slotTypes[slot] : BlackboardValueType.Invalid;

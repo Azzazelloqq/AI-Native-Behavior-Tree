@@ -8,7 +8,8 @@
   "blackboard": {
     "target-visible": { "type": "Bool", "typeVersion": 1, "scope": "tree", "default": false },
     "target-position": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } },
-    "waypoint": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } }
+    "waypoint": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } },
+    "spotted-again-at": { "type": "Float32", "typeVersion": 1, "scope": "tree", "default": 0.0 }
   },
   "nodes": {
     "priority": {
@@ -21,7 +22,7 @@
       "type": "aibt.core.memory-sequence",
       "typeVersion": 1,
       "displayName": "Chase",
-      "children": ["sees-target", "alert-on", "run-to-target"]
+      "children": ["sees-target", "alert-on", "announce", "face-target", "run-to-target"]
     },
     "sees-target": {
       "type": "aibt.unity.is-true",
@@ -30,9 +31,51 @@
       "parameters": { "key": "target-visible", "interrupt": "both" }
     },
     "alert-on": {
-      "type": "samples.simple.set-alert",
+      "type": "aibt.unity.set-active",
       "typeVersion": 1,
-      "parameters": { "visible": true }
+      "displayName": "Show alert",
+      "parameters": { "reference": "alert", "active": true }
+    },
+    "announce": {
+      "type": "aibt.core.memory-selector",
+      "typeVersion": 1,
+      "displayName": "Announce at most every 3 s",
+      "children": ["announce-now", "already-announced"]
+    },
+    "announce-now": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "displayName": "Announce",
+      "children": ["announce-ready", "spotted", "announce-cooldown"]
+    },
+    "announce-ready": {
+      "type": "aibt.unity.is-cooldown-ready",
+      "typeVersion": 1,
+      "displayName": "Cooldown over?",
+      "parameters": { "key": "spotted-again-at" }
+    },
+    "spotted": {
+      "type": "aibt.unity.raise-event",
+      "typeVersion": 1,
+      "displayName": "Tell gameplay",
+      "parameters": { "event-name": "spotted" }
+    },
+    "announce-cooldown": {
+      "type": "aibt.unity.start-cooldown",
+      "typeVersion": 1,
+      "displayName": "Start 3 s cooldown",
+      "parameters": { "key": "spotted-again-at", "seconds": 3.0 }
+    },
+    "already-announced": {
+      "type": "aibt.unity.succeed",
+      "typeVersion": 1,
+      "displayName": "Skip"
+    },
+    "face-target": {
+      "type": "aibt.unity.look-at",
+      "typeVersion": 1,
+      "displayName": "Face target",
+      "parameters": { "target": "target-position", "degrees-per-second": 720.0 }
     },
     "run-to-target": {
       "type": "aibt.unity.move-towards",
@@ -47,9 +90,10 @@
       "children": ["alert-off", "next-waypoint", "walk-to-waypoint", "look-around"]
     },
     "alert-off": {
-      "type": "samples.simple.set-alert",
+      "type": "aibt.unity.set-active",
       "typeVersion": 1,
-      "parameters": { "visible": false }
+      "displayName": "Hide alert",
+      "parameters": { "reference": "alert", "active": false }
     },
     "next-waypoint": {
       "type": "samples.simple.next-waypoint",
@@ -63,10 +107,10 @@
       "parameters": { "target": "waypoint", "speed": 2.0, "stop-distance": 0.1, "keep-height": true }
     },
     "look-around": {
-      "type": "aibt.unity.wait-seconds",
+      "type": "aibt.unity.turn-by",
       "typeVersion": 1,
       "displayName": "Look around",
-      "parameters": { "seconds": 0.8 }
+      "parameters": { "degrees": 360.0, "degrees-per-second": 450.0 }
     }
   }
 }

@@ -13,6 +13,12 @@ namespace AIBT.Mcp.Documentation
     /// </summary>
     internal static class McpNodeCatalogDocumentGenerator
     {
+        /// <summary>
+        /// The registry the package's committed catalog documents: the built-in nodes plus the
+        /// standard managed nodes shipped in AIBT.Agents (<c>aibt.unity.*</c>), without any project node.
+        /// </summary>
+        internal static NodeRegistry PackageRegistry() => AIBT.Agents.ManagedNodeCatalog.Standard.Registry;
+
         internal static string Generate(NodeRegistry registry)
         {
             var query = new NodeCatalogQuery(registry);
@@ -57,6 +63,7 @@ namespace AIBT.Mcp.Documentation
 
         private static void AppendField(StringBuilder builder, string label, string value)
         {
+            if (string.IsNullOrEmpty(value)) return; // optional guidance a node did not write
             builder.Append("- **");
             builder.Append(label);
             builder.Append(":** ");

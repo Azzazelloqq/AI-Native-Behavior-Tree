@@ -14,6 +14,7 @@ namespace AIBT
         private ManagedTreeInstance _instance;
         private string _nodeId;
         private uint _runtimeIndex;
+        private bool _warned;
 
         internal BtNode()
         {
@@ -52,6 +53,49 @@ namespace AIBT
 
         /// <summary>Writes the blackboard value a key parameter is bound to.</summary>
         protected void Set<T>(BbKey<T> key, T value) => RequireInstance().Blackboard.Set(key, value, _nodeId);
+
+        /// <summary>
+        /// Seconds of tree time since the key last changed value (written by a node or by
+        /// gameplay code with a different value). Counts from the tree's start if it never changed.
+        /// </summary>
+        protected float SecondsSinceChanged(BbAnyKey key)
+        {
+            var instance = RequireInstance();
+            if (!key.IsBound) throw new InvalidOperationException("Node '" + _nodeId + "' uses a blackboard key parameter that the tree leaves unbound.");
+            return instance.SecondsSinceChanged(key.Slot);
+        }
+
+        /// <summary>
+        /// The GameObject a node acts on: the agent's own for an empty <paramref name="reference"/>,
+        /// otherwise the agent's named reference. Null when it is missing or destroyed.
+        /// </summary>
+        protected GameObject ResolveGameObject(string reference)
+        {
+            var agent = Agent;
+            return agent != null ? agent.ResolveGameObject(reference) : null;
+        }
+
+        /// <summary>
+        /// A component on the object <see cref="ResolveGameObject"/> returns, searching its
+        /// children too (models usually carry the Animator or AudioSource on a child). A reference
+        /// that is itself a component of type <typeparamref name="T"/> is returned directly.
+        /// </summary>
+        protected T ResolveComponent<T>(string reference) where T : Component
+        {
+            var agent = Agent;
+            if (agent == null) return null;
+            if (!string.IsNullOrEmpty(reference) && agent.GetReference(reference) is T direct) return direct;
+            var target = agent.ResolveGameObject(reference);
+            return target != null ? target.GetComponentInChildren<T>(true) : null;
+        }
+
+        /// <summary>Logs a warning once per node instance, for configuration problems found while running.</summary>
+        protected void WarnOnce(string message)
+        {
+            if (_warned) return;
+            _warned = true;
+            Debug.LogWarning("[" + (Agent != null ? Agent.name : "tree") + "] node '" + _nodeId + "': " + message, Agent);
+        }
 
         /// <summary>
         /// Called once after this node's parameters are assigned and before its first use. Cache

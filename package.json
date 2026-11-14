@@ -19,7 +19,7 @@
   "samples": [
     {
       "displayName": "Simple Agent",
-      "description": "One BehaviorTreeAgent component, three ordinary C# node classes and a guard that patrols, chases and returns.",
+      "description": "BehaviorTreeAgent with standard aibt.unity nodes and one custom C# node: a guard that patrols, chases and returns, a wanderer and a scout.",
       "path": "Samples~/SimpleAgent"
     },
     {

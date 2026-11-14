@@ -50,6 +50,14 @@ namespace AIBT
         [Tooltip("Use unscaled time, so the tree keeps running while Time.timeScale is 0.")]
         [SerializeField] private bool _useUnscaledTime;
 
+        [Tooltip("Scene objects the tree's nodes address by name, for example 'player'. Nodes with an empty reference act on this GameObject.")]
+        [SerializeField] private List<AgentReference> _references = new List<AgentReference>();
+
+        [Tooltip("Responses to named events the tree raises (aibt.unity.raise-event).")]
+        [SerializeField] private List<AgentEventResponse> _eventResponses = new List<AgentEventResponse>();
+
+        private AgentEvents _events;
+
         private ManagedTreeInstance _instance;
         private bool _initialized;
         private bool _ticking;
@@ -122,6 +130,77 @@ namespace AIBT
         public string LastError { get; private set; }
 
         internal ManagedTreeInstance Instance => _instance;
+
+        /// <summary>Named events the tree raises to gameplay code. See <see cref="AgentEvents"/>.</summary>
+        public AgentEvents Events => _events ?? (_events = new AgentEvents(this));
+
+        /// <summary>The named scene objects nodes can address.</summary>
+        public IReadOnlyList<AgentReference> References => _references;
+
+        /// <summary>
+        /// The object registered under <paramref name="referenceName"/>, or null when there is no
+        /// such entry or its object was destroyed.
+        /// </summary>
+        public UnityEngine.Object GetReference(string referenceName)
+        {
+            if (string.IsNullOrEmpty(referenceName) || _references == null) return null;
+            for (var index = 0; index < _references.Count; index++)
+            {
+                if (string.Equals(_references[index].name, referenceName, StringComparison.Ordinal))
+                    return _references[index].target != null ? _references[index].target : null;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// The GameObject a node should act on: this agent's for an empty name, otherwise the
+        /// referenced object's (a component reference resolves to its GameObject). Null when missing.
+        /// </summary>
+        public GameObject ResolveGameObject(string referenceName)
+        {
+            if (string.IsNullOrEmpty(referenceName)) return gameObject;
+            var target = GetReference(referenceName);
+            if (target is GameObject go) return go;
+            return target is Component component ? component.gameObject : null;
+        }
+
+        /// <summary>Adds or replaces a named reference from code, for objects spawned at runtime.</summary>
+        public void SetReference(string referenceName, UnityEngine.Object target)
+        {
+            if (string.IsNullOrEmpty(referenceName)) throw new ArgumentException("A reference name is required.", nameof(referenceName));
+            if (_references == null) _references = new List<AgentReference>();
+            for (var index = 0; index < _references.Count; index++)
+            {
+                if (!string.Equals(_references[index].name, referenceName, StringComparison.Ordinal)) continue;
+                _references[index] = new AgentReference(referenceName, target);
+                return;
+            }
+
+            _references.Add(new AgentReference(referenceName, target));
+        }
+
+        /// <summary>Adds an inspector-style response from code (mainly for tests and tools).</summary>
+        internal void AddEventResponse(AgentEventResponse response)
+        {
+            if (_eventResponses == null) _eventResponses = new List<AgentEventResponse>();
+            _eventResponses.Add(response);
+        }
+
+        internal int InvokeEventResponses(string eventName)
+        {
+            if (_eventResponses == null) return 0;
+            var invoked = 0;
+            for (var index = 0; index < _eventResponses.Count; index++)
+            {
+                var entry = _eventResponses[index];
+                if (entry == null || entry.response == null || !string.Equals(entry.eventName, eventName, StringComparison.Ordinal)) continue;
+                entry.response.Invoke();
+                invoked++;
+            }
+
+            return invoked;
+        }
 
         /// <summary>Advances the tree once. Call this yourself when Tick Mode is Manual.</summary>
         public void Tick(float deltaTime)

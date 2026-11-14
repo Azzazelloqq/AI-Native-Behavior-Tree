@@ -6,7 +6,10 @@ using UnityEngine;
 
 namespace AIBT.Samples.SimpleAgent.Editor
 {
-    /// <summary>Builds the demo scene: a guard that patrols and chases, and a wanderer it chases.</summary>
+    /// <summary>
+    /// Builds the demo scene: a guard that patrols and chases, a wanderer it chases, a scout that
+    /// keeps its distance from the wanderer, and a beacon that flashes when the guard spots it.
+    /// </summary>
     public static class SimpleAgentSetup
     {
         private const string DemoFolder = "Assets/AibtSimpleAgentDemo";
@@ -24,6 +27,7 @@ namespace AIBT.Samples.SimpleAgent.Editor
         {
             var guardTree = FindTree("guard.aibt");
             var wanderTree = FindTree("wander.aibt");
+            var scoutTree = FindTree("scout.aibt");
             if (!AssetDatabase.IsValidFolder(DemoFolder)) AssetDatabase.CreateFolder("Assets", "AibtSimpleAgentDemo");
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -64,9 +68,38 @@ namespace AIBT.Samples.SimpleAgent.Editor
             {
                 new Vector3(-6f, 1f, -4f), new Vector3(6f, 1f, -4f), new Vector3(6f, 1f, 4f), new Vector3(-6f, 1f, 4f),
             };
-            guard.AddComponent<AlertView>().marker = marker;
-            Assign(guard.AddComponent<BehaviorTreeAgent>(), guardTree);
+            var guardAgent = guard.AddComponent<BehaviorTreeAgent>();
+            Assign(guardAgent, guardTree);
+            // aibt.unity.set-active addresses the marker by this name.
+            guardAgent.SetReference("alert", marker);
             guard.AddComponent<GuardSenses>().target = wanderer.transform;
+
+            var beacon = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            beacon.name = "Beacon";
+            UnityEngine.Object.DestroyImmediate(beacon.GetComponent<Collider>());
+            beacon.transform.position = new Vector3(-10f, 1.5f, 9f);
+            beacon.transform.localScale = new Vector3(1f, 1.5f, 1f);
+            Tint(beacon, new Color(0.2f, 0.2f, 0.25f));
+            var flash = beacon.AddComponent<SpottedFlash>();
+            flash.source = guardAgent;
+            flash.beacon = beacon.GetComponent<Renderer>();
+
+            var scout = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            scout.name = "Scout";
+            scout.transform.position = new Vector3(7f, 0.5f, 7f);
+            scout.transform.localScale = new Vector3(0.7f, 0.5f, 0.7f);
+            Tint(scout, new Color(0.3f, 0.85f, 0.45f));
+            var eye = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            eye.name = "ScoutFacing";
+            UnityEngine.Object.DestroyImmediate(eye.GetComponent<Collider>());
+            eye.transform.SetParent(scout.transform, false);
+            eye.transform.localPosition = new Vector3(0f, 0.6f, 0.55f);
+            eye.transform.localScale = new Vector3(0.3f, 0.4f, 0.4f);
+            Tint(eye, Color.white);
+            var scoutAgent = scout.AddComponent<BehaviorTreeAgent>();
+            Assign(scoutAgent, scoutTree);
+            // aibt.unity.get-position, has-reference and line-of-sight address the wanderer by this name.
+            scoutAgent.SetReference("intruder", wanderer);
 
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.tag = "MainCamera";

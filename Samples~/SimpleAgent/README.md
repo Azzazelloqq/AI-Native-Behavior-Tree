@@ -1,15 +1,19 @@
 # Simple Agent
 
 A guard patrols four waypoints, chases a wanderer while it can see it, and returns to its route
-when the wanderer gets away. Everything runs through one component, `BehaviorTreeAgent`; there is
-no generated catalog, runtime asset or host wiring.
+when the wanderer gets away. A scout roams near its corner and, while it has line of sight to the
+wanderer, keeps three to five meters away from it. Everything runs through one component,
+`BehaviorTreeAgent`; there is no generated catalog, runtime asset or host wiring. Almost every node
+is a standard `aibt.unity.*` node; one project node is left as the "write your own" example.
 
 ## Run it
 
 1. Import **Simple Agent** from AIBT's Package Manager Samples tab.
 2. Run **AIBT > Samples > Simple Agent > Create Demo**, then press Play.
-3. The blue guard walks its square route. When the orange wanderer enters its sight cone the red
-   marker appears and the guard chases; past the lose range it goes back to patrolling.
+3. The blue guard walks its square route and looks around at each corner. When the orange
+   wanderer enters its sight cone the red marker appears, the yellow beacon flashes and the guard
+   chases; past the lose range it goes back to patrolling. The green scout backs away from the
+   wanderer whenever it sees it.
 4. Double-click `Trees/guard.aibt` to open the tree in **AIBT > Graph Editor**.
 
 ## What to read
@@ -17,15 +21,26 @@ no generated catalog, runtime asset or host wiring.
 | File | Shows |
 | --- | --- |
 | `Trees/guard.aibt` | A priority selector: chase while the target is visible, otherwise patrol. |
-| `Runtime/GuardNodes.cs` | Three project nodes, each an ordinary class. |
+| `Trees/wander.aibt` | Random points around the arena center (`random-point`, `wait-random`). |
+| `Trees/scout.aibt` | A named scene reference, `line-of-sight` and `keep-distance`, with no gameplay script. |
+| `Runtime/GuardNodes.cs` | The one project node, an ordinary class. |
 | `Runtime/GuardSenses.cs` | Gameplay code that writes what the guard perceives into the blackboard. |
+| `Runtime/SpottedFlash.cs` | Gameplay code that reacts to the tree's `spotted` event. |
 
 ## How the pieces talk to each other
 
 - **Gameplay to tree.** `GuardSenses` calls `agent.Blackboard.Set("target-visible", ...)` and
   `Set("target-position", ...)` every frame. The tree sees the new values on its next tick.
 - **Tree to gameplay.** Nodes act on the GameObject directly: `aibt.unity.move-towards` moves the
-  Transform, `samples.simple.set-alert` calls `AlertView.Show`.
+  Transform, `aibt.unity.set-active` shows the marker named `alert` in the agent's **References**
+  list, and `aibt.unity.raise-event` raises `spotted`, which `SpottedFlash` receives through
+  `agent.Events.Subscribe("spotted", ...)`. The same event can be wired without code in the
+  agent's **Event Responses** list. The chase restarts every time the guard reaches the target,
+  so the event is guarded by `aibt.unity.is-cooldown-ready` / `aibt.unity.start-cooldown`: it
+  is raised at most once every 3 seconds.
+- **Other scene objects.** The blackboard holds values, not objects. A node that needs another
+  object takes a reference name: the scout's agent lists the wanderer as `intruder`, and
+  `aibt.unity.get-position` copies its position into a key for `line-of-sight` and `keep-distance`.
 - **Node to node.** `samples.simple.next-waypoint` writes the `waypoint` key and
   `aibt.unity.move-towards` reads it. Both name the key through a `BbKey<Vector3>` parameter that
   the tree binds.

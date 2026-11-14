@@ -62,7 +62,8 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
         [Test]
         public void ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog()
         {
-            var response = Dispatch("search_nodes", new JObject { ["keyword"] = "" }, "Read");
+            // search_nodes pages by 50 by default; the package catalog is larger since P9-002.
+            var response = Dispatch("search_nodes", new JObject { ["keyword"] = "", ["count"] = 1000 }, "Read");
 
             var entries = (JArray)response["result"]["entries"];
             var typeIds = entries.Select(e => (string)e["typeId"]).OrderBy(id => id, System.StringComparer.Ordinal).ToArray();
@@ -74,6 +75,8 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
                 .Select(m => m.TypeId)
                 .Concat(AIBT.Authoring.BuiltInLeafManifests.All.Select(p => p.Manifest.TypeId))
                 .Concat(PackageManagedNodeTypeIds())
+                // P9-002: the package's native-only standard shard (assembly AIBT.StandardNodes).
+                .Concat(new[] { "aibt.stdlib.bool-is-true", "aibt.stdlib.float-at-least", "aibt.stdlib.set-float", "aibt.stdlib.wait-microseconds" })
                 .OrderBy(id => id, System.StringComparer.Ordinal)
                 .ToArray();
             Assert.That(typeIds, Is.EqualTo(expectedTypeIds),

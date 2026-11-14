@@ -1,0 +1,84 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "samples.simple.scout",
+  "name": "Scout",
+  "description": "Roams near home; while it can see the intruder it keeps 3 to 5 meters away. Only standard nodes.",
+  "root": "priority",
+  "blackboard": {
+    "intruder-position": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } },
+    "roam-point": { "type": "Float3", "typeVersion": 1, "scope": "tree", "default": { "x": 0.0, "y": 0.0, "z": 0.0 } }
+  },
+  "nodes": {
+    "priority": {
+      "type": "aibt.core.memory-selector",
+      "typeVersion": 1,
+      "displayName": "Watch or roam",
+      "children": ["watch", "roam"]
+    },
+    "watch": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "displayName": "Watch intruder",
+      "children": ["has-intruder", "locate", "can-see", "keep-away", "watch-it"]
+    },
+    "has-intruder": {
+      "type": "aibt.unity.has-reference",
+      "typeVersion": 1,
+      "displayName": "Intruder exists?",
+      "parameters": { "reference": "intruder" }
+    },
+    "locate": {
+      "type": "aibt.unity.get-position",
+      "typeVersion": 1,
+      "displayName": "Where is it?",
+      "parameters": { "result": "intruder-position", "reference": "intruder" }
+    },
+    "can-see": {
+      "type": "aibt.unity.line-of-sight",
+      "typeVersion": 1,
+      "displayName": "Can see it?",
+      "parameters": { "target": "intruder-position", "eye-height": 0.5, "target-height": 0.0, "max-distance": 9.0, "target-reference": "intruder" }
+    },
+    "keep-away": {
+      "type": "aibt.unity.keep-distance",
+      "typeVersion": 1,
+      "displayName": "Keep 3-5 m away",
+      "parameters": { "target": "intruder-position", "min-distance": 3.0, "max-distance": 5.0, "speed": 4.0 }
+    },
+    "watch-it": {
+      "type": "aibt.unity.wait-seconds",
+      "typeVersion": 1,
+      "displayName": "Watch",
+      "parameters": { "seconds": 0.1 }
+    },
+    "roam": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "displayName": "Roam",
+      "children": ["pick", "go", "pause", "glance"]
+    },
+    "pick": {
+      "type": "aibt.unity.random-point",
+      "typeVersion": 1,
+      "displayName": "Pick a point near home",
+      "parameters": { "result": "roam-point", "radius": 4.0, "min-radius": 1.5 }
+    },
+    "go": {
+      "type": "aibt.unity.move-towards",
+      "typeVersion": 1,
+      "parameters": { "target": "roam-point", "speed": 2.5, "stop-distance": 0.1, "keep-height": true }
+    },
+    "pause": {
+      "type": "aibt.unity.wait-random",
+      "typeVersion": 1,
+      "parameters": { "min-seconds": 0.3, "max-seconds": 1.0 }
+    },
+    "glance": {
+      "type": "aibt.unity.turn-by",
+      "typeVersion": 1,
+      "displayName": "Glance",
+      "parameters": { "degrees": -120.0, "degrees-per-second": 240.0 }
+    }
+  }
+}

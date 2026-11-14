@@ -7,5 +7,27 @@
   ],
   "autoReferenced": true,
   "overrideReferences": false,
-  "noEngineReferences": false
+  "noEngineReferences": false,
+  "versionDefines": [
+    {
+      "name": "com.unity.modules.ai",
+      "expression": "1.0.0",
+      "define": "AIBT_UNITY_AI"
+    },
+    {
+      "name": "com.unity.modules.physics",
+      "expression": "1.0.0",
+      "define": "AIBT_UNITY_PHYSICS"
+    },
+    {
+      "name": "com.unity.modules.animation",
+      "expression": "1.0.0",
+      "define": "AIBT_UNITY_ANIMATION"
+    },
+    {
+      "name": "com.unity.modules.audio",
+      "expression": "1.0.0",
+      "define": "AIBT_UNITY_AUDIO"
+    }
+  ]
 }
