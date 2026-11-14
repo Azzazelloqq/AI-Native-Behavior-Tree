@@ -89,19 +89,24 @@ Importer-owned Editor metadata. The .aibt source is the only authoring authority
 
 ### `AIBT.Editor.Graph.BehaviorTreeGraphView`
 
-Read-only rendering of a canonical <see cref="TreeDocument"/> as a graph. Never mutates the document and never writes to disk. Node movement is presentation-only and transient.
+Renders a canonical <see cref="TreeDocument"/> as a top-down graph. Never mutates the document and never writes to disk. It is read-only until a host enables editing; edits are requested through callbacks and applied by the host, which then calls <see cref="Sync"/>. Node movement is presentation only; child order always comes from the document.
 
 - `METHOD System.Collections.Generic.List`1<UnityEditor.Experimental.GraphView.Port> GetCompatiblePorts(UnityEditor.Experimental.GraphView.Port,UnityEditor.Experimental.GraphView.NodeAdapter)`
 - `METHOD System.Void .ctor()`
+- `METHOD System.Void AddToSelection(UnityEditor.Experimental.GraphView.ISelectable)`
+- `METHOD System.Void BuildContextualMenu(UnityEngine.UIElements.ContextualMenuPopulateEvent)`
+- `METHOD System.Void ClearSelection()`
 - `METHOD System.Void Populate(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry)`
+- `METHOD System.Void RemoveFromSelection(UnityEditor.Experimental.GraphView.ISelectable)`
 - `PROPERTY System.Collections.Generic.IReadOnlyDictionary`2<AIBT.NodeId,AIBT.Editor.Graph.BehaviorTreeNode> NodesById`
 
 ---
 
 ### `AIBT.Editor.Graph.BehaviorTreeGraphWindow`
 
-Hosts an authoring graph over an AIBT tree document.
+Hosts an authoring graph over an AIBT tree document. One toolbar, one Save for the tree and its layout, one undo history (wired into Unity's Edit &gt; Undo), and no modal dialogs on the open path: unsaved work is protected by a non-blocking banner or a second window.
 
+- `METHOD AIBT.Editor.Graph.BehaviorTreeGraphWindow OpenTree(System.String)`
 - `METHOD AIBT.Editor.Graph.BehaviorTreeGraphWindow ShowWindow()`
 - `METHOD System.Void .ctor()`
 - `METHOD System.Void DiscardChanges()`
@@ -126,7 +131,10 @@ Imports an <c>.aibt</c> tree. The main object is a Player-loadable <see cref="Be
 
 ### `AIBT.Editor.Graph.BehaviorTreeNode`
 
+A node card: kind accent and tag, readable title, one-line parameter summary, a child-order badge, a problem badge and a glow used by live execution views. Ports sit on the top (parent) and bottom (children) edges. Presentation only.
+
 - `METHOD System.Void .ctor(AIBT.Authoring.NodeDocument,AIBT.Authoring.NodeManifest)`
+- `METHOD System.Void BuildContextualMenu(UnityEngine.UIElements.ContextualMenuPopulateEvent)`
 - `PROPERTY AIBT.Authoring.NodeManifest Manifest`
 - `PROPERTY AIBT.NodeId NodeId`
 - `PROPERTY System.String TypeId`

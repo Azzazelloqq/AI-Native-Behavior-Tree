@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using AIBT.Agents;
 using AIBT.Authoring;
 
 namespace AIBT.Editor.Graph
@@ -40,15 +41,23 @@ namespace AIBT.Editor.Graph
                     entry.Details = "Source parsed. Project node contracts are not validated here: " + string.Join(", ", unresolved);
                     return entry;
                 }
-                var diagnostics = TreeValidator.Validate(document, registry,
-                    new ValidationOptions(path, supportsAgentScope: true, supportsSharedScope: true));
+                // Trees with managed (C#) nodes run on BehaviorTreeAgent and are validated with the
+                // managed policy, which accepts the main-thread nodes the native policy rejects.
+                var managed = document.Nodes.Any(node => registry.TryGet(node.TypeId, out var item) &&
+                                                         item.Manifest.ExecutionDomain != NodeExecutionDomain.Burst);
+                var options = managed
+                    ? ManagedTreeProgram.CreateOptions(path).Policy.CreateValidationOptions(path)
+                    : new ValidationOptions(path, supportsAgentScope: true, supportsSharedScope: true);
+                var diagnostics = TreeValidator.Validate(document, registry, options);
                 entry.Status = diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error) ? "Errors"
-                    : diagnostics.Count > 0 ? "Warnings"
-                    : document.Nodes.Any(node => registry.TryGet(node.TypeId, out var item) &&
+                    : diagnostics.Any(d => d.Severity == DiagnosticSeverity.Warning) ? "Warnings"
+                    : !managed && document.Nodes.Any(node => registry.TryGet(node.TypeId, out var item) &&
                                                  item.Source == NodeManifestSource.UserExtension && !item.HasReferenceHandlerBinding)
                         ? "Needs native compile" : "Valid";
                 entry.Details = string.Join("\n", diagnostics.Select(d => d.Code.Value + ": " + d.Message));
-                if (entry.Status == "Needs native compile")
+                if (entry.Status == "Valid" && managed)
+                    entry.Details = "Node contracts validated; managed C# nodes run on a BehaviorTreeAgent.";
+                else if (entry.Status == "Needs native compile")
                     entry.Details = "Node contracts validated; generated runtime compilation has not been checked here.";
                 else if (entry.Status == "Valid")
                     entry.Details = "Node contracts validated; runtime compilation is a separate step.";

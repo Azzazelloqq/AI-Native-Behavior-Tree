@@ -1,0 +1,214 @@
+/* AIBT graph canvas: background, node cards, ports, edges and live execution states.
+   Colors are presentation only; semantic behavior never depends on them. */
+
+.aibt-graph {
+    background-color: #1c1d20;
+}
+
+.aibt-graph GridBackground {
+    --grid-background-color: #1c1d20;
+    --line-color: rgba(255, 255, 255, 0.035);
+    --thick-line-color: rgba(255, 255, 255, 0.075);
+    --spacing: 24;
+    --thick-lines: 8;
+}
+
+.aibt-minimap {
+    position: absolute;
+    background-color: rgba(18, 19, 22, 0.88);
+    border-width: 1px;
+    border-color: #34373d;
+    border-radius: 4px;
+}
+
+/* ---------- Node card ---------- */
+
+.aibt-node {
+    width: 176px;
+    min-width: 176px;
+    max-width: 176px;
+}
+
+.aibt-node > #node-border {
+    background-color: #2a2c31;
+    border-width: 1px;
+    border-color: #121316;
+    border-radius: 7px;
+    overflow: visible;
+    margin: 0;
+}
+
+.aibt-node #title,
+.aibt-node #contents {
+    display: none;
+}
+
+.aibt-node > #selection-border {
+    border-radius: 8px;
+    border-width: 0;
+    margin: 0;
+}
+
+.aibt-node:hover > #selection-border {
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.aibt-node:selected > #selection-border,
+.aibt-node:hover:selected > #selection-border {
+    border-width: 2px;
+    border-color: #4da3ff;
+}
+
+.aibt-node__accent {
+    height: 4px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    background-color: #8b949e;
+}
+
+.aibt-node--composite .aibt-node__accent { background-color: #6e7bf2; }
+.aibt-node--decorator .aibt-node__accent { background-color: #b07cd8; }
+.aibt-node--condition .aibt-node__accent { background-color: #d9a43b; }
+.aibt-node--action .aibt-node__accent { background-color: #3fae6a; }
+
+.aibt-node__body {
+    padding: 3px 8px 5px 8px;
+}
+
+.aibt-node__kind {
+    font-size: 10px;
+    color: #8b9097;
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0;
+    margin: 0;
+}
+
+.aibt-node--composite .aibt-node__kind { color: #a7afff; }
+.aibt-node--decorator .aibt-node__kind { color: #cfa6ee; }
+.aibt-node--condition .aibt-node__kind { color: #ecc46f; }
+.aibt-node--action .aibt-node__kind { color: #7ed69f; }
+
+.aibt-node__title {
+    font-size: 13px;
+    color: #f0f1f3;
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 1px 0 0 0;
+    margin: 0;
+}
+
+.aibt-node__summary {
+    font-size: 10px;
+    color: #a3a8af;
+    -unity-text-align: upper-center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 1px 0 0 0;
+    margin: 0;
+}
+
+.aibt-node__summary--empty {
+    display: none;
+}
+
+.aibt-node__badge {
+    position: absolute;
+    top: -9px;
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    border-width: 1px;
+    border-color: #121316;
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    padding: 0;
+    margin: 0;
+}
+
+.aibt-node__order {
+    left: -9px;
+    background-color: #454953;
+    color: #f0f1f3;
+}
+
+.aibt-node__problem {
+    right: -9px;
+    background-color: #e5534b;
+    color: #ffffff;
+}
+
+.aibt-node__problem--warning {
+    background-color: #c69026;
+}
+
+.aibt-node__badge--hidden {
+    display: none;
+}
+
+.aibt-node--invalid > #node-border {
+    border-color: #e5534b;
+}
+
+.aibt-node__glow {
+    position: absolute;
+    left: -6px;
+    right: -6px;
+    top: -6px;
+    bottom: -6px;
+    border-width: 3px;
+    border-radius: 11px;
+    border-color: #ffd84a;
+    opacity: 0;
+}
+
+/* ---------- Ports ---------- */
+
+.aibt-node__ports {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0);
+    padding: 0;
+    margin: 0;
+    height: 14px;
+}
+
+.aibt-node--root #aibt-node-input {
+    visibility: hidden;
+}
+
+.aibt-port {
+    height: 14px;
+    min-height: 14px;
+    padding: 0 4px;
+    margin: 0;
+    justify-content: center;
+}
+
+.aibt-port #type {
+    display: none;
+}
+
+/* ---------- Edges ---------- */
+
+.aibt-edge {
+    --edge-width: 2;
+    --edge-color: #7d838c;
+    --selected-edge-color: #4da3ff;
+}
+
+/* Live active path: both ends of the edge are running. */
+.aibt-edge.aibt-edge--active {
+    --edge-width: 4;
+    --edge-color: #ffd84a;
+}

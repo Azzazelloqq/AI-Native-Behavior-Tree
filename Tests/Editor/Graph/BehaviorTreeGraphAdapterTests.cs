@@ -190,15 +190,15 @@ namespace AIBT.Tests.Editor.Graph
                     view.SendEvent(mouseUp);
                 }
                 yield return null;
-                var field = window.rootVisualElement.Query<TextField>().ToList().Single(item => item.label == "ticks *");
-                field.Focus();
+                var field = window.rootVisualElement.Q<UnsignedIntegerField>("aibt-param-ticks");
+                Assert.That(field, Is.Not.Null, "A UInt32 parameter is edited through a typed field.");
+                Assert.That(field.label, Does.StartWith("ticks"));
+                field.value = 3;
                 yield return null;
-                field.value = "3";
-                var save = window.rootVisualElement.Q<Button>("aibt-save-tree");
-                save.Focus();
+                Assert.That(window.HasPendingChanges, Is.True);
+                Assert.That(window.SaveAll(), Is.True);
                 yield return null;
-                Submit(save);
-                yield return null;
+                Assert.That(window.HasPendingChanges, Is.False);
                 var parsed = CanonicalTreeJson.Parse(File.ReadAllBytes(path), path);
                 Assert.That(parsed.Success, Is.True);
                 var options = new ReferenceCompilerOptions("trees/window.aibt.json", ReferenceCompilationPolicy.Phase1,
@@ -221,7 +221,7 @@ namespace AIBT.Tests.Editor.Graph
                 File.WriteAllBytes(path, CanonicalTreeJson.Serialize(tree).Utf8);
                 window.OpenFromPath(path, NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry);
                 yield return null;
-                Submit(window.rootVisualElement.Q<Button>("aibt-check-native"));
+                window.CheckNative();
                 var result = window.rootVisualElement.Q<Label>("aibt-native-validation");
                 Assert.That(result.text, Does.StartWith("Native compilation:"));
                 Assert.That(NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry.TryGet("aibt.stdlib.wait", out var wait), Is.True);
@@ -231,14 +231,11 @@ namespace AIBT.Tests.Editor.Graph
                 view.AddToSelection(view.NodesById[child.Id]);
                 using (var mouseUp = MouseUpEvent.GetPooled()) { mouseUp.target = view; view.SendEvent(mouseUp); }
                 yield return null;
-                var field = window.rootVisualElement.Query<TextField>().ToList().Single(item => item.label == "ticks *");
-                field.Focus();
-                field.value = "3";
-                window.rootVisualElement.Q<Button>("aibt-check-native").Focus();
+                window.rootVisualElement.Q<UnsignedIntegerField>("aibt-param-ticks").value = 3;
                 yield return null;
-                Submit(window.rootVisualElement.Q<Button>("aibt-check-native"));
+                window.CheckNative();
                 Assert.That(result.text, Does.StartWith("Native program compiled."), result.text);
-                Submit(window.rootVisualElement.Q<Button>("aibt-save-tree"));
+                Assert.That(window.SaveAll(), Is.True);
                 yield return null;
             }
             return WithRenderedScratchWindow(Check);
@@ -253,14 +250,15 @@ namespace AIBT.Tests.Editor.Graph
                 yield return null;
                 var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
                 var root = view.NodesById[new NodeId("root")];
-                root.SetPosition(new Rect(240, 120, 0, 0));
-                view.graphViewChanged(new GraphViewChange { movedElements = new System.Collections.Generic.List<GraphElement> { root } });
+                var original = BehaviorTreeGraphView.NodePosition(root);
+                Move(view, root, new Vector2(240, 120));
                 yield return null;
-                Submit(window.rootVisualElement.Q<Button>("aibt-undo-layout"));
-                for (var frame = 0; frame < 20 && Vector2.Distance(root.GetPosition().position, Vector2.zero) > 1; frame++)
+                Assert.That(window.HasPendingChanges, Is.True, "Moving a node is a layout change that Save writes.");
+                window.UndoEdit();
+                for (var frame = 0; frame < 20 && Vector2.Distance(root.GetPosition().position, original) > 1; frame++)
                     yield return null;
-                AssertStoredPosition(root, Vector2.zero);
-                Submit(window.rootVisualElement.Q<Button>("aibt-redo-layout"));
+                AssertStoredPosition(root, original);
+                window.RedoEdit();
                 for (var frame = 0; frame < 20 && Vector2.Distance(root.GetPosition().position, new Vector2(240, 120)) > 1; frame++)
                     yield return null;
                 AssertStoredPosition(root, new Vector2(240, 120));
@@ -277,15 +275,11 @@ namespace AIBT.Tests.Editor.Graph
                 window.OpenFromPath(path, BuildRegistry());
                 yield return null;
                 var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
-                view.NodesById[new NodeId("root")].SetPosition(new Rect(410, 220, 0, 0));
-                var button = window.rootVisualElement.Q<Button>("aibt-save-layout");
-                using (var submit = NavigationSubmitEvent.GetPooled())
-                {
-                    submit.target = button;
-                    button.SendEvent(submit);
-                }
+                Move(view, view.NodesById[new NodeId("root")], new Vector2(410, 220));
                 yield return null;
-                Assert.That(File.ReadAllBytes(path), Is.EqualTo(semanticBytes));
+                Assert.That(window.SaveAll(), Is.True);
+                yield return null;
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(semanticBytes), "Saving a layout-only change must not rewrite the tree.");
                 Assert.That(File.Exists(LayoutPersistenceController.LayoutPathFor(path)), Is.True);
                 window.OpenFromPath(path, BuildRegistry());
                 yield return null;
@@ -318,12 +312,10 @@ namespace AIBT.Tests.Editor.Graph
 
                 window.OpenFromPath(path, BuildRegistry());
                 yield return null;
-                var button = window.rootVisualElement.Q<Button>("aibt-save-layout");
-                using (var submit = NavigationSubmitEvent.GetPooled())
-                {
-                    submit.target = button;
-                    button.SendEvent(submit);
-                }
+                var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
+                Move(view, view.NodesById[root], new Vector2(32, 16));
+                yield return null;
+                Assert.That(window.SaveAll(), Is.True);
                 yield return null;
                 var layout = CanonicalLayoutJson.Parse(File.ReadAllBytes(LayoutPersistenceController.LayoutPathFor(path)), null, edited);
                 Assert.That(layout.Success, Is.True, Messages(layout.Diagnostics));
@@ -342,8 +334,17 @@ namespace AIBT.Tests.Editor.Graph
                 yield return null;
                 var view = window.rootVisualElement.Q<BehaviorTreeGraphView>();
                 Assert.That(window.Diagnostics.Count, Is.Zero);
-                Assert.That(view.NodesById[new NodeId("root")].GetPosition().position, Is.EqualTo(Vector2.zero));
-                Assert.That(view.NodesById[new NodeId("guard")].GetPosition().y, Is.GreaterThan(0));
+                // The default is a top-down tree: the root above its children, children in semantic order.
+                var root = BehaviorTreeGraphView.NodePosition(view.NodesById[new NodeId("root")]);
+                var guard = BehaviorTreeGraphView.NodePosition(view.NodesById[new NodeId("guard")]);
+                var action = BehaviorTreeGraphView.NodePosition(view.NodesById[new NodeId("action")]);
+                var condition = BehaviorTreeGraphView.NodePosition(view.NodesById[new NodeId("condition")]);
+                Assert.That(guard.y, Is.GreaterThan(root.y));
+                Assert.That(action.y, Is.EqualTo(guard.y));
+                Assert.That(condition.y, Is.GreaterThan(guard.y));
+                Assert.That(guard.x, Is.LessThan(action.x));
+                Assert.That(root.x, Is.GreaterThan(guard.x).And.LessThan(action.x), "The parent is centered over its children.");
+                Assert.That(action.x - guard.x, Is.GreaterThanOrEqualTo(176f), "Sibling cards must not overlap.");
                 Assert.That(File.Exists(LayoutPersistenceController.LayoutPathFor(path)), Is.False);
             }
             return WithRenderedScratchWindow(Check);
@@ -378,13 +379,10 @@ namespace AIBT.Tests.Editor.Graph
             }
         }
 
-        private static void Submit(Button button)
+        private static void Move(BehaviorTreeGraphView view, BehaviorTreeNode node, Vector2 position)
         {
-            using (var submit = NavigationSubmitEvent.GetPooled())
-            {
-                submit.target = button;
-                button.SendEvent(submit);
-            }
+            node.SetPosition(new Rect(position, Vector2.zero));
+            view.graphViewChanged(new GraphViewChange { movedElements = new System.Collections.Generic.List<GraphElement> { node } });
         }
 
         [Test]

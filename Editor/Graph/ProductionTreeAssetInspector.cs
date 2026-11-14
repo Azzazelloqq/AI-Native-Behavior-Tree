@@ -16,7 +16,7 @@ namespace AIBT.Editor.Graph
             {
                 if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(asset.SourceId) == null)
                     EditorUtility.DisplayDialog("AIBT", "The original source path is unavailable. Open its current location in the graph editor.", "OK");
-                else BehaviorTreeGraphWindow.ShowWindow().OpenFromPath(asset.SourceId);
+                else BehaviorTreeGraphWindow.OpenTree(asset.SourceId);
             }
         }
     }

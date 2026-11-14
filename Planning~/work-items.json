@@ -22,7 +22,7 @@
       "owns": ["Planning~/Evidence/P9-004/"]
     },
     {
-      "id": "P9-003", "phase": 9, "title": "Graph editor usability and live debugging", "status": "draft", "kind": "implementation",
+      "id": "P9-003", "phase": 9, "title": "Graph editor usability and live debugging", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P9/P9-003-graph-editor-ux.md",
       "dependsOn": ["P9-001"],
       "owns": ["Editor/Graph/Styles/", "Planning~/Evidence/P9-003/"]

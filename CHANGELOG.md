@@ -4,6 +4,20 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Graph editor
+
+- Restyle the graph: grid, minimap, cards with kind accent, readable title, parameter summary,
+  child-order and problem badges; top-down default layout from the deterministic layout service.
+- Edit from the canvas: context menus, searchable node creation (context menu, Space, edge dropped
+  on empty canvas), drag an edge to connect or reparent, Delete, Ctrl+S, Ctrl+Z/Ctrl+Y, Ctrl+D, F.
+- One toolbar, one Save for tree and layout, one undo history shared with Unity's Edit > Undo, and
+  incremental graph updates. Opening a tree never shows a modal dialog; a banner or a second
+  window protects unsaved work.
+- Typed inspector with contract defaults and type-filtered blackboard-key popups, a Blackboard
+  panel and a clickable Problems list. Managed trees are listed as Valid, not Errors.
+- Live debugging of a selected `BehaviorTreeAgent` in Play Mode: running nodes pulse,
+  success/failure flash and fade, the active path is highlighted and blackboard values update.
+
 ### Managed agent layer
 
 - Add `BehaviorTreeAgent`: assign an `.aibt` tree to one component and press Play. It compiles

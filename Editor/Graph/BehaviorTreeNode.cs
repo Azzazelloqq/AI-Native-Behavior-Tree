@@ -6,46 +6,173 @@ using UnityEngine.UIElements;
 
 namespace AIBT.Editor.Graph
 {
+    /// <summary>
+    /// A node card: kind accent and tag, readable title, one-line parameter summary, a child-order
+    /// badge, a problem badge and a glow used by live execution views. Ports sit on the top
+    /// (parent) and bottom (children) edges. Presentation only.
+    /// </summary>
     public sealed class BehaviorTreeNode : Node
     {
+        private readonly Label _kind;
+        private readonly Label _title;
+        private readonly Label _summary;
+        private readonly Label _order;
+        private readonly Label _problem;
+        private readonly VisualElement _glow;
+        private string _kindClass;
+
         public BehaviorTreeNode(NodeDocument document, NodeManifest manifest)
+            : this(document, manifest, null)
         {
+        }
+
+        internal BehaviorTreeNode(NodeDocument document, NodeManifest manifest, IEdgeConnectorListener listener)
+        {
+            AddToClassList("aibt-node");
+            GraphStyles.ApplyGraph(this);
             NodeId = document.Id;
-            TypeId = document.TypeId;
-            Manifest = manifest;
-            title = string.IsNullOrEmpty(document.DisplayName) ? ReadableTitle(document.TypeId) : document.DisplayName;
-            tooltip = document.TypeId;
             capabilities = Capabilities.Selectable | Capabilities.Movable;
 
-            InputPort = Port.Create<Edge>(Orientation.Vertical, Direction.Input, Port.Capacity.Single, typeof(bool));
-            InputPort.portName = "in";
+            // Ports live in the card's own top and bottom slots: GraphView keeps its default
+            // input/output containers inside #contents, which the card does not use.
+            var inputSlot = new VisualElement { name = "aibt-node-input" };
+            inputSlot.AddToClassList("aibt-node__ports");
+            InputPort = BehaviorTreePort.Create(Direction.Input, Port.Capacity.Single, listener);
             InputPort.SetEnabled(false);
-            inputContainer.Add(InputPort);
+            inputSlot.Add(InputPort);
+            mainContainer.Insert(0, inputSlot);
+
+            var accent = new VisualElement { name = "aibt-node-accent", pickingMode = PickingMode.Ignore };
+            accent.AddToClassList("aibt-node__accent");
+            mainContainer.Add(accent);
+            var body = new VisualElement { name = "aibt-node-body", pickingMode = PickingMode.Ignore };
+            body.AddToClassList("aibt-node__body");
+            _kind = AddLabel(body, "aibt-node-kind", "aibt-node__kind");
+            _title = AddLabel(body, "aibt-node-title", "aibt-node__title");
+            _summary = AddLabel(body, "aibt-node-summary", "aibt-node__summary");
+            mainContainer.Add(body);
 
             if (AcceptsChildren(manifest))
             {
-                OutputPort = Port.Create<Edge>(Orientation.Vertical, Direction.Output, Port.Capacity.Multi, typeof(bool));
-                OutputPort.portName = "children";
+                OutputPort = BehaviorTreePort.Create(Direction.Output, Port.Capacity.Multi, listener);
                 OutputPort.SetEnabled(false);
-                outputContainer.Add(OutputPort);
+                var outputSlot = new VisualElement { name = "aibt-node-output" };
+                outputSlot.AddToClassList("aibt-node__ports");
+                outputSlot.Add(OutputPort);
+                mainContainer.Add(outputSlot);
             }
 
-            titleContainer.style.backgroundColor = ColorForKind(manifest?.Kind);
-            extensionContainer.Add(new Label(manifest != null ? manifest.Kind.ToString() : "Unresolved") { name = "kind-label" });
+            _glow = new VisualElement { name = "aibt-node-glow", pickingMode = PickingMode.Ignore };
+            _glow.AddToClassList("aibt-node__glow");
+            Insert(0, _glow);
+            _order = AddLabel(this, "aibt-node-order", "aibt-node__badge");
+            _order.AddToClassList("aibt-node__order");
+            _order.AddToClassList("aibt-node__badge--hidden");
+            _problem = AddLabel(this, "aibt-node-problem", "aibt-node__badge");
+            _problem.AddToClassList("aibt-node__problem");
+            _problem.AddToClassList("aibt-node__badge--hidden");
+            _problem.text = "!";
+            _problem.pickingMode = PickingMode.Position;
 
+            Bind(document, manifest);
             RefreshExpandedState();
             RefreshPorts();
         }
 
         public NodeId NodeId { get; }
 
-        public string TypeId { get; }
+        public string TypeId { get; private set; }
 
-        public NodeManifest Manifest { get; }
+        public NodeManifest Manifest { get; private set; }
 
         public Port InputPort { get; }
 
         public Port OutputPort { get; }
+
+        /// <summary>Text of the card's kind tag, e.g. "MEMORY SEQUENCE" or "ACTION · WAIT".</summary>
+        internal string KindText => _kind.text;
+
+        internal string Summary => _summary.text;
+
+        /// <summary>The child-order badge text, or null when the node has no parent.</summary>
+        internal string OrderText => _order.ClassListContains("aibt-node__badge--hidden") ? null : _order.text;
+
+        /// <summary>The problem badge tooltip, or null when the node has no reported problem.</summary>
+        internal string ProblemText => _problem.ClassListContains("aibt-node__badge--hidden") ? null : _problem.tooltip;
+
+        internal float HighlightStrength => _glow.resolvedStyle.opacity;
+
+        internal Color HighlightColor { get; private set; }
+
+        /// <summary>Updates the card text for a document node whose type did not change.</summary>
+        internal void Bind(NodeDocument document, NodeManifest manifest)
+        {
+            TypeId = document.TypeId;
+            Manifest = manifest;
+            var readable = ReadableTitle(document.TypeId);
+            title = string.IsNullOrEmpty(document.DisplayName) ? readable : document.DisplayName;
+            _title.text = title;
+            tooltip = document.TypeId;
+            _kind.text = KindTag(manifest, readable, !string.IsNullOrEmpty(document.DisplayName) && document.DisplayName != readable);
+            var summary = NodeParameterSummary.Describe(document, manifest);
+            _summary.text = summary;
+            _summary.tooltip = summary;
+            _summary.EnableInClassList("aibt-node__summary--empty", summary.Length == 0);
+
+            var kindClass = manifest == null ? "aibt-node--unresolved" : "aibt-node--" + manifest.Kind.ToString().ToLowerInvariant();
+            if (_kindClass != kindClass)
+            {
+                if (_kindClass != null) RemoveFromClassList(_kindClass);
+                AddToClassList(kindClass);
+                _kindClass = kindClass;
+            }
+        }
+
+        /// <summary>Shows the 1-based execution position among the parent's children; null hides it.</summary>
+        internal void SetOrder(int? order)
+        {
+            _order.EnableInClassList("aibt-node__badge--hidden", !order.HasValue);
+            _order.text = order.HasValue ? order.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
+            _order.tooltip = order.HasValue ? "Runs " + Ordinal(order.Value) + " among its siblings." : string.Empty;
+        }
+
+        /// <summary>Shows a problem badge with the given messages; null hides it.</summary>
+        internal void SetProblem(string messages, bool isError)
+        {
+            var hidden = string.IsNullOrEmpty(messages);
+            _problem.EnableInClassList("aibt-node__badge--hidden", hidden);
+            _problem.EnableInClassList("aibt-node__problem--warning", !hidden && !isError);
+            EnableInClassList("aibt-node--invalid", !hidden && isError);
+            _problem.tooltip = hidden ? string.Empty : messages;
+        }
+
+        internal void SetRoot(bool isRoot) => EnableInClassList("aibt-node--root", isRoot);
+
+        internal void SetEditable(bool editable)
+        {
+            capabilities = editable
+                ? Capabilities.Selectable | Capabilities.Movable | Capabilities.Deletable | Capabilities.Copiable
+                : Capabilities.Selectable | Capabilities.Movable;
+            InputPort.SetEnabled(editable);
+            OutputPort?.SetEnabled(editable);
+        }
+
+        // Node's default menu disconnects ports directly; graph edits go through the window instead.
+        public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
+        {
+        }
+
+        /// <summary>Paints the execution glow around the card; strength 0 hides it. Never moves the node.</summary>
+        internal void SetHighlight(Color color, float strength)
+        {
+            strength = Mathf.Clamp01(strength);
+            HighlightColor = strength > 0f ? color : Color.clear;
+            _glow.style.opacity = strength;
+            _glow.style.borderTopColor = color;
+            _glow.style.borderBottomColor = color;
+            _glow.style.borderLeftColor = color;
+            _glow.style.borderRightColor = color;
+        }
 
         internal static string ReadableTitle(string typeId)
         {
@@ -53,7 +180,15 @@ namespace AIBT.Editor.Graph
             return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(leaf);
         }
 
-        private static bool AcceptsChildren(NodeManifest manifest)
+        internal static string KindTag(NodeManifest manifest, string readableType, bool showType)
+        {
+            if (manifest == null) return "UNRESOLVED · " + readableType.ToUpperInvariant();
+            if (manifest.Kind == NodeBehaviorKind.Composite) return readableType.ToUpperInvariant();
+            var kind = manifest.Kind.ToString().ToUpperInvariant();
+            return showType ? kind + " · " + readableType.ToUpperInvariant() : kind;
+        }
+
+        internal static bool AcceptsChildren(NodeManifest manifest)
         {
             if (manifest == null)
             {
@@ -64,21 +199,19 @@ namespace AIBT.Editor.Graph
             return !maximum.HasValue || maximum.Value > 0;
         }
 
-        private static Color ColorForKind(NodeBehaviorKind? kind)
+        private static Label AddLabel(VisualElement parent, string name, string className)
         {
-            switch (kind)
-            {
-                case NodeBehaviorKind.Composite:
-                    return new Color(0.20f, 0.35f, 0.55f);
-                case NodeBehaviorKind.Decorator:
-                    return new Color(0.45f, 0.32f, 0.55f);
-                case NodeBehaviorKind.Condition:
-                    return new Color(0.55f, 0.45f, 0.20f);
-                case NodeBehaviorKind.Action:
-                    return new Color(0.25f, 0.50f, 0.30f);
-                default:
-                    return new Color(0.30f, 0.30f, 0.30f);
-            }
+            var label = new Label { name = name, pickingMode = PickingMode.Ignore };
+            label.AddToClassList(className);
+            parent.Add(label);
+            return label;
+        }
+
+        private static string Ordinal(int value)
+        {
+            var suffix = value % 100 >= 11 && value % 100 <= 13 ? "th"
+                : value % 10 == 1 ? "st" : value % 10 == 2 ? "nd" : value % 10 == 3 ? "rd" : "th";
+            return value.ToString(CultureInfo.InvariantCulture) + suffix;
         }
     }
 }

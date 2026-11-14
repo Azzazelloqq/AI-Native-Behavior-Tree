@@ -3,44 +3,44 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AIBT.Authoring;
-using AIBT.Editor.Editing;
 using AIBT.Editor.Layout;
 using AIBT.Editor.Organization;
 using AIBT.Editor.Registry;
 using UnityEditor;
-using UnityEditor.UIElements;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace AIBT.Editor.Graph
 {
-    /// <summary>Hosts an authoring graph over an AIBT tree document.</summary>
+    /// <summary>
+    /// Hosts an authoring graph over an AIBT tree document. One toolbar, one Save for the tree and
+    /// its layout, one undo history (wired into Unity's Edit &gt; Undo), and no modal dialogs on the
+    /// open path: unsaved work is protected by a non-blocking banner or a second window.
+    /// </summary>
     public sealed partial class BehaviorTreeGraphWindow : EditorWindow
     {
+        private const string WindowTitle = "AIBT Graph";
+
         private BehaviorTreeGraphView _view;
-        private Label _diagnosticLabel;
-        private Label _validationLabel;
-        private Label _nativeValidationLabel;
-        private Label _documentLabel;
-        private Label _emptyLabel;
-        private ListView _treeList;
-        private ToolbarSearchField _search;
-        private PopupField<string> _tag;
-        private PopupField<string> _status;
-        private ScrollView _inspector;
-        private Label _catalogDiagnostics;
-        private ProjectNodeCatalog _projectCatalog;
         private GraphEditSession _session;
         private LayoutHistory _layoutHistory;
         private NodeRegistry _registry;
-        private readonly List<TreeCatalogEntry> _catalog = new List<TreeCatalogEntry>();
-        private readonly List<TreeCatalogEntry> _filtered = new List<TreeCatalogEntry>();
+        private ProjectNodeCatalog _projectCatalog;
+        private readonly GraphEditHistory _history = new GraphEditHistory();
+        private readonly HashSet<NodeId> _pinned = new HashSet<NodeId>();
+        private readonly Dictionary<NodeId, Vector2> _pendingPlacement = new Dictionary<NodeId, Vector2>();
+        private bool _layoutIsDefault;
+        private bool _restoringFromUndo;
+        private bool _restorePending;
+        [SerializeField] private GraphUndoMarker _undoMarker;
         [SerializeField] private string _sourcePath;
         [SerializeField] private string _sourceGuid;
         [SerializeField] private string _draftBytes;
         [SerializeField] private string _draftBaseBytes;
         [SerializeField] private string _layoutBaseBytes;
         [SerializeField] private bool _layoutDirty;
+        [SerializeField] private bool _hideTreeList;
         [SerializeField] private List<string> _layoutNodeIds = new List<string>();
         [SerializeField] private List<Vector2> _layoutPositions = new List<Vector2>();
 
@@ -51,32 +51,83 @@ namespace AIBT.Editor.Graph
         public BehaviorTreeGraphView View { get { EnsureView(); return _view; } }
         internal event Action ViewInvalidated;
         internal NodeRegistry CurrentRegistry => _registry;
+        internal string SourcePath => _sourcePath;
+        internal bool HasPendingChanges => Document != null && (_session?.IsDirty == true || _layoutDirty);
+        internal bool CanUndoEdit => _history.CanUndo;
+        internal bool CanRedoEdit => _history.CanRedo;
         internal void ReleaseExecutionView() => ViewInvalidated?.Invoke();
 
         [MenuItem("AIBT/Graph Editor")]
         public static BehaviorTreeGraphWindow ShowWindow()
         {
             var window = GetWindow<BehaviorTreeGraphWindow>();
-            window.titleContent = new GUIContent("AIBT Graph");
+            window.titleContent = new GUIContent(WindowTitle);
             return window;
         }
+
+        /// <summary>
+        /// Opens a tree without ever blocking: reuses the window that shows it, else a window
+        /// without unsaved changes, else opens a new graph window next to the others.
+        /// </summary>
+        public static BehaviorTreeGraphWindow OpenTree(string path)
+        {
+            var windows = Resources.FindObjectsOfTypeAll<BehaviorTreeGraphWindow>();
+            foreach (var window in windows)
+            {
+                window.EnsureView();
+                window.RestorePendingDocument();
+            }
+            var target = windows.FirstOrDefault(window => SamePath(window._sourcePath, path))
+                         ?? windows.FirstOrDefault(window => !window.HasPendingChanges)
+                         ?? CreateWindow<BehaviorTreeGraphWindow>(WindowTitle, typeof(BehaviorTreeGraphWindow));
+            target.titleContent = new GUIContent(WindowTitle);
+            target.Show();
+            target.Focus();
+            if (!SamePath(target._sourcePath, path) || target.Document == null) target.OpenFromPath(path);
+            return target;
+        }
+
+        public void OpenFromPath(string path) => OpenFromPath(path, (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry);
 
         public void OpenFromPath(string path, NodeRegistry registry)
         {
             EnsureView();
-            EditorApplication.delayCall -= RestoreDocument;
-            if (!ConfirmDiscard()) return;
+            RestorePendingDocument();
+            if (SamePath(path, _sourcePath) && Document != null && HasPendingChanges) return;
+            if (HasPendingChanges)
+            {
+                OfferPendingOpen(Path.GetFileName(path), () => OpenFromPathNow(path, registry));
+                return;
+            }
+
+            OpenFromPathNow(path, registry);
+        }
+
+        public void OpenFromBytes(byte[] utf8, string documentId, NodeRegistry registry)
+        {
+            EnsureView();
+            RestorePendingDocument();
+            if (HasPendingChanges)
+            {
+                OfferPendingOpen(documentId, () => OpenFromBytesNow(utf8, documentId, registry));
+                return;
+            }
+
+            OpenFromBytesNow(utf8, documentId, registry);
+        }
+
+        private void OpenFromPathNow(string path, NodeRegistry registry)
+        {
             ReleaseExecutionView();
             ResetLayoutChanges();
+            HideBanner();
             _sourcePath = path;
             _sourceGuid = AssetDatabase.AssetPathToGUID(path);
-            _documentLabel.text = path;
             try
             {
                 if (!TreeSourcePaths.IsTree(path)) throw new ArgumentException("Choose an .aibt or .aibt.json tree.");
                 OpenDocument(File.ReadAllBytes(path), path, registry, path);
-                _emptyLabel.style.display = DisplayStyle.None;
-                _view.schedule.Execute(() => _view.FrameAll()).ExecuteLater(100);
+                FrameAllSoon();
             }
             catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is ArgumentException)
             {
@@ -86,21 +137,20 @@ namespace AIBT.Editor.Graph
                 _draftBytes = null;
                 _draftBaseBytes = null;
                 hasUnsavedChanges = false;
-                _diagnosticLabel.text = exception.Message;
-                _diagnosticLabel.style.display = DisplayStyle.Flex;
-                _emptyLabel.text = "Tree could not be opened. Check the source path and diagnostics above.";
+                Diagnostics = DiagnosticCollection.Empty;
+                _layoutHistory = null;
+                _extraMessages.Clear();
+                _extraMessages.Add(new GraphMessage(DiagnosticSeverity.Error, exception.Message));
+                RefreshChrome();
+                _emptyLabel.text = "The tree could not be opened. See the problem below.";
                 _emptyLabel.style.display = DisplayStyle.Flex;
             }
         }
 
-        public void OpenFromPath(string path) => OpenFromPath(path, (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry);
-
-        public void OpenFromBytes(byte[] utf8, string documentId, NodeRegistry registry)
+        private void OpenFromBytesNow(byte[] utf8, string documentId, NodeRegistry registry)
         {
-            EnsureView();
-            if (!ConfirmDiscard()) return;
-            EditorApplication.delayCall -= RestoreDocument;
             ResetLayoutChanges();
+            HideBanner();
             _sourcePath = null;
             _sourceGuid = null;
             OpenDocument(utf8, documentId, registry, null);
@@ -110,9 +160,13 @@ namespace AIBT.Editor.Graph
         {
             EnsureView();
             ReleaseExecutionView();
+            _live?.Detach();
             _view.ClearDocument();
-            _nativeValidationLabel.text = string.Empty;
-            _nativeValidationLabel.style.display = DisplayStyle.None;
+            _nativeMessage = null;
+            _extraMessages.Clear();
+            _pinned.Clear();
+            _pendingPlacement.Clear();
+            ResetHistory();
 
             var result = CanonicalTreeJson.Parse(utf8, documentId);
             Diagnostics = result.Diagnostics;
@@ -124,7 +178,6 @@ namespace AIBT.Editor.Graph
             _draftBytes = null;
             _draftBaseBytes = null;
             hasUnsavedChanges = false;
-            RefreshValidation();
 
             LayoutDocument layout = null;
             var canRender = Document != null;
@@ -135,45 +188,80 @@ namespace AIBT.Editor.Graph
                 var loaded = LayoutPersistenceController.Load(treePath, Document);
                 Diagnostics = new DiagnosticCollection(Diagnostics.Concat(loaded.Diagnostics));
                 // A broken presentation file must not hide an otherwise readable tree.
-                // Keep its diagnostics visible and use the graph's default placement.
+                // Keep its diagnostics visible and use the default placement.
                 if (loaded.Success && !loaded.UsedDefault) layout = loaded.Document;
             }
 
-            _diagnosticLabel.text = string.Join("\n", Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
-            _diagnosticLabel.style.display = Diagnostics.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
-            if (canRender) _view.Populate(Document, registry, layout);
-            _layoutHistory = canRender ? new LayoutHistory(LayoutSnapshot()) : null;
-            if (canRender && registry != null)
+            _layoutIsDefault = layout == null;
+            if (layout != null)
+                foreach (var pair in layout.Nodes.Where(pair => pair.Value.Pinned)) _pinned.Add(pair.Key);
+            if (canRender)
             {
-                var missing = Document.Nodes.Where(n => !registry.TryGet(n.TypeId, out _)).Select(n => n.TypeId).Distinct().ToArray();
-                if (missing.Length > 0)
+                _view.Editable = _session != null;
+                _view.Populate(Document, registry, layout);
+                _layoutHistory = new LayoutHistory(LayoutSnapshot());
+                if (registry != null)
                 {
-                    _diagnosticLabel.text += "\nProject node contracts unresolved in this view (not a runtime failure): " + string.Join(", ", missing);
-                    _diagnosticLabel.style.display = DisplayStyle.Flex;
+                    var missing = Document.Nodes.Where(n => !registry.TryGet(n.TypeId, out _)).Select(n => n.TypeId).Distinct().ToArray();
+                    if (missing.Length > 0)
+                        _extraMessages.Add(new GraphMessage(DiagnosticSeverity.Info,
+                            "Project node contracts unresolved in this view (not a runtime failure): " + string.Join(", ", missing)));
                 }
             }
-            RefreshInspector();
+            else _layoutHistory = null;
+
+            RefreshChrome();
+            TryAutoAttachSelectedAgent();
         }
 
         private void OnEnable()
         {
             EnsureView();
+            if (_undoMarker == null) _undoMarker = CreateInstance<GraphUndoMarker>();
+            _undoMarker.hideFlags = HideFlags.HideAndDontSave;
+            _undoMarker.Position = 0;
+            Undo.ClearUndo(_undoMarker);
+            Undo.undoRedoPerformed += OnUnityUndoRedo;
             ProjectNodeCatalogCache.Changed += RefreshCatalog;
             EditorApplication.projectChanged += ProjectChanged;
-            EditorApplication.delayCall += RestoreDocument;
+            _restorePending = true;
+            EditorApplication.update += RestoreDocument;
+            EnableLiveDebugging();
         }
 
         private void OnDisable()
         {
             ReleaseExecutionView();
+            DisableLiveDebugging();
+            Undo.undoRedoPerformed -= OnUnityUndoRedo;
             ProjectNodeCatalogCache.Changed -= RefreshCatalog;
             EditorApplication.projectChanged -= ProjectChanged;
-            EditorApplication.delayCall -= RestoreDocument;
+            EditorApplication.update -= RestoreDocument;
+            EditorApplication.update -= FrameWhenLaidOut;
+        }
+
+        private void OnDestroy()
+        {
+            if (_undoMarker == null) return;
+            Undo.ClearUndo(_undoMarker);
+            DestroyImmediate(_undoMarker);
+            _undoMarker = null;
+        }
+
+        // A domain reload restores the window before its delayed restore runs; an open request in
+        // between must see the restored draft, not an empty window.
+        private void RestorePendingDocument()
+        {
+            EditorApplication.update -= RestoreDocument;
+            if (_restorePending) RestoreDocument();
         }
 
         private void RestoreDocument()
         {
-            if (this == null) return;
+            // Runs once, on the first Editor update after enable (delayCall is not guaranteed to run promptly).
+            EditorApplication.update -= RestoreDocument;
+            if (this == null || !_restorePending) return;
+            _restorePending = false;
             RefreshCatalog();
             var restoreLayout = _layoutDirty;
             var savedIds = _layoutNodeIds.ToArray();
@@ -187,15 +275,24 @@ namespace AIBT.Editor.Graph
                     _registry = (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry;
                     var baseline = string.IsNullOrEmpty(_draftBaseBytes) ? null : Convert.FromBase64String(_draftBaseBytes);
                     _session = new GraphEditSession(result.Document, _registry, CompilerOptions(), baseline, ValidateProjectDocument);
-                    RefreshSession();
+                    Document = _session.Document;
+                    Diagnostics = _session.Diagnostics;
+                    _view.Editable = true;
+                    _view.Populate(Document, _registry, null);
+                    _layoutIsDefault = !restoreLayout;
+                    _layoutHistory = new LayoutHistory(LayoutSnapshot());
+                    ResetHistory();
                     RestoreLayoutPositions(savedIds, savedPositions, restoreLayout);
+                    OnDocumentChanged();
+                    FrameAllSoon();
                     return;
                 }
             }
             _layoutDirty = false;
-            if (!string.IsNullOrEmpty(_sourcePath)) OpenFromPath(_sourcePath);
+            if (!string.IsNullOrEmpty(_sourcePath)) OpenFromPathNow(_sourcePath, (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry);
             if (restoreLayout) _layoutBaseBytes = layoutBaseline;
             RestoreLayoutPositions(savedIds, savedPositions, restoreLayout);
+            RefreshChrome();
         }
 
         private void ProjectChanged()
@@ -204,18 +301,26 @@ namespace AIBT.Editor.Graph
             if (!string.IsNullOrEmpty(_sourceGuid))
             {
                 var moved = AssetDatabase.GUIDToAssetPath(_sourceGuid);
-                if (!string.IsNullOrEmpty(moved))
+                if (!string.IsNullOrEmpty(moved) && moved != _sourcePath)
                 {
                     _sourcePath = moved;
-                    _documentLabel.text = moved + (_session?.IsDirty == true ? " *" : "");
+                    RefreshChrome();
                 }
             }
-            if (string.IsNullOrEmpty(_sourcePath) || _layoutDirty || _session?.IsDirty == true) return;
-            var baseline = _session?.SavedBytes;
+            if (string.IsNullOrEmpty(_sourcePath)) return;
+            if (_session == null)
+            {
+                if (File.Exists(_sourcePath)) OpenFromPathNow(_sourcePath, _registry ?? (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry);
+                return;
+            }
+            var baseline = _session.SavedBytes;
             try
             {
-                if (_session == null || (baseline != null && (!File.Exists(_sourcePath) || !File.ReadAllBytes(_sourcePath).SequenceEqual(baseline))))
-                    OpenFromPath(_sourcePath);
+                var changedOnDisk = baseline != null && (!File.Exists(_sourcePath) || !File.ReadAllBytes(_sourcePath).SequenceEqual(baseline));
+                if (!changedOnDisk) return;
+                if (!HasPendingChanges) OpenFromPathNow(_sourcePath, _registry ?? (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry);
+                else ShowBanner("The tree changed on disk while you have unsaved edits here. Reloading discards your edits; saving is refused until you reload.",
+                    BannerKind.Warning, ("Reload from disk", ReloadDiscardingChanges), ("Keep editing", HideBanner));
             }
             catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
             {
@@ -226,24 +331,64 @@ namespace AIBT.Editor.Graph
         private static ReferenceCompilerOptions CompilerOptions() => new ReferenceCompilerOptions(
             "trees/editor.aibt.json", ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 0));
 
-        private bool ConfirmDiscard()
+        // ---------------------------------------------------------------- open / new / save
+
+        private void OfferPendingOpen(string target, Action open)
         {
-            return (_session == null || !_session.IsDirty) && !_layoutDirty || EditorUtility.DisplayDialog(
-                "Unsaved AIBT tree", "Discard unsaved tree or layout changes?", "Discard", "Cancel");
+            var current = string.IsNullOrEmpty(_sourcePath) ? "this tree" : Path.GetFileName(_sourcePath);
+            ShowBanner("Unsaved changes in " + current + ". Open " + target + "?", BannerKind.Warning,
+                ("Save and open", () => { if (SaveAll()) open(); }),
+                ("Discard and open", () => { DiscardPendingChanges(); open(); }),
+                ("Cancel", HideBanner));
+        }
+
+        private void ReloadDiscardingChanges()
+        {
+            var path = _sourcePath;
+            DiscardPendingChanges();
+            if (!string.IsNullOrEmpty(path)) OpenFromPathNow(path, _registry ?? (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry);
+        }
+
+        private void DiscardPendingChanges()
+        {
+            _draftBytes = null;
+            _draftBaseBytes = null;
+            _session = null;
+            ResetLayoutChanges();
+            hasUnsavedChanges = false;
+            HideBanner();
         }
 
         private void NewTree()
         {
-            EditorApplication.delayCall -= RestoreDocument;
-            if (!ConfirmDiscard()) return;
+            RestorePendingDocument();
+            if (HasPendingChanges)
+            {
+                OfferPendingOpen("a new tree", NewTreeNow);
+                return;
+            }
+
+            NewTreeNow();
+        }
+
+        private void NewTreeNow()
+        {
             var path = EditorUtility.SaveFilePanelInProject("Create AIBT tree", "NewTree.aibt", "aibt", "Choose a tree location.");
             if (string.IsNullOrEmpty(path)) return;
             if (File.Exists(path))
             {
-                EditorUtility.DisplayDialog("AIBT", "Choose a new file; existing trees are not overwritten.", "OK");
+                ShowBanner("Choose a new file; existing trees are not overwritten.", BannerKind.Error, ("OK", HideBanner));
                 return;
             }
-            _registry = (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry;
+            CreateTreeAt(path, (_projectCatalog ?? ProjectNodeCatalogCache.Current).Registry);
+        }
+
+        /// <summary>Starts an unsaved tree with a memory-sequence root; Save writes it to <paramref name="path"/>.</summary>
+        internal void CreateTreeAt(string path, NodeRegistry registry)
+        {
+            EnsureView();
+            ReleaseExecutionView();
+            _registry = registry;
             var root = new NodeDocument(new NodeId("root"), "aibt.core.memory-sequence", 1,
                 parameters: SemanticObject.Empty, tags: TagSet.Empty);
             var document = TreeDocument.CreateVersion2(
@@ -252,387 +397,113 @@ namespace AIBT.Editor.Graph
             _sourcePath = path;
             _sourceGuid = null;
             ResetLayoutChanges();
+            HideBanner();
             _layoutBaseBytes = null;
             _session = new GraphEditSession(document, _registry, CompilerOptions(), null, ValidateProjectDocument);
-            _view.ClearDocument();
-            RefreshSession();
-        }
-
-        private void SaveTree()
-        {
-            if (_session == null || string.IsNullOrEmpty(_sourcePath)) return;
-            try
-            {
-                _session.Save(_sourcePath);
-                hasUnsavedChanges = _layoutDirty;
-                AssetDatabase.Refresh();
-                _sourceGuid = AssetDatabase.AssetPathToGUID(_sourcePath);
-                RefreshSession();
-            }
-            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is InvalidOperationException)
-            {
-                EditorUtility.DisplayDialog("Unable to save tree", exception.Message, "OK");
-            }
-        }
-
-        private void AddChild()
-        {
-            var selected = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault();
-            if (_session == null || selected == null) return;
-            var parent = _session.Document.Nodes.First(n => n.Id == selected.NodeId);
-            if (selected.Manifest == null || (selected.Manifest.ChildPolicy.Maximum.HasValue &&
-                parent.Children.Count >= selected.Manifest.ChildPolicy.Maximum.Value)) return;
-            var menu = new GenericMenu();
-            var labels = _registry.Select(entry => entry.Manifest.Category + "/" + BehaviorTreeNode.ReadableTitle(entry.Manifest.TypeId)).ToList();
-            var index = 0;
-            foreach (var entry in _registry)
-            {
-                var manifest = entry.Manifest;
-                var label = labels[index++];
-                if (labels.Count(other => string.Equals(other, label, StringComparison.Ordinal)) > 1)
-                    label += " [" + manifest.TypeId + "]";
-                menu.AddItem(new GUIContent(label, manifest.Summary), false, () => AddChildTo(parent.Id, manifest));
-            }
-            menu.ShowAsContext();
-        }
-
-        internal void AddChildTo(NodeId parentId, NodeManifest manifest)
-        {
-            var id = new NodeId("node-" + Guid.NewGuid().ToString("N"));
-            var node = new NodeDocument(id, manifest.TypeId, checked((int)manifest.Version),
-                parameters: SemanticObject.Empty, tags: TagSet.Empty);
-            _session.Apply(document => SemanticEditOperations.AddNode(document, node, parentId));
-            RefreshSession();
-        }
-
-        private void SaveLayout()
-        {
-            if (_session == null || string.IsNullOrEmpty(_sourcePath)) return;
-            if (_session.IsDirty)
-            {
-                EditorUtility.DisplayDialog("Save tree first", "Save the tree before saving its layout.", "OK");
-                return;
-            }
-            try
-            {
-                var layoutPath = LayoutPersistenceController.LayoutPathFor(_sourcePath);
-                var expected = string.IsNullOrEmpty(_layoutBaseBytes) ? null : Convert.FromBase64String(_layoutBaseBytes);
-                LayoutDocument old;
-                if (expected == null) old = DeterministicAutoLayoutService.Layout(Document);
-                else
-                {
-                    var parsed = CanonicalLayoutJson.Parse(expected, layoutPath);
-                    if (!parsed.Success || parsed.Document.TreeId != Document.TreeId)
-                        throw new InvalidOperationException("The existing layout cannot be read for this tree. Resolve its diagnostics before saving a layout.");
-                    old = parsed.Document;
-                }
-                var nodes = new Dictionary<NodeId, LayoutNodePlacement>();
-                foreach (var pair in _view.NodesById)
-                {
-                    var position = NodePosition(pair.Value);
-                    var pinned = old.Nodes.TryGetValue(pair.Key, out var placement) && placement.Pinned;
-                    nodes.Add(pair.Key, new LayoutNodePlacement(new LayoutPoint(position.x, position.y), pinned));
-                }
-                var groups = old.Groups.ToDictionary(pair => pair.Key, pair => new LayoutGroup(
-                    pair.Value.Title, pair.Value.MemberNodeIds.Where(nodes.ContainsKey), pair.Value.Description,
-                    pair.Value.Color, pair.Value.Locked));
-                var edges = new HashSet<LayoutEdgeKey>(Document.Nodes.SelectMany(node =>
-                    node.Children.Select(child => new LayoutEdgeKey(node.Id, child))));
-                var reroutes = old.Reroutes.Where(pair => edges.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value);
-                var layout = new LayoutDocument(Document.TreeId, old.Direction, nodes, groups, old.Notes, reroutes);
-                var bytes = CanonicalLayoutJsonWriter.Write(layout);
-                var validation = CanonicalLayoutJson.Parse(bytes, layoutPath, Document);
-                if (!validation.Success)
-                    throw new InvalidOperationException(string.Join("\n", validation.Diagnostics.Select(d => d.Message)));
-                GraphEditSession.WriteIfUnchanged(layoutPath, expected, bytes);
-                _layoutBaseBytes = Convert.ToBase64String(bytes);
-                ResetLayoutChanges();
-                hasUnsavedChanges = _session.IsDirty;
-                AssetDatabase.Refresh();
-            }
-            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is InvalidOperationException || exception is ArgumentException)
-            {
-                EditorUtility.DisplayDialog("Unable to save layout", exception.Message, "OK");
-            }
-        }
-
-        private void RemoveSelected()
-        {
-            var node = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault();
-            if (_session == null || node == null || node.NodeId == _session.Document.Root) return;
-            if (!EditorUtility.DisplayDialog("Remove branch", "Remove this node and all its descendants?", "Remove", "Cancel")) return;
-            _session.Apply(document => SemanticEditOperations.RemoveNode(document, node.NodeId));
-            RefreshSession();
-        }
-
-        private void MoveSelected(int direction)
-        {
-            var selected = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault();
-            if (_session == null || selected == null) return;
-            var parent = Document.Nodes.FirstOrDefault(node => node.Children.Contains(selected.NodeId));
-            if (parent == null) return;
-            var children = parent.Children.ToList();
-            var index = children.IndexOf(selected.NodeId);
-            var next = index + direction;
-            if (next < 0 || next >= children.Count) return;
-            _session.Apply(document => SemanticEditOperations.Connect(
-                SemanticEditOperations.Disconnect(document, parent.Id, selected.NodeId), parent.Id, selected.NodeId, next));
-            RefreshSession();
-        }
-
-        private void DetachSelected()
-        {
-            var selected = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault();
-            if (_session == null || selected == null || selected.NodeId == Document.Root) return;
-            var parent = Document.Nodes.FirstOrDefault(node => node.Children.Contains(selected.NodeId));
-            if (parent == null) return;
-            _session.Apply(document => SemanticEditOperations.Disconnect(document, parent.Id, selected.NodeId));
-            RefreshSession();
-        }
-
-        private void SetSelectedRoot()
-        {
-            var selected = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault();
-            if (_session == null || selected == null || selected.NodeId == Document.Root) return;
-            _session.Apply(document => SemanticEditOperations.SetRoot(document, selected.NodeId));
-            RefreshSession();
-        }
-
-        private void AttachSelected()
-        {
-            var selected = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault();
-            if (_session == null || selected == null || selected.NodeId == Document.Root) return;
-            var previousParent = Document.Nodes.FirstOrDefault(node => node.Children.Contains(selected.NodeId));
-            var subtree = new HashSet<NodeId>();
-            var pending = new Stack<NodeId>();
-            pending.Push(selected.NodeId);
-            while (pending.Count > 0)
-            {
-                var id = pending.Pop();
-                if (!subtree.Add(id)) continue;
-                var node = Document.Nodes.FirstOrDefault(candidate => candidate.Id == id);
-                if (node != null) foreach (var child in node.Children) pending.Push(child);
-            }
-            var menu = new GenericMenu();
-            var found = false;
-            foreach (var parent in Document.Nodes)
-            {
-                if (subtree.Contains(parent.Id) || (previousParent != null && previousParent.Id == parent.Id) ||
-                    !_registry.TryGet(parent.TypeId, out var entry) ||
-                    (entry.Manifest.ChildPolicy.Maximum.HasValue && parent.Children.Count >= entry.Manifest.ChildPolicy.Maximum.Value)) continue;
-                var candidate = parent;
-                found = true;
-                menu.AddItem(new GUIContent(candidate.Id.Value + " (" + candidate.TypeId + ")"), false, () =>
-                {
-                    _session.Apply(document =>
-                    {
-                        var detached = previousParent == null ? document : SemanticEditOperations.Disconnect(document, previousParent.Id, selected.NodeId);
-                        return SemanticEditOperations.Connect(detached, candidate.Id, selected.NodeId);
-                    });
-                    RefreshSession();
-                });
-            }
-            if (!found) menu.AddDisabledItem(new GUIContent("No compatible parent"));
-            menu.ShowAsContext();
-        }
-
-        private void RefreshSession()
-        {
-            ReleaseExecutionView();
-            var selectedId = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault()?.NodeId;
-            var positions = _view.NodesById.ToDictionary(pair => pair.Key,
-                pair => new Rect(NodePosition(pair.Value), pair.Value.GetPosition().size));
             Document = _session.Document;
-            Diagnostics = _session.Diagnostics;
-            _nativeValidationLabel.text = string.Empty;
-            _nativeValidationLabel.style.display = DisplayStyle.None;
-            hasUnsavedChanges = _session.IsDirty || _layoutDirty;
-            _draftBytes = _session.IsDirty ? Convert.ToBase64String(CanonicalTreeJson.Serialize(Document).Utf8) : null;
-            var savedBytes = _session.SavedBytes;
-            _draftBaseBytes = _session.IsDirty && savedBytes != null ? Convert.ToBase64String(savedBytes) : null;
-            saveChangesMessage = "Save the AIBT tree before closing?";
-            _documentLabel.text = _sourcePath + (_session.IsDirty ? " *" : "");
-            _emptyLabel.style.display = DisplayStyle.None;
-            _diagnosticLabel.text = string.Join("\n", Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
-            _diagnosticLabel.style.display = Diagnostics.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
-            RefreshValidation();
-            _view.Populate(Document, _registry);
-            foreach (var pair in _view.NodesById)
-            {
-                if (positions.TryGetValue(pair.Key, out var position)) pair.Value.SetPosition(position);
-                else if (_layoutHistory != null && _layoutHistory.Current.TreeId == Document.TreeId &&
-                         _layoutHistory.Current.Nodes.TryGetValue(pair.Key, out var previous))
-                    pair.Value.SetPosition(new Rect(previous.Position.X, previous.Position.Y, 0, 0));
-            }
-            if (_layoutHistory == null || _layoutHistory.Current.TreeId != Document.TreeId)
-                _layoutHistory = new LayoutHistory(LayoutSnapshot());
-            else _layoutHistory.IncludeNodes(LayoutSnapshot().Nodes);
-            if (selectedId.HasValue && _view.NodesById.TryGetValue(selectedId.Value, out var selected))
-                _view.AddToSelection(selected);
-            RefreshInspector();
+            _view.ClearDocument();
+            _view.Editable = true;
+            _view.Populate(Document, _registry, null);
+            _layoutIsDefault = true;
+            _layoutHistory = new LayoutHistory(LayoutSnapshot());
+            ResetHistory();
+            OnDocumentChanged();
+            FrameAllSoon();
         }
 
-        private void ValidateNative()
+        /// <summary>Saves the tree (when edited) and then its layout (when moved). Returns false and shows why when it cannot.</summary>
+        internal bool SaveAll()
         {
-            if (_session == null) return;
-            var catalog = _projectCatalog ?? ProjectNodeCatalogCache.Current;
-            if (catalog.Problems.Count > 0)
+            if (_session == null || string.IsNullOrEmpty(_sourcePath))
             {
-                _nativeValidationLabel.text = "Native compilation unavailable: " + string.Join("\n", catalog.Problems);
+                Notify(Document == null ? "Nothing to save." : "This view is read-only; open the tree from a file to edit it.");
+                return false;
             }
+
+            try
+            {
+                var savedTree = false;
+                if (_session.IsDirty)
+                {
+                    _session.Save(_sourcePath);
+                    savedTree = true;
+                }
+                var savedLayout = _layoutDirty && WriteLayout();
+                if (savedTree || savedLayout)
+                {
+                    Import(_sourcePath);
+                    if (savedLayout) Import(LayoutPersistenceController.LayoutPathFor(_sourcePath));
+                    _sourceGuid = AssetDatabase.AssetPathToGUID(_sourcePath);
+                }
+                _draftBytes = null;
+                _draftBaseBytes = null;
+                HideBanner();
+                UpdateDirtyState();
+                RefreshChrome();
+                Notify(savedTree || savedLayout ? "Saved " + Path.GetFileName(_sourcePath) : "No changes to save");
+                return true;
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException ||
+                                              exception is InvalidOperationException || exception is ArgumentException)
+            {
+                var conflict = exception is IOException && exception.Message.StartsWith("The file changed outside", StringComparison.Ordinal);
+                if (conflict)
+                    ShowBanner("Not saved: " + exception.Message, BannerKind.Error,
+                        ("Reload from disk", ReloadDiscardingChanges), ("Keep editing", HideBanner));
+                else ShowBanner("Not saved: " + exception.Message, BannerKind.Error, ("OK", HideBanner));
+                return false;
+            }
+        }
+
+        private static void Import(string path)
+        {
+            var relative = path.Replace('\\', '/');
+            if (Path.IsPathRooted(relative)) relative = FileUtil.GetProjectRelativePath(relative);
+            if (!string.IsNullOrEmpty(relative) && (relative.StartsWith("Assets/", StringComparison.Ordinal) || relative.StartsWith("Packages/", StringComparison.Ordinal)))
+                AssetDatabase.ImportAsset(relative, ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        private bool WriteLayout()
+        {
+            var layoutPath = LayoutPersistenceController.LayoutPathFor(_sourcePath);
+            var expected = string.IsNullOrEmpty(_layoutBaseBytes) ? null : Convert.FromBase64String(_layoutBaseBytes);
+            LayoutDocument old;
+            if (expected == null) old = DeterministicAutoLayoutService.Layout(Document);
             else
             {
-                var result = GeneratedCompiledProgramV2Compiler.Compile(_session.Document, catalog.Generated.Values, catalog.RegisteredTypes,
-                    new ReferenceCompilerOptions("trees/editor.aibt.json", ReferenceCompilationPolicy.Phase1,
-                        new CompiledCompilerVersion(1, 0, 0, 5)));
-                _nativeValidationLabel.text = result.Success
-                    ? "Native program compiled. Player dispatch and game integration still require verification."
-                    : "Native compilation: " + string.Join("\n", result.Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
+                var parsed = CanonicalLayoutJson.Parse(expected, layoutPath);
+                if (!parsed.Success || parsed.Document.TreeId != Document.TreeId)
+                    throw new InvalidOperationException("The existing layout cannot be read for this tree. Resolve its diagnostics before saving a layout.");
+                old = parsed.Document;
             }
-            _nativeValidationLabel.style.display = DisplayStyle.Flex;
-        }
-
-        private void RefreshValidation()
-        {
-            if (_validationLabel == null) return;
-            _validationLabel.text = _session == null || _session.CanCompile ? string.Empty :
-                "Reference validation: " + string.Join("\n", _session.Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
-            _validationLabel.style.display = string.IsNullOrEmpty(_validationLabel.text) ? DisplayStyle.None : DisplayStyle.Flex;
-        }
-
-        private void RefreshInspector()
-        {
-            if (_inspector == null) return;
-            _inspector.Clear();
-            if (_session != null) AddBlackboardInspector();
-            var view = _view.selection.OfType<BehaviorTreeNode>().FirstOrDefault();
-            if (_session == null || view == null) { _inspector.Add(new Label("Select a node to edit its parameters.")); return; }
-            var node = Document.Nodes.First(n => n.Id == view.NodeId);
-            _inspector.Add(new Label(view.title) { style = { unityFontStyleAndWeight = FontStyle.Bold } });
-            _inspector.Add(new Label(node.TypeId) { style = { whiteSpace = WhiteSpace.Normal } });
-            if (view.Manifest == null) { _inspector.Add(new Label("Node contract is unavailable.")); return; }
-            _inspector.Add(new Label(view.Manifest.Summary) { style = { whiteSpace = WhiteSpace.Normal } });
-            AddBindingInspector(node);
-            foreach (var parameter in view.Manifest.Parameters)
+            var nodes = new Dictionary<NodeId, LayoutNodePlacement>();
+            foreach (var pair in _view.NodesById)
             {
-                node.Parameters.TryGetValue(parameter.Name, out var value);
-                var label = parameter.Name + (parameter.Required ? " *" : "");
-                if (parameter.Type == NodeParameterType.Boolean)
-                {
-                    var field = new Toggle(label);
-                    field.SetValueWithoutNotify(value != null && value.TryGetBoolean(out var flag) && flag);
-                    field.RegisterValueChangedCallback(evt => SetParameter(node.Id, parameter.Name, SemanticValue.FromBoolean(evt.newValue)));
-                    _inspector.Add(field);
-                }
-                else if (parameter.Type == NodeParameterType.Float32)
-                {
-                    var field = new FloatField(label) { isDelayed = true };
-                    if (value != null)
-                    {
-                        if (value.TryGetNumber(out var number)) field.SetValueWithoutNotify((float)number);
-                        else if (value.TryGetInt64(out var signed)) field.SetValueWithoutNotify(signed);
-                        else if (value.TryGetUInt64(out var unsigned)) field.SetValueWithoutNotify(unsigned);
-                    }
-                    field.RegisterValueChangedCallback(evt =>
-                    {
-                        if (!float.IsNaN(evt.newValue) && !float.IsInfinity(evt.newValue))
-                            SetParameter(node.Id, parameter.Name, SemanticValue.FromNumber(evt.newValue == 0f ? 0d : evt.newValue));
-                        else _view.schedule.Execute(RefreshInspector);
-                    });
-                    _inspector.Add(field);
-                    if (value == null)
-                        _inspector.Add(new Button(() => SetParameter(node.Id, parameter.Name, SemanticValue.FromNumber(0d))) { text = "Set " + parameter.Name + " to zero" });
-                }
-                else if (parameter.Type == NodeParameterType.StringEnum)
-                {
-                    var choices = parameter.AllowedValues.ToList();
-                    var current = value != null && value.TryGetString(out var text) && choices.Contains(text) ? text : choices[0];
-                    var field = new PopupField<string>(label, choices, choices.IndexOf(current));
-                    field.RegisterValueChangedCallback(evt => SetParameter(node.Id, parameter.Name, SemanticValue.FromString(evt.newValue)));
-                    _inspector.Add(field);
-                }
-                else if (parameter.Type == NodeParameterType.String)
-                {
-                    var field = new TextField(label) { isDelayed = true };
-                    if (value != null && value.TryGetString(out var text)) field.SetValueWithoutNotify(text);
-                    else if (parameter.DefaultValue != null && parameter.DefaultValue.TryGetString(out var fallback)) field.SetValueWithoutNotify(fallback);
-                    field.RegisterValueChangedCallback(evt => SetParameter(node.Id, parameter.Name, SemanticValue.FromString(evt.newValue ?? string.Empty)));
-                    _inspector.Add(field);
-                }
-                else if (parameter.Type == NodeParameterType.Int32)
-                {
-                    var field = new IntegerField(label) { isDelayed = true };
-                    var shown = value ?? parameter.DefaultValue;
-                    if (shown != null && shown.TryGetInt64(out var signed)) field.SetValueWithoutNotify((int)signed);
-                    else if (shown != null && shown.TryGetUInt64(out var unsigned)) field.SetValueWithoutNotify((int)unsigned);
-                    field.RegisterValueChangedCallback(evt => SetParameter(node.Id, parameter.Name, SemanticValue.FromInt64(evt.newValue)));
-                    _inspector.Add(field);
-                }
-                else if (parameter.Type == NodeParameterType.BlackboardKey)
-                {
-                    // Offer only keys whose type the parameter accepts; an empty first entry clears it.
-                    var choices = new List<string> { string.Empty };
-                    choices.AddRange(Document.Blackboard
-                        .Where(key => key.Scope == BlackboardScope.Tree && (parameter.BlackboardValueType == null
-                            || key.Type.CanonicalTypeId == parameter.BlackboardValueType))
-                        .Select(key => key.Id));
-                    var current = value != null && value.TryGetString(out var keyId) ? keyId : string.Empty;
-                    if (!choices.Contains(current)) choices.Add(current);
-                    var field = new PopupField<string>(label, choices, choices.IndexOf(current),
-                        choice => string.IsNullOrEmpty(choice) ? "(none)" : choice, choice => string.IsNullOrEmpty(choice) ? "(none)" : choice);
-                    field.RegisterValueChangedCallback(evt =>
-                    {
-                        if (string.IsNullOrEmpty(evt.newValue))
-                        {
-                            _session.Apply(document => SemanticEditOperations.RemoveParameter(document, node.Id, parameter.Name));
-                            _view.schedule.Execute(RefreshSession);
-                        }
-                        else SetParameter(node.Id, parameter.Name, SemanticValue.FromString(evt.newValue));
-                    });
-                    _inspector.Add(field);
-                    if (parameter.BlackboardValueType != null)
-                        _inspector.Add(new Label("Blackboard key of type " + parameter.BlackboardValueType) { style = { fontSize = 10, opacity = 0.7f } });
-                }
-                else
-                {
-                    var field = new TextField(label);
-                    if (value != null && value.TryGetUInt64(out var number)) field.SetValueWithoutNotify(number.ToString());
-                    else if (value != null && value.TryGetInt64(out var signed) && signed >= 0) field.SetValueWithoutNotify(signed.ToString());
-                    field.RegisterCallback<FocusOutEvent>(_ =>
-                    {
-                        if (ulong.TryParse(field.value, out var number) &&
-                            (parameter.Type != NodeParameterType.UInt32 || number <= uint.MaxValue) &&
-                            !(value != null && ((value.TryGetUInt64(out var previous) && previous == number) ||
-                                (value.TryGetInt64(out var previousSigned) && previousSigned >= 0 && (ulong)previousSigned == number))))
-                            SetParameter(node.Id, parameter.Name, SemanticValue.FromUInt64(number));
-                    });
-                    _inspector.Add(field);
-                }
-                if (value == null) _inspector.Add(new Label("Not set") { style = { color = new Color(1f, 0.65f, 0.25f) } });
-                if (value == null && parameter.Type == NodeParameterType.Boolean)
-                    _inspector.Add(new Button(() => SetParameter(node.Id, parameter.Name, SemanticValue.FromBoolean(false))) { text = "Set " + parameter.Name + " to false" });
-                if (value == null && parameter.Type == NodeParameterType.StringEnum)
-                    _inspector.Add(new Button(() => SetParameter(node.Id, parameter.Name, SemanticValue.FromString(parameter.AllowedValues[0]))) { text = "Set " + parameter.Name + " default" });
-                if (value != null)
-                    _inspector.Add(new Button(() =>
-                    {
-                        _session.Apply(document => SemanticEditOperations.RemoveParameter(document, node.Id, parameter.Name));
-                        RefreshSession();
-                    }) { text = "Clear " + parameter.Name });
+                var position = BehaviorTreeGraphView.NodePosition(pair.Value);
+                var pinned = old.Nodes.TryGetValue(pair.Key, out var placement) && placement.Pinned;
+                nodes.Add(pair.Key, new LayoutNodePlacement(new LayoutPoint(position.x, position.y), pinned));
             }
-        }
-
-        private void SetParameter(NodeId node, string name, SemanticValue value)
-        {
-            _session.Apply(document => SemanticEditOperations.SetParameter(document, node, name, value));
-            // The field may still be dispatching FocusOut; rebuild after that event completes.
-            _view.schedule.Execute(RefreshSession);
+            var groups = old.Groups.ToDictionary(pair => pair.Key, pair => new LayoutGroup(
+                pair.Value.Title, pair.Value.MemberNodeIds.Where(nodes.ContainsKey), pair.Value.Description,
+                pair.Value.Color, pair.Value.Locked));
+            var edges = new HashSet<LayoutEdgeKey>(Document.Nodes.SelectMany(node =>
+                node.Children.Select(child => new LayoutEdgeKey(node.Id, child))));
+            var reroutes = old.Reroutes.Where(pair => edges.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value);
+            var layout = new LayoutDocument(Document.TreeId, old.Direction, nodes, groups, old.Notes, reroutes);
+            var bytes = CanonicalLayoutJsonWriter.Write(layout);
+            var validation = CanonicalLayoutJson.Parse(bytes, layoutPath, Document);
+            if (!validation.Success)
+                throw new InvalidOperationException(string.Join("\n", validation.Diagnostics.Select(d => d.Message)));
+            GraphEditSession.WriteIfUnchanged(layoutPath, expected, bytes);
+            _layoutBaseBytes = Convert.ToBase64String(bytes);
+            ResetLayoutChanges();
+            return true;
         }
 
         public override void SaveChanges()
         {
-            if (_session?.IsDirty == true) SaveTree();
-            if (_session != null && !_session.IsDirty && _layoutDirty) SaveLayout();
+            SaveAll();
+            base.SaveChanges();
         }
 
         public override void DiscardChanges()
@@ -644,56 +515,237 @@ namespace AIBT.Editor.Graph
             base.DiscardChanges();
         }
 
+        [Shortcut("AIBT Graph/Save", typeof(BehaviorTreeGraphWindow), KeyCode.S, ShortcutModifiers.Action)]
+        private static void SaveShortcut(ShortcutArguments arguments) => (arguments.context as BehaviorTreeGraphWindow)?.SaveAll();
+
+        [Shortcut("AIBT Graph/Auto Layout", typeof(BehaviorTreeGraphWindow), KeyCode.L, ShortcutModifiers.Action | ShortcutModifiers.Shift)]
+        private static void AutoLayoutShortcut(ShortcutArguments arguments) => (arguments.context as BehaviorTreeGraphWindow)?.AutoLayout();
+
+        // ---------------------------------------------------------------- semantic edits and history
+
+        /// <summary>Applies one semantic edit as one undo step. Returns false when nothing changed or the edit was refused.</summary>
+        internal bool ApplyEdit(Func<TreeDocument, TreeDocument> edit)
+        {
+            if (_session == null) return false;
+            TreeDocument candidate;
+            try
+            {
+                candidate = edit(_session.Document);
+                if (candidate == null || ReferenceEquals(candidate, _session.Document)) return false;
+                _session.Apply(_ => candidate);
+            }
+            catch (Exception exception) when (exception is ArgumentException || exception is InvalidOperationException)
+            {
+                Notify(exception.Message);
+                return false;
+            }
+
+            RecordHistory(GraphEditKind.Semantic);
+            OnDocumentChanged();
+            return true;
+        }
+
+        /// <summary>Steps back one edit through Unity's undo stack (the same path as Ctrl+Z).</summary>
+        internal void UndoEdit()
+        {
+            if (!_history.CanUndo) return;
+            var before = _history.Position;
+            Undo.PerformUndo();
+            if (_history.Position == before) StepUndo(); // Unity's stack lost our record (for example, after clearing it)
+            SyncMarker();
+        }
+
+        internal void RedoEdit()
+        {
+            if (!_history.CanRedo) return;
+            var before = _history.Position;
+            Undo.PerformRedo();
+            if (_history.Position == before) StepRedo();
+            SyncMarker();
+        }
+
+        private void RecordHistory(GraphEditKind kind)
+        {
+            _history.Record(kind);
+            if (_undoMarker == null) return;
+            Undo.RegisterCompleteObjectUndo(_undoMarker, kind == GraphEditKind.Semantic ? "Edit AIBT Tree" : "Move AIBT Nodes");
+            _undoMarker.Position = _history.Position;
+            Undo.IncrementCurrentGroup();
+        }
+
+        private void OnUnityUndoRedo()
+        {
+            if (_undoMarker == null || _restoringFromUndo || (_session == null && _layoutHistory == null)) return;
+            var target = _undoMarker.Position;
+            _restoringFromUndo = true;
+            try
+            {
+                while (_history.Position > target && _history.CanUndo) StepUndo();
+                while (_history.Position < target && _history.CanRedo) StepRedo();
+            }
+            finally
+            {
+                _restoringFromUndo = false;
+            }
+        }
+
+        private void StepUndo()
+        {
+            if (_history.Undo() == GraphEditKind.Semantic)
+            {
+                if (_session != null && _session.CanUndo) _session.Undo();
+                OnDocumentChanged();
+            }
+            else if (_layoutHistory != null && _layoutHistory.CanUndo) ApplyLayout(_layoutHistory.Undo());
+        }
+
+        private void StepRedo()
+        {
+            if (_history.Redo() == GraphEditKind.Semantic)
+            {
+                if (_session != null && _session.CanRedo) _session.Redo();
+                OnDocumentChanged();
+            }
+            else if (_layoutHistory != null && _layoutHistory.CanRedo) ApplyLayout(_layoutHistory.Redo());
+        }
+
+        private void SyncMarker()
+        {
+            if (_undoMarker != null) _undoMarker.Position = _history.Position;
+        }
+
+        private void ResetHistory()
+        {
+            _history.Clear();
+            if (_undoMarker == null) return;
+            Undo.ClearUndo(_undoMarker);
+            _undoMarker.Position = 0;
+        }
+
+        /// <summary>Brings the graph and panels in line with the session's current document, without a rebuild.</summary>
+        private void OnDocumentChanged()
+        {
+            if (_session == null) return;
+            ReleaseExecutionView();
+            Document = _session.Document;
+            Diagnostics = _session.Diagnostics;
+            _nativeMessage = null;
+            var positions = CurrentPositions();
+            var placedNew = false;
+            _view.Sync(Document, _registry, id =>
+            {
+                placedNew = true;
+                if (_pendingPlacement.TryGetValue(id, out var requested)) return requested;
+                if (_layoutHistory != null && _layoutHistory.Current.Nodes.TryGetValue(id, out var previous))
+                    return new Vector2(previous.Position.X, previous.Position.Y);
+                var parent = GraphDocumentEdits.ParentOf(Document, id);
+                var place = parent != null ? GraphLayout.PlaceChild(Document, parent.Id, id, positions) : Vector2.zero;
+                positions[id] = place;
+                return place;
+            });
+            _pendingPlacement.Clear();
+            if (_layoutIsDefault) ApplyPositions(GraphLayout.Arrange(Document));
+            else if (placedNew) _layoutDirty = true;
+            if (_layoutHistory == null || _layoutHistory.Current.TreeId != Document.TreeId) _layoutHistory = new LayoutHistory(LayoutSnapshot());
+            else _layoutHistory.IncludeNodes(LayoutSnapshot().Nodes);
+            CaptureLayoutPositions();
+            UpdateDirtyState();
+            RefreshChrome();
+        }
+
+        private void UpdateDirtyState()
+        {
+            var dirty = _session?.IsDirty == true;
+            hasUnsavedChanges = dirty || _layoutDirty;
+            saveChangesMessage = "Save the AIBT tree and its layout before closing?";
+            _draftBytes = dirty ? Convert.ToBase64String(CanonicalTreeJson.Serialize(Document).Utf8) : null;
+            var savedBytes = _session?.SavedBytes;
+            _draftBaseBytes = dirty && savedBytes != null ? Convert.ToBase64String(savedBytes) : null;
+        }
+
+        // ---------------------------------------------------------------- layout
+
+        /// <summary>Re-arranges every unpinned node as a tidy top-down tree. One undo step; never changes child order.</summary>
+        internal void AutoLayout()
+        {
+            if (Document == null || _layoutHistory == null) return;
+            var keep = _view.NodesById.Where(pair => _pinned.Contains(pair.Key))
+                .ToDictionary(pair => pair.Key, pair => BehaviorTreeGraphView.NodePosition(pair.Value));
+            ApplyPositions(GraphLayout.Arrange(Document, keep));
+            _layoutIsDefault = keep.Count == 0;
+            RecordLayoutChange();
+            FrameAllSoon();
+        }
+
+        private void RecordLayoutChange()
+        {
+            if (_layoutHistory == null) return;
+            _layoutDirty = _session != null;
+            _layoutHistory.Do(LayoutSnapshot());
+            RecordHistory(GraphEditKind.Layout);
+            CaptureLayoutPositions();
+            UpdateDirtyState();
+            RefreshToolbarState();
+        }
+
+        private void OnNodesMoved()
+        {
+            _layoutIsDefault = false;
+            RecordLayoutChange();
+        }
+
+        private void ApplyLayout(LayoutDocument layout)
+        {
+            ApplyPositions(layout.Nodes.ToDictionary(pair => pair.Key, pair => new Vector2(pair.Value.Position.X, pair.Value.Position.Y)));
+            _layoutDirty = _session != null;
+            _layoutIsDefault = false;
+            CaptureLayoutPositions();
+            UpdateDirtyState();
+            RefreshToolbarState();
+        }
+
+        private void ApplyPositions(IReadOnlyDictionary<NodeId, Vector2> positions)
+        {
+            foreach (var pair in positions)
+                if (_view.NodesById.TryGetValue(pair.Key, out var node)) BehaviorTreeGraphView.SetNodePosition(node, pair.Value);
+            _view.MarkDirtyRepaint();
+        }
+
+        private Dictionary<NodeId, Vector2> CurrentPositions()
+            => _view.NodesById.ToDictionary(pair => pair.Key, pair => BehaviorTreeGraphView.NodePosition(pair.Value));
+
         private void CaptureLayoutPositions()
         {
-            if (!_layoutDirty) return;
             _layoutNodeIds.Clear();
             _layoutPositions.Clear();
+            if (!_layoutDirty) return;
             foreach (var pair in _view.NodesById)
             {
                 _layoutNodeIds.Add(pair.Key.Value);
-                _layoutPositions.Add(NodePosition(pair.Value));
+                _layoutPositions.Add(BehaviorTreeGraphView.NodePosition(pair.Value));
             }
         }
 
         private LayoutDocument LayoutSnapshot()
         {
-            var nodes = _view.NodesById.ToDictionary(pair => pair.Key,
-                pair => new LayoutNodePlacement(new LayoutPoint(NodePosition(pair.Value).x, NodePosition(pair.Value).y)));
+            var nodes = _view.NodesById.ToDictionary(pair => pair.Key, pair =>
+            {
+                var position = BehaviorTreeGraphView.NodePosition(pair.Value);
+                return new LayoutNodePlacement(new LayoutPoint(position.x, position.y), _pinned.Contains(pair.Key));
+            });
             return new LayoutDocument(Document.TreeId, LayoutDirection.TopToBottom, nodes);
-        }
-
-        private void RecordLayoutMove()
-        {
-            if (_session == null || _layoutHistory == null) return;
-            _layoutHistory.Do(LayoutSnapshot());
-            CaptureLayoutPositions();
-        }
-
-        private void ChangeLayoutHistory(bool redo)
-        {
-            if (_layoutHistory == null || (redo ? !_layoutHistory.CanRedo : !_layoutHistory.CanUndo)) return;
-            var layout = redo ? _layoutHistory.Redo() : _layoutHistory.Undo();
-            foreach (var pair in layout.Nodes)
-                if (_view.NodesById.TryGetValue(pair.Key, out var node))
-                    node.SetPosition(new Rect(pair.Value.Position.X, pair.Value.Position.Y, node.GetPosition().width, node.GetPosition().height));
-            _layoutDirty = true;
-            hasUnsavedChanges = true;
-            CaptureLayoutPositions();
-            _view.MarkDirtyRepaint();
-            Repaint();
         }
 
         private void RestoreLayoutPositions(string[] ids, Vector2[] positions, bool wasDirty)
         {
-            if (!wasDirty) return;
+            if (!wasDirty || Document == null) return;
             for (var index = 0; index < Math.Min(ids.Length, positions.Length); index++)
             {
                 var id = new NodeId(ids[index]);
-                if (_view.NodesById.TryGetValue(id, out var node))
-                    node.SetPosition(new Rect(positions[index], node.GetPosition().size));
+                if (_view.NodesById.TryGetValue(id, out var node)) BehaviorTreeGraphView.SetNodePosition(node, positions[index]);
             }
             _layoutDirty = true;
+            _layoutIsDefault = false;
             hasUnsavedChanges = true;
             CaptureLayoutPositions();
             _layoutHistory = new LayoutHistory(LayoutSnapshot());
@@ -706,162 +758,47 @@ namespace AIBT.Editor.Graph
             _layoutPositions.Clear();
         }
 
-        private static Vector2 NodePosition(BehaviorTreeNode node)
-            => new Vector2(node.style.left.value.value, node.style.top.value.value);
-
-        private void RefreshCatalog()
+        private void FrameAllSoon()
         {
-            var previous = _projectCatalog;
-            _projectCatalog = ProjectNodeCatalogCache.Current;
-            if (_session != null && previous != _projectCatalog && ReferenceEquals(_registry, previous?.Registry))
-            {
-                _registry = _projectCatalog.Registry;
-                _session.RebindRegistry(_registry, ValidateProjectDocument);
-                if (previous.Registry.Hash != _projectCatalog.Registry.Hash || !previous.Problems.SequenceEqual(_projectCatalog.Problems)) RefreshSession();
-                else RefreshValidation();
-            }
-            _catalogDiagnostics.text = string.Join("\n", _projectCatalog.Problems);
-            _catalogDiagnostics.style.display = _projectCatalog.Problems.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
-            _catalog.Clear();
-            foreach (var path in AssetDatabase.GetAllAssetPaths().Where(TreeSourcePaths.IsTree)
-                         .Where(path => !path.StartsWith("Assets/AIBT/Tests/", StringComparison.OrdinalIgnoreCase) &&
-                                        !path.StartsWith("Packages/com.azzazello.aibt/Tests/", StringComparison.OrdinalIgnoreCase))
-                         .OrderBy(p => p, StringComparer.Ordinal))
-                _catalog.Add(TreeCatalogEntry.Read(path, _projectCatalog.Registry));
-            var selectedTag = _tag.value;
-            _tag.choices = new[] { "All tags" }.Concat(_catalog.SelectMany(e => e.Tags).Distinct().OrderBy(t => t)).ToList();
-            _tag.SetValueWithoutNotify(_tag.choices.Contains(selectedTag) ? selectedTag : "All tags");
-            FilterCatalog();
+            // Framing needs a laid-out view and laid-out cards; after a domain reload the window may not have a size yet.
+            _framePending = true;
+            EditorApplication.update -= FrameWhenLaidOut;
+            EditorApplication.update += FrameWhenLaidOut;
         }
+
+        private bool _framePending;
+        private int _frameTicks;
+
+        // Frames the whole tree on the first Editor update where the view has a size.
+        private void FrameWhenLaidOut()
+        {
+            if (this == null || _view == null || !_framePending || ++_frameTicks > 200)
+            {
+                EditorApplication.update -= FrameWhenLaidOut;
+                _frameTicks = 0;
+                return;
+            }
+            if (float.IsNaN(_view.layout.width) || _view.layout.width < 1f || _view.NodesById.Count == 0) return;
+            if (_view.NodesById.Values.Any(node => float.IsNaN(node.layout.width) || node.layout.width < 1f)) return;
+            _framePending = false;
+            _frameTicks = 0;
+            EditorApplication.update -= FrameWhenLaidOut;
+            _view.FrameAll();
+        }
+
+        private static bool SamePath(string left, string right)
+            => !string.IsNullOrEmpty(left) && !string.IsNullOrEmpty(right) &&
+               string.Equals(left.Replace('\\', '/'), right.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
         private DiagnosticCollection ValidateProjectDocument(TreeDocument document)
             => _projectCatalog != null && ReferenceEquals(_registry, _projectCatalog.Registry)
                 ? _projectCatalog.ValidateAuthoring(document, CompilerOptions())
                 : ReferenceCompiler.Compile(document, _registry, CompilerOptions()).Diagnostics;
 
-        private void FilterCatalog()
+        private void Notify(string message)
         {
-            _filtered.Clear();
-            _filtered.AddRange(_catalog.Where(e => e.Matches(_search.value, _tag.value, _status.value)));
-            _treeList.Rebuild();
-        }
-
-        private void ChooseTree()
-        {
-            var path = EditorUtility.OpenFilePanelWithFilters("Open AIBT Tree", Application.dataPath,
-                new[] { "AIBT trees", "aibt,json" });
-            if (string.IsNullOrEmpty(path)) return;
-            var relative = FileUtil.GetProjectRelativePath(path);
-            OpenFromPath(string.IsNullOrEmpty(relative) ? path : relative);
-        }
-
-        private void EnsureView()
-        {
-            if (_view != null)
-            {
-                return;
-            }
-
-            var toolbar = new Toolbar();
-            toolbar.Add(new ToolbarButton(NewTree) { text = "New" });
-            toolbar.Add(new ToolbarButton(ChooseTree) { text = "Open Tree", name = "aibt-open-tree" });
-            toolbar.Add(new ToolbarButton(SaveTree) { text = "Save", name = "aibt-save-tree" });
-            toolbar.Add(new ToolbarButton(SaveLayout) { text = "Save Layout", name = "aibt-save-layout" });
-            toolbar.Add(new ToolbarButton(ValidateNative) { text = "Check Native", name = "aibt-check-native" });
-            toolbar.Add(new ToolbarButton(BakeRuntimeAsset) { text = "Prepare Runtime", name = "aibt-prepare-runtime" });
-            toolbar.Add(new ToolbarButton(PreviewCurrent) { text = "Preview", name = "aibt-preview-current" });
-            toolbar.Add(new ToolbarButton(AttachSelectedHost) { text = "Debug Selected", name = "aibt-debug-selected" });
-            toolbar.Add(new ToolbarButton(() => { RefreshCatalog(); if (!string.IsNullOrEmpty(_sourcePath)) OpenFromPath(_sourcePath); }) { text = "Reload" });
-            toolbar.Add(new ToolbarButton(() => _view.FrameAll()) { text = "Frame All", name = "aibt-frame-all" });
-            rootVisualElement.Add(toolbar);
-            var editToolbar = new Toolbar();
-            editToolbar.Add(new ToolbarButton(AddChild) { text = "Add Child" });
-            editToolbar.Add(new ToolbarButton(RemoveSelected) { text = "Remove Branch" });
-            editToolbar.Add(new ToolbarButton(DetachSelected) { text = "Detach" });
-            editToolbar.Add(new ToolbarButton(AttachSelected) { text = "Attach To" });
-            editToolbar.Add(new ToolbarButton(SetSelectedRoot) { text = "Set Root" });
-            editToolbar.Add(new ToolbarButton(() => MoveSelected(-1)) { text = "Earlier" });
-            editToolbar.Add(new ToolbarButton(() => MoveSelected(1)) { text = "Later" });
-            editToolbar.Add(new ToolbarButton(() => { if (_session?.CanUndo == true) { _session.Undo(); RefreshSession(); } }) { text = "Undo" });
-            editToolbar.Add(new ToolbarButton(() => { if (_session?.CanRedo == true) { _session.Redo(); RefreshSession(); } }) { text = "Redo" });
-            editToolbar.Add(new ToolbarButton(() => ChangeLayoutHistory(false)) { text = "Undo Layout", name = "aibt-undo-layout" });
-            editToolbar.Add(new ToolbarButton(() => ChangeLayoutHistory(true)) { text = "Redo Layout", name = "aibt-redo-layout" });
-            rootVisualElement.Add(editToolbar);
-
-            var body = new VisualElement { style = { flexDirection = FlexDirection.Row, flexGrow = 1 } };
-            var sidebar = new VisualElement { name = "aibt-tree-browser", style = { width = 320, minWidth = 220, flexShrink = 0 } };
-            sidebar.Add(new Label("PROJECT TREES") { style = { unityFontStyleAndWeight = FontStyle.Bold } });
-            _catalogDiagnostics = new Label { style = { whiteSpace = WhiteSpace.Normal, color = new Color(1f, 0.65f, 0.25f) } };
-            sidebar.Add(_catalogDiagnostics);
-            _search = new ToolbarSearchField { name = "aibt-tree-search" };
-            _search.RegisterValueChangedCallback(_ => FilterCatalog());
-            sidebar.Add(_search);
-            _tag = new PopupField<string>("Tag", new List<string> { "All tags" }, 0);
-            _status = new PopupField<string>("State", new List<string> { "All states", "Valid", "Warnings", "Errors", "Needs registry", "Needs native compile" }, 0);
-            _tag.RegisterValueChangedCallback(_ => FilterCatalog());
-            _status.RegisterValueChangedCallback(_ => FilterCatalog());
-            sidebar.Add(_tag);
-            sidebar.Add(_status);
-            _treeList = new ListView(_filtered, 66,
-                () => new Label { style = { whiteSpace = WhiteSpace.Normal } },
-                (element, index) =>
-                {
-                    var entry = _filtered[index];
-                    ((Label)element).text = entry.Name + "  [" + entry.Status + "]\n" + entry.TreeId + "\n" + entry.Path;
-                    element.tooltip = entry.Details;
-                }) { name = "aibt-tree-list", virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight, style = { flexGrow = 1 } };
-            _treeList.selectionChanged += selected =>
-            {
-                var entry = selected.OfType<TreeCatalogEntry>().FirstOrDefault();
-                if (entry != null) OpenFromPath(entry.Path);
-            };
-            sidebar.Add(_treeList);
-            sidebar.Add(new Label("Search: name, ID or path.\nSamples~ appear after import; Open Tree can read them directly.") { style = { whiteSpace = WhiteSpace.Normal } });
-            body.Add(sidebar);
-            var content = new VisualElement { style = { flexGrow = 1, minWidth = 0 } };
-            _documentLabel = new Label("No tree selected") { name = "aibt-source-path" };
-            content.Add(_documentLabel);
-            _emptyLabel = new Label("Select a tree on the left or click Open Tree.\nPan: middle mouse • Zoom: wheel • Select: click • Frame: Frame All")
-                { name = "aibt-empty-state", style = { whiteSpace = WhiteSpace.Normal, paddingTop = 12, paddingBottom = 12 } };
-            content.Add(_emptyLabel);
-            _view = new BehaviorTreeGraphView { name = "aibt-graph-view" };
-            _view.CanConnectNodes = (parent, child) => _session != null && _session.CanConnect(parent, child);
-            _view.style.flexGrow = 1;
-            _view.graphViewChanged = change =>
-            {
-                if (_session != null && change.edgesToCreate != null && change.edgesToCreate.Count > 0)
-                {
-                    foreach (var edge in change.edgesToCreate)
-                        if (edge.output?.node is BehaviorTreeNode parent && edge.input?.node is BehaviorTreeNode child)
-                            _session.TryConnect(parent.NodeId, child.NodeId);
-                    change.edgesToCreate.Clear();
-                    _view.schedule.Execute(RefreshSession);
-                }
-                if (_session != null && change.movedElements != null && change.movedElements.OfType<BehaviorTreeNode>().Any())
-                {
-                    _layoutDirty = true;
-                    hasUnsavedChanges = true;
-                    RecordLayoutMove();
-                }
-                return change;
-            };
-            _view.RegisterCallback<MouseUpEvent>(_ => _view.schedule.Execute(RefreshInspector));
-            _diagnosticLabel = new Label { name = "aibt-graph-diagnostics" };
-            _diagnosticLabel.style.whiteSpace = WhiteSpace.Normal;
-            _diagnosticLabel.style.display = DisplayStyle.None;
-            _validationLabel = new Label { name = "aibt-validation" };
-            _validationLabel.style.whiteSpace = WhiteSpace.Normal;
-            _validationLabel.style.display = DisplayStyle.None;
-            content.Add(_diagnosticLabel);
-            content.Add(_validationLabel);
-            _nativeValidationLabel = new Label { name = "aibt-native-validation", style = { whiteSpace = WhiteSpace.Normal, display = DisplayStyle.None } };
-            content.Add(_nativeValidationLabel);
-            content.Add(_view);
-            body.Add(content);
-            _inspector = new ScrollView { style = { width = 260, flexShrink = 0 } };
-            body.Add(_inspector);
-            rootVisualElement.Add(body);
-            RefreshCatalog();
+            if (string.IsNullOrEmpty(message)) return;
+            ShowNotification(new GUIContent(message), 2.5);
         }
     }
 }

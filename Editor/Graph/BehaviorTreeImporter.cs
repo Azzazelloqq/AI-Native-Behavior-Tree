@@ -42,7 +42,7 @@ namespace AIBT.Editor.Graph
         {
             var path = AssetDatabase.GetAssetPath(instanceId);
             if (!TreeSourcePaths.IsTree(path)) return false;
-            BehaviorTreeGraphWindow.ShowWindow().OpenFromPath(path);
+            BehaviorTreeGraphWindow.OpenTree(path);
             return true;
         }
     }
@@ -84,7 +84,7 @@ namespace AIBT.Editor.Graph
             EditorGUILayout.Space();
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(path)))
             {
-                if (GUILayout.Button("Open Graph")) BehaviorTreeGraphWindow.ShowWindow().OpenFromPath(path);
+                if (GUILayout.Button("Open Graph")) BehaviorTreeGraphWindow.OpenTree(path);
                 if (GUILayout.Button("Open Text Source")) UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(path, 1);
             }
         }
@@ -101,7 +101,7 @@ namespace AIBT.Editor.Graph
             EditorGUILayout.LabelField("Nodes", asset.NodeCount.ToString());
             EditorGUILayout.LabelField("Validation", asset.Status);
             if (!string.IsNullOrEmpty(asset.Details)) EditorGUILayout.HelpBox(asset.Details, MessageType.Info);
-            if (GUILayout.Button("Open Graph")) BehaviorTreeGraphWindow.ShowWindow().OpenFromPath(AssetDatabase.GetAssetPath(asset));
+            if (GUILayout.Button("Open Graph")) BehaviorTreeGraphWindow.OpenTree(AssetDatabase.GetAssetPath(asset));
             if (GUILayout.Button("Open JSON Source")) UnityEditorInternal.InternalEditorUtility.OpenFileAtLineExternal(AssetDatabase.GetAssetPath(asset), 1);
         }
     }

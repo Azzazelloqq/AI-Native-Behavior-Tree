@@ -309,8 +309,14 @@ namespace AIBT.Editor.Trace
             SetBorder(element, Color.Lerp(Color.clear, ActiveNodeColor, alpha), Mathf.Lerp(0f, MaxBorderWidth, alpha));
         }
 
+        // Graph cards draw execution state as a glow around the card (never a layout change).
         private static void SetBorder(VisualElement element, Color color, float width)
         {
+            if (element is AIBT.Editor.Graph.BehaviorTreeNode node)
+            {
+                node.SetHighlight(color, width <= 0f ? 0f : Mathf.Clamp01(width / 3f));
+                return;
+            }
             element.style.borderTopWidth = width;
             element.style.borderBottomWidth = width;
             element.style.borderLeftWidth = width;

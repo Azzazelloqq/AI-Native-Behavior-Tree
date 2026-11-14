@@ -88,3 +88,46 @@ Conflicts in semantic files and layout files are resolved independently. View-on
 - trace comparison between agents or revisions.
 
 Debug instrumentation is optional in player builds and must have an explicit cost profile.
+
+## Graph editor as implemented (P9-003)
+
+`AIBT > Graph Editor`, or double-click an `.aibt` asset. Opening a tree never blocks: the window
+that already shows it is focused; otherwise a window without unsaved changes is reused; otherwise
+a second graph window opens. Inside one window, opening another tree while edits are unsaved
+shows a banner (Save and open / Discard and open / Cancel) instead of a modal dialog.
+
+**Canvas.** Grid background, minimap, top-down tree layout computed by
+`DeterministicAutoLayoutService` and scaled for the card size, so no branch is hidden under the
+side panels. Each card shows a kind color accent and tag (composite, decorator, condition,
+action), a readable title (display name, else the type name), a one-line parameter summary, a
+child-order badge and an error/warning badge. Ports sit on the card's top (parent) and bottom
+(children) edges. Child order always comes from the document; moving a card never reorders.
+
+**Editing.** Right-click a node, edge or the canvas for its commands (add child, move earlier or
+later, detach, set as root, duplicate, delete, insert node on an edge, create node, auto layout,
+frame). Node creation uses a searchable list grouped by kind, opened from the context menu,
+Space, or by dropping a dragged edge on empty canvas (the new node becomes the last child).
+Dragging an edge onto another node connects or reparents it. Shortcuts: Delete, Ctrl+S (save),
+Ctrl+Z / Ctrl+Y (undo/redo), Ctrl+D (duplicate), F (frame), Alt+Left/Right (reorder),
+Ctrl+Shift+L (auto layout). Until a card is dragged by hand, the tree is re-laid out after each
+edit; after that, new nodes are placed next to their parent and other positions are kept.
+
+**One toolbar, one save, one history.** New, Open, Save, Auto Layout, Preview, Debug, and More
+(Check Native Compile, Prepare Runtime Asset, Reload From Disk, Frame All). Save writes the tree
+when it changed and the `.aibt.layout.json` sidecar when positions changed. Tree edits and layout
+moves share one undo history that is also Unity's Edit > Undo. External changes to an open,
+edited tree show a reload banner; saving over them is refused.
+
+**Inspector.** Typed fields per parameter (toggle, number, enum popup, text, blackboard-key popup
+filtered by the expected value type). Unset parameters show the contract default greyed with a
+`default` tag; right-click a field to reset it. The Blackboard panel lists keys with their type and
+Tree-scope default and adds keys. The Problems list under the graph shows diagnostics; clicking one
+selects and frames its node. The project tree list validates managed trees with the managed policy.
+
+**Live debugging.** In Play Mode, selecting a GameObject with a `BehaviorTreeAgent` whose tree is
+open attaches the graph automatically (Debug attaches explicitly and opens the agent's tree when
+the window is clean). Running nodes pulse, finished nodes flash green (success), red (failure) or
+grey (aborted) and fade, edges between running nodes are drawn as the active path, and the
+Blackboard panel shows live values. States are sampled about 30 times a second, so a node that
+starts and finishes between two samples is not shown. Native hosts keep the existing trace path
+(`ProductionTreeHost`, Debug with a host selected).
