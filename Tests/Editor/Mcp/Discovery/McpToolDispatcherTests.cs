@@ -76,7 +76,7 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
                 .Concat(AIBT.Authoring.BuiltInLeafManifests.All.Select(p => p.Manifest.TypeId))
                 .Concat(PackageManagedNodeTypeIds())
                 // P9-002: the package's native-only standard shard (assembly AIBT.StandardNodes).
-                .Concat(new[] { "aibt.stdlib.bool-is-true", "aibt.stdlib.float-at-least", "aibt.stdlib.set-float", "aibt.stdlib.wait-microseconds" })
+                .Concat(new[] { "aibt.native.bool-is-true", "aibt.native.float-at-least", "aibt.native.set-float", "aibt.native.wait-microseconds" })
                 .OrderBy(id => id, System.StringComparer.Ordinal)
                 .ToArray();
             Assert.That(typeIds, Is.EqualTo(expectedTypeIds),

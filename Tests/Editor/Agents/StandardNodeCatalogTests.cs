@@ -66,7 +66,7 @@ namespace AIBT.Tests.Editor.Agents
         public void TheProjectCatalogOffersTheStandardNativeShardAsNativeOnlyNodes()
         {
             var catalog = global::AIBT.Editor.Registry.ProjectNodeCatalog.Discover();
-            foreach (var typeId in new[] { "aibt.stdlib.bool-is-true", "aibt.stdlib.float-at-least", "aibt.stdlib.set-float", "aibt.stdlib.wait-microseconds" })
+            foreach (var typeId in new[] { "aibt.native.bool-is-true", "aibt.native.float-at-least", "aibt.native.set-float", "aibt.native.wait-microseconds" })
             {
                 Assert.That(catalog.Registry.TryGet(typeId, out var entry), Is.True, typeId + "; problems: " + string.Join("\n", catalog.Problems));
                 Assert.That(entry.Manifest.ExecutionDomain, Is.EqualTo(NodeExecutionDomain.Burst), typeId);

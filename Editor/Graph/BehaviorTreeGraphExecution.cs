@@ -56,7 +56,7 @@ namespace AIBT.Editor.Graph
             var selected = Selection.activeGameObject;
             if (selected == null)
             {
-                Notify("Select a GameObject with a BehaviorTreeAgent or ProductionTreeHost.");
+                Notify("Select a GameObject with a BehaviorTreeAgent, NativeTreeAgent or ProductionTreeHost.");
                 return;
             }
 
@@ -67,8 +67,50 @@ namespace AIBT.Editor.Graph
                 return;
             }
 
+            var native = selected.GetComponent<NativeTreeAgent>();
+            if (native != null)
+            {
+                if (!TryAttachNativeAgent(native, openMatchingTree: true, out var nativeReason)) Notify(nativeReason);
+                return;
+            }
+
             var host = selected.GetComponent<ProductionTreeHost>();
             if (!TryAttachHost(host, out var explanation)) Notify(explanation);
+        }
+
+        /// <summary>
+        /// Shows a native agent live on this graph when its compiled program matches the open tree.
+        /// With <paramref name="openMatchingTree"/> the asset's recorded source is opened first.
+        /// </summary>
+        internal bool TryAttachNativeAgent(NativeTreeAgent agent, bool openMatchingTree, out string reason)
+        {
+            reason = null;
+            if (agent == null) { reason = "No NativeTreeAgent selected."; return false; }
+            if (!EditorApplication.isPlaying) { reason = "Enter Play Mode to watch " + agent.name + " run."; return false; }
+            if (agent.Program == null) { reason = agent.name + " is not running" + (agent.LastError == null ? "." : ": " + agent.LastError); return false; }
+            if (!MatchesProgram(agent.Program))
+            {
+                var path = agent.Tree == null ? null : ProductionTreeAssetStaleness.SourcePath(agent.Tree);
+                if (!openMatchingTree || string.IsNullOrEmpty(path) || HasPendingChanges)
+                {
+                    reason = agent.name + " runs a program that does not match this graph. Open its source"
+                        + (string.IsNullOrEmpty(path) ? "" : " (" + path + ")") + ", and prepare the runtime asset again if the source changed.";
+                    return false;
+                }
+                OpenFromPath(path);
+                if (!MatchesProgram(agent.Program))
+                {
+                    reason = agent.name + "'s program is older than " + path + ". Prepare the runtime asset again and restart Play Mode.";
+                    return false;
+                }
+            }
+
+            ReleaseExecutionView();
+            _live.Attach(agent);
+            _live.Update(EditorApplication.timeSinceStartup);
+            RefreshToolbarState();
+            RefreshInspector();
+            return true;
         }
 
         /// <summary>
@@ -115,6 +157,9 @@ namespace AIBT.Editor.Graph
             var agent = Selection.activeGameObject.GetComponent<BehaviorTreeAgent>();
             if (agent != null && GraphLiveDebugger.Matches(agent, Document) && (_live == null || _live.Agent != agent))
                 TryAttachAgent(agent, openMatchingTree: false, out _);
+            var native = Selection.activeGameObject.GetComponent<NativeTreeAgent>();
+            if (native != null && native.Program != null && MatchesProgram(native.Program) && (_live == null || _live.NativeAgent != native))
+                TryAttachNativeAgent(native, openMatchingTree: false, out _);
         }
 
         private void OnSelectionChanged() => TryAutoAttachSelectedAgent();

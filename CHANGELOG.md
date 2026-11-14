@@ -4,6 +4,24 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Native agent facade (P9-004)
+
+- Add `NativeTreeAgent`: assign a prepared `ProductionTreeAsset` and press Play. It shares one
+  program per asset and catalog between agents, creates its host, joins a world (an assigned one or
+  a shared `AIBT Native World`) and restarts the tree by `NativeTreeRestartMode`.
+- `SetFact(key, value)` writes typed Tree-scope facts at the world's safe boundary and keeps them
+  across restarts; `OnEffect(name, handler)` receives typed effects by command name. A throwing
+  handler is logged and does not block later effects. `Completed` and `Faulted` report results.
+- Prepared runtime assets record their source and catalog. They are re-prepared automatically
+  after the source tree is saved or the catalog changes; a stale asset is marked in its inspector
+  with a Prepare Again button.
+- The graph window debugs a selected `NativeTreeAgent` live in Play Mode (active path, finished
+  nodes, root result).
+- The First Agent sample uses `NativeTreeAgent`: its gameplay script shrank from 65 to 32 lines,
+  and its setup menu creates a runnable demo scene.
+- The package Burst shard and its nodes are now named `aibt.native.*` (`aibt.native.standard`,
+  `aibt.native.bool-is-true`, ...); `aibt.stdlib.*` stays for nodes that run on both executors.
+
 ### Standard node library (P9-002)
 
 - Add 38 standard managed `aibt.unity.*` nodes so a common agent needs no custom node: waits
@@ -25,7 +43,7 @@ All notable changes to this project will be documented here. The project follows
 - The generated node catalog (`Documentation~/generated/node-catalog.md`) now lists the
   standard managed nodes alongside the built-ins; empty "when to use" / "when not to use" lines
   are omitted.
-- Add a package Burst shard `aibt.stdlib.standard-native` (assembly `AIBT.StandardNodes`):
+- Add a package Burst shard `aibt.native.standard` (assembly `AIBT.StandardNodes`):
   `bool-is-true`, `float-at-least`, `set-float` (blackboard through generated bindings) and
   `wait-microseconds` (host clock). A project `[AibtCatalogSet]` can list it next to its own
   shards. The nodes are native-only: the reference executor cannot read `GeneratedHandle`

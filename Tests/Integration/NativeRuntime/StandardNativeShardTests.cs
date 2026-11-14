@@ -37,10 +37,10 @@ namespace AIBT.Tests.Integration.NativeRuntime
   ""nodes"": {
     ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""project-node"", ""armed-check"", ""wait"", ""set-score"", ""score-check""] },
     ""project-node"": { ""type"": ""aibt.tests.external-tree-write-reader"", ""typeVersion"": 1, ""bindings"": { ""live-target"": ""live-target"" } },
-    ""armed-check"": { ""type"": ""aibt.stdlib.bool-is-true"", ""typeVersion"": 1, ""bindings"": { ""key"": ""armed"" } },
-    ""wait"": { ""type"": ""aibt.stdlib.wait-microseconds"", ""typeVersion"": 1, ""parameters"": { ""duration-microseconds"": 500000 } },
-    ""set-score"": { ""type"": ""aibt.stdlib.set-float"", ""typeVersion"": 1, ""parameters"": { ""value"": 2.5 }, ""bindings"": { ""key"": ""score"" } },
-    ""score-check"": { ""type"": ""aibt.stdlib.float-at-least"", ""typeVersion"": 1, ""parameters"": { ""threshold"": 2.0 }, ""bindings"": { ""key"": ""score"" } }
+    ""armed-check"": { ""type"": ""aibt.native.bool-is-true"", ""typeVersion"": 1, ""bindings"": { ""key"": ""armed"" } },
+    ""wait"": { ""type"": ""aibt.native.wait-microseconds"", ""typeVersion"": 1, ""parameters"": { ""duration-microseconds"": 500000 } },
+    ""set-score"": { ""type"": ""aibt.native.set-float"", ""typeVersion"": 1, ""parameters"": { ""value"": 2.5 }, ""bindings"": { ""key"": ""score"" } },
+    ""score-check"": { ""type"": ""aibt.native.float-at-least"", ""typeVersion"": 1, ""parameters"": { ""threshold"": 2.0 }, ""bindings"": { ""key"": ""score"" } }
   }
 }";
 
@@ -86,7 +86,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
             var ids = Materialize(typeof(StandardNativeShard)).Nodes.Select(node => node.Manifest.TypeId).ToArray();
             Assert.That(ids, Is.EquivalentTo(new[]
             {
-                "aibt.stdlib.bool-is-true", "aibt.stdlib.float-at-least", "aibt.stdlib.set-float", "aibt.stdlib.wait-microseconds",
+                "aibt.native.bool-is-true", "aibt.native.float-at-least", "aibt.native.set-float", "aibt.native.wait-microseconds",
             }));
             Assert.That(StandardNativeProbeCatalog.IsUsable, Is.True);
         }

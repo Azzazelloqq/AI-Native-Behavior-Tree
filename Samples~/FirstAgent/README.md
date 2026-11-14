@@ -2,24 +2,38 @@
 
 1. Import **First Agent** from AIBT's Package Manager Samples tab.
 2. Run **AIBT > Samples > First Agent > Create Demo**, then press Play.
-3. The cube moves toward x=5 and finishes within 0.25 units. The generated node owns the decision;
-   the Unity component supplies distance and applies committed movement effects.
-4. Open `first-agent.aibt.json` in **AIBT > Graph Editor**, select the cube during Play, then click
-   **Debug Selected**. The trace annotates that exact authoring graph. Editing detaches it safely.
-5. Stop Play, change `speed` to another positive float, Save, then **Prepare Runtime**, choosing
-   `FirstAgentCatalog` and the existing demo runtime asset. Restart Play to use the new program.
+3. The cube walks to the goal sphere. When it arrives (within 0.25 units) the tree finishes with
+   Success, the goal jumps to the other side and the tree starts again. The generated Burst node
+   owns the decision; the Unity component only reports the distance and applies movement.
+4. Open `first-agent.aibt.json` in **AIBT > Graph Editor** and select the cube during Play: the
+   graph highlights the running node live (or press **Debug Selected**, or **Debug in Graph** in the
+   `NativeTreeAgent` inspector).
+5. Change `speed` in the graph and Save. The runtime asset `FirstAgent.runtime.asset` is prepared
+   again automatically (its inspector shows whether it is up to date). Agents already running keep
+   their program; enter Play Mode again to use the new one.
 
-The preparation step compiles in the Editor. The sample's runtime assembly references only Runtime
-and its generated catalog; it never reads JSON, materializes metadata, or compiles trees in Player.
+## How it is wired
+
+- `NativeTreeAgent` (package component) runs the prepared asset. It shares one program between all
+  agents with the same asset, joins a shared scheduler world, restarts when the root finishes and
+  releases all native memory when disabled.
+- `FirstAgent` (this sample, ~30 lines) is the game side:
+
+```csharp
+_agent.OnEffect("move-speed", (float speed) => transform.position =
+    Vector3.MoveTowards(transform.position, _goal.position, speed * Time.deltaTime));
+_agent.SetFact("distance", Vector3.Distance(transform.position, _goal.position));
+```
+
+Facts are Tree-scope blackboard keys that no node writes; they are written at the scheduler's safe
+boundary. Effects are the node's `[AibtCommandBinding]` ids, delivered on the main thread after the
+node's update commits.
+
 The node and catalog are separate generated assemblies, as required by the supported Burst ABI.
+The Player never reads JSON or compiles trees: the asset is compiled in the Editor. The agent finds
+the catalog recorded in the asset by name; if your build strips it, assign
+`NativeTreeAgent.CatalogFactory = YourCatalog.TryCreateRuntimeCatalog` before the agent is enabled.
 
-In your game, assign a `ProductionTreeAsset`, create a shared program once with
-`asset.TryCreateProgram(YourCatalog.TryCreateRuntimeCatalog, out program, out failure)`, and call
-`program.TryBootstrap(host, out failure, effectCapacity: capacity)` for each agent. Supply facts and
-consume effects through `IProductionTreeWorldParticipant`. Resolve typed input handles once.
-On shutdown unregister participants, call `host.Stop()` for each host, then dispose the program.
-Stop is permanent for that host; create a fresh host for another instance.
-
-Generated native-only nodes need an explicit reference provider for **Preview**. Use **Debug
-Selected** to inspect the actual running native node. Runtime assets are derived snapshots; changing
-the source or catalog requires preparing them again. No automatic live migration is implied.
+The low-level path (`ProductionTreeAsset.TryCreateProgram`, `ProductionTreeProgram.TryBootstrap`,
+`ProductionTreeHost`, `IProductionTreeWorldParticipant`) is unchanged and remains available for full
+control; see `Documentation~/production-host.md`.

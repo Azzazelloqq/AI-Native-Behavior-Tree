@@ -14,12 +14,37 @@ typed external input and a committed Float32 effect. Its runtime assembly has no
 3. Save, then **Prepare Runtime** and choose your generated catalog. Preparation compiles with
    exactly its declared shards and creates a `ProductionTreeAsset` at your selected asset path.
    Updating an existing runtime asset preserves its Unity GUID. A different asset type is refused.
-4. Assign this compiled asset to your Unity integration component. The authored tree remains the
-   editable authority. Re-prepare after source or catalog changes and restart its hosts.
+4. Assign this compiled asset to a `NativeTreeAgent` (or your own integration component). The
+   authored tree remains the editable authority. The asset records its source and catalog: saving
+   the source or changing the catalog re-prepares it automatically, and its inspector shows a
+   stale snapshot with a **Prepare Again** button when that fails. Running hosts keep the program
+   they started with; restart them to pick up a new snapshot.
 
 ## Runtime integration
 
-Keep one `ProductionTreeProgram` per shared asset/catalog, rather than repeating compilation or
+Add `NativeTreeAgent` to a GameObject and assign the prepared asset. It shares one program per
+asset and catalog between agents, creates its host, joins a world (an assigned
+`ProductionTreeWorld` or a shared `AIBT Native World`) and restarts the tree when the root finishes
+(`Restart Mode`). Gameplay code feeds facts and handles effects by name:
+
+```csharp
+var agent = GetComponent<NativeTreeAgent>();
+agent.OnEffect("move-speed", (float speed) => Move(speed));
+agent.Completed += result => Debug.Log("Tree finished: " + result);
+// Every frame or whenever it changes; written at the world's safe input boundary.
+agent.SetFact("distance", Vector3.Distance(transform.position, goal.position));
+```
+
+A fact must be a Tree-scope key of the same type that no node writes; a wrong key is logged once
+and ignored. Facts are kept across restarts. A throwing effect handler is logged and does not block
+later effects. The agent resolves the catalog from the type recorded in the asset; assign
+`CatalogFactory` from code (for example `ProjectCatalog.TryCreateRuntimeCatalog`) when code
+stripping may remove that type in a Player build. Disabling the agent stops its host, leaves the
+world and releases the program; the last agent disposes it.
+
+### Low-level path
+
+For custom scheduling or populations managed by your own code, keep one `ProductionTreeProgram` per shared asset/catalog, rather than repeating compilation or
 catalog allocation for every agent:
 
 ```csharp
@@ -54,7 +79,9 @@ project native-only nodes require an explicit reference provider. Preview does n
 gameplay effects.
 
 During Play, select an agent GameObject and click **Debug Selected** in its source graph. The
-host supplies its exact immutable program/debug map. A mismatched source is refused. Trace
+host supplies its exact immutable program/debug map. For a `NativeTreeAgent` the graph shows the
+active path, nodes that just finished and the root result; exit statuses of inner nodes, nodes that
+start and finish within one frame and native blackboard values are not shown. A mismatched source is refused. Trace
 scrubbing and live highlighting preserve graph node objects and layout. Editing/reloading the
 document or closing the graph detaches highlighting; it never changes the running agent.
 **AIBT > Attach Selected Host Trace** remains available for unmapped raw trace. Dropped trace

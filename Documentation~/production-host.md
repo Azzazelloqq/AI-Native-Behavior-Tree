@@ -78,5 +78,9 @@ typed effects. The host's bounded queue is drained by `TryDrainEffects`; effect 
 post-commit public boundary, not a license to inspect generated dispatch storage. Pipelined hosts
 may deliver and accept new facts at their next idle barrier, never into an in-flight native wave.
 
-Automatic restart/pooling and migration/hot-reload wiring remain separate work. A delegate-based
-host still requires its caller-owned adapter; it does not itself provide gameplay Actions.
+`NativeTreeAgent` is a ready-made world participant built only from these public pieces: it
+creates a hidden host per run, restarts it by `NativeTreeRestartMode`, flushes `SetFact` values at
+the same safe boundary and routes effects to handlers registered by command name (see
+`ADR-P9-004`). The host itself still never restarts; pooling and migration/hot-reload wiring remain
+separate work. A delegate-based host still requires its caller-owned adapter; it does not itself
+provide gameplay Actions.

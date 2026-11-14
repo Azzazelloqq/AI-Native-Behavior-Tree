@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Editor`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-52 public type(s).
+54 public type(s).
 
 ---
 
@@ -146,6 +146,33 @@ A node card: kind accent and tag, readable title, one-line parameter summary, a 
 ### `AIBT.Editor.Graph.ProductionTreeAssetBaker`
 
 - `METHOD AIBT.ProductionTreeAsset Create(AIBT.Authoring.TreeDocument,System.String,System.Type,AIBT.DiagnosticCollection&)`
+
+---
+
+### `AIBT.Editor.Graph.ProductionTreeAssetStaleness`
+
+Detects stale <see cref="ProductionTreeAsset"/>s and re-prepares them: after a tree source is imported (saved) and after every script reload (catalog changes). Only assets that recorded their source and catalog are rebuilt automatically; failures are logged and leave the old snapshot in place, visibly stale in its inspector.
+
+- `METHOD AIBT.Editor.Graph.ProductionTreeAssetState Evaluate(AIBT.ProductionTreeAsset)`
+- `METHOD System.Boolean TryPrepareAgain(AIBT.ProductionTreeAsset,System.String&)`
+- `METHOD System.Int32 RefreshAll(System.Collections.Generic.ICollection`1<System.String>)`
+- `METHOD System.String Describe(AIBT.Editor.Graph.ProductionTreeAssetState)`
+- `METHOD System.String SourcePath(AIBT.ProductionTreeAsset)`
+- `METHOD System.Type CatalogType(AIBT.ProductionTreeAsset)`
+
+---
+
+### `AIBT.Editor.Graph.ProductionTreeAssetState`
+
+Whether a prepared runtime asset still matches its authored source and node catalog.
+
+- `FIELD AIBT.Editor.Graph.ProductionTreeAssetState CatalogChanged`
+- `FIELD AIBT.Editor.Graph.ProductionTreeAssetState CatalogMissing`
+- `FIELD AIBT.Editor.Graph.ProductionTreeAssetState Current`
+- `FIELD AIBT.Editor.Graph.ProductionTreeAssetState SourceChanged`
+- `FIELD AIBT.Editor.Graph.ProductionTreeAssetState SourceMissing`
+- `FIELD AIBT.Editor.Graph.ProductionTreeAssetState Unknown`
+- `FIELD System.Int32 value__`
 
 ---
 

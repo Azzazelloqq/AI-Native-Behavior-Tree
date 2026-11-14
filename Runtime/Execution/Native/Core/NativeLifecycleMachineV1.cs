@@ -311,6 +311,19 @@ namespace AIBT
             return true;
         }
 
+        /// <summary>
+        /// Main-thread, read-only copy of the current activation stack (root first). Diagnostic
+        /// only: callers must not hold a drive lock or have a job in flight on this machine.
+        /// </summary>
+        internal void CopyActivePath(System.Collections.Generic.List<uint> into)
+        {
+            into.Clear();
+            if (!IsCreated) return;
+            var depth = _control[0].Depth;
+            for (var index = 0; index < depth && index < _frames.Length; index++)
+                into.Add(_frames[index].NodeIndex);
+        }
+
         internal bool TryBeginUpdate(ulong updateId, out NativeRuntimeFailureV1 failure)
             => TryBeginUpdate(updateId, 0, out failure);
 

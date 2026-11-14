@@ -6,7 +6,9 @@ namespace AIBT.StandardNodes
     // and a clock-based wait. Native-only: the reference executor has no GeneratedHandle support,
     // so these run in a generated catalog (ProductionTreeHost), not in a BehaviorTreeAgent. A
     // project includes them by listing typeof(StandardNativeShard) in its own [AibtCatalogSet].
-    [AibtCatalogShard("aibt.stdlib.standard-native", 1u)]
+    // Naming (owner decision, P9-004): aibt.native.* is for native-only nodes; aibt.stdlib.* stays
+    // reserved for nodes with byte-identical manifests on both execution paths (P7-028).
+    [AibtCatalogShard("aibt.native.standard", 1u)]
     public partial struct StandardNativeShard { }
 
     public partial struct StandardNativeNoMemory { }
@@ -23,9 +25,9 @@ namespace AIBT.StandardNodes
         "Native/Blackboard",
         "Use in a native (Burst) tree to gate a branch on a flag gameplay code writes.",
         "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-true there.",
-        "stdlib-bool-is-true")]
+        "native-bool-is-true")]
     [AibtBurstNode(
-        "aibt.stdlib.bool-is-true", 1u, BurstNodeKind.Condition,
+        "aibt.native.bool-is-true", 1u, BurstNodeKind.Condition,
         typeof(BoolIsTrueConfig), typeof(StandardNativeNoMemory), NodeMemoryLifetime.Activation,
         true, BurstCancellationMode.NotApplicable, BurstNodeCost.Trivial,
         BurstNodeStatusMask.Success | BurstNodeStatusMask.Failure)]
@@ -60,9 +62,9 @@ namespace AIBT.StandardNodes
         "Native/Blackboard",
         "Use in a native (Burst) tree for checks such as health against a constant.",
         "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-float there.",
-        "stdlib-float-at-least")]
+        "native-float-at-least")]
     [AibtBurstNode(
-        "aibt.stdlib.float-at-least", 1u, BurstNodeKind.Condition,
+        "aibt.native.float-at-least", 1u, BurstNodeKind.Condition,
         typeof(FloatAtLeastConfig), typeof(StandardNativeNoMemory), NodeMemoryLifetime.Activation,
         true, BurstCancellationMode.NotApplicable, BurstNodeCost.Trivial,
         BurstNodeStatusMask.Success | BurstNodeStatusMask.Failure)]
@@ -98,9 +100,9 @@ namespace AIBT.StandardNodes
         "Native/Blackboard",
         "Use in a native (Burst) tree to record a state for gameplay code or later nodes.",
         "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-float there.",
-        "stdlib-set-float")]
+        "native-set-float")]
     [AibtBurstNode(
-        "aibt.stdlib.set-float", 1u, BurstNodeKind.Action,
+        "aibt.native.set-float", 1u, BurstNodeKind.Action,
         typeof(SetFloatConfig), typeof(StandardNativeNoMemory), NodeMemoryLifetime.Activation,
         true, BurstCancellationMode.AbortOnly, BurstNodeCost.Trivial,
         BurstNodeStatusMask.Success | BurstNodeStatusMask.Failure)]
@@ -138,9 +140,9 @@ namespace AIBT.StandardNodes
         "Native/Flow",
         "Use in a native (Burst) tree for pauses in host time; aibt.stdlib.wait counts ticks instead.",
         "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.wait-seconds there.",
-        "stdlib-wait-microseconds")]
+        "native-wait-microseconds")]
     [AibtBurstNode(
-        "aibt.stdlib.wait-microseconds", 1u, BurstNodeKind.Action,
+        "aibt.native.wait-microseconds", 1u, BurstNodeKind.Action,
         typeof(WaitMicrosecondsConfig), typeof(WaitMicrosecondsMemory), NodeMemoryLifetime.Activation,
         true, BurstCancellationMode.AbortOnly, BurstNodeCost.Trivial,
         BurstNodeStatusMask.Success | BurstNodeStatusMask.Running | BurstNodeStatusMask.Failure)]

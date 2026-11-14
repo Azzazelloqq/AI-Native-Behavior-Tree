@@ -157,6 +157,20 @@ namespace AIBT
         /// </summary>
         internal NativeLifecycleMachineV1 Machine => _agents[0].Machine;
 
+        /// <summary>
+        /// Editor live-debug read of this host's active node path (runtime node indices, root
+        /// first). Returns false, leaving <paramref name="into"/> empty, while the host is driving,
+        /// pipelined, stopped or not bootstrapped. Never changes execution state.
+        /// </summary>
+        internal bool TryCopyActiveNodes(System.Collections.Generic.List<uint> into)
+        {
+            if (into == null) throw new ArgumentNullException(nameof(into));
+            into.Clear();
+            if (!_bootstrapped || _disposed || _driving || _agents == null) return false;
+            _agents[0].Machine.CopyActivePath(into);
+            return true;
+        }
+
         /// <summary>Bootstraps a Tick-only integration with scaled Unity time and no-op lifecycle callbacks.</summary>
         public bool TryBootstrap(CompiledProgram program, DispatchLeaf dispatch,
             NativeTraceChannelCapacityV1 traceCapacity, out NativeRuntimeFailureV1 failure)

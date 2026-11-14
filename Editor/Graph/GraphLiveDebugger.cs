@@ -11,6 +11,9 @@ namespace AIBT.Editor.Graph
     /// Shows a running <see cref="BehaviorTreeAgent"/> on the graph: running nodes pulse, finished
     /// nodes flash green (success) or red (failure) and fade, and edges between running nodes form
     /// the highlighted active path. Reads live state only; never changes the agent or the layout.
+    /// A <see cref="NativeTreeAgent"/> is shown from its host's activation stack: the running path
+    /// pulses, nodes that leave it flash in a neutral colour (the native trace contract does not
+    /// record composite exit statuses), and the root flashes with each finished run's result.
     /// </summary>
     internal sealed class GraphLiveDebugger
     {
@@ -21,6 +24,7 @@ namespace AIBT.Editor.Graph
         internal static readonly Color SuccessColor = new Color(0.30f, 0.85f, 0.50f);
         internal static readonly Color FailureColor = new Color(1f, 0.36f, 0.32f);
         internal static readonly Color AbortedColor = new Color(0.62f, 0.64f, 0.70f);
+        internal static readonly Color FinishedColor = new Color(0.55f, 0.78f, 1f);
 
         private readonly BehaviorTreeGraphView _view;
         private readonly List<(NodeId Parent, NodeId Child)> _activeEdges = new List<(NodeId, NodeId)>();
@@ -36,9 +40,20 @@ namespace AIBT.Editor.Graph
             _view = view ?? throw new ArgumentNullException(nameof(view));
         }
 
+        private readonly List<uint> _activePath = new List<uint>();
+        private CompiledProgram _nativeProgram;
+        private bool[] _nativeRunning = Array.Empty<bool>();
+        private int _nativeRuns;
+        private uint _nativeRoot;
+
         internal BehaviorTreeAgent Agent { get; private set; }
 
-        internal bool IsAttached => Agent != null;
+        internal NativeTreeAgent NativeAgent { get; private set; }
+
+        /// <summary>The attached managed or native agent component.</summary>
+        internal Component Target => Agent != null ? Agent : (Component)NativeAgent;
+
+        internal bool IsAttached => Agent != null || NativeAgent != null;
 
         /// <summary>Nodes currently running, as of the last <see cref="Update"/>.</summary>
         internal IReadOnlyCollection<NodeId> RunningNodes => _running;
@@ -60,9 +75,18 @@ namespace AIBT.Editor.Graph
             Agent = agent;
         }
 
+        internal void Attach(NativeTreeAgent agent)
+        {
+            Detach();
+            NativeAgent = agent;
+        }
+
         internal void Detach()
         {
             Agent = null;
+            NativeAgent = null;
+            _nativeProgram = null;
+            _nativeRunning = Array.Empty<bool>();
             _instance = null;
             _running.Clear();
             _activeEdges.Clear();
@@ -73,6 +97,11 @@ namespace AIBT.Editor.Graph
         /// <summary>Reads the agent's node states and repaints highlights for time <paramref name="now"/> (seconds).</summary>
         internal void Update(double now)
         {
+            if ((object)NativeAgent != null)
+            {
+                UpdateNative(now);
+                return;
+            }
             if (Agent == null) return;
             if (!Agent)
             {
@@ -137,6 +166,13 @@ namespace AIBT.Editor.Graph
 
         internal string Describe()
         {
+            if (NativeAgent != null)
+            {
+                var native = NativeAgent;
+                var status = native.LastError != null ? "faulted"
+                    : native.IsRunning ? "running" : native.LastResult.HasValue ? native.LastResult.Value.ToString().ToLowerInvariant() : "stopped";
+                return native.name + " (native) — " + status + ", run " + (native.CompletedRuns + (native.IsRunning ? 1 : 0)).ToString(CultureInfo.InvariantCulture);
+            }
             if (Agent == null) return string.Empty;
             if (_instance == null) return Agent.name + " — waiting for the agent to start";
             var state = Agent.HasFaulted ? "faulted" : _instance.LastResult.HasValue ? _instance.LastResult.Value.ToString().ToLowerInvariant() : "running";
@@ -170,6 +206,86 @@ namespace AIBT.Editor.Graph
         }
 
         private static string N(float value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+        private void UpdateNative(double now)
+        {
+            if (!NativeAgent)
+            {
+                Detach();
+                return;
+            }
+            var program = NativeAgent.Program;
+            if (!ReferenceEquals(program, _nativeProgram)) RebindNative(program);
+            if (_nativeProgram == null)
+            {
+                _view.ClearExecutionHighlight();
+                return;
+            }
+
+            // A host that is mid-drive (or pipelined) is not read; the last picture stays.
+            var host = NativeAgent.Host;
+            if (host != null && host.TryCopyActiveNodes(_activePath))
+            {
+                var count = _ids.Length;
+                var nowRunning = new bool[count];
+                foreach (var index in _activePath)
+                    if (index < count) nowRunning[index] = true;
+                for (var index = 0; index < count; index++)
+                {
+                    if (_nativeRunning[index] && !nowRunning[index])
+                    {
+                        _flashStart[index] = now;
+                        _flashColor[index] = FinishedColor;
+                    }
+                }
+                _nativeRunning = nowRunning;
+            }
+            else if (host == null)
+            {
+                Array.Clear(_nativeRunning, 0, _nativeRunning.Length);
+            }
+
+            if (NativeAgent.CompletedRuns != _nativeRuns)
+            {
+                _nativeRuns = NativeAgent.CompletedRuns;
+                if (_nativeRoot < _ids.Length && NativeAgent.LastResult.HasValue)
+                {
+                    _flashStart[_nativeRoot] = now;
+                    _flashColor[_nativeRoot] = NativeAgent.LastResult.Value == NodeStatus.Success ? SuccessColor : FailureColor;
+                }
+            }
+
+            _running.Clear();
+            _activeEdges.Clear();
+            for (var index = 0; index < _ids.Length; index++)
+            {
+                if (_nativeRunning[index]) _running.Add(_ids[index]);
+                if (!_view.NodesById.TryGetValue(_ids[index], out var node)) continue;
+                if (_nativeRunning[index]) node.SetHighlight(RunningColor, Pulse(now));
+                else node.SetHighlight(_flashColor[index], FlashStrength(now - _flashStart[index]));
+            }
+            foreach (var key in _view.EdgesByKey.Keys)
+                if (_running.Contains(key.Parent) && _running.Contains(key.Child)) _activeEdges.Add(key);
+            _view.SetActiveEdges(_activeEdges);
+        }
+
+        private void RebindNative(CompiledProgram program)
+        {
+            _view.ClearExecutionHighlight();
+            _nativeProgram = program;
+            var count = program?.Nodes.Count ?? 0;
+            _ids = new NodeId[count];
+            _nativeRunning = new bool[count];
+            _flashStart = new double[count];
+            _flashColor = new Color[count];
+            _last = new ManagedNodeState[count];
+            for (var index = 0; index < count; index++) _flashStart[index] = double.NegativeInfinity;
+            if (program == null) return;
+            foreach (var entry in program.DebugMap)
+                if (entry.RuntimeNodeIndex < count) _ids[entry.RuntimeNodeIndex] = entry.AuthoringNodeId;
+            _nativeRoot = program.Header.RootNodeIndex;
+            _nativeRuns = NativeAgent.CompletedRuns;
+        }
 
         private void Rebind(ManagedTreeInstance instance)
         {

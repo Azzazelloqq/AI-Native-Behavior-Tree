@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-281 public type(s).
+283 public type(s).
 
 ---
 
@@ -2999,10 +2999,50 @@ An immutable, non-owning job view of one snapshot revision. Payload bytes use th
 
 ---
 
+### `AIBT.NativeTreeAgent`
+
+One component that runs a prepared native (Burst) tree: it shares one program per (runtime asset, catalog), creates the world and scheduler when the scene has none assigned, writes named facts at the scheduler's safe boundary, and calls named effect handlers. It is a facade over <see cref="ProductionTreeAsset"/>, <see cref="ProductionTreeProgram"/>, <see cref="ProductionTreeHost"/> and <see cref="ProductionTreeWorld"/>, which stay available for full control. See ADR-P9-004.
+
+- `METHOD System.Boolean RemoveEffect(System.String)`
+- `METHOD System.Void .ctor()`
+- `METHOD System.Void OnEffect(System.String,System.Action`1<AIBT.Float3Value>)`
+- `METHOD System.Void OnEffect(System.String,System.Action`1<System.Int32>)`
+- `METHOD System.Void OnEffect(System.String,System.Action`1<System.Single>)`
+- `METHOD System.Void OnEffect(System.String,System.Action`1<UnityEngine.Vector3>)`
+- `METHOD System.Void Restart()`
+- `METHOD System.Void SetFact(System.String,)`
+- `METHOD System.Void SetFact(System.String,UnityEngine.Vector3)`
+- `METHOD System.Void Stop()`
+- `PROPERTY AIBT.CompiledProgram Program`
+- `PROPERTY AIBT.NativeTreeRestartMode RestartMode`
+- `PROPERTY AIBT.ProductionTreeAsset Tree`
+- `PROPERTY AIBT.ProductionTreeCatalogFactory CatalogFactory`
+- `PROPERTY AIBT.ProductionTreeHost Host`
+- `PROPERTY AIBT.ProductionTreeWorld World`
+- `PROPERTY AIBT.SchedulingProfile Profile`
+- `PROPERTY System.Boolean IsRunning`
+- `PROPERTY System.Int32 CompletedRuns`
+- `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastResult`
+- `PROPERTY System.String LastError`
+
+---
+
 ### `AIBT.NativeTreeBlackboardV1`
 
 - `METHOD AIBT.Burst.BurstContextResult TryRead(AIBT.NativeProgramImageViewV2,AIBT.NativeInstanceArenaViewV2,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,,System.UInt64&)`
 - `METHOD AIBT.Burst.BurstContextResult TryWrite(AIBT.NativeProgramImageViewV2,AIBT.NativeInstanceArenaViewV2,System.UInt32,System.UInt32,AIBT.NativeBlackboardTypeIdV2,Unity.Collections.NativeArray`1<>,System.Boolean&)`
+
+---
+
+### `AIBT.NativeTreeRestartMode`
+
+What a <see cref="NativeTreeAgent"/> does when its root finishes.
+
+- `FIELD AIBT.NativeTreeRestartMode Always`
+- `FIELD AIBT.NativeTreeRestartMode Never`
+- `FIELD AIBT.NativeTreeRestartMode OnFailure`
+- `FIELD AIBT.NativeTreeRestartMode OnSuccess`
+- `FIELD System.Int32 value__`
 
 ---
 
@@ -3103,7 +3143,12 @@ Editor-prepared compiled data. The authored tree remains the source of truth.
 
 - `METHOD AIBT.ProductionTreeAsset Create(AIBT.NativeProgramBlackboardBindingV2,AIBT.Burst.BurstCatalogFingerprint)`
 - `METHOD System.Boolean TryCreateProgram(AIBT.ProductionTreeCatalogFactory,AIBT.ProductionTreeProgram&,AIBT.Burst.BurstContextResult&)`
+- `METHOD System.String FormatFingerprint(AIBT.Burst.BurstCatalogFingerprint)`
 - `METHOD System.Void .ctor()`
+- `PROPERTY System.String CatalogFingerprint`
+- `PROPERTY System.String CatalogTypeName`
+- `PROPERTY System.String SourceContentHash`
+- `PROPERTY System.String SourceGuid`
 - `PROPERTY System.String SourceId`
 
 ---

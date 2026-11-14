@@ -16,7 +16,7 @@
       "owns": ["Planning~/Evidence/P9-005/"]
     },
     {
-      "id": "P9-004", "phase": 9, "title": "Native agent facade and automatic preparation", "status": "draft", "kind": "implementation",
+      "id": "P9-004", "phase": 9, "title": "Native agent facade and automatic preparation", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P9/P9-004-native-agent-facade.md",
       "dependsOn": ["P9-001"],
       "owns": ["Planning~/Evidence/P9-004/"]

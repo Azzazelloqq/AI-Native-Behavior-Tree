@@ -1,5 +1,5 @@
 {
   "name": "AIBT.Samples.FirstAgent",
-  "references": ["AIBT.Runtime", "AIBT.Samples.FirstAgent.Catalog"],
+  "references": ["AIBT.Runtime"],
   "autoReferenced": false
 }

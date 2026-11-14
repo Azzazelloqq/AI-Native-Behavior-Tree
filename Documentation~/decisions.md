@@ -45,5 +45,6 @@ This file records accepted direction. Detailed ADR files may be introduced when 
 | AIBT-043 | CLI and MCP share operations; explicit client requests start/recover one Editor bridge; see [ADR P8-010](decisions/ADR-P8-010-cli-and-managed-bridge.md). | Accepted |
 | AIBT-044 | Shared agent catalogs, explicit execution backends, native preparation/trace and expected-outcome node checks; see [ADR P8-011](decisions/ADR-P8-011-agent-consumer-completion.md). | Accepted |
 | AIBT-045 | A managed agent layer (`AIBT.Agents`) runs a tree on the reference executor from one component with ordinary C# node classes, named blackboard access, managed-only unpacked parameter types and opt-in condition interrupts for memory composites; see [ADR P9-001](decisions/ADR-P9-001-managed-agent-layer.md). | Accepted |
+| AIBT-046 | `NativeTreeAgent` (in `AIBT.Runtime`) runs a prepared tree on the native path from one component: shared ref-counted programs, typed facts flushed at the world boundary, named effect handlers, restart policy; prepared assets record source and catalog and are re-prepared automatically; see [ADR P9-004](decisions/ADR-P9-004-native-tree-agent-facade.md). | Accepted |
 
 Normative details are in `Documentation~/specifications/`. An implementation may change them only through an accepted decision and corresponding specification update.

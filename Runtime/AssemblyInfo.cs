@@ -6,5 +6,6 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("AIBT.BehaviorCases.Tests")]
 [assembly: InternalsVisibleTo("AIBT.Integration.Tests")]
 [assembly: InternalsVisibleTo("AIBT.Mcp")]
+[assembly: InternalsVisibleTo("AIBT.Editor")]
 
 [assembly: InternalsVisibleTo("AIBT.Agents")]

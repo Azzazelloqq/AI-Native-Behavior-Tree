@@ -15,8 +15,30 @@ namespace AIBT
         [SerializeField, HideInInspector] private string _payloadHash;
         [SerializeField, HideInInspector] private string _catalogFingerprint;
         [SerializeField, HideInInspector] private string _sourceId;
+        [SerializeField, HideInInspector] private string _sourceGuid;
+        [SerializeField, HideInInspector] private string _sourceContentHash;
+        [SerializeField, HideInInspector] private string _catalogTypeName;
 
         public string SourceId => _sourceId;
+        /// <summary>Asset GUID of the authored tree this snapshot was prepared from; empty for assets prepared before P9-004.</summary>
+        public string SourceGuid => _sourceGuid ?? string.Empty;
+        /// <summary>SHA-256 of the authored source bytes at preparation time; empty when unknown.</summary>
+        public string SourceContentHash => _sourceContentHash ?? string.Empty;
+        /// <summary>Assembly-qualified name of the generated <c>[AibtCatalogSet]</c> class used for preparation; empty when unknown.</summary>
+        public string CatalogTypeName => _catalogTypeName ?? string.Empty;
+        /// <summary>Lowercase hexadecimal catalog fingerprint this snapshot was compiled against.</summary>
+        public string CatalogFingerprint => _catalogFingerprint ?? string.Empty;
+
+        /// <summary>Records where the snapshot came from so the Editor can detect and repair stale assets.</summary>
+        internal void RecordPreparation(string sourceGuid, string sourceContentHash, string catalogTypeName)
+        {
+            _sourceGuid = sourceGuid ?? string.Empty;
+            _sourceContentHash = sourceContentHash ?? string.Empty;
+            _catalogTypeName = catalogTypeName ?? string.Empty;
+        }
+
+        /// <summary>The fingerprint text format used by <see cref="CatalogFingerprint"/>.</summary>
+        public static string FormatFingerprint(BurstCatalogFingerprint fingerprint) => FingerprintText(fingerprint);
 
         public static ProductionTreeAsset Create(NativeProgramBlackboardBindingV2 binding, BurstCatalogFingerprint catalogFingerprint)
         {
