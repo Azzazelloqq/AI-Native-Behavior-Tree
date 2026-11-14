@@ -23,6 +23,7 @@ namespace AIBT
         [NonSerialized] private string _compiledJson;
         [NonSerialized] private string _compileError;
         [NonSerialized] private bool _hasCompiled;
+        [NonSerialized] private ManagedNodeSet _nodes;
 
         /// <summary>The tree's canonical JSON text.</summary>
         public string Json => _json;
@@ -50,6 +51,17 @@ namespace AIBT
             return source;
         }
 
+        /// <summary>
+        /// Creates an in-memory tree compiled against an explicit node set instead of the project
+        /// catalog, so tests can run node classes that discovery deliberately skips.
+        /// </summary>
+        internal static BehaviorTreeSource FromJson(string json, string name, ManagedNodeSet nodes)
+        {
+            var source = FromJson(json, name);
+            source._nodes = nodes;
+            return source;
+        }
+
         /// <summary>Importer entry point; replaces the content and drops any cached compilation.</summary>
         public void SetContent(string json, string sourceId, string treeId, string treeName, int nodeCount, string status, string details)
         {
@@ -74,7 +86,7 @@ namespace AIBT
                 _hasCompiled = true;
                 _compiledJson = _json;
                 _program = null;
-                _compileError = ManagedTreeProgram.TryCompile(_json, _sourceId, null, out _program, out var diagnostics)
+                _compileError = ManagedTreeProgram.TryCompile(_json, _sourceId, _nodes, out _program, out var diagnostics)
                     ? null
                     : ManagedTreeProgram.Describe(diagnostics);
             }

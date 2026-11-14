@@ -12,7 +12,8 @@ namespace AIBT.Tests.Editor.Mcp.Verification
     /// P6-007's real end-to-end proof at the same dispatcher entry point
     /// <see cref="AIBT.Mcp.McpBridgeListener"/> calls for every real request -- mirrors
     /// Tests/Editor/Mcp/Authoring/McpAuthoringToolDispatcherTests.cs's fixture shape. validate/
-    /// compile use the real production registry (NodeRegistryBuilder.CreateWithBuiltIns());
+    /// compile use the real production registry (the project node catalog: built-ins plus the
+    /// package's managed aibt.unity.* nodes in an empty project);
     /// simulate is fixed to ReferencePreviewDriver's own Phase 1 fixture/built-in set, so it
     /// reuses Tests/Editor/Preview/Fixtures/success-then-running.aibt.json (P3-009's own proven
     /// fixture, already known to compile against exactly that registry) rather than a real
@@ -106,7 +107,15 @@ namespace AIBT.Tests.Editor.Mcp.Verification
             Assert.That(toolHash, Is.Not.Null.And.Not.Empty);
 
             var document = CanonicalTreeJson.Parse(File.ReadAllText(TreePath("valid.aibt.json")), documentId: "valid.aibt.json").Document;
-            var registry = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
+            // The registry an empty project gets (P9-001): the built-in nodes plus the managed
+            // nodes AIBT.Agents ships, and nothing else.
+            var packageManagedNodes = typeof(AIBT.BtNode).Assembly.GetTypes()
+                .Where(type => !type.IsAbstract && typeof(AIBT.BtNode).IsAssignableFrom(type)
+                    && type.IsDefined(typeof(AIBT.BtNodeAttribute), false));
+            var packageNodes = AIBT.Agents.ManagedNodeSet.Create(packageManagedNodes);
+            Assert.That(packageNodes.Problems, Is.Empty, string.Join("\n", packageNodes.Problems));
+            Assert.That(packageNodes.Types, Is.Not.Empty);
+            var registry = packageNodes.Registry;
             var options = new ReferenceCompilerOptions("valid.aibt.json", ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 0));
             var direct = ReferenceCompiler.Compile(document, registry, options);
 

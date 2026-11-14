@@ -159,6 +159,9 @@ namespace AIBT.Agents
 
         internal ManagedTreeProgram Program => _program;
 
+        /// <summary>The reference machine this instance drives; exposed for its own tests.</summary>
+        internal ReferenceExecutionMachine Machine => _machine;
+
         internal AgentBlackboard Blackboard { get; }
 
         internal IReadOnlyList<string> KeyNames => _keyNames;

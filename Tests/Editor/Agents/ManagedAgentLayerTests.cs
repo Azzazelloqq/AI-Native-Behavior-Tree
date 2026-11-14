@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using AIBT.Agents;
 using AIBT.Authoring;
 using NUnit.Framework;
 using UnityEngine;
+using static AIBT.Tests.Editor.Agents.ManagedTestTrees;
 
 namespace AIBT.Tests.Editor.Agents
 {
@@ -398,22 +398,6 @@ namespace AIBT.Tests.Editor.Agents
                 Node("alarmed", "test.flag-is-set", "\"flag\": \"alarm\", \"interrupt\": \"" + interrupt + "\""),
                 Node("chase", "test.hold", "\"name\": \"chase\""),
                 Node("patrol", "test.hold", "\"name\": \"patrol\""));
-        }
-
-        private static string Tree(string root, string blackboard, params string[] nodes)
-        {
-            return "{ \"format\": \"aibt.tree\", \"formatVersion\": 2, \"treeId\": \"tree.test.managed\", \"name\": \"Managed\", \"root\": \""
-                + root + "\", " + (blackboard == null ? string.Empty : "\"blackboard\": { " + blackboard + " }, ")
-                + "\"nodes\": { " + string.Join(", ", nodes) + " } }";
-        }
-
-        private static string Node(string id, string type, string parameters, params string[] children)
-        {
-            var builder = new StringBuilder();
-            builder.Append('"').Append(id).Append("\": { \"type\": \"").Append(type).Append("\", \"typeVersion\": 1");
-            if (parameters != null) builder.Append(", \"parameters\": { ").Append(parameters).Append(" }");
-            if (children.Length > 0) builder.Append(", \"children\": [\"").Append(string.Join("\", \"", children)).Append("\"]");
-            return builder.Append(" }").ToString();
         }
 
         [BtNode("test.count")]

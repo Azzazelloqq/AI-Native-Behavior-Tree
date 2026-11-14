@@ -34,7 +34,7 @@
       "owns": ["Agents/Nodes/", "Planning~/Evidence/P9-002/"]
     },
     {
-      "id": "P9-001", "phase": 9, "title": "Managed agent layer", "status": "in_progress", "kind": "implementation",
+      "id": "P9-001", "phase": 9, "title": "Managed agent layer", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P9/P9-001-managed-agent-layer.md",
       "dependsOn": ["P3-009", "P7-008", "P7-028"],
       "owns": ["Agents/", "Samples~/SimpleAgent/", "Planning~/Evidence/P9-001/"]

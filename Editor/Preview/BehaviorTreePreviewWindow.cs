@@ -40,6 +40,7 @@ namespace AIBT.Editor.Preview
         private string _sourceId;
         private ReferencePreviewDriver _driver;
         private DiagnosticCollection _diagnostics;
+        private string _unsupportedReason;
         private bool _isPlaying;
 
         [MenuItem("AIBT/Behavior Tree Preview")]
@@ -99,14 +100,40 @@ namespace AIBT.Editor.Preview
             _sourceId = sourceId ?? throw new ArgumentNullException(nameof(sourceId));
             _isPlaying = false;
             if (_playButton != null) _playButton.text = "Play";
+            _breakpoints.Clear();
+            _unsupportedReason = null;
+            if (UsesAgentNodes(_document))
+            {
+                // Managed (BtAction/BtCondition) nodes need their authored parameters and an agent,
+                // which only BehaviorTreeAgent supplies; this window steps the fixture-based
+                // reference preview, which has no way to run them (P9-001).
+                _driver = null;
+                _diagnostics = null;
+                _unsupportedReason = ManagedTreeMessage;
+                Refresh();
+                return;
+            }
+
             var policy = new ReferenceCompilationPolicy(
                 allowManagedNodes: _allowManaged != null && _allowManaged.value,
                 allowMainThreadNodes: _allowManaged != null && _allowManaged.value,
                 requireDeterministicNodes: _allowNondeterministic == null || !_allowNondeterministic.value);
             ReferencePreviewDriver.TryCreate(_document, _sourceId,
                 ProjectLeafExtensionDiscovery.DiscoverViaTypeCache(), policy, out _driver, out _diagnostics);
-            _breakpoints.Clear();
             Refresh();
+        }
+
+        // Only BtAction/BtCondition classes: main-thread project leaf extensions with their own
+        // reference behavior still preview as before when "allow managed" is on.
+        private static bool UsesAgentNodes(TreeDocument document)
+        {
+            var agentNodes = AIBT.Agents.ManagedNodeCatalog.Default;
+            for (var index = 0; index < document.Nodes.Count; index++)
+            {
+                if (agentNodes.TryGet(document.Nodes[index].TypeId, out _)) return true;
+            }
+
+            return false;
         }
 
         internal void AttachToGraph(BehaviorTreeGraphWindow window, string sourceId)
@@ -254,7 +281,9 @@ namespace AIBT.Editor.Preview
                 if (_sharedWindow == null)
                 {
                     ClearBreakpointMenus();
-                    _graphView.Populate(_document, _driver?.Registry ?? ReferencePreviewDriver.CreatePreviewNodeRegistry());
+                    _graphView.Populate(_document, _driver?.Registry ?? (_unsupportedReason != null
+                        ? ProjectNodeCatalogCache.Current.Registry
+                        : ReferencePreviewDriver.CreatePreviewNodeRegistry()));
                 }
                 AttachBreakpointMenus();
             }
@@ -323,24 +352,32 @@ namespace AIBT.Editor.Preview
             element.style.borderRightColor = color;
         }
 
+        internal const string ManagedTreeMessage =
+            "This tree uses managed C# nodes (BtAction/BtCondition), which run only in a BehaviorTreeAgent. "
+            + "Preview cannot step it: add the tree to a GameObject's Behavior Tree Agent and enter Play Mode.";
+
+        /// <summary>The status line this window shows for its current document.</summary>
+        internal string StatusText
+        {
+            get
+            {
+                if (_document == null)
+                {
+                    return HasErrors(_diagnostics)
+                        ? "Failed to load: " + FirstError(_diagnostics)
+                        : "No document loaded.";
+                }
+
+                if (_unsupportedReason != null) return _unsupportedReason;
+                if (_driver == null) return "Compilation failed: " + FirstError(_diagnostics);
+                var terminal = _driver.TerminalResult.HasValue ? _driver.TerminalResult.Value.ToString() : "(running)";
+                return $"{_sourceId} -- open tick: {_driver.HasOpenTick} -- terminal: {terminal}";
+            }
+        }
+
         private void RefreshStatus()
         {
-            if (_document == null)
-            {
-                _statusLabel.text = HasErrors(_diagnostics)
-                    ? "Failed to load: " + FirstError(_diagnostics)
-                    : "No document loaded.";
-                return;
-            }
-
-            if (_driver == null)
-            {
-                _statusLabel.text = "Compilation failed: " + FirstError(_diagnostics);
-                return;
-            }
-
-            var terminal = _driver.TerminalResult.HasValue ? _driver.TerminalResult.Value.ToString() : "(running)";
-            _statusLabel.text = $"{_sourceId} -- open tick: {_driver.HasOpenTick} -- terminal: {terminal}";
+            if (_statusLabel != null) _statusLabel.text = StatusText;
         }
 
         private void RefreshBlackboard()

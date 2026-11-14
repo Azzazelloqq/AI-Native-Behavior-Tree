@@ -1,6 +1,6 @@
 # P9-001 — Managed agent layer
 
-Status: `In progress`
+Status: `Review`
 
 ## Authorization and dependencies
 
@@ -56,3 +56,16 @@ Baseline in the `Modules` host project before this card (Unity 6000.7.0b1, 2026-
 `AIBT.BehaviorCases.Tests` 65/65. The two existing failures are
 `McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` and
 `McpVerificationToolDispatcherTests.CompileReturnsTheSameContentHashAsADirectReferenceCompilerCall`.
+
+## Handoff
+
+Task ID: P9-001. Outcome: implemented and verified in the `Modules` host on Unity 6000.7.0b1;
+status Review, not Done. Branch: feature/aibt-consumer-workflow; local commits only, no push.
+Verification: `AIBT.Runtime.Tests` 707/707, `AIBT.Editor.Tests` 549/551,
+`AIBT.Integration.Tests` 58/58, `AIBT.BehaviorCases.Tests` 65/65; `Verify-Static.ps1` passed
+(7 schemas). The two Editor failures are the pre-existing host-only MCP catalog/hash tests, now
+shown to differ only by the imported Swarm Arena and Simple Agent sample nodes.
+See ../../Evidence/P9-001/README.md.
+Known limits: no Player build yet; live Play Mode run of the sample not repeated in the tail;
+API reference does not cover `AIBT.Agents`; condition interrupts are managed-only; the reference
+Preview window explains instead of running managed trees.

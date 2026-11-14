@@ -42,5 +42,33 @@ namespace AIBT.Tests.Editor.Preview
             Assert.That(after, Is.EqualTo(before), "Loading and switching documents in a preview must never touch the source file on disk.");
             Assert.That(File.Exists(layoutPath), Is.False, "Preview must never create a layout file as a side effect.");
         }
+
+        [Test]
+        public void ATreeWithManagedAgentNodesShowsWhereItCanRunInsteadOfAFault()
+        {
+            // P9-001: aibt.unity.* nodes run only in a BehaviorTreeAgent.
+            var json = @"{ ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tree.preview.managed"", ""name"": ""Managed"",
+  ""root"": ""root"", ""nodes"": {
+    ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""log""] },
+    ""log"": { ""type"": ""aibt.unity.log"", ""typeVersion"": 1 } } }";
+            var result = CanonicalTreeJson.Parse(json, "preview/managed.aibt");
+            Assert.That(result.Success, Is.True);
+
+            var window = ScriptableObject.CreateInstance<BehaviorTreePreviewWindow>();
+            try
+            {
+                window.LoadDocument(result.Document, "preview/managed.aibt");
+                Assert.That(window.StatusText, Is.EqualTo(BehaviorTreePreviewWindow.ManagedTreeMessage));
+
+                var path = EditorTestPackagePaths.Resolve("Tests", "Editor", "Preview", "Fixtures", "success-then-running.aibt.json");
+                window.LoadFromPath(path);
+                Assert.That(window.StatusText, Does.Not.Contain("managed C# nodes").And.Not.StartWith("Compilation failed"),
+                    "A tree without managed agent nodes still runs in the reference preview.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
     }
 }

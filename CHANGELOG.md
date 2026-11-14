@@ -19,6 +19,8 @@ All notable changes to this project will be documented here. The project follows
   compare, move-towards, look-at, is-within-distance) and the importable Simple Agent sample.
 - Import `.aibt` as a Player-loadable `BehaviorTreeSource`. Add managed-only node parameter types
   `int32`, `string` and `blackboard-key`; Burst manifests and existing bytes are unchanged.
+- The reference Preview window explains that a tree with `BtAction`/`BtCondition` nodes runs in a
+  `BehaviorTreeAgent` in Play Mode instead of reporting a compilation error.
 
 ### CLI and MCP
 

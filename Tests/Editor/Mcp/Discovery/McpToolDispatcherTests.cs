@@ -67,13 +67,31 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
             var entries = (JArray)response["result"]["entries"];
             var typeIds = entries.Select(e => (string)e["typeId"]).OrderBy(id => id, System.StringComparer.Ordinal).ToArray();
 
+            // P9-001: the package's own managed nodes (the [BtNode] classes in AIBT.Agents) are part
+            // of the standard catalog, like the built-in leaves. Read straight from the attributes so
+            // the expectation does not depend on the discovery code under test.
             var expectedTypeIds = AIBT.Authoring.BuiltInNodeManifests.All
                 .Select(m => m.TypeId)
                 .Concat(AIBT.Authoring.BuiltInLeafManifests.All.Select(p => p.Manifest.TypeId))
+                .Concat(PackageManagedNodeTypeIds())
                 .OrderBy(id => id, System.StringComparer.Ordinal)
                 .ToArray();
             Assert.That(typeIds, Is.EqualTo(expectedTypeIds),
-                "With no custom nodes registered, the catalog must be exactly the built-in set -- honestly, not padded or trimmed.");
+                "With no custom nodes registered, the catalog must be exactly the built-in set -- honestly, not padded or trimmed."
+                + " Extra: [" + string.Join(", ", typeIds.Except(expectedTypeIds)) + "]"
+                + " Missing: [" + string.Join(", ", expectedTypeIds.Except(typeIds)) + "]");
+        }
+
+        internal static string[] PackageManagedNodeTypeIds()
+        {
+            var ids = typeof(AIBT.BtNode).Assembly.GetTypes()
+                .Where(type => !type.IsAbstract && typeof(AIBT.BtNode).IsAssignableFrom(type))
+                .Select(type => (AIBT.BtNodeAttribute)System.Attribute.GetCustomAttribute(type, typeof(AIBT.BtNodeAttribute), false))
+                .Where(attribute => attribute != null)
+                .Select(attribute => attribute.TypeId)
+                .ToArray();
+            Assert.That(ids, Is.Not.Empty.And.All.StartsWith("aibt.unity."), "AIBT.Agents ships its standard nodes under aibt.unity.*.");
+            return ids;
         }
 
         [Test]
