@@ -84,7 +84,7 @@ namespace AIBT.CodeGen
                     var field = model.GetSymbolInfo(argument).Symbol as IFieldSymbol;
                     if (field?.Type is INamedTypeSymbol handle && handle.IsGenericType)
                     {
-                        var fieldBindings = field.GetAttributes().Where(IsBindingAttribute).ToArray();
+                        var fieldBindings = field.AibtAttributes().Where(IsBindingAttribute).ToArray();
                         if (fieldBindings.Length == 1 && !HandleBindingMatches(handle, fieldBindings[0])) continue;
                     }
                     context.ReportDiagnostic(field == null
@@ -183,11 +183,11 @@ namespace AIBT.CodeGen
             if (!costValid) { ReportAt(context, AbiDiagnostics.Kind, AttributeLocation(nodeAttribute, 8), node.Type.Name); valid = false; }
             if (!statusesValid) { ReportAt(context, AbiDiagnostics.Kind, AttributeLocation(nodeAttribute, 9), node.Type.Name); valid = false; }
             var asyncBindings = node.Config?.GetMembers().OfType<IFieldSymbol>()
-                .SelectMany(field => field.GetAttributes()
+                .SelectMany(field => field.AibtAttributes()
                     .Where(value => value.AttributeClass?.ToDisplayString() == "AIBT.Burst.AibtAsyncOperationBindingAttribute")
                     .Select(attribute => (Field: field, Attribute: attribute)))
                 .OrderBy(value => SourceOrder(value.Field), StringComparer.Ordinal).ToArray()
-                ?? Array.Empty<(IFieldSymbol Field, AttributeData Attribute)>();
+                ?? Array.Empty<(IFieldSymbol Field, Attr Attribute)>();
             if (cancellationValid && statusesValid && ((cancellation == 0 && (statuses & 4) != 0)
                 || (cancellation == 2 && ((statuses & 4) == 0 || asyncBindings.Length == 0))))
             {
@@ -204,10 +204,10 @@ namespace AIBT.CodeGen
 
             valid &= ValidateStorage(context, node, node.Config, ConfigFieldAttribute, "configuration");
             valid &= ValidateStorage(context, node, node.Memory, MemoryFieldAttribute, "memory");
-            valid &= Callback(context, node, "Enter", "System.Void", "AIBT.Burst.BurstEnterContext", null);
+            valid &= OptionalCallback(context, node, "Enter", "System.Void", "AIBT.Burst.BurstEnterContext", null);
             valid &= Callback(context, node, "Tick", "AIBT.NodeStatus", "AIBT.Burst.BurstTickContext", null);
-            valid &= Callback(context, node, "Abort", "System.Void", "AIBT.Burst.BurstAbortContext", "AIBT.Burst.BurstNodeAbortReason");
-            valid &= Callback(context, node, "Exit", "System.Void", "AIBT.Burst.BurstExitContext", "AIBT.Burst.BurstNodeExitReason");
+            valid &= OptionalCallback(context, node, "Abort", "System.Void", "AIBT.Burst.BurstAbortContext", "AIBT.Burst.BurstNodeAbortReason");
+            valid &= OptionalCallback(context, node, "Exit", "System.Void", "AIBT.Burst.BurstExitContext", "AIBT.Burst.BurstNodeExitReason");
 
             var evaluate = node.Type.GetMembers("Evaluate").OfType<IMethodSymbol>().ToArray();
             if (observer)
@@ -230,7 +230,7 @@ namespace AIBT.CodeGen
                 reason = label + " must be a public top-level non-generic unmanaged partial struct";
             else
             {
-                var explicitLayout = type.GetAttributes().FirstOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.StructLayoutAttribute");
+                var explicitLayout = type.AibtAttributes().FirstOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.StructLayoutAttribute");
                 if (explicitLayout != null)
                 {
                     ReportAt(context, AbiDiagnostics.Storage, AttributeLocation(explicitLayout, -1), node.Type.Name, label + " uses forbidden explicit StructLayout");
@@ -262,7 +262,7 @@ namespace AIBT.CodeGen
                     { Report(context, AbiDiagnostics.Storage, field, node.Type.Name, label + ": " + fieldReason); return false; }
                     if (fieldAttribute == ConfigFieldAttribute && !AllowedConfigurationField(field.Type))
                     { Report(context, AbiDiagnostics.Storage, field, node.Type.Name, "configuration field type is outside the closed bool/uint/ulong/handle allowlist"); return false; }
-                    var attributes = field.GetAttributes(); var stableAttributes = attributes.Where(attribute => attribute.AttributeClass?.ToDisplayString() == fieldAttribute).ToArray();
+                    var attributes = field.AibtAttributes(); var stableAttributes = attributes.Where(attribute => attribute.AttributeClass?.ToDisplayString() == fieldAttribute).ToArray();
                     if (field.DeclaredAccessibility != Accessibility.Public || stableAttributes.Length != 1)
                     {
                         Report(context, AbiDiagnostics.Storage, field, node.Type.Name, label + " field '" + field.Name + "' requires exactly one stable field attribute and public accessibility");
@@ -287,7 +287,7 @@ namespace AIBT.CodeGen
                     var bindings = attributes.Where(IsBindingAttribute).ToArray();
                     if ((isHandle && (bindings.Length != 1 || !HandleBindingMatches(namedField!, bindings[0]))) || (!isHandle && bindings.Length != 0))
                     { ReportAt(context, AbiDiagnostics.WrongAccess, bindings.Length == 0 ? field.Locations.FirstOrDefault() : BindingMismatchLocation(namedField!, bindings[0]), field.Name, bindings.Length == 0 ? "missing-binding" : bindings[0].AttributeClass?.Name ?? "binding"); return false; }
-                    if (field.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.FieldOffsetAttribute"))
+                    if (field.AibtAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.FieldOffsetAttribute"))
                     { Report(context, AbiDiagnostics.Storage, field, node.Type.Name, label + " field uses forbidden FieldOffset"); return false; }
                 }
                 if (fieldAttribute == ConfigFieldAttribute)
@@ -295,7 +295,7 @@ namespace AIBT.CodeGen
                     var orderedBindings = fields.Select(field => new
                         {
                             Field = field,
-                            Attribute = field.GetAttributes().SingleOrDefault(IsBindingAttribute)
+                            Attribute = field.AibtAttributes().SingleOrDefault(IsBindingAttribute)
                         })
                         .Where(value => value.Attribute != null)
                         .OrderBy(value => SourceOrder(value.Field), StringComparer.Ordinal)
@@ -313,7 +313,7 @@ namespace AIBT.CodeGen
                             }
                         }
                 }
-                var ordered = fields.Select(field => new StableField(field, field.GetAttributes().Single(attribute => attribute.AttributeClass?.ToDisplayString() == fieldAttribute)))
+                var ordered = fields.Select(field => new StableField(field, field.AibtAttributes().Single(attribute => attribute.AttributeClass?.ToDisplayString() == fieldAttribute)))
                     .OrderBy(field => SourceOrder(field.Field), StringComparer.Ordinal).ToArray();
                 for (var later = 0; later < ordered.Length; later++)
                     for (var earlier = 0; earlier < later; earlier++)
@@ -350,7 +350,7 @@ namespace AIBT.CodeGen
                     || type.GetMembers().OfType<IMethodSymbol>().Any(method => !method.IsImplicitlyDeclared
                         && (method.Name == "Equals" || method.Name == "GetHashCode" || method.Name == "op_Equality" || method.Name == "op_Inequality"
                             || method.Name.IndexOf("Serialize", StringComparison.OrdinalIgnoreCase) >= 0 || method.Name.IndexOf("Deserialize", StringComparison.OrdinalIgnoreCase) >= 0));
-                if (type.GetAttributes().Any(value => value.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.StructLayoutAttribute")
+                if (type.AibtAttributes().Any(value => value.AttributeClass?.ToDisplayString() == "System.Runtime.InteropServices.StructLayoutAttribute")
                     || type.GetMembers().OfType<IFieldSymbol>().Any(field => field.IsStatic && !field.IsConst && !field.IsImplicitlyDeclared)
                     || hasAutoProperty || hasEqualityContract || type.GetTypeMembers("BurstCodec").Length != 0)
                 { Report(context, AbiDiagnostics.Storage, type, type.Name, "registered value has explicit layout, mutable/static/property/custom hook, or reserved BurstCodec"); valid = false; continue; }
@@ -364,7 +364,7 @@ namespace AIBT.CodeGen
                 var stableFields = new List<StableField>();
                 foreach (var field in fields)
                 {
-                    var attributes = field.GetAttributes().Where(value => value.AttributeClass?.ToDisplayString() == ValueFieldAttribute).ToArray();
+                    var attributes = field.AibtAttributes().Where(value => value.AttributeClass?.ToDisplayString() == ValueFieldAttribute).ToArray();
                     if (field.DeclaredAccessibility != Accessibility.Public || attributes.Length != 1 || !AllowedType(field.Type, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out _))
                     { Report(context, AbiDiagnostics.Storage, field, type.Name, "registered value field is not public, attributed once, or allowlisted"); valid = false; typeValid = false; continue; }
                     var fieldAttribute = attributes[0];
@@ -535,7 +535,7 @@ namespace AIBT.CodeGen
             return true;
         }
 
-        private static Location? IdentityMismatchLocation(AttributeData attribute, ITypeSymbol type)
+        private static Location? IdentityMismatchLocation(Attr attribute, ITypeSymbol type)
         {
             var id = attribute.ConstructorArguments.Length > 1 ? attribute.ConstructorArguments[1].Value as string ?? string.Empty : string.Empty;
             uint expectedVersion = 1;
@@ -543,7 +543,7 @@ namespace AIBT.CodeGen
             return PrimitiveIdentityMatches(type, id, expectedVersion) ? AttributeLocation(attribute, 2) : AttributeLocation(attribute, 1);
         }
 
-        private static Location? BindingMismatchLocation(INamedTypeSymbol handle, AttributeData binding)
+        private static Location? BindingMismatchLocation(INamedTypeSymbol handle, Attr binding)
         {
             var args = binding.ConstructorArguments;
             if (args.Length == 0 || !(args[0].Value is string bindingId) || !CanonicalField(bindingId)) return AttributeLocation(binding, 0);
@@ -565,7 +565,7 @@ namespace AIBT.CodeGen
             return BindingTypeMismatchLocation(binding, handle.TypeArguments[0], 1, 2) ?? AttributeLocation(binding, 1);
         }
 
-        private static Location? BindingTypeMismatchLocation(AttributeData binding, ITypeSymbol type, int idArgument, int versionArgument)
+        private static Location? BindingTypeMismatchLocation(Attr binding, ITypeSymbol type, int idArgument, int versionArgument)
         {
             if (binding.ConstructorArguments.Length <= versionArgument) return AttributeLocation(binding, idArgument);
             var id = binding.ConstructorArguments[idArgument].Value as string ?? string.Empty; var version = binding.ConstructorArguments[versionArgument].Value is uint value ? value : 0;
@@ -591,7 +591,7 @@ namespace AIBT.CodeGen
             }
         }
 
-        private static bool IsBindingAttribute(AttributeData attribute)
+        private static bool IsBindingAttribute(Attr attribute)
         {
             var name = attribute.AttributeClass?.ToDisplayString();
             return name == "AIBT.Burst.AibtBlackboardBindingAttribute" || name == "AIBT.Burst.AibtSnapshotBindingAttribute"
@@ -599,7 +599,7 @@ namespace AIBT.CodeGen
                 || name == "AIBT.Burst.AibtCompletionBindingAttribute";
         }
 
-        private static bool HandleBindingMatches(INamedTypeSymbol handle, AttributeData binding)
+        private static bool HandleBindingMatches(INamedTypeSymbol handle, Attr binding)
         {
             var args = binding.ConstructorArguments; var bindingName = binding.AttributeClass?.ToDisplayString();
             if (args.Length == 0 || !(args[0].Value is string bindingId) || !CanonicalField(bindingId)) return false;
@@ -629,6 +629,13 @@ namespace AIBT.CodeGen
             if (!ok) ReportAt(context, AbiDiagnostics.Callback, CallbackLocation(methods, node.Type), node.Type.Name, name);
             return ok;
         }
+
+        // P9-005: Enter, Abort and Exit may be omitted (no-op). A declared callback must still match
+        // exactly, and an omitted one changes only the generated call site, never metadata or ABI.
+        private static bool OptionalCallback(SourceProductionContext context, Node node, string name, string returnType, string contextType, string? reasonType)
+            => !HasCallback(node, name) || Callback(context, node, name, returnType, contextType, reasonType);
+
+        private static bool HasCallback(Node node, string name) => node.Type.GetMembers(name).OfType<IMethodSymbol>().Any();
 
         private static bool CommonCallback(IMethodSymbol method, Node node, string returnType, string contextType, string? reasonType)
         {
@@ -1559,10 +1566,10 @@ namespace AIBT.CodeGen
             builder.AppendLine("                global::AIBT.Burst.BurstTickContext tickContext = default;");
             builder.AppendLine("                switch (phase)"); builder.AppendLine("                {");
             builder.AppendLine("                    case global::AIBT.Burst.BurstCallbackPhase.Enter:"); builder.AppendLine("                    {");
-            builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryCreateEnterContext(in frame, out enterContext);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); builder.Append("                        ").Append(nodeType).AppendLine(".Enter(in config, ref memory, ref enterContext);"); builder.AppendLine("                        break;"); builder.AppendLine("                    }");
+            builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryCreateEnterContext(in frame, out enterContext);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); if (HasCallback(node, "Enter")) builder.Append("                        ").Append(nodeType).AppendLine(".Enter(in config, ref memory, ref enterContext);"); builder.AppendLine("                        break;"); builder.AppendLine("                    }");
             builder.AppendLine("                    case global::AIBT.Burst.BurstCallbackPhase.Tick:"); builder.AppendLine("                    {"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryCreateTickContext(in frame, out tickContext);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); builder.Append("                        tickStatus = ").Append(nodeType).AppendLine(".Tick(in config, ref memory, ref tickContext);"); builder.AppendLine("                        break;"); builder.AppendLine("                    }");
-            builder.AppendLine("                    case global::AIBT.Burst.BurstCallbackPhase.Abort:"); builder.AppendLine("                    {"); builder.AppendLine("                        global::AIBT.Burst.BurstAbortContext context;"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryCreateAbortContext(in frame, out context);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); builder.AppendLine("                        global::AIBT.Burst.BurstNodeAbortReason reason;"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryGetAbortReason(in frame, out reason);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); builder.Append("                        ").Append(nodeType).AppendLine(".Abort(in config, ref memory, ref context, reason);"); builder.AppendLine("                        break;"); builder.AppendLine("                    }");
-            builder.AppendLine("                    case global::AIBT.Burst.BurstCallbackPhase.Exit:"); builder.AppendLine("                    {"); builder.AppendLine("                        global::AIBT.Burst.BurstExitContext context;"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryCreateExitContext(in frame, out context);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); builder.AppendLine("                        global::AIBT.Burst.BurstNodeExitReason reason;"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryGetExitReason(in frame, out reason);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); builder.Append("                        ").Append(nodeType).AppendLine(".Exit(in config, ref memory, ref context, reason);"); builder.AppendLine("                        break;"); builder.AppendLine("                    }");
+            builder.AppendLine("                    case global::AIBT.Burst.BurstCallbackPhase.Abort:"); builder.AppendLine("                    {"); builder.AppendLine("                        global::AIBT.Burst.BurstAbortContext context;"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryCreateAbortContext(in frame, out context);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); builder.AppendLine("                        global::AIBT.Burst.BurstNodeAbortReason reason;"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryGetAbortReason(in frame, out reason);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); if (HasCallback(node, "Abort")) builder.Append("                        ").Append(nodeType).AppendLine(".Abort(in config, ref memory, ref context, reason);"); builder.AppendLine("                        break;"); builder.AppendLine("                    }");
+            builder.AppendLine("                    case global::AIBT.Burst.BurstCallbackPhase.Exit:"); builder.AppendLine("                    {"); builder.AppendLine("                        global::AIBT.Burst.BurstExitContext context;"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryCreateExitContext(in frame, out context);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); builder.AppendLine("                        global::AIBT.Burst.BurstNodeExitReason reason;"); builder.AppendLine("                        bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryGetExitReason(in frame, out reason);"); builder.AppendLine("                        if (bridgeResult != global::AIBT.Burst.BurstContextResult.Success) return bridgeResult;"); if (HasCallback(node, "Exit")) builder.Append("                        ").Append(nodeType).AppendLine(".Exit(in config, ref memory, ref context, reason);"); builder.AppendLine("                        break;"); builder.AppendLine("                    }");
             builder.AppendLine("                    default: return global::AIBT.Burst.BurstContextResult.PhaseViolation;"); builder.AppendLine("                }");
             EmitWrites(builder, node.Memory);
             builder.AppendLine("                bridgeResult = global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryCommitMemory(ref memoryAccessor);");
@@ -1625,7 +1632,7 @@ namespace AIBT.CodeGen
         private static bool TryEmitHandleRead(StringBuilder builder, IFieldSymbol field, int ordinal, string prefix, string reader)
         {
             var named = field.Type as INamedTypeSymbol; if (named == null || !named.IsGenericType || !named.Name.EndsWith("Handle", StringComparison.Ordinal)) return false;
-            var binding = field.GetAttributes().FirstOrDefault(attribute => attribute.AttributeClass != null && attribute.AttributeClass.Name.EndsWith("BindingAttribute", StringComparison.Ordinal));
+            var binding = field.AibtAttributes().FirstOrDefault(attribute => attribute.AttributeClass != null && attribute.AttributeClass.Name.EndsWith("BindingAttribute", StringComparison.Ordinal));
             if (binding == null) return false;
             var args = binding.ConstructorArguments; string method; var identities = new List<string>();
             switch (binding.AttributeClass!.Name)
@@ -1678,7 +1685,7 @@ namespace AIBT.CodeGen
 
         private static string StableFieldId(IFieldSymbol field)
         {
-            var attribute = field.GetAttributes().FirstOrDefault(candidate => candidate.AttributeClass != null && (candidate.AttributeClass.Name == "AibtConfigFieldAttribute" || candidate.AttributeClass.Name == "AibtMemoryFieldAttribute" || candidate.AttributeClass.Name == "AibtValueFieldAttribute"));
+            var attribute = field.AibtAttributes().FirstOrDefault(candidate => candidate.AttributeClass != null && (candidate.AttributeClass.Name == "AibtConfigFieldAttribute" || candidate.AttributeClass.Name == "AibtMemoryFieldAttribute" || candidate.AttributeClass.Name == "AibtValueFieldAttribute"));
             return attribute != null && attribute.ConstructorArguments.Length > 0 ? attribute.ConstructorArguments[0].Value as string ?? field.Name : field.Name;
         }
 
@@ -1716,7 +1723,7 @@ namespace AIBT.CodeGen
             return examples.Length > 0 && examples.Distinct(StringComparer.Ordinal).Count() == examples.Length && examples.All(ValidExampleId);
         }
 
-        private static bool TryByteArgument(AttributeData attribute, int argument, out byte value)
+        private static bool TryByteArgument(Attr attribute, int argument, out byte value)
         {
             value = 0;
             if (attribute.ConstructorArguments.Length <= argument || attribute.ConstructorArguments[argument].Value == null) return false;
@@ -1724,8 +1731,8 @@ namespace AIBT.CodeGen
             catch (Exception exception) when (exception is FormatException || exception is InvalidCastException || exception is OverflowException) { return false; }
         }
 
-        private static AttributeData? Attribute(ISymbol symbol, string metadataName)
-            => symbol.GetAttributes().FirstOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == metadataName);
+        private static Attr? Attribute(ISymbol symbol, string metadataName)
+            => symbol.AibtAttributes().FirstOrDefault(attribute => attribute.AttributeClass?.ToDisplayString() == metadataName);
 
         private static IEnumerable<INamedTypeSymbol> AllTypes(INamespaceSymbol root)
         {
@@ -1824,16 +1831,18 @@ namespace AIBT.CodeGen
             var declaration = methods.SelectMany(method => method.DeclaringSyntaxReferences).Select(reference => reference.GetSyntax()).OfType<MethodDeclarationSyntax>().FirstOrDefault();
             return declaration?.Identifier.GetLocation() ?? fallback.Locations.FirstOrDefault();
         }
-        private static Location? DocumentationLocation(AttributeData? attribute)
+        private static Location? DocumentationLocation(Attr? attribute)
         {
             if (attribute == null) return null;
             for (var index = 0; index < Math.Min(4, attribute.ConstructorArguments.Length); index++) if (string.IsNullOrWhiteSpace(attribute.ConstructorArguments[index].Value as string)) return AttributeLocation(attribute, index);
             return AttributeLocation(attribute, 4);
         }
-        private static Location? AttributeLocation(AttributeData attribute, int argument)
+        private static Location? AttributeLocation(Attr attribute, int argument)
         {
             var syntax = attribute.ApplicationSyntaxReference?.GetSyntax() as AttributeSyntax;
             if (syntax == null) return attribute.AttributeClass?.Locations.FirstOrDefault();
+            // A short form has only its identifier in source; every other synthesized argument maps to the attribute.
+            if (attribute.IsShortForm && argument != 0) return syntax.GetLocation();
             if (argument >= 0 && syntax.ArgumentList != null && argument < syntax.ArgumentList.Arguments.Count) return syntax.ArgumentList.Arguments[argument].Expression.GetLocation();
             return syntax.GetLocation();
         }
@@ -2548,7 +2557,7 @@ namespace AIBT.CodeGen
 
         private sealed class ShardRecord
         {
-            internal ShardRecord(INamedTypeSymbol type, AttributeData attribute) { Type = type; Id = (string)attribute.ConstructorArguments[0].Value!; Version = (uint)attribute.ConstructorArguments[1].Value!; }
+            internal ShardRecord(INamedTypeSymbol type, Attr attribute) { Type = type; Id = (string)attribute.ConstructorArguments[0].Value!; Version = (uint)attribute.ConstructorArguments[1].Value!; }
             internal INamedTypeSymbol Type { get; } internal string Id { get; } internal uint Version { get; }
         }
 
@@ -2568,7 +2577,7 @@ namespace AIBT.CodeGen
             internal byte Alignment { get; } internal byte Encoding { get; } internal byte[] SchemaHash { get; } internal uint Offset { get; set; }
             internal static FieldLayout Create(IFieldSymbol field)
             {
-                var attribute = field.GetAttributes().First(value => value.AttributeClass != null &&
+                var attribute = field.AibtAttributes().First(value => value.AttributeClass != null &&
                     (value.AttributeClass.ToDisplayString() == ConfigFieldAttribute || value.AttributeClass.ToDisplayString() == MemoryFieldAttribute || value.AttributeClass.ToDisplayString() == ValueFieldAttribute));
                 SizeAndEncoding(field.Type, out var size, out var alignment, out var encoding);
                 return new FieldLayout(field, (string)attribute.ConstructorArguments[0].Value!, (string)attribute.ConstructorArguments[1].Value!,
@@ -2618,7 +2627,7 @@ namespace AIBT.CodeGen
             internal string Id { get; } internal byte Kind { get; } internal byte Scope { get; } internal byte PhaseMask { get; } internal BindingTypeRecord[] Types { get; }
             internal static BindingRecord? TryCreate(IFieldSymbol field)
             {
-                foreach (var attribute in field.GetAttributes())
+                foreach (var attribute in field.AibtAttributes())
                 {
                     var name = attribute.AttributeClass?.Name; var args = attribute.ConstructorArguments;
                     if (name == "AibtBlackboardBindingAttribute") return new BindingRecord((string)args[0].Value!, Convert.ToByte(args[1].Value, CultureInfo.InvariantCulture), Convert.ToByte(args[2].Value, CultureInfo.InvariantCulture), 0, new[] { new BindingTypeRecord(0, (string)args[3].Value!, (uint)args[4].Value!, ((INamedTypeSymbol)field.Type).TypeArguments[0]) });
@@ -2634,15 +2643,15 @@ namespace AIBT.CodeGen
         private sealed class ValueLeaf { internal ValueLeaf(ITypeSymbol type, string access) { Type = type; Access = access; } internal ITypeSymbol Type { get; } internal string Access { get; } }
         private sealed class StableField
         {
-            internal StableField(IFieldSymbol field, AttributeData attribute) { Field = field; Attribute = attribute; Id = attribute.ConstructorArguments[0].Value as string ?? string.Empty; }
-            internal IFieldSymbol Field { get; } internal AttributeData Attribute { get; } internal string Id { get; }
+            internal StableField(IFieldSymbol field, Attr attribute) { Field = field; Attribute = attribute; Id = attribute.ConstructorArguments[0].Value as string ?? string.Empty; }
+            internal IFieldSymbol Field { get; } internal Attr Attribute { get; } internal string Id { get; }
         }
         private sealed class RegisteredValueIdentity
         {
-            internal RegisteredValueIdentity(INamedTypeSymbol type, AttributeData attribute, string typeId, uint version, string schemaId)
+            internal RegisteredValueIdentity(INamedTypeSymbol type, Attr attribute, string typeId, uint version, string schemaId)
             { Type = type; Attribute = attribute; TypeId = typeId; Version = version; SchemaId = schemaId; }
             internal INamedTypeSymbol Type { get; }
-            internal AttributeData Attribute { get; }
+            internal Attr Attribute { get; }
             internal string TypeId { get; }
             internal uint Version { get; }
             internal string SchemaId { get; }

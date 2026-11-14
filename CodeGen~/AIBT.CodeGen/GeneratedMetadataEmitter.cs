@@ -110,7 +110,7 @@ namespace AIBT.CodeGen
             var values = new List<BindingInfo>();
             foreach (var field in fields)
             {
-                var attribute = field.Symbol.GetAttributes().FirstOrDefault(candidate => IsBinding(candidate.AttributeClass?.ToDisplayString()));
+                var attribute = field.Symbol.AibtAttributes().FirstOrDefault(candidate => IsBinding(candidate.AttributeClass?.ToDisplayString()));
                 if (attribute == null) continue;
                 var name = attribute.AttributeClass!.ToDisplayString();
                 var args = attribute.ConstructorArguments;
@@ -347,7 +347,7 @@ namespace AIBT.CodeGen
 
         private static bool IsHandle(ITypeSymbol type) => type is INamedTypeSymbol named && named.IsGenericType && new[] { "BlackboardReadHandle<T>", "BlackboardWriteHandle<T>", "BlackboardReadWriteHandle<T>", "SnapshotReadHandle<T>", "CommandHandle<T>", "AsyncOperationHandle<TStart, TCancel>", "CompletionHandle<T>" }.Contains(named.ConstructedFrom.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
         private static bool IsBinding(string? name) => name != null && (name == BlackboardBindingAttribute || name.EndsWith("AibtSnapshotBindingAttribute", StringComparison.Ordinal) || name.EndsWith("AibtCommandBindingAttribute", StringComparison.Ordinal) || name.EndsWith("AibtAsyncOperationBindingAttribute", StringComparison.Ordinal) || name.EndsWith("AibtCompletionBindingAttribute", StringComparison.Ordinal));
-        private static AttributeData? Attribute(ISymbol symbol, string name) => symbol.GetAttributes().FirstOrDefault(value => value.AttributeClass?.ToDisplayString() == name);
+        private static Attr? Attribute(ISymbol symbol, string name) => symbol.AibtAttributes().FirstOrDefault(value => value.AttributeClass?.ToDisplayString() == name);
         private static uint Align(uint value, byte alignment) => checked((value + (uint)alignment - 1) & ~((uint)alignment - 1));
         private static ulong Numeric(string value) { var hash = 14695981039346656037UL; foreach (var octet in new UTF8Encoding(false, true).GetBytes(value)) { hash ^= octet; hash *= 1099511628211UL; } return hash; }
         private static string Sha256(string value) { using (var hash = SHA256.Create()) return Hex(hash.ComputeHash(Encoding.UTF8.GetBytes(value))); }

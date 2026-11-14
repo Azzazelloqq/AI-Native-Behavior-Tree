@@ -10,7 +10,7 @@
       "owns": ["README.md", "Samples~/README.md", "Planning~/Evidence/P9-006/"]
     },
     {
-      "id": "P9-005", "phase": 9, "title": "Shorter native node declarations", "status": "draft", "kind": "implementation",
+      "id": "P9-005", "phase": 9, "title": "Shorter native node declarations", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P9/P9-005-native-authoring-sugar.md",
       "dependsOn": ["P9-004"],
       "owns": ["Planning~/Evidence/P9-005/"]

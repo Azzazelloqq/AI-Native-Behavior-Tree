@@ -22,6 +22,17 @@ All notable changes to this project will be documented here. The project follows
 - The package Burst shard and its nodes are now named `aibt.native.*` (`aibt.native.standard`,
   `aibt.native.bool-is-true`, ...); `aibt.stdlib.*` stays for nodes that run on both executors.
 
+### Burst node authoring (P9-005)
+
+- `Enter`, `Abort` and `Exit` are optional on a Burst node; an omitted one does nothing. A declared
+  callback must still have the exact signature.
+- Add short declarations in `AIBT.Native`: `[AibtAction("id")]` / `[AibtCondition("id")]` with
+  defaults and configuration/memory types taken from `Tick`, `[AibtParam]` and `[AibtMemory]` with
+  the value type taken from the field, `[AibtKey]` (access from the handle, Tree scope by default)
+  and `[AibtCommand]`. The generator expands them into exactly the long `AIBT.Burst` attributes, so
+  both forms produce identical metadata. The long form, its generated output and ABI v2 are unchanged.
+- The First Agent `MoveNode` uses the short form and declares only `Tick`.
+
 ### Standard node library (P9-002)
 
 - Add 38 standard managed `aibt.unity.*` nodes so a common agent needs no custom node: waits

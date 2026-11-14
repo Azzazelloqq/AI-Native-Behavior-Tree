@@ -47,6 +47,7 @@ internal static class Program
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Execution/Burst/Dispatch/BurstDispatchBridgeCoreV2.cs"), Encoding.UTF8),
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/BurstBindingBridgeCoreV2.cs"), Encoding.UTF8),
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/BurstNodeContracts.cs"), Encoding.UTF8),
+            File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/NativeNodeShortForms.cs"), Encoding.UTF8),
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/BurstGeneratedRuntimeBridge.cs"), Encoding.UTF8),
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Integration/GeneratedDispatch/GeneratedBurstCatalogExecutorV2.cs"), Encoding.UTF8),
             File.ReadAllText(Path.Combine(packageRoot, "Runtime/Nodes/Contracts/RuntimeBuiltInCatalogAuthority.cs"), Encoding.UTF8)
@@ -65,6 +66,8 @@ internal static class Program
         await VerifyNestedRegisteredLayoutOrder(contractReference);
         await VerifyAccessAndCodecGeneration(contractReference);
         await VerifyDiagnosticMatrix(contractReference);
+        await VerifyOptionalLifecycleCallbacks(contractReference);
+        await VerifyShortForms(contractReference);
         await VerifyTransitiveCapabilityFlow(contractReference);
         await VerifyForbiddenExceptionFlow(contractReference);
         await VerifyForbiddenUnityApiFlow(contractReference);
@@ -406,6 +409,132 @@ public partial struct AccessNode
         var unrelated = await CompileAsync("Unrelated", new[] { "namespace Plain { public sealed class Ordinary { public int Value { get; set; } } }" }, new[] { contracts }, true, true);
         RequireClean(unrelated, "unrelated assembly");
         Require(string.IsNullOrEmpty(unrelated.GeneratedSource), "unrelated assembly received generated AIBT source");
+    }
+
+    // P9-005: Enter, Abort and Exit are optional. A Tick-only node generates, compiles and
+    // dispatches without calls to the omitted callbacks; a declared callback with a wrong
+    // signature is still AIBT5003; shard metadata does not depend on which callbacks exist.
+    private static async Task VerifyOptionalLifecycleCallbacks(MetadataReference contracts)
+    {
+        var tickOnly = await CompileAsync("Optional.TickOnly", new[] { Node("aibt.optional.tick-only", lifecycle: string.Empty) }, new[] { contracts }, true, true);
+        RequireClean(tickOnly, "Tick-only node");
+        var full = await CompileAsync("Optional.Full", new[] { Node("aibt.optional.tick-only") }, new[] { contracts }, true, true);
+        RequireClean(full, "full lifecycle node");
+        Require(tickOnly.GeneratedSource == full.GeneratedSource, "shard metadata changes when lifecycle callbacks are omitted");
+
+        const string catalogSource = "using AIBT.Burst; [AibtCatalogSet(\"aibt.optional.catalog\",1u,typeof(ProbeShard))] public static partial class ProbeCatalog { }";
+        var tickOnlyCatalog = await CompileAsync("Optional.TickOnly.Catalog", new[] { catalogSource }, new[] { contracts, Reference(tickOnly) }, true, true);
+        RequireClean(tickOnlyCatalog, "Tick-only catalog");
+        var fullCatalog = await CompileAsync("Optional.Full.Catalog", new[] { catalogSource }, new[] { contracts, Reference(full) }, true, true);
+        RequireClean(fullCatalog, "full lifecycle catalog");
+        Require(tickOnlyCatalog.GeneratedSource.Contains("ProbeNode.Tick(", StringComparison.Ordinal), "Tick-only catalog does not dispatch Tick");
+        foreach (var omitted in new[] { "ProbeNode.Enter(", "ProbeNode.Abort(", "ProbeNode.Exit(" })
+        {
+            Require(!tickOnlyCatalog.GeneratedSource.Contains(omitted, StringComparison.Ordinal), "Tick-only catalog calls omitted callback " + omitted);
+            Require(fullCatalog.GeneratedSource.Contains(omitted, StringComparison.Ordinal), "full lifecycle catalog lost callback " + omitted);
+        }
+
+        var wrongEnter = await CompileAsync("Optional.WrongEnter", new[] { Node("aibt.optional.wrong-enter", lifecycle: "public static void Enter(in Config config, ref Memory memory) { }") }, new[] { contracts }, true, true);
+        RequireDiagnostic(wrongEnter, "AIBT5003", true, "Enter");
+        var wrongExit = await CompileAsync("Optional.WrongExit", new[] { Node("aibt.optional.wrong-exit", lifecycle: "public static int Exit(in Config config, ref Memory memory, ref BurstExitContext context, BurstNodeExitReason reason) => 0;") }, new[] { contracts }, true, true);
+        RequireDiagnostic(wrongExit, "AIBT5003", true, "Exit");
+    }
+
+    // P9-005 option A: AIBT.Native short attributes are expanded by the generator into the long
+    // AIBT.Burst attributes. A node written either way must produce identical generated shard and
+    // catalog source (manifest, descriptor JSON, fingerprints, BurstAccess and dispatch).
+    private const string ShortFormTick =
+        "public static NodeStatus Tick(in MoveConfig config, ref MoveMemory memory, ref BurstTickContext context) {"
+        + " if (!config.Enabled || ProbeShard.BurstAccess.TryRead(ref context, config.Distance, out var distance) != BurstContextResult.Success) return NodeStatus.Failure;"
+        + " var hits = 1; if (ProbeShard.BurstAccess.TryWrite(ref context, config.Hits, in hits) != BurstContextResult.Success) return NodeStatus.Failure;"
+        + " if (distance <= config.Stop) return NodeStatus.Success;"
+        + " return ProbeShard.BurstAccess.TryEmit(ref context, config.MoveSpeed, in config.Speed) == BurstContextResult.Success ? NodeStatus.Running : NodeStatus.Failure; }"
+        + " public static void Exit(in MoveConfig config, ref MoveMemory memory, ref BurstExitContext context, BurstNodeExitReason reason) { memory.Count++; }";
+    private const string ShortFormConditionTick =
+        "public static NodeStatus Tick(in CheckConfig config, ref CheckMemory memory, ref BurstTickContext context) =>"
+        + " ProbeShard.BurstAccess.TryRead(ref context, config.Flag, out var flag) == BurstContextResult.Success && flag && config.Limit > 0u ? NodeStatus.Success : NodeStatus.Failure;";
+
+    private const string LongFormNodes =
+        "using AIBT; using AIBT.Burst; [AibtCatalogShard(\"aibt.short.shard\",1u)] public partial struct ProbeShard { }"
+        + "public partial struct MoveConfig {"
+        + " [AibtConfigField(\"speed\",\"Float32\",1u)] public float Speed;"
+        + " [AibtConfigField(\"stop\",\"Float32\",1u)] public float Stop;"
+        + " [AibtConfigField(\"enabled\",\"Bool\",1u)] public bool Enabled;"
+        + " [AibtConfigField(\"distance\",\"GeneratedHandle\",1u),AibtBlackboardBinding(\"distance\",BurstBlackboardAccess.Read,BlackboardScope.Tree,\"Float32\",1u)] public BlackboardReadHandle<float> Distance;"
+        + " [AibtConfigField(\"hits\",\"GeneratedHandle\",1u),AibtBlackboardBinding(\"hits\",BurstBlackboardAccess.Write,BlackboardScope.Tree,\"Int32\",1u)] public BlackboardWriteHandle<int> Hits;"
+        + " [AibtConfigField(\"move-speed\",\"GeneratedHandle\",1u),AibtCommandBinding(\"move-speed\",\"Float32\",1u)] public CommandHandle<float> MoveSpeed; }"
+        + "public partial struct MoveMemory { [AibtMemoryField(\"count\",\"UInt32\",1u)] public uint Count; }"
+        + "[AibtNodeDocumentation(\"Moves\",\"Tests\",\"Use\",\"Avoid\",\"move\")]"
+        + "[AibtBurstNode(\"aibt.short.move\",1u,BurstNodeKind.Action,typeof(MoveConfig),typeof(MoveMemory),NodeMemoryLifetime.Activation,true,BurstCancellationMode.AbortOnly,BurstNodeCost.Low,BurstNodeStatusMask.Success|BurstNodeStatusMask.Failure|BurstNodeStatusMask.Running)]"
+        + "public partial struct MoveNode { " + ShortFormTick + " }"
+        + "public partial struct CheckConfig {"
+        + " [AibtConfigField(\"limit\",\"UInt32\",1u)] public uint Limit;"
+        + " [AibtConfigField(\"flag\",\"GeneratedHandle\",1u),AibtBlackboardBinding(\"flag\",BurstBlackboardAccess.Read,BlackboardScope.Agent,\"Bool\",1u)] public BlackboardReadHandle<bool> Flag; }"
+        + "public partial struct CheckMemory { }"
+        + "[AibtNodeDocumentation(\"Checks\",\"Tests\",\"Use\",\"Avoid\",\"check\")]"
+        + "[AibtBurstNode(\"aibt.short.check\",2u,BurstNodeKind.Condition,typeof(CheckConfig),typeof(CheckMemory),NodeMemoryLifetime.Activation,true,BurstCancellationMode.NotApplicable,BurstNodeCost.Medium,BurstNodeStatusMask.Success|BurstNodeStatusMask.Failure)]"
+        + "public partial struct CheckNode { " + ShortFormConditionTick + " }";
+
+    private const string ShortFormNodes =
+        "using AIBT; using AIBT.Burst; using AIBT.Native; [AibtCatalogShard(\"aibt.short.shard\",1u)] public partial struct ProbeShard { }"
+        + "public partial struct MoveConfig {"
+        + " [AibtParam(\"speed\")] public float Speed;"
+        + " [AibtParam(\"stop\")] public float Stop;"
+        + " [AibtParam(\"enabled\")] public bool Enabled;"
+        + " [AibtKey(\"distance\")] public BlackboardReadHandle<float> Distance;"
+        + " [AibtKey(\"hits\")] public BlackboardWriteHandle<int> Hits;"
+        + " [AibtCommand(\"move-speed\")] public CommandHandle<float> MoveSpeed; }"
+        + "public partial struct MoveMemory { [AibtMemory(\"count\")] public uint Count; }"
+        + "[AibtNodeDocumentation(\"Moves\",\"Tests\",\"Use\",\"Avoid\",\"move\")]"
+        + "[AibtAction(\"aibt.short.move\")]"
+        + "public partial struct MoveNode { " + ShortFormTick + " }"
+        + "public partial struct CheckConfig {"
+        + " [AibtParam(\"limit\")] public uint Limit;"
+        + " [AibtKey(\"flag\", Scope = BlackboardScope.Agent)] public BlackboardReadHandle<bool> Flag; }"
+        + "public partial struct CheckMemory { }"
+        + "[AibtNodeDocumentation(\"Checks\",\"Tests\",\"Use\",\"Avoid\",\"check\")]"
+        + "[AibtCondition(\"aibt.short.check\", Version = 2u, Cost = BurstNodeCost.Medium)]"
+        + "public partial struct CheckNode { " + ShortFormConditionTick + " }";
+
+    private const string MisusePrefix = "using AIBT; using AIBT.Burst; using AIBT.Native; [AibtCatalogShard(\"aibt.short.bad\",1u)] public partial struct ProbeShard { } ";
+    private const string MisuseDocs = "[AibtNodeDocumentation(\"P\",\"T\",\"U\",\"A\",\"p\")]";
+    private const string MisuseTick = " public partial struct N { public static NodeStatus Tick(in C config, ref M memory, ref BurstTickContext context) => NodeStatus.Success; }";
+
+    private static async Task VerifyShortForms(MetadataReference contracts)
+    {
+        var longForm = await CompileAsync("ShortForm.Shard", new[] { LongFormNodes }, new[] { contracts }, true, true);
+        RequireClean(longForm, "long-form shard");
+        var shortForm = await CompileAsync("ShortForm.Shard", new[] { ShortFormNodes }, new[] { contracts }, true, true);
+        RequireClean(shortForm, "short-form shard");
+        Require(longForm.GeneratedSource.Contains("public const bool IsUsable = true;", StringComparison.Ordinal), "long-form shard is not usable: " + longForm.GeneratedSource);
+        Require(shortForm.GeneratedSource == longForm.GeneratedSource, "short-form shard source differs from the long form");
+
+        const string catalogSource = "using AIBT.Burst; [AibtCatalogSet(\"aibt.short.catalog\",1u,typeof(ProbeShard))] public static partial class ProbeCatalog { }";
+        var longCatalog = await CompileAsync("ShortForm.Catalog", new[] { catalogSource }, new[] { contracts, Reference(longForm) }, true, true);
+        var shortCatalog = await CompileAsync("ShortForm.Catalog", new[] { catalogSource }, new[] { contracts, Reference(shortForm) }, true, true);
+        RequireClean(longCatalog, "long-form catalog");
+        RequireClean(shortCatalog, "short-form catalog");
+        Require(shortCatalog.GeneratedSource == longCatalog.GeneratedSource, "short-form catalog source differs from the long form");
+        Require(shortCatalog.GeneratedSource.Contains("MoveNode.Exit(", StringComparison.Ordinal) && !shortCatalog.GeneratedSource.Contains("MoveNode.Enter(", StringComparison.Ordinal),
+            "short-form catalog does not combine with optional callbacks");
+
+        // Misuse is reported through the usual diagnostics at the short attribute, never as a crash.
+        var misuse = new[]
+        {
+            ("AIBT5002", MisusePrefix + "public partial struct C { [AibtParam(\"count\")] public int Count; } public partial struct M { } " + MisuseDocs + "[AibtCondition(\"aibt.short.bad-param\")]" + MisuseTick),
+            ("AIBT5007", MisusePrefix + "public partial struct C { [AibtKey(\"shared\", Scope = BlackboardScope.Shared)] public BlackboardWriteHandle<int> Value; } public partial struct M { } " + MisuseDocs + "[AibtAction(\"aibt.short.bad-scope\")]" + MisuseTick),
+            ("AIBT5009", MisusePrefix + "public partial struct C { } public partial struct M { } " + MisuseDocs + "[AibtCondition(\"Invalid\")]" + MisuseTick),
+        };
+        foreach (var (id, source) in misuse)
+        {
+            var result = await CompileAsync("ShortForm.Misuse." + id, new[] { source }, new[] { contracts }, true, true);
+            Require(!result.Diagnostics.Any(value => value.Id == "CS8785" || value.Id == "AD0001"), "short-form misuse crashed the generator or analyzer: " + id);
+            Require(result.Diagnostics.Any(value => value.Id == id), "short-form misuse did not report " + id + ": " + string.Join(" | ", result.Diagnostics.Select(value => value.Id + ":" + value.GetMessage(CultureInfo.InvariantCulture))));
+        }
+        var noTick = await CompileAsync("ShortForm.NoTick", new[] { MisusePrefix + MisuseDocs + "[AibtAction(\"aibt.short.no-tick\")] public partial struct N { }" }, new[] { contracts }, true, true);
+        Require(!noTick.Diagnostics.Any(value => value.Id == "CS8785" || value.Id == "AD0001"), "short-form node without Tick crashed the generator or analyzer");
+        Require(noTick.Diagnostics.Any(value => value.Id.StartsWith("AIBT", StringComparison.Ordinal) && value.Severity == DiagnosticSeverity.Error), "short-form node without Tick was accepted");
+        Require(!noTick.GeneratedSource.Contains("IsUsable = true", StringComparison.Ordinal), "short-form node without Tick produced a usable shard");
     }
 
     private static async Task VerifyDiagnosticMatrix(MetadataReference contracts)
@@ -983,7 +1112,8 @@ public partial struct AccessNode
         string cancellation = "BurstCancellationMode.NotApplicable",
         string cost = "BurstNodeCost.Trivial",
         string statuses = "BurstNodeStatusMask.Success|BurstNodeStatusMask.Failure",
-        string? memory = null)
+        string? memory = null,
+        string? lifecycle = null)
     {
         var builder = new StringBuilder();
         if (includeSupport) builder.Append(Support);
@@ -995,10 +1125,10 @@ public partial struct AccessNode
             .Append(cancellation).Append(',').Append(cost).Append(',').Append(statuses).Append(")]" )
             .Append("public partial struct ").Append(nodeName).Append(" {")
             .Append(nodeBody ?? string.Empty)
-            .Append("public static void Enter(in Config config, ref Memory memory, ref BurstEnterContext context) { }")
+            .Append(lifecycle ?? "public static void Enter(in Config config, ref Memory memory, ref BurstEnterContext context) { }")
             .Append(tick ?? "public static NodeStatus Tick(in Config config, ref Memory memory, ref BurstTickContext context) => NodeStatus.Success;")
-            .Append("public static void Abort(in Config config, ref Memory memory, ref BurstAbortContext context, BurstNodeAbortReason reason) { }")
-            .Append("public static void Exit(in Config config, ref Memory memory, ref BurstExitContext context, BurstNodeExitReason reason) { }")
+            .Append(lifecycle != null ? string.Empty : "public static void Abort(in Config config, ref Memory memory, ref BurstAbortContext context, BurstNodeAbortReason reason) { }")
+            .Append(lifecycle != null ? string.Empty : "public static void Exit(in Config config, ref Memory memory, ref BurstExitContext context, BurstNodeExitReason reason) { }")
             .Append("}");
         return builder.ToString();
     }

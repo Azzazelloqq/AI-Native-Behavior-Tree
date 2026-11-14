@@ -26,7 +26,7 @@ _agent.SetFact("distance", Vector3.Distance(transform.position, _goal.position))
 ```
 
 Facts are Tree-scope blackboard keys that no node writes; they are written at the scheduler's safe
-boundary. Effects are the node's `[AibtCommandBinding]` ids, delivered on the main thread after the
+boundary. Effects are the node's command ids (`[AibtCommand]`), delivered on the main thread after the
 node's update commits.
 
 The node and catalog are separate generated assemblies, as required by the supported Burst ABI.
@@ -37,3 +37,7 @@ the catalog recorded in the asset by name; if your build strips it, assign
 The low-level path (`ProductionTreeAsset.TryCreateProgram`, `ProductionTreeProgram.TryBootstrap`,
 `ProductionTreeHost`, `IProductionTreeWorldParticipant`) is unchanged and remains available for full
 control; see `Documentation~/production-host.md`.
+
+The node in `Nodes/MoveNode.cs` uses the short `AIBT.Native` attributes (`[AibtAction]`, `[AibtParam]`,
+`[AibtKey]`, `[AibtCommand]`) and declares only `Tick`. They expand to exactly the long `AIBT.Burst`
+attributes; see `Documentation~/burst-node-authoring.md`.

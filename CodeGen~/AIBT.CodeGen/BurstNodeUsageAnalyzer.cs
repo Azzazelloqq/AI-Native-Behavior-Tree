@@ -475,7 +475,7 @@ namespace AIBT.CodeGen
             var configParameter = callback.Parameters[0];
             if (field == null || receiver == null || !SymbolEqualityComparer.Default.Equals(receiver, configParameter)
                 || !SymbolEqualityComparer.Default.Equals(field.ContainingType, configParameter.Type)) return false;
-            var attribute = field.GetAttributes().FirstOrDefault(value => value.AttributeClass != null && expectedAttributes.Contains(value.AttributeClass.ToDisplayString(), StringComparer.Ordinal));
+            var attribute = field.AibtAttributes().FirstOrDefault(value => value.AttributeClass != null && expectedAttributes.Contains(value.AttributeClass.ToDisplayString(), StringComparer.Ordinal));
             return attribute != null && called.Parameters.Length > argumentIndex
                 && SymbolEqualityComparer.Default.Equals(called.Parameters[argumentIndex].Type, field.Type)
                 && PhaseAllows(callback, called.Name) && BindingKindAllows(attribute, called.Name);
@@ -491,7 +491,7 @@ namespace AIBT.CodeGen
             var configParameter = callback.Parameters[0];
             if (field == null || receiver == null || !SymbolEqualityComparer.Default.Equals(receiver, configParameter)
                 || !SymbolEqualityComparer.Default.Equals(field.ContainingType, configParameter.Type)) return false;
-            var attribute = field.GetAttributes().FirstOrDefault(value => value.AttributeClass != null && expectedAttributes.Contains(value.AttributeClass.ToDisplayString(), StringComparer.Ordinal));
+            var attribute = field.AibtAttributes().FirstOrDefault(value => value.AttributeClass != null && expectedAttributes.Contains(value.AttributeClass.ToDisplayString(), StringComparer.Ordinal));
             return attribute != null && PhaseAllows(callback, operation) && BindingKindAllows(attribute, operation);
         }
 
@@ -542,7 +542,7 @@ namespace AIBT.CodeGen
                 Report(context, AbiDiagnostics.UndeclaredAccess, invocation, called.Name);
                 return;
             }
-            var attribute = field.GetAttributes().FirstOrDefault(value => value.AttributeClass != null && expectedAttributes.Contains(value.AttributeClass.ToDisplayString(), StringComparer.Ordinal));
+            var attribute = field.AibtAttributes().FirstOrDefault(value => value.AttributeClass != null && expectedAttributes.Contains(value.AttributeClass.ToDisplayString(), StringComparer.Ordinal));
             var compatibleHandle = called.Parameters.Length > argumentIndex && SymbolEqualityComparer.Default.Equals(called.Parameters[argumentIndex].Type, field.Type);
             if (attribute == null || !compatibleHandle
                 || !PhaseAllows(callback, called.Name) || !BindingKindAllows(attribute, called.Name))
@@ -560,7 +560,7 @@ namespace AIBT.CodeGen
             }
         }
 
-        private static bool BindingKindAllows(AttributeData attribute, string operation)
+        private static bool BindingKindAllows(Attr attribute, string operation)
         {
             var name = attribute.AttributeClass?.ToDisplayString();
             if (name == "AIBT.Burst.AibtBlackboardBindingAttribute" && attribute.ConstructorArguments.Length > 1 && attribute.ConstructorArguments[1].Value != null)
@@ -716,7 +716,7 @@ namespace AIBT.CodeGen
         }
 
         private static bool HasAttribute(ISymbol symbol, string name)
-            => symbol.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == name);
+            => symbol.AibtAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == name);
 
         private static void Report(SyntaxNodeAnalysisContext context, DiagnosticDescriptor descriptor, SyntaxNode node, params object[] args)
             => context.ReportDiagnostic(Diagnostic.Create(descriptor, node.GetLocation(), args));

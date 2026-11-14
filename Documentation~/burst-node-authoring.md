@@ -18,6 +18,35 @@ authoring path:
   completion, `Running`, and cancellation from `Abort`;
 - a separate generated catalog that selects the public shard.
 
+## Short declarations
+
+`using AIBT.Native;` gives short attributes that the generator expands into exactly the long
+`AIBT.Burst` attributes, so a node written either way has the same manifest, metadata, catalog
+fingerprint and generated dispatch:
+
+| Short | Long equivalent |
+|---|---|
+| `[AibtAction("id")]` | `[AibtBurstNode("id", 1u, BurstNodeKind.Action, typeof(TConfig), typeof(TMemory), NodeMemoryLifetime.Activation, true, BurstCancellationMode.AbortOnly, BurstNodeCost.Low, Success \| Failure \| Running)]` |
+| `[AibtCondition("id")]` | `[AibtBurstNode("id", 1u, BurstNodeKind.Condition, typeof(TConfig), typeof(TMemory), NodeMemoryLifetime.Activation, true, BurstCancellationMode.NotApplicable, BurstNodeCost.Trivial, Success \| Failure)]` |
+| `[AibtParam("speed")] public float Speed;` | `[AibtConfigField("speed", "Float32", 1u)]` (bool → `Bool`, uint → `UInt32`, ulong → `UInt64`, float → `Float32`) |
+| `[AibtMemory("count")] public uint Count;` | `[AibtMemoryField("count", "UInt32", 1u)]` (type and version from the field type) |
+| `[AibtKey("target")] public BlackboardReadHandle<float> Target;` | `[AibtConfigField("target", "GeneratedHandle", 1u), AibtBlackboardBinding("target", BurstBlackboardAccess.Read, BlackboardScope.Tree, "Float32", 1u)]` (access from the handle type; `Scope =` to change) |
+| `[AibtCommand("move")] public CommandHandle<float> Move;` | `[AibtConfigField("move", "GeneratedHandle", 1u), AibtCommandBinding("move", "Float32", 1u)]` |
+
+`TConfig` and `TMemory` are the first two parameter types of the node's `Tick`. Every default can
+be overridden by a named argument (`Version`, `MemoryLifetime`, `Deterministic`, `Cancellation`,
+`Cost`, `Statuses`). Mistakes are reported with the usual AIBT5xxx diagnostics at the short
+attribute. `[AibtNodeDocumentation]`, `[AibtCatalogShard]`, snapshot, async and completion
+bindings have no short form. The short attributes are not part of the ABI v2 contract
+(`AIBT.Burst`); see `ADR-P9-005`.
+
+## Callbacks
+
+`Tick` is required. `Enter`, `Abort` and `Exit` are optional: omit the ones that would be empty
+and the generated dispatch skips them. A declared callback must keep its exact signature
+(AIBT5003 otherwise). Omitting callbacks does not change the node's manifest or catalog
+fingerprint. The First Agent `MoveNode` declares only `Tick`.
+
 Handle fields use `GeneratedHandle` configuration fields paired with one binding
 attribute. Call only the generated `TShard.BurstAccess` methods from lifecycle
 callbacks. Check every `BurstContextResult`; an ignored failure is latched and

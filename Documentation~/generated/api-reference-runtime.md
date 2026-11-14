@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-283 public type(s).
+289 public type(s).
 
 ---
 
@@ -1246,6 +1246,61 @@ One agent binding owned by a <see cref="ProductionTreeWorld"/>. Implementations 
 - `METHOD System.Void Abort(AIBT.ReferenceLeafContext&,AIBT.NodeAbortReason)`
 - `METHOD System.Void Enter(AIBT.ReferenceLeafContext&)`
 - `METHOD System.Void Exit(AIBT.ReferenceLeafContext&,AIBT.NodeExitReason)`
+
+---
+
+### `AIBT.Native.AibtActionAttribute`
+
+- `METHOD System.Void .ctor(System.String)`
+- `PROPERTY AIBT.Burst.BurstCancellationMode Cancellation`
+- `PROPERTY AIBT.Burst.BurstNodeCost Cost`
+- `PROPERTY AIBT.Burst.BurstNodeStatusMask Statuses`
+- `PROPERTY AIBT.NodeMemoryLifetime MemoryLifetime`
+- `PROPERTY System.Boolean Deterministic`
+- `PROPERTY System.String CanonicalTypeId`
+- `PROPERTY System.UInt32 Version`
+
+---
+
+### `AIBT.Native.AibtCommandAttribute`
+
+- `METHOD System.Void .ctor(System.String)`
+- `PROPERTY System.String CommandId`
+
+---
+
+### `AIBT.Native.AibtConditionAttribute`
+
+- `METHOD System.Void .ctor(System.String)`
+- `PROPERTY AIBT.Burst.BurstCancellationMode Cancellation`
+- `PROPERTY AIBT.Burst.BurstNodeCost Cost`
+- `PROPERTY AIBT.Burst.BurstNodeStatusMask Statuses`
+- `PROPERTY AIBT.NodeMemoryLifetime MemoryLifetime`
+- `PROPERTY System.Boolean Deterministic`
+- `PROPERTY System.String CanonicalTypeId`
+- `PROPERTY System.UInt32 Version`
+
+---
+
+### `AIBT.Native.AibtKeyAttribute`
+
+- `METHOD System.Void .ctor(System.String)`
+- `PROPERTY AIBT.BlackboardScope Scope`
+- `PROPERTY System.String Key`
+
+---
+
+### `AIBT.Native.AibtMemoryAttribute`
+
+- `METHOD System.Void .ctor(System.String)`
+- `PROPERTY System.String FieldId`
+
+---
+
+### `AIBT.Native.AibtParamAttribute`
+
+- `METHOD System.Void .ctor(System.String)`
+- `PROPERTY System.String FieldId`
 
 ---
 
