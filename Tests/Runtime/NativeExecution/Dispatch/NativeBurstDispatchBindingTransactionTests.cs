@@ -170,6 +170,8 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
         [TestCase(LiveAliasForgery.PartialDifferentTarget, false)]
         [TestCase(LiveAliasForgery.FullDifferentTarget, false)]
         [TestCase(LiveAliasForgery.ExactSameTarget, true)]
+        [TestCase(LiveAliasForgery.SameTargetSeparateRanges, false)]
+        [TestCase(LiveAliasForgery.ReversedTargetsSeparateRanges, true)]
         public void LiveValueRanges_OnlyExactSemanticAliasesAreAccepted(
             LiveAliasForgery forgery,
             bool expectedSuccess)
@@ -199,6 +201,24 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
                 {
                     Assert.That(owner, Is.Null);
                 }
+            }
+        }
+
+        // P10-003: an owner that already validated its immutable catalog metadata skips only the
+        // catalog checks; every request, resolved-binding and live-value check gives the same answer.
+        [TestCase(LiveAliasForgery.None, true)]
+        [TestCase(LiveAliasForgery.PartialDifferentTarget, false)]
+        [TestCase(LiveAliasForgery.FullDifferentTarget, false)]
+        [TestCase(LiveAliasForgery.ExactSameTarget, true)]
+        [TestCase(LiveAliasForgery.SameTargetSeparateRanges, false)]
+        [TestCase(LiveAliasForgery.ReversedTargetsSeparateRanges, true)]
+        public void CatalogValidatedFlag_KeepsEveryRequestCheck(LiveAliasForgery forgery, bool expected)
+        {
+            using (var input = new ValueInput(2, NativeBurstDispatchFieldEncodingV2.Int32, false, forgery))
+            {
+                var value = input.Value;
+                Assert.That(NativeBurstDispatchBatchOwnerV2.ValidateCreateInput(in value, false), Is.EqualTo(expected));
+                Assert.That(NativeBurstDispatchBatchOwnerV2.ValidateCreateInput(in value, true), Is.EqualTo(expected));
             }
         }
 
@@ -655,7 +675,12 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
             None = 0,
             PartialDifferentTarget = 1,
             FullDifferentTarget = 2,
-            ExactSameTarget = 3
+            ExactSameTarget = 3,
+            // P10-003: separate live ranges per request, but target ordinals that do not increase
+            // with the request (one shared target; reversed targets), so the ordered-block shortcut
+            // must not apply and every pair is compared.
+            SameTargetSeparateRanges = 4,
+            ReversedTargetsSeparateRanges = 5
         }
 
         private abstract class ScenarioBase : IDisposable
@@ -952,8 +977,11 @@ namespace AIBT.Tests.Runtime.NativeExecution.Dispatch
                                 ? 0u
                                 : (uint)(index * 4);
                     var targetOrdinal = liveAliasForgery == LiveAliasForgery.ExactSameTarget
+                        || liveAliasForgery == LiveAliasForgery.SameTargetSeparateRanges
                         ? 100u
-                        : (uint)(100 + index);
+                        : liveAliasForgery == LiveAliasForgery.ReversedTargetsSeparateRanges
+                            ? (uint)(100 + requestCount - 1 - index)
+                            : (uint)(100 + index);
                     _resolved[index] = new NativeBurstDispatchResolvedBindingV2(
                         0,
                         targetOrdinal,

@@ -21,12 +21,12 @@ namespace AIBT.Burst
                 return roleGate;
             }
 
-            if (!TryControl(batch.Runtime, out _))
+            if (!TryControl(batch.RuntimeRef(), out _))
             {
                 return BurstContextResult.InvalidHandle;
             }
 
-            handshake = batch.Runtime.Handshake;
+            handshake = batch.RuntimeRef().Handshake;
             return BurstContextResult.Success;
         }
 
@@ -34,7 +34,7 @@ namespace AIBT.Burst
             ref BurstExecutionBatch batch,
             in BurstCatalogValidationResult validation)
         {
-            if (!TryExecutionClaim(batch.Runtime, out var executionClaim))
+            if (!TryExecutionClaim(batch.RuntimeRef(), out var executionClaim))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -44,7 +44,7 @@ namespace AIBT.Burst
                 return BurstContextResult.PhaseViolation;
             }
 
-            if (!TryControl(batch.Runtime, out var control))
+            if (!TryControl(batch.RuntimeRef(), out var control))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -58,13 +58,13 @@ namespace AIBT.Burst
                 return BurstContextResult.InvalidStatus;
             }
 
-            var rejectableEmpty = batch.Runtime.Requests.Length == 0
+            var rejectableEmpty = batch.RuntimeRef().Requests.Length == 0
                 && control.State == NativeBurstDispatchStateV2.Terminal
                 && control.ResultCode == BurstExecutionCode.Success
                 && control.Cursor == 0;
             if ((!rejectableEmpty && control.State != NativeBurstDispatchStateV2.Ready)
                 || control.ActiveFrameId != 0
-                || batch.Runtime.ExecutionClaim[0] != 0)
+                || batch.RuntimeRef().ExecutionClaim[0] != 0)
             {
                 return BurstContextResult.PhaseViolation;
             }
@@ -72,7 +72,7 @@ namespace AIBT.Burst
             control.State = NativeBurstDispatchStateV2.Terminal;
             control.ResultCode = BurstExecutionCode.ValidationFailed;
             control.DiagnosticNumber = 5012;
-            WriteControl(batch.Runtime, control);
+            WriteControl(batch.RuntimeRef(), control);
             return BurstContextResult.Success;
         }
 
@@ -95,7 +95,7 @@ namespace AIBT.Burst
                 return roleGate;
             }
 
-            if (!TryControl(batch.Runtime, out var control))
+            if (!TryControl(batch.RuntimeRef(), out var control))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -117,12 +117,12 @@ namespace AIBT.Burst
 
             if (control.State != NativeBurstDispatchStateV2.Ready
                 || control.ActiveFrameId != 0
-                || control.Cursor >= batch.Runtime.Requests.Length)
+                || control.Cursor >= batch.RuntimeRef().Requests.Length)
             {
                 return BurstContextResult.PhaseViolation;
             }
 
-            var request = batch.Runtime.Requests[(int)control.Cursor];
+            var request = batch.RuntimeRef().Requests[(int)control.Cursor];
             instanceOrdinal = request.InstanceOrdinal;
             runtimeNodeIndex = request.RuntimeNodeIndex;
             catalogCaseIndex = request.CatalogCaseIndex;
@@ -142,7 +142,7 @@ namespace AIBT.Burst
                 return roleGate;
             }
 
-            if (!TryControl(batch.Runtime, out var control))
+            if (!TryControl(batch.RuntimeRef(), out var control))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -165,7 +165,7 @@ namespace AIBT.Burst
             out BurstExecutionBatch scheduledView)
         {
             scheduledView = default;
-            if (!TryExecutionClaim(batch.Runtime, out var executionClaim))
+            if (!TryExecutionClaim(batch.RuntimeRef(), out var executionClaim))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -175,7 +175,7 @@ namespace AIBT.Burst
                 return BurstContextResult.PhaseViolation;
             }
 
-            if (!TryControl(batch.Runtime, out var control))
+            if (!TryControl(batch.RuntimeRef(), out var control))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -184,14 +184,14 @@ namespace AIBT.Burst
                 || control.State != NativeBurstDispatchStateV2.Ready
                 || control.Cursor != 0
                 || control.ActiveFrameId != 0
-                || !TryClaimSchedule(batch.Runtime,
+                || !TryClaimSchedule(batch.RuntimeRef(),
                     2,
                     0))
             {
                 return BurstContextResult.PhaseViolation;
             }
 
-            scheduledView = new BurstExecutionBatch(batch.Runtime, NativeBurstBatchRoleV2.Job);
+            scheduledView = new BurstExecutionBatch(batch.RuntimeRef(), NativeBurstBatchRoleV2.Job);
             batch.Role = NativeBurstBatchRoleV2.ScheduledHost;
             return BurstContextResult.Success;
         }
@@ -211,7 +211,7 @@ namespace AIBT.Burst
                 return roleGate;
             }
 
-            if (!TryControl(batch.Runtime, out var control))
+            if (!TryControl(batch.RuntimeRef(), out var control))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -219,58 +219,58 @@ namespace AIBT.Burst
             if (!RoleCanExecute(in batch, control)
                 || control.State != NativeBurstDispatchStateV2.Ready
                 || control.ActiveFrameId != 0
-                || control.Cursor >= batch.Runtime.Requests.Length)
+                || control.Cursor >= batch.RuntimeRef().Requests.Length)
             {
-                return FaultWithoutFrame(batch.Runtime, BurstContextResult.PhaseViolation);
+                return FaultWithoutFrame(batch.RuntimeRef(), BurstContextResult.PhaseViolation);
             }
 
-            var request = batch.Runtime.Requests[(int)control.Cursor];
+            var request = batch.RuntimeRef().Requests[(int)control.Cursor];
             if (request.InstanceOrdinal != instanceOrdinal
                 || request.RuntimeNodeIndex != runtimeNodeIndex
                 || request.CatalogCaseIndex != catalogCaseIndex
                 || request.Phase != phase
-                || catalogCaseIndex >= batch.Runtime.Cases.Length)
+                || catalogCaseIndex >= batch.RuntimeRef().Cases.Length)
             {
-                return FaultWithoutFrame(batch.Runtime, BurstContextResult.InvalidHandle);
+                return FaultWithoutFrame(batch.RuntimeRef(), BurstContextResult.InvalidHandle);
             }
 
-            var dispatchCase = batch.Runtime.Cases[(int)catalogCaseIndex];
+            var dispatchCase = batch.RuntimeRef().Cases[(int)catalogCaseIndex];
             if (dispatchCase.CatalogCaseIndex != catalogCaseIndex
                 || dispatchCase.TypeNumericId != request.TypeNumericId
                 || dispatchCase.TypeVersion != request.TypeVersion
                 || !Includes(dispatchCase.Phases, phase))
             {
-                return FaultWithoutFrame(batch.Runtime, BurstContextResult.TypeMismatch);
+                return FaultWithoutFrame(batch.RuntimeRef(), BurstContextResult.TypeMismatch);
             }
 
             if (control.NextFrameId == uint.MaxValue)
             {
-                return FaultWithoutFrame(batch.Runtime, BurstContextResult.Overflow);
+                return FaultWithoutFrame(batch.RuntimeRef(), BurstContextResult.Overflow);
             }
 
             var frameId = control.NextFrameId + 1;
-            if (!TryClaimFrameAcquisition(batch.Runtime, frameId))
+            if (!TryClaimFrameAcquisition(batch.RuntimeRef(), frameId))
             {
                 return BurstContextResult.PhaseViolation;
             }
 
             CopyRange(
-                batch.Runtime.MemoryBytes,
+                batch.RuntimeRef().MemoryBytes,
                 request.MemoryOffset,
-                batch.Runtime.MemoryStaging,
+                batch.RuntimeRef().MemoryStaging,
                 request.MemoryOffset,
                 dispatchCase.MemorySize);
-            ClearRange(batch.Runtime.MemoryWritten, request.MemoryOffset, dispatchCase.MemorySize);
+            ClearRange(batch.RuntimeRef().MemoryWritten, request.MemoryOffset, dispatchCase.MemorySize);
             control.NextFrameId = frameId;
             control.ActiveFrameId = frameId;
             control.MemoryCommitted = 0;
             control.FirstFailure = BurstContextResult.Success;
             control.State = NativeBurstDispatchStateV2.Running;
-            WriteControl(batch.Runtime, control);
-            BurstBindingBridgeCoreV2.PrepareFrame(batch.Runtime, frameId);
+            WriteControl(batch.RuntimeRef(), control);
+            BurstBindingBridgeCoreV2.PrepareFrame(batch.RuntimeRef(), frameId);
             frame = new BurstDispatchFrame(
                 Token(control.OwnerId, control.Generation, frameId),
-                batch.Runtime,
+                batch.RuntimeRef(),
                 frameId,
                 control.Cursor,
                 batch.Role);
@@ -288,14 +288,14 @@ namespace AIBT.Burst
                 return carrierGate;
             }
 
-            if (!TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out var control))
+            if (!TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out var control))
             {
                 return BurstContextResult.InvalidHandle;
             }
 
             reader = new BurstConfigurationReader(
                 Token(control.OwnerId, control.Generation, frame.FrameId),
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.FrameId,
                 frame.RequestOrdinal,
                 frame.Role);
@@ -313,20 +313,20 @@ namespace AIBT.Burst
                 return carrierGate;
             }
 
-            if (!TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out var control))
+            if (!TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out var control))
             {
                 return BurstContextResult.InvalidHandle;
             }
 
-            var request = frame.Runtime.Requests[(int)control.Cursor];
+            var request = frame.RuntimeRef().Requests[(int)control.Cursor];
             if (request.Phase == BurstCallbackPhase.Observer)
             {
-                return LatchFrameFailure(frame.Runtime, frame.FrameId, BurstContextResult.PhaseViolation);
+                return LatchFrameFailure(frame.RuntimeRef(), frame.FrameId, BurstContextResult.PhaseViolation);
             }
 
             accessor = new BurstMemoryAccessor(
                 Token(control.OwnerId, control.Generation, frame.FrameId),
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.FrameId,
                 frame.RequestOrdinal,
                 frame.Role);
@@ -348,15 +348,15 @@ namespace AIBT.Burst
                 return carrierGate;
             }
 
-            if (!TryFrame(reader.Runtime, reader.FrameId, reader.RequestOrdinal, out var control))
+            if (!TryFrame(reader.RuntimeRef(), reader.FrameId, reader.RequestOrdinal, out var control))
             {
-                return LatchFrameFailure(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                return LatchFrameFailure(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            var request = reader.Runtime.Requests[(int)control.Cursor];
-            var dispatchCase = reader.Runtime.Cases[(int)request.CatalogCaseIndex];
+            var request = reader.RuntimeRef().Requests[(int)control.Cursor];
+            var dispatchCase = reader.RuntimeRef().Cases[(int)request.CatalogCaseIndex];
             if (!TryField(
-                    reader.Runtime.ConfigurationFields,
+                    reader.RuntimeRef().ConfigurationFields,
                     dispatchCase.FirstConfigurationField,
                     dispatchCase.ConfigurationFieldCount,
                     fieldOrdinal,
@@ -365,17 +365,17 @@ namespace AIBT.Burst
                     out var field,
                     out var relativeOffset))
             {
-                return LatchFrameFailure(reader.Runtime, reader.FrameId, BurstContextResult.TypeMismatch);
+                return LatchFrameFailure(reader.RuntimeRef(), reader.FrameId, BurstContextResult.TypeMismatch);
             }
 
             var result = TryReadCanonical(
-                reader.Runtime.ConfigurationBytes,
+                reader.RuntimeRef().ConfigurationBytes,
                 request.ConfigurationOffset + relativeOffset,
                 encoding,
                 out value);
             return result == BurstContextResult.Success
                 ? result
-                : LatchFrameFailure(reader.Runtime, reader.FrameId, result);
+                : LatchFrameFailure(reader.RuntimeRef(), reader.FrameId, result);
         }
 
         internal static BurstContextResult TryReadMemory<T>(
@@ -393,15 +393,15 @@ namespace AIBT.Burst
                 return carrierGate;
             }
 
-            if (!TryFrame(accessor.Runtime, accessor.FrameId, accessor.RequestOrdinal, out var control))
+            if (!TryFrame(accessor.RuntimeRef(), accessor.FrameId, accessor.RequestOrdinal, out var control))
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.InvalidHandle);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            var request = accessor.Runtime.Requests[(int)control.Cursor];
-            var dispatchCase = accessor.Runtime.Cases[(int)request.CatalogCaseIndex];
+            var request = accessor.RuntimeRef().Requests[(int)control.Cursor];
+            var dispatchCase = accessor.RuntimeRef().Cases[(int)request.CatalogCaseIndex];
             if (!TryField(
-                    accessor.Runtime.MemoryFields,
+                    accessor.RuntimeRef().MemoryFields,
                     dispatchCase.FirstMemoryField,
                     dispatchCase.MemoryFieldCount,
                     fieldOrdinal,
@@ -410,17 +410,17 @@ namespace AIBT.Burst
                     out _,
                     out var relativeOffset))
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.TypeMismatch);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.TypeMismatch);
             }
 
             var result = TryReadCanonical(
-                accessor.Runtime.MemoryStaging,
+                accessor.RuntimeRef().MemoryStaging,
                 request.MemoryOffset + relativeOffset,
                 encoding,
                 out value);
             return result == BurstContextResult.Success
                 ? result
-                : LatchFrameFailure(accessor.Runtime, accessor.FrameId, result);
+                : LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, result);
         }
 
         internal static BurstContextResult TryWriteMemory<T>(
@@ -437,9 +437,9 @@ namespace AIBT.Burst
                 return carrierGate;
             }
 
-            if (!TryFrame(accessor.Runtime, accessor.FrameId, accessor.RequestOrdinal, out var control))
+            if (!TryFrame(accessor.RuntimeRef(), accessor.FrameId, accessor.RequestOrdinal, out var control))
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.InvalidHandle);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.InvalidHandle);
             }
 
             if (control.FirstFailure != BurstContextResult.Success)
@@ -449,13 +449,13 @@ namespace AIBT.Burst
 
             if (control.MemoryCommitted != 0)
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.AlreadyCommitted);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.AlreadyCommitted);
             }
 
-            var request = accessor.Runtime.Requests[(int)control.Cursor];
-            var dispatchCase = accessor.Runtime.Cases[(int)request.CatalogCaseIndex];
+            var request = accessor.RuntimeRef().Requests[(int)control.Cursor];
+            var dispatchCase = accessor.RuntimeRef().Cases[(int)request.CatalogCaseIndex];
             if (!TryField(
-                    accessor.Runtime.MemoryFields,
+                    accessor.RuntimeRef().MemoryFields,
                     dispatchCase.FirstMemoryField,
                     dispatchCase.MemoryFieldCount,
                     fieldOrdinal,
@@ -464,21 +464,21 @@ namespace AIBT.Burst
                     out var field,
                     out var relativeOffset))
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.TypeMismatch);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.TypeMismatch);
             }
 
             var result = TryWriteCanonical(
-                accessor.Runtime.MemoryStaging,
+                accessor.RuntimeRef().MemoryStaging,
                 request.MemoryOffset + relativeOffset,
                 encoding,
                 value);
             if (result != BurstContextResult.Success)
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, result);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, result);
             }
 
             MarkRange(
-                accessor.Runtime.MemoryWritten,
+                accessor.RuntimeRef().MemoryWritten,
                 request.MemoryOffset + relativeOffset,
                 field.ElementSize);
             return BurstContextResult.Success;
@@ -498,7 +498,7 @@ namespace AIBT.Burst
 
             if (float.IsNaN(value) || float.IsInfinity(value))
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.InvalidEncoding);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.InvalidEncoding);
             }
 
             if (value == 0f)
@@ -528,7 +528,7 @@ namespace AIBT.Burst
 
             if (double.IsNaN(value) || double.IsInfinity(value))
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.InvalidEncoding);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.InvalidEncoding);
             }
 
             if (value == 0d)
@@ -552,9 +552,9 @@ namespace AIBT.Burst
                 return carrierGate;
             }
 
-            if (!TryFrame(accessor.Runtime, accessor.FrameId, accessor.RequestOrdinal, out var control))
+            if (!TryFrame(accessor.RuntimeRef(), accessor.FrameId, accessor.RequestOrdinal, out var control))
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.InvalidHandle);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.InvalidHandle);
             }
 
             if (control.FirstFailure != BurstContextResult.Success)
@@ -564,54 +564,54 @@ namespace AIBT.Burst
 
             if (control.MemoryCommitted != 0)
             {
-                return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.AlreadyCommitted);
+                return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.AlreadyCommitted);
             }
 
-            var request = accessor.Runtime.Requests[(int)control.Cursor];
-            var dispatchCase = accessor.Runtime.Cases[(int)request.CatalogCaseIndex];
+            var request = accessor.RuntimeRef().Requests[(int)control.Cursor];
+            var dispatchCase = accessor.RuntimeRef().Cases[(int)request.CatalogCaseIndex];
             for (uint ordinal = 0; ordinal < dispatchCase.MemoryFieldCount; ordinal++)
             {
-                var field = accessor.Runtime.MemoryFields[(int)(dispatchCase.FirstMemoryField + ordinal)];
+                var field = accessor.RuntimeRef().MemoryFields[(int)(dispatchCase.FirstMemoryField + ordinal)];
                 var bytes = (ulong)field.ElementCount * field.ElementSize;
                 var start = request.MemoryOffset + field.ByteOffset;
                 for (ulong index = 0; index < bytes; index++)
                 {
-                    if (accessor.Runtime.MemoryWritten[(int)(start + index)] == 0)
+                    if (accessor.RuntimeRef().MemoryWritten[(int)(start + index)] == 0)
                     {
-                        return LatchFrameFailure(accessor.Runtime, accessor.FrameId, BurstContextResult.IncompleteValue);
+                        return LatchFrameFailure(accessor.RuntimeRef(), accessor.FrameId, BurstContextResult.IncompleteValue);
                     }
                 }
             }
 
-            if (accessor.Runtime.CaseCanonicalRanges.Length != 0)
+            if (accessor.RuntimeRef().CaseCanonicalRanges.Length != 0)
             {
                 var canonicalRangeIndex = (ulong)request.CatalogCaseIndex * 2UL + 1UL;
-                if (canonicalRangeIndex >= (ulong)accessor.Runtime.CaseCanonicalRanges.Length)
+                if (canonicalRangeIndex >= (ulong)accessor.RuntimeRef().CaseCanonicalRanges.Length)
                 {
                     return LatchFrameFailure(
-                        accessor.Runtime,
+                        accessor.RuntimeRef(),
                         accessor.FrameId,
                         BurstContextResult.InvalidHandle);
                 }
 
-                var canonicalRange = accessor.Runtime.CaseCanonicalRanges[(int)canonicalRangeIndex];
+                var canonicalRange = accessor.RuntimeRef().CaseCanonicalRanges[(int)canonicalRangeIndex];
                 if (!NativeBurstDispatchCanonicalV2.ValidateBytes(
-                        accessor.Runtime.CanonicalRules.AsReadOnly(),
+                        accessor.RuntimeRef().CanonicalRules.AsReadOnly(),
                         in canonicalRange,
-                        accessor.Runtime.MemoryStaging.AsReadOnly(),
+                        accessor.RuntimeRef().MemoryStaging.AsReadOnly(),
                         request.MemoryOffset,
                         dispatchCase.MemorySize,
                         NativeBurstDispatchCanonicalStoragePolicyV2.AllowZeroOpaqueSentinel))
                 {
                     return LatchFrameFailure(
-                        accessor.Runtime,
+                        accessor.RuntimeRef(),
                         accessor.FrameId,
                         BurstContextResult.InvalidEncoding);
                 }
             }
 
             control.MemoryCommitted = 1;
-            WriteControl(accessor.Runtime, control);
+            WriteControl(accessor.RuntimeRef(), control);
             return BurstContextResult.Success;
         }
 
@@ -625,12 +625,12 @@ namespace AIBT.Burst
                 return PhaseFailure(in frame);
             }
 
-            GetRandom(frame.Runtime, in request, in dispatchCase, out var state, out var increment);
+            GetRandom(frame.RuntimeRef(), in request, in dispatchCase, out var state, out var increment);
             context = new BurstEnterContext(
                 Token(control.OwnerId, control.Generation, frame.FrameId),
                 state,
                 increment,
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.FrameId,
                 frame.Role);
             return BurstContextResult.Success;
@@ -646,12 +646,12 @@ namespace AIBT.Burst
                 return PhaseFailure(in frame);
             }
 
-            GetRandom(frame.Runtime, in request, in dispatchCase, out var state, out var increment);
+            GetRandom(frame.RuntimeRef(), in request, in dispatchCase, out var state, out var increment);
             context = new BurstTickContext(
                 Token(control.OwnerId, control.Generation, frame.FrameId),
                 state,
                 increment,
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.FrameId,
                 frame.Role);
             return BurstContextResult.Success;
@@ -669,7 +669,7 @@ namespace AIBT.Burst
 
             context = new BurstAbortContext(
                 Token(control.OwnerId, control.Generation, frame.FrameId),
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.FrameId,
                 frame.Role);
             return BurstContextResult.Success;
@@ -686,14 +686,14 @@ namespace AIBT.Burst
                 return carrierGate;
             }
 
-            if (!TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out _))
+            if (!TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out _))
             {
                 return BurstContextResult.InvalidHandle;
             }
 
             return TryPhase(in frame, BurstCallbackPhase.Exit, out _, out _, out _)
                 ? BurstContextResult.Success
-                : LatchFrameFailure(frame.Runtime, frame.FrameId, BurstContextResult.PhaseViolation);
+                : LatchFrameFailure(frame.RuntimeRef(), frame.FrameId, BurstContextResult.PhaseViolation);
         }
 
         internal static BurstContextResult TryCreateObserverContext(
@@ -708,7 +708,7 @@ namespace AIBT.Burst
 
             context = new BurstObserverContext(
                 Token(control.OwnerId, control.Generation, frame.FrameId),
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.FrameId,
                 frame.Role);
             return BurstContextResult.Success;
@@ -750,7 +750,7 @@ namespace AIBT.Burst
             var contextGate = ValidateCompletionContext(
                 in batch,
                 in frame,
-                context.Runtime,
+                context.RuntimeRef(),
                 context.FrameId,
                 context.ValidationToken);
             if (contextGate != BurstContextResult.Success)
@@ -777,7 +777,7 @@ namespace AIBT.Burst
             var contextGate = ValidateCompletionContext(
                 in batch,
                 in frame,
-                context.Runtime,
+                context.RuntimeRef(),
                 context.FrameId,
                 context.ValidationToken);
             if (contextGate != BurstContextResult.Success)
@@ -813,21 +813,21 @@ namespace AIBT.Burst
             }
 
             var carrierRoleGate = BurstBindingBridgeCoreV2.GateCarrierRole(
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.Role);
             if (carrierRoleGate != BurstContextResult.Success)
             {
                 return carrierRoleGate;
             }
 
-            if (!SameBacking(batch.Runtime, frame.Runtime))
+            if (!SameBacking(batch.RuntimeRef(), frame.RuntimeRef()))
             {
                 return BurstContextResult.InvalidHandle;
             }
 
-            if (!TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out _))
+            if (!TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out _))
             {
-                return CompletedFrameResult(frame.Runtime, frame.FrameId, frame.RequestOrdinal);
+                return CompletedFrameResult(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal);
             }
 
             var frameGate = BurstBindingBridgeCoreV2.GateFrameCarrier(in frame);
@@ -838,7 +838,7 @@ namespace AIBT.Burst
 
             if ((byte)result > (byte)ConditionResult.Failure)
             {
-                return LatchFrameFailure(frame.Runtime, frame.FrameId, BurstContextResult.InvalidStatus);
+                return LatchFrameFailure(frame.RuntimeRef(), frame.FrameId, BurstContextResult.InvalidStatus);
             }
 
             return Complete(ref batch, in frame, BurstCallbackPhase.Observer, default, result, 0, 1);
@@ -856,33 +856,33 @@ namespace AIBT.Burst
             }
 
             if (frame.Role != batch.Role
-                || !SameBacking(batch.Runtime, frame.Runtime))
+                || !SameBacking(batch.RuntimeRef(), frame.RuntimeRef()))
             {
                 return BurstContextResult.InvalidHandle;
             }
 
             var carrierGate = BurstBindingBridgeCoreV2.GateCarrierRole(
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.Role);
             if (carrierGate != BurstContextResult.Success)
             {
                 return carrierGate;
             }
 
-            if (!TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out var control)
+            if (!TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out var control)
                 || frame.ValidationToken != Token(
                     control.OwnerId,
                     control.Generation,
                     frame.FrameId))
             {
-                return CompletedFrameResult(frame.Runtime, frame.FrameId, frame.RequestOrdinal);
+                return CompletedFrameResult(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal);
             }
 
             if (failure == BurstContextResult.Success
                 || (byte)failure > (byte)BurstContextResult.InvalidStatus)
             {
                 return LatchFrameFailure(
-                    frame.Runtime,
+                    frame.RuntimeRef(),
                     frame.FrameId,
                     BurstContextResult.InvalidStatus);
             }
@@ -893,27 +893,27 @@ namespace AIBT.Burst
             }
             else
             {
-                LatchFrameFailure(frame.Runtime, frame.FrameId, failure);
+                LatchFrameFailure(frame.RuntimeRef(), frame.FrameId, failure);
                 control.FirstFailure = failure;
             }
 
-            if (!TryClaimFrameCompletion(frame.Runtime, frame.FrameId))
+            if (!TryClaimFrameCompletion(frame.RuntimeRef(), frame.FrameId))
             {
                 return BurstContextResult.StaleCompletion;
             }
 
-            BurstBindingBridgeCoreV2.DiscardFrame(frame.Runtime, frame.FrameId);
+            BurstBindingBridgeCoreV2.DiscardFrame(frame.RuntimeRef(), frame.FrameId);
             control.ActiveFrameId = 0;
             control.MemoryCommitted = 0;
             control.State = NativeBurstDispatchStateV2.Terminal;
             control.ResultCode = BurstExecutionCode.Faulted;
             control.DiagnosticNumber = Diagnostic(failure);
-            WriteControl(batch.Runtime, control);
+            WriteControl(batch.RuntimeRef(), control);
             return failure;
         }
 
         internal static BurstContextResult TryGetTime(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             out long value)
         {
@@ -928,7 +928,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryNextUInt32(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong increment,
             ref ulong state,
@@ -946,7 +946,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryNextUInt32(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong increment,
             ref ulong state,
@@ -978,7 +978,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryNextFloat32(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong increment,
             ref ulong state,
@@ -1011,29 +1011,29 @@ namespace AIBT.Burst
             }
 
             var carrierRoleGate = BurstBindingBridgeCoreV2.GateCarrierRole(
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.Role);
             if (carrierRoleGate != BurstContextResult.Success)
             {
                 return carrierRoleGate;
             }
 
-            if (!SameBacking(batch.Runtime, frame.Runtime))
+            if (!SameBacking(batch.RuntimeRef(), frame.RuntimeRef()))
             {
                 return BurstContextResult.InvalidHandle;
             }
 
             if (!TryPhase(in frame, phase, out var control, out var request, out var dispatchCase))
             {
-                if (!TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out _))
+                if (!TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out _))
                 {
-                    return CompletedFrameResult(frame.Runtime, frame.FrameId, frame.RequestOrdinal);
+                    return CompletedFrameResult(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal);
                 }
 
                 var frameGate = BurstBindingBridgeCoreV2.GateFrameCarrier(in frame);
                 return frameGate == BurstContextResult.Success
                     ? LatchFrameFailure(
-                        frame.Runtime,
+                        frame.RuntimeRef(),
                         frame.FrameId,
                         BurstContextResult.PhaseViolation)
                     : frameGate;
@@ -1046,46 +1046,46 @@ namespace AIBT.Burst
 
             if (phase != BurstCallbackPhase.Observer && control.MemoryCommitted == 0)
             {
-                return LatchFrameFailure(frame.Runtime, frame.FrameId, BurstContextResult.IncompleteValue);
+                return LatchFrameFailure(frame.RuntimeRef(), frame.FrameId, BurstContextResult.IncompleteValue);
             }
 
             if (phase == BurstCallbackPhase.Tick
                 && (!IsStatus(status)
                     || !StatusAllowed(dispatchCase.PossibleStatuses, status)))
             {
-                return LatchFrameFailure(frame.Runtime, frame.FrameId, BurstContextResult.InvalidStatus);
+                return LatchFrameFailure(frame.RuntimeRef(), frame.FrameId, BurstContextResult.InvalidStatus);
             }
 
             if ((phase == BurstCallbackPhase.Enter || phase == BurstCallbackPhase.Tick)
                 && (dispatchCase.HasRandomStream != 0
                     ? (randomIncrement & 1) == 0
-                        || randomIncrement != frame.Runtime.RandomIncrements[(int)request.RandomStateIndex]
+                        || randomIncrement != frame.RuntimeRef().RandomIncrements[(int)request.RandomStateIndex]
                     : randomState != 0 || randomIncrement != 1))
             {
-                return LatchFrameFailure(frame.Runtime, frame.FrameId, BurstContextResult.PhaseViolation);
+                return LatchFrameFailure(frame.RuntimeRef(), frame.FrameId, BurstContextResult.PhaseViolation);
             }
 
             var bindingPreflight = BurstBindingBridgeCoreV2.TryPreflightFramePublish(
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.FrameId);
             if (bindingPreflight != BurstContextResult.Success)
             {
                 return bindingPreflight;
             }
 
-            if (!TryClaimFrameCompletion(frame.Runtime, frame.FrameId))
+            if (!TryClaimFrameCompletion(frame.RuntimeRef(), frame.FrameId))
             {
                 return BurstContextResult.StaleCompletion;
             }
 
-            BurstBindingBridgeCoreV2.PublishFrame(frame.Runtime, frame.FrameId);
+            BurstBindingBridgeCoreV2.PublishFrame(frame.RuntimeRef(), frame.FrameId);
 
             if (phase != BurstCallbackPhase.Observer)
             {
                 CopyRange(
-                    frame.Runtime.MemoryStaging,
+                    frame.RuntimeRef().MemoryStaging,
                     request.MemoryOffset,
-                    frame.Runtime.MemoryBytes,
+                    frame.RuntimeRef().MemoryBytes,
                     request.MemoryOffset,
                     dispatchCase.MemorySize);
             }
@@ -1093,11 +1093,11 @@ namespace AIBT.Burst
             if ((phase == BurstCallbackPhase.Enter || phase == BurstCallbackPhase.Tick)
                 && dispatchCase.HasRandomStream != 0)
             {
-                Write(frame.Runtime.RandomStates, (int)request.RandomStateIndex, randomState);
+                Write(frame.RuntimeRef().RandomStates, (int)request.RandomStateIndex, randomState);
             }
 
             Write(
-                frame.Runtime.RequestStatuses,
+                frame.RuntimeRef().RequestStatuses,
                 (int)control.Cursor,
                 phase == BurstCallbackPhase.Tick
                     ? (byte)status
@@ -1109,17 +1109,17 @@ namespace AIBT.Burst
             control.Cursor++;
             control.InstancesVisited++;
             control.SegmentSteps++;
-            control.State = control.Cursor == frame.Runtime.Requests.Length
+            control.State = control.Cursor == frame.RuntimeRef().Requests.Length
                 ? NativeBurstDispatchStateV2.Terminal
                 : NativeBurstDispatchStateV2.Ready;
             control.ResultCode = BurstExecutionCode.Success;
             control.DiagnosticNumber = 0;
-            WriteControl(frame.Runtime, control);
+            WriteControl(frame.RuntimeRef(), control);
             return BurstContextResult.Success;
         }
 
         private static bool TryControl(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             out NativeBurstDispatchControlV2 control)
         {
             control = default;
@@ -1137,7 +1137,7 @@ namespace AIBT.Burst
         }
 
         private static bool TryExecutionClaim(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             out int claim)
         {
             claim = default;
@@ -1150,7 +1150,7 @@ namespace AIBT.Burst
             return claim >= 0 && claim <= 3;
         }
 
-        private static bool TryClaimFrameAcquisition(BurstDispatchBackingV2 runtime, uint frameId)
+        private static bool TryClaimFrameAcquisition(in BurstDispatchBackingV2 runtime, uint frameId)
         {
             var claims = runtime.FrameCompletionClaim;
             var expected = (long)frameId - 1L;
@@ -1161,7 +1161,7 @@ namespace AIBT.Burst
                 && Interlocked.CompareExchange(ref claims.ElementAt(0), active, expected) == expected;
         }
 
-        private static bool TryClaimFrameCompletion(BurstDispatchBackingV2 runtime, uint frameId)
+        private static bool TryClaimFrameCompletion(in BurstDispatchBackingV2 runtime, uint frameId)
         {
             var claims = runtime.FrameCompletionClaim;
             return claims.IsCreated
@@ -1174,7 +1174,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult CompletedFrameResult(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             uint requestOrdinal)
         {
@@ -1197,7 +1197,7 @@ namespace AIBT.Burst
             in BurstExecutionBatch batch,
             bool allowCompleted)
         {
-            if (!TryExecutionClaim(batch.Runtime, out var claim))
+            if (!TryExecutionClaim(batch.RuntimeRef(), out var claim))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -1228,7 +1228,7 @@ namespace AIBT.Burst
 
         private static BurstContextResult GateBatchExecute(in BurstExecutionBatch batch)
         {
-            if (!TryExecutionClaim(batch.Runtime, out var claim))
+            if (!TryExecutionClaim(batch.RuntimeRef(), out var claim))
             {
                 return BurstContextResult.InvalidHandle;
             }
@@ -1265,12 +1265,12 @@ namespace AIBT.Burst
 
             if (batch.Role == NativeBurstBatchRoleV2.Job)
             {
-                return batch.Runtime.ExecutionClaim[0] == 2;
+                return batch.RuntimeRef().ExecutionClaim[0] == 2;
             }
 
-            if (batch.Runtime.ExecutionClaim[0] == 0)
+            if (batch.RuntimeRef().ExecutionClaim[0] == 0)
             {
-                var claims = batch.Runtime.ExecutionClaim;
+                var claims = batch.RuntimeRef().ExecutionClaim;
                 var claim = Interlocked.CompareExchange(
                     ref claims.ElementAt(0),
                     1,
@@ -1282,17 +1282,17 @@ namespace AIBT.Burst
 
             }
 
-            return batch.Runtime.ExecutionClaim[0] == 1;
+            return batch.RuntimeRef().ExecutionClaim[0] == 1;
         }
 
         private static bool RoleCanExecute(
             in BurstExecutionBatch batch,
             in NativeBurstDispatchControlV2 control)
-            => batch.Role == NativeBurstBatchRoleV2.Host && batch.Runtime.ExecutionClaim[0] == 1
-                || batch.Role == NativeBurstBatchRoleV2.Job && batch.Runtime.ExecutionClaim[0] == 2;
+            => batch.Role == NativeBurstBatchRoleV2.Host && batch.RuntimeRef().ExecutionClaim[0] == 1
+                || batch.Role == NativeBurstBatchRoleV2.Job && batch.RuntimeRef().ExecutionClaim[0] == 2;
 
         private static bool TryFrame(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             uint requestOrdinal,
             out NativeBurstDispatchControlV2 control)
@@ -1306,7 +1306,7 @@ namespace AIBT.Burst
         private static BurstContextResult PhaseFailure(in BurstDispatchFrame frame)
         {
             var roleGate = BurstBindingBridgeCoreV2.GateCarrierRole(
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.Role);
             if (roleGate != BurstContextResult.Success)
             {
@@ -1314,13 +1314,13 @@ namespace AIBT.Burst
             }
 
             return BurstBindingBridgeCoreV2.ValidateFrameCarrier(in frame)
-                    && TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out _)
-                ? LatchFrameFailure(frame.Runtime, frame.FrameId, BurstContextResult.PhaseViolation)
+                    && TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out _)
+                ? LatchFrameFailure(frame.RuntimeRef(), frame.FrameId, BurstContextResult.PhaseViolation)
                 : BurstContextResult.InvalidHandle;
         }
 
         private static BurstContextResult LatchFrameFailure(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             BurstContextResult failure)
         {
@@ -1350,18 +1350,18 @@ namespace AIBT.Burst
             request = default;
             dispatchCase = default;
             if (!BurstBindingBridgeCoreV2.ValidateFrameCarrier(in frame)
-                || !TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out control))
+                || !TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out control))
             {
                 return false;
             }
 
-            request = frame.Runtime.Requests[(int)control.Cursor];
-            dispatchCase = frame.Runtime.Cases[(int)request.CatalogCaseIndex];
+            request = frame.RuntimeRef().Requests[(int)control.Cursor];
+            dispatchCase = frame.RuntimeRef().Cases[(int)request.CatalogCaseIndex];
             return request.Phase == phase && Includes(dispatchCase.Phases, phase);
         }
 
         private static bool TryActiveRequest(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             out NativeBurstDispatchControlV2 control,
             out NativeBurstDispatchRequestV2 request,
@@ -1384,10 +1384,10 @@ namespace AIBT.Burst
 
         private static bool ContextMatches(
             in BurstDispatchFrame frame,
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong token)
-            => SameBacking(frame.Runtime, runtime)
+            => SameBacking(frame.RuntimeRef(), runtime)
                 && BurstBindingBridgeCoreV2.ValidateFrameCarrier(in frame)
                 && TryFrame(runtime, frameId, frame.RequestOrdinal, out var control)
                 && token == frame.ValidationToken
@@ -1396,7 +1396,7 @@ namespace AIBT.Burst
         private static BurstContextResult ValidateCompletionContext(
             in BurstExecutionBatch batch,
             in BurstDispatchFrame frame,
-            BurstDispatchBackingV2 contextRuntime,
+            in BurstDispatchBackingV2 contextRuntime,
             uint contextFrameId,
             ulong contextToken)
         {
@@ -1407,21 +1407,21 @@ namespace AIBT.Burst
             }
 
             var carrierRoleGate = BurstBindingBridgeCoreV2.GateCarrierRole(
-                frame.Runtime,
+                frame.RuntimeRef(),
                 frame.Role);
             if (carrierRoleGate != BurstContextResult.Success)
             {
                 return carrierRoleGate;
             }
 
-            if (frame.Role != batch.Role || !SameBacking(batch.Runtime, frame.Runtime))
+            if (frame.Role != batch.Role || !SameBacking(batch.RuntimeRef(), frame.RuntimeRef()))
             {
                 return BurstContextResult.InvalidHandle;
             }
 
-            if (!TryFrame(frame.Runtime, frame.FrameId, frame.RequestOrdinal, out _))
+            if (!TryFrame(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal, out _))
             {
-                return CompletedFrameResult(frame.Runtime, frame.FrameId, frame.RequestOrdinal);
+                return CompletedFrameResult(frame.RuntimeRef(), frame.FrameId, frame.RequestOrdinal);
             }
 
             var frameGate = BurstBindingBridgeCoreV2.GateFrameCarrier(in frame);
@@ -1437,14 +1437,14 @@ namespace AIBT.Burst
                     contextToken)
                 ? BurstContextResult.Success
                 : LatchFrameFailure(
-                    frame.Runtime,
+                    frame.RuntimeRef(),
                     frame.FrameId,
                     BurstContextResult.InvalidHandle);
         }
 
         private static bool SameBacking(
-            BurstDispatchBackingV2 left,
-            BurstDispatchBackingV2 right)
+            in BurstDispatchBackingV2 left,
+            in BurstDispatchBackingV2 right)
             => left.OwnerId != 0
                 && left.OwnerId == right.OwnerId
                 && left.Generation == right.Generation
@@ -1681,7 +1681,7 @@ namespace AIBT.Burst
         }
 
         private static void GetRandom(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             in NativeBurstDispatchRequestV2 request,
             in NativeBurstDispatchCaseV2 dispatchCase,
             out ulong state,
@@ -1699,7 +1699,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult ValidateRandom(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong increment)
         {
@@ -1733,7 +1733,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult FaultWithoutFrame(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             BurstContextResult failure)
         {
             if (!TryControl(runtime, out var control))
@@ -1817,7 +1817,7 @@ namespace AIBT.Burst
         }
 
         private static bool TryClaimSchedule(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             int next,
             int expected)
         {
@@ -1829,7 +1829,7 @@ namespace AIBT.Burst
         }
 
         private static void WriteControl(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             NativeBurstDispatchControlV2 control)
         {
             var controls = runtime.Control;

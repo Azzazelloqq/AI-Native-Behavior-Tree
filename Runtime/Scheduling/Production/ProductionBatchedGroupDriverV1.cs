@@ -35,6 +35,9 @@ namespace AIBT
         private bool _running;
         private bool _disposed;
 
+        /// <summary>True once the round pool's Persistent storage has been released.</summary>
+        internal bool IsPoolDisposed => _pool.IsDisposed;
+
         internal bool TryRun(
             IReadOnlyList<ProductionTreeHost> members,
             uint batchSize,
@@ -62,6 +65,9 @@ namespace AIBT
                 _pendingDispatch.Clear();
                 _dispatchGroupScratch.Clear();
                 _running = false;
+                // P10-003: Dispose() called during this run (the scheduler destroyed from inside a
+                // round) could not release the pool while the round still used it; release it now.
+                if (_disposed) _pool.Dispose();
             }
         }
 

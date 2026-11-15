@@ -122,6 +122,211 @@ namespace AIBT.Tests.Integration.NativeRuntime
             AssertSame(normal, batched, "forced BatchedJobsSameFrame");
         }
 
+        // P10-003: per-frame SHA-256 (first 16 hex digits) of every observation of
+        // AllPolicies_MatchTheOutcomeRecordedBeforeP10003_FrameByFrame, recorded on the runtime at
+        // 4dee8ec (before any dispatch-framing change). One entry per frame.
+        private static readonly string[] RecordedFrameDigests =
+        {
+            "c3c9c77fed8a3bc4",
+            "e5a2a7c36ab1abc5",
+            "f0ff5c40cd0c5c03",
+            "c4171b60b0b9bfc4",
+            "a9a8c91f446fb7ef",
+            "1f79d53aaff309cb",
+            "8b32f1691b63f96c",
+            "cf66a06ae5a38651",
+            "efd7d1289d2299fa",
+            "fd5188ddc400c199",
+            "fc153ed0b4660e44",
+            "5f85ffaad9b6ac0b",
+            "ab75f45088cc0dd6",
+            "2da71c4f73b276b3",
+            "fc898ca96975a0d8",
+            "fe2e5c8987d92955",
+            "d9e5da0c094538a7",
+            "21f8b950b85510ed",
+            "a4c38db82a779830",
+            "65afc200546062f3",
+            "9f0abbd5b3f7f9c8",
+            "603c3da882e3094f",
+            "be05332f4393d830",
+            "8d0281b2405942e8",
+            "61707468bce35c58",
+            "01b84ddad2495ef0",
+            "bda6d27d6264623b",
+            "79bb4af1e082e4f7",
+            "f38b42fe785fb202",
+            "8eb78fdf212dc531",
+            "49a98b2c0a0b385f",
+            "2d5b8b992356a81e",
+            "e1338d69415725d3",
+            "933ef304dbfcce6f",
+            "6c3edc5ebf11278b",
+            "a6c09a78db6f9d77",
+            "af6e05441a54d7ca",
+            "fa0ca447bb1310b5",
+            "97a83bade0612f92",
+            "1f36bfe61f309934",
+            "b4183933e6d18cfe",
+            "903ccc0129d27a00",
+            "c3ab1e936eb3f64d",
+            "9ec66ba0e27670e3",
+            "03a5f842afba1f81",
+            "bf87f4781cd74a11",
+            "2975a48d7a7a572a",
+            "133d527894d8e348",
+            "f71008c14b8ee209",
+            "9ef6a9355280ef04",
+            "2cc9183681aa8c04",
+            "6411a3b99e60553b",
+            "c30b1b06151e1142",
+            "8692a56d4a4de39d",
+            "421ff254f43d9e6c",
+            "9fc723f76d2138d7",
+            "09d7860986865c02",
+            "ba515516901592bf",
+            "b777d3e30cbcb218",
+            "05c8740ea6c71085",
+            "9069cd5e6378fdc5",
+            "b65e89a9c6cd249c",
+            "0815a04e09037016",
+            "b4df66ff3b2bd716",
+            "4afdffcdaebb99d3",
+            "9fdb9ee1e92be6f5",
+            "67b9744cff58c628",
+            "e1c457e95b46bdf0",
+            "9cede807208c73bf",
+            "801d14dd5e58d83e",
+            "a425c13338143a9b",
+            "908bdeb07679e350",
+            "89139f89a9e1c23a",
+            "156f4ec97a10fe22",
+            "07c81e69f6200966",
+            "75436d7bf77269e8",
+            "841eff6b0fc1e168",
+            "31e028c6c36eb076",
+            "455b00e73f513ec1",
+            "af840e72c58dfbef",
+            "56187fe463fe6fa8",
+            "4a263aed90d635ad",
+            "6cb326e213c84cdc",
+            "c297280220561e87",
+            "c67fdfd76351c0a7",
+            "ccf58bb55dffd4d6",
+            "dbed7e2c2ceef819",
+            "a382baa71e6f8e94",
+            "d9e8798d4bb4b948",
+            "ee37d7c298f576aa"
+        };
+
+        [Test]
+        public void AllPolicies_MatchTheOutcomeRecordedBeforeP10003_FrameByFrame()
+        {
+            // P10-003 guard for the dispatch-framing optimizations: the observable outcome of every
+            // frame (trace records, root result, running state, run count, error, delivered effects
+            // and every byte of each agent's Tree/Agent blackboard storage) must equal what the
+            // unoptimized runtime produced, under all three profiles.
+            var trees = new[] { Prepare(SequenceTree), Prepare(ReactiveEffectTree), Prepare(LoopTree) };
+            foreach (var mode in new[] { Mode.DefaultProfile, Mode.ForcedImmediate, Mode.ForcedBatchedJobs })
+            {
+                var outcome = Run(trees, mode, withTreeValues: true);
+                var digests = FrameDigests(outcome.Lines);
+                Assert.That(digests.Count, Is.EqualTo(FrameCount), mode + ": frames observed");
+                if (RecordedFrameDigests.Length == 0)
+                    Assert.Fail("No recorded digests. Recorded now (" + mode + "):\n"
+                        + string.Join(",\n", digests.Select(d => "            \"" + d + "\"")));
+                for (var frame = 0; frame < FrameCount; frame++)
+                    if (digests[frame] != RecordedFrameDigests[frame])
+                        Assert.Fail(mode + ": frame " + frame + " differs from the recorded outcome.\n"
+                            + string.Join("\n", outcome.Lines.Where(l => l.StartsWith("f" + frame + " ", StringComparison.Ordinal)).Take(40)));
+            }
+        }
+
+        private static List<string> FrameDigests(List<string> lines)
+        {
+            var digests = new List<string>();
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
+                var frame = 0;
+                var text = new StringBuilder();
+                void Flush()
+                {
+                    var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(text.ToString()));
+                    digests.Add(BitConverter.ToString(hash, 0, 8).Replace("-", string.Empty).ToLowerInvariant());
+                    text.Clear();
+                }
+                foreach (var line in lines)
+                {
+                    var space = line.IndexOf(' ');
+                    var lineFrame = int.Parse(line.Substring(1, space - 1), System.Globalization.CultureInfo.InvariantCulture);
+                    while (lineFrame > frame) { Flush(); frame++; }
+                    text.Append(line).Append('\n');
+                }
+                Flush();
+            }
+            return digests;
+        }
+
+        [Test]
+        public void WarmedUpImmediateFrames_DoNotAllocateManagedMemory()
+        {
+            // P10-003: the same population as the BatchedJobsSameFrame allocation test below, driven
+            // through NativeTreeAgent under a forced Immediate profile (single-host dispatch path).
+            var recorder = UnityEngine.Profiling.Recorder.Get("GC.Alloc");
+            recorder.FilterToCurrentThread();
+            object kept = null;
+            Assert.That(CountAllocations(recorder, () => kept = new byte[64], 10), Is.EqualTo(10), "The recorder must see allocations.");
+            Assert.That(kept, Is.Not.Null);
+
+            var trees = new[] { Prepare(LoopTree), Prepare(ReactiveEffectTree) };
+            var worldObject = Track(new GameObject("AIBT.Tests.P10003.AllocationWorld"));
+            var scheduler = worldObject.AddComponent<ProductionTreeScheduler>();
+            var world = worldObject.AddComponent<ProductionTreeWorld>();
+            InvokePrivate(world, "Awake");
+            InvokePrivate(world, "OnEnable");
+            var profile = Forced(SchedulingPolicy.Immediate);
+            var update = (Action)Delegate.CreateDelegate(typeof(Action), scheduler,
+                typeof(ProductionTreeScheduler).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic));
+
+            var agents = new List<NativeTreeAgent>();
+            var effects = 0;
+            try
+            {
+                for (var index = 0; index < 32; index++)
+                {
+                    var agent = Track(new GameObject("AIBT.Tests.P10003.AllocationAgent" + index)).AddComponent<NativeTreeAgent>();
+                    agent.Tree = trees[index % trees.Length];
+                    agent.World = world;
+                    agent.RestartMode = NativeTreeRestartMode.Never;
+                    agent.Profile = profile;
+                    agent.OnEffect("hit", (int value) => effects++);
+                    agent.Activate();
+                    agent.SetFact("live-target", 1f);
+                    if (index % trees.Length == 1) agent.SetFact("armed", true);
+                    agents.Add(agent);
+                }
+                for (var frame = 0; frame < 60; frame++) update();
+                var effectsBefore = effects;
+
+                var allocations = CountAllocations(recorder, update, 200);
+
+                Assert.That(effects - effectsBefore, Is.EqualTo(200 * 16), "Every emitter delivers one effect per frame while measured.");
+                foreach (var agent in agents)
+                {
+                    Assert.That(agent.LastError, Is.Null);
+                    Assert.That(agent.IsRunning, Is.True, "The trees keep running; nothing restarts.");
+                }
+                Assert.That(scheduler.TryGetFrameEntry(0, out var entry) && entry.SelectedPolicy == SchedulingPolicy.Immediate, Is.True,
+                    "The frame ran under Immediate.");
+                Assert.That(allocations, Is.Zero,
+                    allocations + " managed allocation(s) in 200 warmed-up Immediate frames; the tolerance is zero.");
+            }
+            finally
+            {
+                foreach (var agent in agents) if (agent != null) agent.Deactivate();
+            }
+        }
+
         [Test]
         public void WarmedUpBatchedJobsFrames_DoNotAllocateManagedMemory()
         {
@@ -225,7 +430,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
             return text.ToString();
         }
 
-        private Outcome Run(ProductionTreeAsset[] trees, Mode mode)
+        private Outcome Run(ProductionTreeAsset[] trees, Mode mode, bool withTreeValues = false)
         {
             var outcome = new Outcome();
             var worldObject = Track(new GameObject("AIBT.Tests.P10002.World." + mode));
@@ -279,6 +484,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
                         var agent = agents[index];
                         var prefix = "f" + frame + " a" + index;
                         CaptureTrace(agent.Host, prefix, outcome.Lines);
+                        if (withTreeValues) CaptureTreeValues(agent.Host, prefix, outcome.Lines);
                         outcome.Lines.Add(prefix + " result=" + (agent.LastResult?.ToString() ?? "none") + " running=" + agent.IsRunning
                             + " runs=" + agent.CompletedRuns + " error=" + (agent.LastError ?? "none"));
                         var runs = agent.CompletedRuns;
@@ -310,6 +516,16 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
             Assert.That(snapshot.DroppedCount, Is.Zero, "The trace channel must hold one frame.");
             Assert.That(owner.TryReset(out failure), Is.True, failure.ToString());
+        }
+
+        private static void CaptureTreeValues(ProductionTreeHost host, string prefix, List<string> lines)
+        {
+            var adapter = host != null ? host.GeneratedDispatchAdapter : null;
+            if (adapter == null) { lines.Add(prefix + " values none"); return; }
+            var text = new StringBuilder(prefix).Append(" values ");
+            for (uint offset = 0; adapter.TryReadTreeValueByte(offset, out var value); offset++)
+                text.Append(value.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+            lines.Add(text.ToString());
         }
 
         private static SchedulingProfile Forced(SchedulingPolicy policy)

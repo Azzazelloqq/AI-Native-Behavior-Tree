@@ -62,9 +62,9 @@ frames instead of one in every few hundred.
 ## Native layer (`NativeTreeAgent`)
 
 A native tick allocates nothing while the tree runs. The fixed cost is per agent and update, on the
-main thread with the default profile (`Normal`, `Immediate` policy): ≈3.8 µs for an agent waiting in
-one leaf at N=1 000, ≈5 µs for one that reads a fact and emits an effect; each further leaf step
-costs about 8 µs.
+main thread with the default profile (`Normal`, `Immediate` policy): ≈2.0 µs for an agent waiting in
+one leaf at N=1 000, ≈2.7 µs for one that reads a fact and emits an effect (since P10-003; it was
+≈3.8 and ≈5 µs before). Each node dispatch costs roughly 1.2–1.7 µs.
 
 Two things allocate:
 
@@ -128,8 +128,27 @@ benchmark (`Invoke-Perf.ps1 -Quick`, IL2CPP, 2 runs; main-thread µs per agent a
 | `shared-reactive16` | default (`Immediate`) | 128 | 127 | 0 |
 | | `BatchedJobsSameFrame` | 119 | 125 | 0 |
 
-These numbers exclude worker time. Trees with facts and effects are still slower under Jobs,
-because the group dispatch path costs more per member (`Planning~/Evidence/P10-002/README.md`).
+These numbers exclude worker time.
+
+Since P10-003 the dispatch framing around each node is cheaper (the bridge no longer copies its
+native backing on every access, catalog metadata is validated once per workspace, and the grouped
+path lost two quadratic loops). Interleaved before/after, IL2CPP, quick benchmark, main-thread µs
+per agent and frame:
+
+| Tree | profile | N=1 000 | N=5 000 | B per agent-tick |
+|---|---|---:|---:|---:|
+| `io-wait1` | default (`Immediate`) | 2.0 | 2.5 | 0 |
+| | `BatchedJobsSameFrame` | 2.0 | 2.5 | 0 |
+| `shared-loop16` | default (`Immediate`) | 3.8 | 4.7 | 0 |
+| | `BatchedJobsSameFrame` | 3.9 | 5.0 | 0 |
+| `io-move1-fact-effect` | default (`Immediate`) | 2.7 | 3.4 | 0 |
+| | `BatchedJobsSameFrame` | 2.7 | 3.5 | 0 |
+| `shared-reactive16` | default (`Immediate`) | 54 | 54 | 0 |
+| | `BatchedJobsSameFrame` | 63 | 73 | 0 |
+
+The managed controls on the same runs: `m-shared-shape15` 1.0 / 1.2 µs, `m-unity15-both` 1.2 /
+1.6 µs. For these small trees the managed layer is still faster per agent. Trees with facts and
+effects are no longer slower under `BatchedJobsSameFrame` (`Planning~/Evidence/P10-003/README.md`).
 
 ## Advice
 

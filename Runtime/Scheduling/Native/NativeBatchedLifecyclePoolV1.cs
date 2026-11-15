@@ -36,6 +36,9 @@ namespace AIBT
 
         internal int Count => _count;
 
+        /// <summary>True once <see cref="Dispose"/> released every Persistent buffer this pool owns.</summary>
+        internal bool IsDisposed => _disposed;
+
         /// <summary>Binds the first <paramref name="count"/> machines (copies, as a lane does) for the next round.</summary>
         internal bool TryBind(NativeLifecycleMachineV1[] machines, int count, out NativeRuntimeFailureV1 failure)
         {

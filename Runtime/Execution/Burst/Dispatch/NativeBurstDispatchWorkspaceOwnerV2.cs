@@ -43,6 +43,9 @@ namespace AIBT.Execution.Burst.Dispatch
         private NativeBurstDispatchWorkspaceCapacityV2 _capacity;
         private bool _hasBindings;
         private bool _hasCanonicalMetadata;
+        // P10-003: the owned case/field/binding/canonical metadata is immutable after creation, so
+        // once one request validated in full, its catalog-only checks are known to pass.
+        private bool _catalogValidated;
         private NativeBurstDispatchWorkspaceStateV2 _state;
         private ulong _ownerId;
         private uint _generation;
@@ -252,6 +255,7 @@ namespace AIBT.Execution.Burst.Dispatch
                 _requests[0] = default;
                 return false;
             }
+            SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.BeginValidate);
 
             var durableTransaction = views.TransactionControl[0];
             if (_ledgerToken == 0)
@@ -304,6 +308,7 @@ namespace AIBT.Execution.Burst.Dispatch
 
             _state = NativeBurstDispatchWorkspaceStateV2.Prepared;
             lease = new NativeBurstDispatchWorkspaceLeaseV2(_ownerId, _generation);
+            SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.BeginClear);
             failure = BurstContextResult.Success;
             return true;
         }
@@ -732,12 +737,13 @@ namespace AIBT.Execution.Burst.Dispatch
                 views.RandomIncrements.AsReadOnly(),
                 bindingInput,
                 CanonicalInput());
-            if (!NativeBurstDispatchBatchOwnerV2.ValidateCreateInput(in input))
+            if (!NativeBurstDispatchBatchOwnerV2.ValidateCreateInput(in input, _catalogValidated))
             {
                 failure = BurstContextResult.InvalidEncoding;
                 return false;
             }
 
+            _catalogValidated = true;
             failure = BurstContextResult.Success;
             return true;
         }

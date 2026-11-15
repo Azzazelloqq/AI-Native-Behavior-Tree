@@ -518,6 +518,14 @@ namespace AIBT.Execution.Burst.Dispatch
         }
 
         internal static bool ValidateCreateInput(in NativeBurstDispatchCreateInputV2 input)
+            => ValidateCreateInput(in input, false);
+
+        /// <summary>
+        /// P10-003: <paramref name="catalogValidated"/> skips checks that read only catalog metadata
+        /// (see <see cref="NativeBurstDispatchBindingValidationV2.Validate(in NativeBurstDispatchCreateInputV2, bool)"/>).
+        /// Only an owner whose immutable metadata already passed one full validation passes true.
+        /// </summary>
+        internal static bool ValidateCreateInput(in NativeBurstDispatchCreateInputV2 input, bool catalogValidated)
         {
             if (!input.Cases.IsCreated
                 || !input.Requests.IsCreated
@@ -533,7 +541,7 @@ namespace AIBT.Execution.Burst.Dispatch
                 return false;
             }
 
-            for (var caseIndex = 0; caseIndex < input.Cases.Length; caseIndex++)
+            for (var caseIndex = 0; !catalogValidated && caseIndex < input.Cases.Length; caseIndex++)
             {
                 var dispatchCase = input.Cases[caseIndex];
                 if (dispatchCase.TypeNumericId == 0
@@ -585,7 +593,7 @@ namespace AIBT.Execution.Burst.Dispatch
                 }
             }
 
-            return NativeBurstDispatchBindingValidationV2.Validate(in input);
+            return NativeBurstDispatchBindingValidationV2.Validate(in input, catalogValidated);
         }
 
         internal static bool ValidateFieldRange(

@@ -42,6 +42,51 @@ namespace AIBT
             Rounds,
             Lanes,
             DispatchMembers,
+            SingleDispatches,
+            Count,
+        }
+
+        /// <summary>
+        /// P10-003: steps inside one generated dispatch (single-host path and group path). A second,
+        /// independent lap timer: <see cref="StepStart"/> opens a dispatch and each
+        /// <see cref="StepLap"/> charges the time since the previous step lap. It runs nested inside
+        /// the stage timer (HostDispatch/HostComplete or RoundResolve), so the steps split those
+        /// stages without changing them.
+        /// </summary>
+        internal enum Step
+        {
+            Reserve,
+            Enter,
+            Activation,
+            Snapshot,
+            RequestBuild,
+            BeginValidate,
+            BeginClear,
+            AcquireBatch,
+            Body,
+            Consume,
+            Commit,
+            Publish,
+            Acknowledge,
+            Reset,
+            Return,
+            EffectCapture,
+            MachineComplete,
+            TraceComplete,
+            GroupScan,
+            GroupParticipant,
+            GroupClear,
+            GroupPack,
+            GroupValidate,
+            GroupReserve,
+            GroupValidateCommits,
+            GroupPublish,
+            GroupResume,
+            BodyGenerated,
+            BridgeFrame,
+            BridgeContext,
+            BridgeComplete,
+            BridgeAccess,
             Count,
         }
 
@@ -49,6 +94,8 @@ namespace AIBT
         private static readonly long[] s_ticks = new long[(int)Stage.Count];
         private static readonly long[] s_counts = new long[(int)Counter.Count];
         private static long s_last;
+        private static readonly long[] s_stepTicks = new long[(int)Step.Count];
+        private static long s_stepLast;
 #endif
 
         [Conditional("AIBT_SCHEDULER_FRAME_PROFILE")]
@@ -70,6 +117,34 @@ namespace AIBT
         }
 
         [Conditional("AIBT_SCHEDULER_FRAME_PROFILE")]
+        internal static void StepStart()
+        {
+#if AIBT_SCHEDULER_FRAME_PROFILE
+            s_stepLast = Stopwatch.GetTimestamp();
+#endif
+        }
+
+        [Conditional("AIBT_SCHEDULER_FRAME_PROFILE")]
+        internal static void StepLap(Step step)
+        {
+#if AIBT_SCHEDULER_FRAME_PROFILE
+            var now = Stopwatch.GetTimestamp();
+            s_stepTicks[(int)step] += now - s_stepLast;
+            s_stepLast = now;
+#endif
+        }
+
+        // Bridge laps split the generated ExecuteImmediate body: time before a bridge call is
+        // generated code, time inside it is the bridge. Burst-compiled jobs skip them.
+        [Conditional("AIBT_SCHEDULER_FRAME_PROFILE")]
+        [Unity.Burst.BurstDiscard]
+        internal static void BridgeEnter() => StepLap(Step.BodyGenerated);
+
+        [Conditional("AIBT_SCHEDULER_FRAME_PROFILE")]
+        [Unity.Burst.BurstDiscard]
+        internal static void BridgeExit(Step step) => StepLap(step);
+
+        [Conditional("AIBT_SCHEDULER_FRAME_PROFILE")]
         internal static void Add(Counter counter, long value)
         {
 #if AIBT_SCHEDULER_FRAME_PROFILE
@@ -84,6 +159,7 @@ namespace AIBT
         {
             for (var index = 0; index < s_ticks.Length; index++) s_ticks[index] = 0;
             for (var index = 0; index < s_counts.Length; index++) s_counts[index] = 0;
+            for (var index = 0; index < s_stepTicks.Length; index++) s_stepTicks[index] = 0;
         }
 
         /// <summary>Totals since <see cref="Reset"/> as a JSON object: stage microseconds and counters.</summary>
@@ -100,6 +176,9 @@ namespace AIBT
             }
             for (var index = 0; index < s_counts.Length; index++)
                 text.Append(",\"").Append(((Counter)index).ToString()).Append("\":").Append(s_counts[index]);
+            for (var index = 0; index < s_stepTicks.Length; index++)
+                text.Append(",\"Step").Append(((Step)index).ToString()).Append("Us\":")
+                    .Append((s_stepTicks[index] * 1000000.0 / Stopwatch.Frequency).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
             text.Append('}');
             return text.ToString();
         }

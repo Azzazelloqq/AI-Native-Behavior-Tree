@@ -5,7 +5,16 @@ namespace AIBT.Execution.Burst.Dispatch
 {
     internal static class NativeBurstDispatchBindingValidationV2
     {
-        internal static bool Validate(in NativeBurstDispatchCreateInputV2 input)
+        internal static bool Validate(in NativeBurstDispatchCreateInputV2 input) => Validate(in input, false);
+
+        /// <summary>
+        /// Validates a create input. With <paramref name="catalogValidated"/> the checks that read only
+        /// catalog metadata (cases, configuration/memory/value fields, bindings and canonical shape) are
+        /// skipped: P10-003 lets a workspace that owns immutable copies of that metadata pass true once
+        /// one full validation of the same metadata succeeded. Every check that reads a request, its
+        /// bytes, resolved bindings, live values or completions still runs, so the result is the same.
+        /// </summary>
+        internal static bool Validate(in NativeBurstDispatchCreateInputV2 input, bool catalogValidated)
         {
             for (var requestIndex = 0; requestIndex < input.Requests.Length; requestIndex++)
             {
@@ -55,16 +64,19 @@ namespace AIBT.Execution.Burst.Dispatch
                     return false;
                 }
 
-                for (var caseIndex = 0; caseIndex < input.Cases.Length; caseIndex++)
+                if (!catalogValidated)
                 {
-                    if (input.Cases[caseIndex].FirstBinding != 0
-                        || input.Cases[caseIndex].BindingCount != 0)
+                    for (var caseIndex = 0; caseIndex < input.Cases.Length; caseIndex++)
                     {
-                        return false;
+                        if (input.Cases[caseIndex].FirstBinding != 0
+                            || input.Cases[caseIndex].BindingCount != 0)
+                        {
+                            return false;
+                        }
                     }
                 }
 
-                return ValidateCanonicalMetadata(in input);
+                return ValidateCanonicalMetadata(in input, catalogValidated);
             }
 
             if (!bindingInput.ValueFields.IsCreated
@@ -85,50 +97,84 @@ namespace AIBT.Execution.Burst.Dispatch
                 return false;
             }
 
-            uint runningBindingCursor = 0;
-            for (var caseIndex = 0; caseIndex < input.Cases.Length; caseIndex++)
+            // Catalog-only checks (P10-003: skipped once the owner's immutable metadata validated).
+            if (!catalogValidated)
             {
-                var dispatchCase = input.Cases[caseIndex];
-                if (dispatchCase.FirstBinding != runningBindingCursor
-                    || !Range(dispatchCase.FirstBinding, dispatchCase.BindingCount, bindingInput.Bindings.Length))
+                uint runningBindingCursor = 0;
+                for (var caseIndex = 0; caseIndex < input.Cases.Length; caseIndex++)
                 {
-                    return false;
-                }
-
-                runningBindingCursor += dispatchCase.BindingCount;
-
-                uint generatedHandleCount = 0;
-                for (uint fieldIndex = 0; fieldIndex < dispatchCase.ConfigurationFieldCount; fieldIndex++)
-                {
-                    var field = input.ConfigurationFields[(int)(dispatchCase.FirstConfigurationField + fieldIndex)];
-                    if (field.Encoding == NativeBurstDispatchFieldEncodingV2.GeneratedHandle)
-                    {
-                        generatedHandleCount++;
-                    }
-                }
-
-                if (generatedHandleCount != dispatchCase.BindingCount)
-                {
-                    return false;
-                }
-
-                for (var requestIndex = 0; requestIndex < input.Requests.Length; requestIndex++)
-                {
-                    var request = input.Requests[requestIndex];
-                    if (request.CatalogCaseIndex == (uint)caseIndex
-                        && request.ResolvedBindingCount != dispatchCase.BindingCount)
+                    var dispatchCase = input.Cases[caseIndex];
+                    if (dispatchCase.FirstBinding != runningBindingCursor
+                        || !Range(dispatchCase.FirstBinding, dispatchCase.BindingCount, bindingInput.Bindings.Length))
                     {
                         return false;
                     }
+
+                    runningBindingCursor += dispatchCase.BindingCount;
+
+                    uint generatedHandleCount = 0;
+                    for (uint fieldIndex = 0; fieldIndex < dispatchCase.ConfigurationFieldCount; fieldIndex++)
+                    {
+                        var field = input.ConfigurationFields[(int)(dispatchCase.FirstConfigurationField + fieldIndex)];
+                        if (field.Encoding == NativeBurstDispatchFieldEncodingV2.GeneratedHandle)
+                        {
+                            generatedHandleCount++;
+                        }
+                    }
+
+                    if (generatedHandleCount != dispatchCase.BindingCount)
+                    {
+                        return false;
+                    }
+
+                    for (uint localOrdinal = 0; localOrdinal < dispatchCase.BindingCount; localOrdinal++)
+                    {
+                        var globalOrdinal = dispatchCase.FirstBinding + localOrdinal;
+                        var binding = bindingInput.Bindings[(int)globalOrdinal];
+                        if (binding.BindingOrdinal != localOrdinal
+                            || !ValidateBinding(in binding, bindingInput.ValueFields)
+                            || !TryFindGeneratedHandleField(
+                                input.ConfigurationFields,
+                                dispatchCase.FirstConfigurationField,
+                                dispatchCase.ConfigurationFieldCount,
+                                binding.ConfigurationFieldOrdinal,
+                                out _))
+                        {
+                            return false;
+                        }
+
+                        for (uint priorLocal = 0; priorLocal < localOrdinal; priorLocal++)
+                        {
+                            if (bindingInput.Bindings[(int)(dispatchCase.FirstBinding + priorLocal)].ConfigurationFieldOrdinal
+                                == binding.ConfigurationFieldOrdinal)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+                if (runningBindingCursor != bindingInput.Bindings.Length)
+                {
+                    return false;
+                }
+            }
+
+            // Per-request checks, request by request (formerly interleaved with the case loop above;
+            // the result is a conjunction, so the order does not matter).
+            for (var requestIndex = 0; requestIndex < input.Requests.Length; requestIndex++)
+            {
+                var request = input.Requests[requestIndex];
+                var dispatchCase = input.Cases[(int)request.CatalogCaseIndex];
+                if (request.ResolvedBindingCount != dispatchCase.BindingCount)
+                {
+                    return false;
                 }
 
                 for (uint localOrdinal = 0; localOrdinal < dispatchCase.BindingCount; localOrdinal++)
                 {
-                    var globalOrdinal = dispatchCase.FirstBinding + localOrdinal;
-                    var binding = bindingInput.Bindings[(int)globalOrdinal];
-                    if (binding.BindingOrdinal != localOrdinal
-                        || !ValidateBinding(in binding, bindingInput.ValueFields)
-                        || !TryFindGeneratedHandleField(
+                    var binding = bindingInput.Bindings[(int)(dispatchCase.FirstBinding + localOrdinal)];
+                    if (!TryFindGeneratedHandleField(
                             input.ConfigurationFields,
                             dispatchCase.FirstConfigurationField,
                             dispatchCase.ConfigurationFieldCount,
@@ -138,50 +184,27 @@ namespace AIBT.Execution.Burst.Dispatch
                         return false;
                     }
 
-                    for (uint priorLocal = 0; priorLocal < localOrdinal; priorLocal++)
+                    var offset = (ulong)request.ConfigurationOffset + handleField.ByteOffset;
+                    if (offset + 4UL > (ulong)input.ConfigurationBytes.Length)
                     {
-                        if (bindingInput.Bindings[(int)(dispatchCase.FirstBinding + priorLocal)].ConfigurationFieldOrdinal
-                            == binding.ConfigurationFieldOrdinal)
-                        {
-                            return false;
-                        }
+                        return false;
                     }
 
-                    for (var requestIndex = 0; requestIndex < input.Requests.Length; requestIndex++)
+                    // A blackboard generated-handle stores its compiled per-node access
+                    // ordinal. Other generated handles store their catalog-local binding
+                    // ordinal. These are different namespaces once a node combines, for
+                    // example, a blackboard fact with an EffectCommand.
+                    var encodedOrdinal = ReadUInt32(input.ConfigurationBytes, (uint)offset);
+                    var isBlackboard = binding.Kind <= NativeBurstDispatchBindingKindV2.BlackboardReadWrite;
+                    if (encodedOrdinal == uint.MaxValue
+                        || (!isBlackboard && encodedOrdinal != localOrdinal))
                     {
-                        var request = input.Requests[requestIndex];
-                        if (request.CatalogCaseIndex != (uint)caseIndex)
-                        {
-                            continue;
-                        }
-
-                        var offset = (ulong)request.ConfigurationOffset + handleField.ByteOffset;
-                        if (offset + 4UL > (ulong)input.ConfigurationBytes.Length)
-                        {
-                            return false;
-                        }
-
-                        // A blackboard generated-handle stores its compiled per-node access
-                        // ordinal. Other generated handles store their catalog-local binding
-                        // ordinal. These are different namespaces once a node combines, for
-                        // example, a blackboard fact with an EffectCommand.
-                        var encodedOrdinal = ReadUInt32(input.ConfigurationBytes, (uint)offset);
-                        var isBlackboard = binding.Kind <= NativeBurstDispatchBindingKindV2.BlackboardReadWrite;
-                        if (encodedOrdinal == uint.MaxValue
-                            || (!isBlackboard && encodedOrdinal != localOrdinal))
-                        {
-                            return false;
-                        }
+                        return false;
                     }
                 }
             }
 
-            if (runningBindingCursor != bindingInput.Bindings.Length)
-            {
-                return false;
-            }
-
-            if (!ValidateCanonicalMetadata(in input))
+            if (!ValidateCanonicalMetadata(in input, catalogValidated))
             {
                 return false;
             }
@@ -238,10 +261,16 @@ namespace AIBT.Execution.Burst.Dispatch
                 }
             }
 
+            // P10-003: when every request's live values and target ordinals occupy their own block,
+            // ordered by request (as grouped dispatch lays them out), no pair from two different
+            // requests can overlap or share an identity, so only pairs within one request can fail.
+            // Otherwise every pair is compared, as before.
+            var crossRequestPairs = !LiveBlocksAreOrderedAndDisjoint(in input);
             for (var leftRequestIndex = 0; leftRequestIndex < input.Requests.Length; leftRequestIndex++)
             {
                 var leftRequest = input.Requests[leftRequestIndex];
                 var leftCase = input.Cases[(int)leftRequest.CatalogCaseIndex];
+                var lastRightRequestIndex = crossRequestPairs ? input.Requests.Length - 1 : leftRequestIndex;
                 for (uint leftLocal = 0; leftLocal < leftCase.BindingCount; leftLocal++)
                 {
                     var left = bindingInput.Bindings[(int)(leftCase.FirstBinding + leftLocal)];
@@ -251,7 +280,7 @@ namespace AIBT.Execution.Burst.Dispatch
                     }
 
                     var leftResolved = bindingInput.ResolvedBindings[(int)(leftRequest.FirstResolvedBinding + leftLocal)];
-                    for (var rightRequestIndex = leftRequestIndex; rightRequestIndex < input.Requests.Length; rightRequestIndex++)
+                    for (var rightRequestIndex = leftRequestIndex; rightRequestIndex <= lastRightRequestIndex; rightRequestIndex++)
                     {
                         var rightRequest = input.Requests[rightRequestIndex];
                         var rightCase = input.Cases[(int)rightRequest.CatalogCaseIndex];
@@ -336,6 +365,61 @@ namespace AIBT.Execution.Burst.Dispatch
                         return false;
                     }
                 }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// True when, in request order, each request's live bindings occupy a live-value byte range
+        /// [min offset, max end) and a target-ordinal range [min, max] that start at or after the
+        /// previous non-empty request's ranges end (bytes) and strictly after its maximum (targets).
+        /// Then a live binding of request r and one of a later request r' can neither overlap
+        /// (every offset of r' is at or past every end of r) nor share a target ordinal.
+        /// </summary>
+        private static bool LiveBlocksAreOrderedAndDisjoint(in NativeBurstDispatchCreateInputV2 input)
+        {
+            var bindingInput = input.BindingInput;
+            var hasPrevious = false;
+            ulong previousEnd = 0;
+            ulong previousMaximumTarget = 0;
+            for (var requestIndex = 0; requestIndex < input.Requests.Length; requestIndex++)
+            {
+                var request = input.Requests[requestIndex];
+                var dispatchCase = input.Cases[(int)request.CatalogCaseIndex];
+                var hasLive = false;
+                ulong minimumOffset = ulong.MaxValue, end = 0, minimumTarget = ulong.MaxValue, maximumTarget = 0;
+                for (uint local = 0; local < dispatchCase.BindingCount; local++)
+                {
+                    var binding = bindingInput.Bindings[(int)(dispatchCase.FirstBinding + local)];
+                    if (!IsLiveBinding(binding.Kind))
+                    {
+                        continue;
+                    }
+
+                    var resolved = bindingInput.ResolvedBindings[(int)(request.FirstResolvedBinding + local)];
+                    hasLive = true;
+                    var offset = (ulong)resolved.LiveValueOffset;
+                    var bindingEnd = offset + binding.PrimaryValueSize;
+                    if (offset < minimumOffset) minimumOffset = offset;
+                    if (bindingEnd > end) end = bindingEnd;
+                    if (resolved.TargetOrdinal < minimumTarget) minimumTarget = resolved.TargetOrdinal;
+                    if (resolved.TargetOrdinal > maximumTarget) maximumTarget = resolved.TargetOrdinal;
+                }
+
+                if (!hasLive)
+                {
+                    continue;
+                }
+
+                if (hasPrevious && (minimumOffset < previousEnd || minimumTarget <= previousMaximumTarget))
+                {
+                    return false;
+                }
+
+                hasPrevious = true;
+                previousEnd = end;
+                previousMaximumTarget = maximumTarget;
             }
 
             return true;
@@ -548,11 +632,11 @@ namespace AIBT.Execution.Burst.Dispatch
             return found;
         }
 
-        private static bool ValidateCanonicalMetadata(in NativeBurstDispatchCreateInputV2 input)
+        private static bool ValidateCanonicalMetadata(in NativeBurstDispatchCreateInputV2 input, bool catalogValidated)
         {
             var bindingInput = input.BindingInput;
             var canonical = input.CanonicalInput;
-            if (!ValidateShapeMetadata(
+            if (!catalogValidated && !ValidateShapeMetadata(
                     input.Cases,
                     input.ConfigurationFields,
                     input.MemoryFields,

@@ -492,6 +492,92 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        /// <summary>
+        /// P10-003: a scheduler destroyed from inside a BatchedJobsSameFrame round (here from a host's
+        /// custom clock, which the round reads when the host begins its update) must still release the
+        /// round pool's Persistent storage once the round unwinds. P10-002's driver skipped it.
+        /// </summary>
+        [Test]
+        public void SchedulerDestroyedInsideABatchedRound_ReleasesTheRoundPool()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            var schedulerObject = new GameObject("AIBT.Tests.P10003.DestroyInRoundScheduler");
+            var hostObjectA = new GameObject("AIBT.Tests.P10003.DestroyInRoundHostA");
+            var hostObjectB = new GameObject("AIBT.Tests.P10003.DestroyInRoundHostB");
+            var ignoreFailingMessages = UnityEngine.TestTools.LogAssert.ignoreFailingMessages;
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+                Assert.That(SchedulerJobsCapabilities.TryCreate(
+                        1.0, 1.0, 1u, 8u, 8u, out var jobsCapabilities, out var capabilitiesError),
+                    Is.True, capabilitiesError.ToString());
+                Assert.That(SchedulingProfile.TryCreate(
+                        "aibt.tests.p10003.destroy-in-round", 0, 1u, null, null, false,
+                        SchedulingPolicy.BatchedJobsSameFrame, out var profile, out var profileError),
+                    Is.True, profileError.ToString());
+                var scheduler = schedulerObject.AddComponent<ProductionTreeScheduler>();
+                scheduler.SetJobsCapabilities(jobsCapabilities);
+                var driver = (ProductionBatchedGroupDriverV1)typeof(ProductionTreeScheduler)
+                    .GetField("_batchedDriver", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(scheduler);
+
+                var destroyedInRound = false;
+                long Clock()
+                {
+                    if (!destroyedInRound)
+                    {
+                        destroyedInRound = true;
+                        InvokePrivate(scheduler, "OnDestroy");
+                    }
+                    return 123_456L;
+                }
+                var traceCapacity = new NativeTraceChannelCapacityV1(
+                    recordCapacity: 65, payloadCapacity: 0, maximumPayloadBytes: 0, emissionCapacity: 256);
+                var hostA = hostObjectA.AddComponent<ProductionTreeHost>();
+                var hostB = hostObjectB.AddComponent<ProductionTreeHost>();
+                Assert.That(hostA.TryBootstrap(definition, catalog, traceCapacity, Clock, out var bootstrapFailureA),
+                    Is.True, bootstrapFailureA.Code.ToString());
+                Assert.That(hostB.TryBootstrap(definition, catalog, traceCapacity, Clock, out var bootstrapFailureB),
+                    Is.True, bootstrapFailureB.Code.ToString());
+                Assert.That(scheduler.TryRegister(hostA, profile, out var registerErrorA), Is.True, registerErrorA.ToString());
+                Assert.That(scheduler.TryRegister(hostB, profile, out var registerErrorB), Is.True, registerErrorB.ToString());
+
+                Assert.That(driver.IsPoolDisposed, Is.False);
+
+                // The first host's clock read (when the round begins its update) tears the scheduler
+                // down mid-round; hosts may then fail the rest of that round, which is logged. Only
+                // the pool release is under test here.
+                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+                try
+                {
+                    InvokePrivate(scheduler, "Update");
+                }
+                catch (TargetInvocationException)
+                {
+                    // Separate, pre-existing defect (reported in P10-003 evidence, not fixed here):
+                    // after the round returns, the scheduler's Update reads its due list, which
+                    // OnDestroy already cleared, and throws ArgumentOutOfRangeException.
+                }
+
+                Assert.That(destroyedInRound, Is.True, "The scheduler must have been destroyed inside the round.");
+                Assert.That(driver.IsPoolDisposed, Is.True,
+                    "The round pool's Persistent storage must be released once the interrupted round unwinds.");
+            }
+            finally
+            {
+                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = ignoreFailingMessages;
+                InvokeOnDestroy(hostObjectA);
+                UnityEngine.Object.DestroyImmediate(hostObjectA);
+                InvokeOnDestroy(hostObjectB);
+                UnityEngine.Object.DestroyImmediate(hostObjectB);
+                UnityEngine.Object.DestroyImmediate(schedulerObject);
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
         private static void InvokePrivate(object target, string methodName)
             => target.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(target, null);
 

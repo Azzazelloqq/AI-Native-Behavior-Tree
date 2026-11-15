@@ -4,6 +4,28 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Performance (P10-003)
+
+- Native dispatch framing is cheaper on the main thread. In an IL2CPP Player (quick benchmark,
+  interleaved before/after) a `NativeTreeAgent` frame takes 40–58% less main-thread time under the
+  default Immediate policy and 31–78% less under `BatchedJobsSameFrame`; for example one waiting
+  leaf at N = 1000 went from 3.7 to 2.0 µs per agent and a looping 16-node tree from 8.1 to
+  3.8 µs. Tick order, statuses, traces, effects, diagnostics, defaults, public API and ABI v2 are
+  unchanged; `JobsPolicyEquivalenceTests` compares every frame with digests recorded before the
+  change.
+  - The Burst bridge reads the dispatch backing by reference instead of copying it (≈0.5 KB) on
+    every access, and its internal getters no longer make defensive copies of the carrier structs.
+  - A dispatch workspace validates the immutable catalog metadata once instead of on every
+    dispatch; per-request checks still run every time.
+  - The grouped (`BatchedJobsSameFrame`) path no longer compares every pair of live values across
+    all members, nor scans all members for each command's owner. A tree with facts and effects at
+    N = 5000 went from 81 ms to 17.5 ms per frame and is no longer slower than Immediate.
+- Fix: a `ProductionTreeScheduler` destroyed during a `BatchedJobsSameFrame` round now releases
+  the round's Persistent storage when the round unwinds (P10-002 leaked it).
+- Add a warmed-up Immediate zero-allocation test through `NativeTreeAgent`, per-step dispatch laps
+  in the opt-in frame profile (`AIBT_SCHEDULER_FRAME_PROFILE`), and the profiling aids
+  `Tools/profile.py` (step table) and `Tools/instrument_bridge_laps.py` in the Player harness.
+
 ### Performance (P10-002)
 
 - `BatchedJobsSameFrame`: the group driver reuses its round storage across frames

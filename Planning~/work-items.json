@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P10-003", "phase": 10, "title": "Cheaper managed dispatch framing around native node bodies (stage F1)", "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-003-dispatch-framing.md",
+      "dependsOn": ["P10-002"],
+      "owns": ["Planning~/Evidence/P10-003/"]
+    },
+    {
       "id": "P10-002", "phase": 10, "title": "Jobs speed-up J1: quick benchmark, frame profile, round overhead, equivalence guard, J2 design", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P10/P10-002-jobs-round-overhead.md",
       "dependsOn": ["P10-001"],

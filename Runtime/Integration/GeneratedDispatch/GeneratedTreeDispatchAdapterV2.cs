@@ -666,6 +666,7 @@ namespace AIBT
             {
                 status = NodeStatus.Running;
                 if (_disposed) return BurstContextResult.InvalidHandle;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Enter);
                 ClearPublishedCommands();
                 var node = programBinding.SemanticProgram.Nodes[(int)_nodeIndex];
                 if (hostRequest.Phase == BurstCallbackPhase.Enter)
@@ -675,7 +676,9 @@ namespace AIBT
                     if (node.MemoryLifetime == NodeMemoryLifetime.Activation) Clear(_memory);
                 }
                 if (_activationGeneration == 0) _activationGeneration = 1;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Activation);
                 if (!SnapshotTreeValues(programBinding, treeValues, agentBaseOffset)) return BurstContextResult.InvalidHandle;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Snapshot);
 
                 var dispatchCase = catalog.Cases[(int)_caseIndex];
                 var request = new NativeBurstDispatchRequestV2(
@@ -687,9 +690,11 @@ namespace AIBT
                     request, _configuration, _memory, _randomStates, _randomIncrements,
                     _resolvedBindings, _bindingValues, _completions, _completionPayload,
                     _commands, _commandPayload, _operations, _transaction);
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.RequestBuild);
                 if (!_workspace.TryBeginRequest(in views, out var lease, out var failure)
                     || !_workspace.TryAcquireImmediateBatch(in lease, out var batch, out failure))
                     return failure;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.AcquireBatch);
 
                 if (scheduled)
                 {
@@ -702,18 +707,24 @@ namespace AIBT
                 {
                     catalog.Executor.ExecuteImmediate(ref batch);
                 }
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Body);
 
                 if (!_workspace.TryConsumeResult(in lease, out var result, out failure)) return failure;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Consume);
                 var callback = result.CallbackFailure;
                 if (!result.Execution.Success && callback == BurstContextResult.Success)
                     callback = BurstContextResult.InvalidEncoding;
                 if (callback == BurstContextResult.Success
                     && !CommitTreeValues(programBinding, treeValues, treeVersions, agentBaseOffset))
                     callback = BurstContextResult.Overflow;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Commit);
                 if (callback == BurstContextResult.Success) PublishCommands(result.Transaction);
                 status = result.Status;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Publish);
                 if (!_workspace.TryAcknowledgePublishedCommands(in lease, out failure)) return failure;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Acknowledge);
                 if (!_workspace.TryReset(in lease, out failure)) return failure;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Reset);
                 return callback;
             }
 
@@ -739,6 +750,7 @@ namespace AIBT
                     failure = BurstContextResult.InvalidHandle;
                     return false;
                 }
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupParticipant);
                 ClearPublishedCommands();
                 var node = programBinding.SemanticProgram.Nodes[(int)_nodeIndex];
                 if (hostRequest.Phase == BurstCallbackPhase.Enter)
@@ -752,12 +764,14 @@ namespace AIBT
                     if (node.MemoryLifetime == NodeMemoryLifetime.Activation) Clear(_memory);
                 }
                 if (_activationGeneration == 0) _activationGeneration = 1;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Activation);
                 if (!SnapshotTreeValues(programBinding, treeValues, agentBaseOffset))
                 {
                     failure = BurstContextResult.InvalidHandle;
                     return false;
                 }
 
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Snapshot);
                 participant = new GeneratedDispatchGroupParticipantV2(
                     node.NodeTypeId, node.NodeTypeVersion, _caseIndex, hostRequest.Phase,
                     _configuration, _memory, _randomStates, _randomIncrements,

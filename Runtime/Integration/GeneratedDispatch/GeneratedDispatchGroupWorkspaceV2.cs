@@ -56,6 +56,8 @@ namespace AIBT
         private uint _generation;
         private bool _leased;
         private bool _disposed;
+        // P10-003: see NativeBurstDispatchWorkspaceOwnerV2._catalogValidated (same immutable copies).
+        private bool _catalogValidated;
 
         private GeneratedDispatchGroupWorkspaceV2(
             GeneratedBurstCatalogV2 catalog,
@@ -196,6 +198,7 @@ namespace AIBT
                     if (!members[index].Host.TryReserveGeneratedEffectCapacity(members[index].NodeIndex, out failure))
                         return false;
                 }
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupReserve);
 
                 var backing = CreateBacking(
                     activeCount, configurationLength, memoryLength, randomCount,
@@ -221,10 +224,13 @@ namespace AIBT
                         return false;
                     }
                 }
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Body);
 
                 if (!TryValidateTransaction(out failure)) return false;
                 if (!TryValidateCommits(members, activeCount, out failure)) return false;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupValidateCommits);
                 if (!TryPublishGroupedCommands(members, activeCount, out failure)) return false;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupPublish);
                 for (var index = 0; index < activeCount; index++)
                 {
                     var participant = _participants[index];
@@ -241,6 +247,7 @@ namespace AIBT
                     {
                         return false;
                     }
+                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Commit);
                     members[index].Host.CompletePendingDispatch(
                         BurstContextResult.Success, (NodeStatus)_requestStatuses[index]);
                 }
@@ -353,6 +360,7 @@ namespace AIBT
                 totalTargetOrdinals += participantTargetSpan;
                 _participants[index] = participant;
             }
+            SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupParticipant);
 
             if (configurationLength > _configurationBytes.Length
                 || memoryLength > _memoryBytes.Length
@@ -382,6 +390,7 @@ namespace AIBT
                     ? 1UL
                     : _bindingCapacity.FirstOperationSequence
             };
+            SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupClear);
 
             var configurationOffset = 0;
             var memoryOffset = 0;
@@ -426,6 +435,7 @@ namespace AIBT
                 bindingOffset += participant.ResolvedBindings.Length;
                 liveValueOffset += participant.BindingValues.Length;
             }
+            SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupPack);
 
             var input = new NativeBurstDispatchCreateInputV2(
                 _catalog.Handshake,
@@ -444,11 +454,13 @@ namespace AIBT
                     _bindingCapacity,
                     CanonicalInput()),
                 CanonicalInput());
-            if (!NativeBurstDispatchBatchOwnerV2.ValidateCreateInput(in input))
+            if (!NativeBurstDispatchBatchOwnerV2.ValidateCreateInput(in input, _catalogValidated))
             {
                 failure = BurstContextResult.InvalidEncoding;
                 return false;
             }
+            _catalogValidated = true;
+            SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupValidate);
 
             failure = BurstContextResult.Success;
             return true;
@@ -520,15 +532,7 @@ namespace AIBT
                     return false;
                 }
 
-                var participantIndex = -1;
-                for (var index = 0; index < activeCount; index++)
-                {
-                    var first = _targetOrdinalBaseOffsets[index];
-                    var span = _targetOrdinalSpans[index];
-                    if (command.TargetOrdinal < first || command.TargetOrdinal - first >= span) continue;
-                    participantIndex = index;
-                    break;
-                }
+                var participantIndex = FindTargetOwner(command.TargetOrdinal, activeCount);
                 if (participantIndex < 0)
                 {
                     failure = BurstContextResult.InvalidEncoding;
@@ -558,6 +562,30 @@ namespace AIBT
             }
             failure = BurstContextResult.Success;
             return true;
+        }
+
+        /// <summary>
+        /// The participant whose target-ordinal range [base, base + span) holds
+        /// <paramref name="targetOrdinal"/>, or -1. Bases are cumulative spans, so they never
+        /// decrease and the ranges are disjoint: the only possible owner is the last participant
+        /// whose base is at most the target (P10-003; replaces a linear scan per command).
+        /// </summary>
+        private int FindTargetOwner(uint targetOrdinal, int activeCount)
+        {
+            int low = 0, high = activeCount - 1, candidate = -1;
+            while (low <= high)
+            {
+                var middle = low + ((high - low) >> 1);
+                if (_targetOrdinalBaseOffsets[middle] <= targetOrdinal)
+                {
+                    candidate = middle;
+                    low = middle + 1;
+                }
+                else high = middle - 1;
+            }
+            if (candidate < 0 || targetOrdinal - _targetOrdinalBaseOffsets[candidate] >= _targetOrdinalSpans[candidate])
+                return -1;
+            return candidate;
         }
 
         private bool TryValidateTransaction(out BurstContextResult failure)

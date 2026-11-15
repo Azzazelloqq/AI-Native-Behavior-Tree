@@ -358,7 +358,7 @@ namespace AIBT.Burst
     public struct BurstValueReader
     {
         private ulong _validationToken;
-        private BurstDispatchBackingV2 _runtime;
+        internal BurstDispatchBackingV2 _runtime;
         private uint _frameId;
         private uint _bindingOrdinal;
         private uint _state;
@@ -380,12 +380,12 @@ namespace AIBT.Burst
             _role = role;
         }
 
-        internal ulong ValidationToken => _validationToken;
+        internal readonly ulong ValidationToken => _validationToken;
         internal BurstDispatchBackingV2 Runtime => _runtime;
-        internal uint FrameId => _frameId;
-        internal uint BindingOrdinal => _bindingOrdinal;
-        internal AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
-        internal bool TryGetSessionOrdinal(out uint value)
+        internal readonly uint FrameId => _frameId;
+        internal readonly uint BindingOrdinal => _bindingOrdinal;
+        internal readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
+        internal readonly bool TryGetSessionOrdinal(out uint value)
         {
             value = _state - 1u;
             return _state != 0;
@@ -395,7 +395,7 @@ namespace AIBT.Burst
     public struct BurstValueWriter
     {
         private ulong _validationToken;
-        private BurstDispatchBackingV2 _runtime;
+        internal BurstDispatchBackingV2 _runtime;
         private uint _frameId;
         private uint _bindingOrdinal;
         private uint _state;
@@ -417,12 +417,12 @@ namespace AIBT.Burst
             _role = role;
         }
 
-        internal ulong ValidationToken => _validationToken;
+        internal readonly ulong ValidationToken => _validationToken;
         internal BurstDispatchBackingV2 Runtime => _runtime;
-        internal uint FrameId => _frameId;
-        internal uint BindingOrdinal => _bindingOrdinal;
-        internal AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
-        internal bool TryGetSessionOrdinal(out uint value)
+        internal readonly uint FrameId => _frameId;
+        internal readonly uint BindingOrdinal => _bindingOrdinal;
+        internal readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
+        internal readonly bool TryGetSessionOrdinal(out uint value)
         {
             value = _state - 1u;
             return _state != 0;
@@ -435,7 +435,7 @@ namespace AIBT.Burst
         private readonly ulong _validationToken;
         private ulong _randomState;
         private readonly ulong _randomIncrement;
-        private BurstDispatchBackingV2 _runtime;
+        internal BurstDispatchBackingV2 _runtime;
         private uint _frameId;
         private AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 _role;
 
@@ -449,12 +449,12 @@ namespace AIBT.Burst
             _role = role;
         }
 
-        internal ulong ValidationToken => _validationToken;
-        internal ulong RandomState => _randomState;
-        internal ulong RandomIncrement => _randomIncrement;
-        internal uint FrameId => _frameId;
+        internal readonly ulong ValidationToken => _validationToken;
+        internal readonly ulong RandomState => _randomState;
+        internal readonly ulong RandomIncrement => _randomIncrement;
+        internal readonly uint FrameId => _frameId;
         internal BurstDispatchBackingV2 Runtime => _runtime;
-        internal AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
+        internal readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
 
         public BurstContextResult TryGetTimeMicroseconds(out long value) => BurstBindingBridgeCoreV2.TryGetTime(_runtime, _frameId, _validationToken, _role, out value);
         public BurstContextResult TryNextUInt32(out uint value) => BurstBindingBridgeCoreV2.TryNextUInt32(_runtime, _frameId, _validationToken, _role, _randomIncrement, ref _randomState, out value);
@@ -476,7 +476,7 @@ namespace AIBT.Burst
         private readonly ulong _validationToken;
         private ulong _randomState;
         private readonly ulong _randomIncrement;
-        private BurstDispatchBackingV2 _runtime;
+        internal BurstDispatchBackingV2 _runtime;
         private uint _frameId;
         private AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 _role;
 
@@ -490,12 +490,12 @@ namespace AIBT.Burst
             _role = role;
         }
 
-        internal ulong ValidationToken => _validationToken;
-        internal ulong RandomState => _randomState;
-        internal ulong RandomIncrement => _randomIncrement;
-        internal uint FrameId => _frameId;
+        internal readonly ulong ValidationToken => _validationToken;
+        internal readonly ulong RandomState => _randomState;
+        internal readonly ulong RandomIncrement => _randomIncrement;
+        internal readonly uint FrameId => _frameId;
         internal BurstDispatchBackingV2 Runtime => _runtime;
-        internal AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
+        internal readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
 
         public BurstContextResult TryGetTimeMicroseconds(out long value) => BurstBindingBridgeCoreV2.TryGetTime(_runtime, _frameId, _validationToken, _role, out value);
         public BurstContextResult TryNextUInt32(out uint value) => BurstBindingBridgeCoreV2.TryNextUInt32(_runtime, _frameId, _validationToken, _role, _randomIncrement, ref _randomState, out value);
@@ -514,7 +514,7 @@ namespace AIBT.Burst
     public readonly struct BurstAbortContext
     {
         private readonly ulong _validationToken;
-        private readonly BurstDispatchBackingV2 _runtime;
+        internal readonly BurstDispatchBackingV2 _runtime;
         private readonly uint _frameId;
         private readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 _role;
 
@@ -539,7 +539,7 @@ namespace AIBT.Burst
     public readonly struct BurstObserverContext
     {
         private readonly ulong _validationToken;
-        private readonly BurstDispatchBackingV2 _runtime;
+        internal readonly BurstDispatchBackingV2 _runtime;
         private readonly uint _frameId;
         private readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 _role;
 
@@ -565,7 +565,7 @@ namespace AIBT.Burst
     public readonly struct BurstDispatchFrame
     {
         private readonly ulong _validationToken;
-        private readonly BurstDispatchBackingV2 _runtime;
+        internal readonly BurstDispatchBackingV2 _runtime;
         private readonly uint _frameId;
         private readonly uint _requestOrdinal;
         private readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 _role;
@@ -589,7 +589,7 @@ namespace AIBT.Burst
     public readonly struct BurstConfigurationReader
     {
         private readonly ulong _validationToken;
-        private readonly BurstDispatchBackingV2 _runtime;
+        internal readonly BurstDispatchBackingV2 _runtime;
         private readonly uint _frameId;
         private readonly uint _requestOrdinal;
         private readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 _role;
@@ -613,7 +613,7 @@ namespace AIBT.Burst
     public struct BurstMemoryAccessor
     {
         private ulong _validationToken;
-        private BurstDispatchBackingV2 _runtime;
+        internal BurstDispatchBackingV2 _runtime;
         private uint _frameId;
         private uint _requestOrdinal;
         private AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 _role;
@@ -628,16 +628,16 @@ namespace AIBT.Burst
         }
 
         internal BurstDispatchBackingV2 Runtime => _runtime;
-        internal ulong ValidationToken => _validationToken;
-        internal uint FrameId => _frameId;
-        internal uint RequestOrdinal => _requestOrdinal;
-        internal AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
+        internal readonly ulong ValidationToken => _validationToken;
+        internal readonly uint FrameId => _frameId;
+        internal readonly uint RequestOrdinal => _requestOrdinal;
+        internal readonly AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role => _role;
     }
 
     public struct BurstExecutionBatch
     {
         private ulong _validationToken;
-        private BurstDispatchBackingV2 _runtime;
+        internal BurstDispatchBackingV2 _runtime;
         private AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 _role;
 
         internal BurstExecutionBatch(BurstDispatchBackingV2 runtime, AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 role)
@@ -648,9 +648,26 @@ namespace AIBT.Burst
         }
 
         internal BurstDispatchBackingV2 Runtime => _runtime;
-        internal AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role { get => _role; set => _role = value; }
-        internal bool MatchesOwner(Unity.Collections.NativeArray<AIBT.Execution.Burst.Dispatch.NativeBurstDispatchControlV2> control)
+        internal AIBT.Execution.Burst.Dispatch.NativeBurstBatchRoleV2 Role { readonly get => _role; set => _role = value; }
+        internal readonly bool MatchesOwner(Unity.Collections.NativeArray<AIBT.Execution.Burst.Dispatch.NativeBurstDispatchControlV2> control)
             => _validationToken != 0 && _runtime.Control.Equals(control);
+    }
+
+    // P10-003: the bridge reads the dispatch backing (about thirty native containers) through these
+    // references instead of the by-value Runtime properties, which copied the whole backing on
+    // every access in IL2CPP builds. Read-only; nothing about the public structs changes.
+    internal static class BurstDispatchRuntimeRefV2
+    {
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstValueReader value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstValueWriter value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstEnterContext value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstTickContext value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstAbortContext value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstObserverContext value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstDispatchFrame value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstConfigurationReader value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstMemoryAccessor value) => ref value._runtime;
+        internal static ref readonly BurstDispatchBackingV2 RuntimeRef(this in BurstExecutionBatch value) => ref value._runtime;
     }
 
     internal static class BurstNodeContractCore

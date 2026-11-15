@@ -209,7 +209,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryGetTime(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -223,7 +223,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryNextUInt32(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -239,7 +239,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryNextUInt32(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -262,7 +262,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryNextFloat32(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -278,7 +278,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryBeginBlackboardRead(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -331,7 +331,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryBeginBlackboardWrite(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -389,7 +389,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryBeginSnapshotRead(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -446,7 +446,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryBeginConsume(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -530,7 +530,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryBeginEffect(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -587,7 +587,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryBeginStart(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -662,7 +662,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryBeginCancel(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -751,7 +751,7 @@ namespace AIBT.Burst
 
             GetSessionLayout(in session, in binding, out var firstField, out var fieldCount, out _);
             if (!TryFindValueField(
-                    reader.Runtime.ValueFields,
+                    reader.RuntimeRef().ValueFields,
                     firstField,
                     fieldCount,
                     fieldOrdinal,
@@ -760,20 +760,20 @@ namespace AIBT.Burst
                     out var fieldOffset,
                     out var fieldSize))
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.TypeMismatch);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.TypeMismatch);
             }
 
             result = TryReadCanonical(
-                reader.Runtime.ValueStagingBytes,
+                reader.RuntimeRef().ValueStagingBytes,
                 session.StagingOffset + fieldOffset,
                 encoding,
                 out value);
             if (result != BurstContextResult.Success)
             {
-                return Latch(reader.Runtime, reader.FrameId, result);
+                return Latch(reader.RuntimeRef(), reader.FrameId, result);
             }
 
-            MarkRange(reader.Runtime.ValueMarks, session.StagingOffset + fieldOffset, fieldSize);
+            MarkRange(reader.RuntimeRef().ValueMarks, session.StagingOffset + fieldOffset, fieldSize);
             return BurstContextResult.Success;
         }
 
@@ -792,16 +792,16 @@ namespace AIBT.Burst
 
             GetSessionLayout(in session, in binding, out var firstField, out var fieldCount, out _);
             if (!AllFieldsMarked(
-                    reader.Runtime,
+                    reader.RuntimeRef(),
                     session.StagingOffset,
                     firstField,
                     fieldCount))
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.IncompleteValue);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.IncompleteValue);
             }
 
             session.State = NativeBurstDispatchValueSessionStateV2.ReadComplete;
-            WriteSession(reader.Runtime, sessionOrdinal, session);
+            WriteSession(reader.RuntimeRef(), sessionOrdinal, session);
             return BurstContextResult.Success;
         }
 
@@ -826,7 +826,7 @@ namespace AIBT.Burst
 
             GetSessionLayout(in session, in binding, out var firstField, out var fieldCount, out _);
             if (!TryFindValueField(
-                    writer.Runtime.ValueFields,
+                    writer.RuntimeRef().ValueFields,
                     firstField,
                     fieldCount,
                     fieldOrdinal,
@@ -835,25 +835,25 @@ namespace AIBT.Burst
                     out var fieldOffset,
                     out var fieldSize))
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.TypeMismatch);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.TypeMismatch);
             }
 
-            if (AnyMarked(writer.Runtime.ValueMarks, session.StagingOffset + fieldOffset, fieldSize))
+            if (AnyMarked(writer.RuntimeRef().ValueMarks, session.StagingOffset + fieldOffset, fieldSize))
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.AlreadyCommitted);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.AlreadyCommitted);
             }
 
             result = TryWriteCanonical(
-                writer.Runtime.ValueStagingBytes,
+                writer.RuntimeRef().ValueStagingBytes,
                 session.StagingOffset + fieldOffset,
                 encoding,
                 value);
             if (result != BurstContextResult.Success)
             {
-                return Latch(writer.Runtime, writer.FrameId, result);
+                return Latch(writer.RuntimeRef(), writer.FrameId, result);
             }
 
-            MarkRange(writer.Runtime.ValueMarks, session.StagingOffset + fieldOffset, fieldSize);
+            MarkRange(writer.RuntimeRef().ValueMarks, session.StagingOffset + fieldOffset, fieldSize);
             return BurstContextResult.Success;
         }
 
@@ -885,16 +885,16 @@ namespace AIBT.Burst
             }
 
             if (session.Kind != NativeBurstDispatchValueSessionKindV2.CompletionRead
-                || session.CompletionOrdinal >= reader.Runtime.Completions.Length
-                || reader.Runtime.Completions[(int)session.CompletionOrdinal].State
+                || session.CompletionOrdinal >= reader.RuntimeRef().Completions.Length
+                || reader.RuntimeRef().Completions[(int)session.CompletionOrdinal].State
                     != NativeBurstDispatchCompletionStateV2.Available)
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.StaleCompletion);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.StaleCompletion);
             }
 
-            if (!TryTransaction(reader.Runtime, reader.FrameId, out var transaction))
+            if (!TryTransaction(reader.RuntimeRef(), reader.FrameId, out var transaction))
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
             for (uint index = 0; index < transaction.SessionCount; index++)
@@ -904,18 +904,18 @@ namespace AIBT.Burst
                     continue;
                 }
 
-                var candidate = reader.Runtime.ValueSessions[(int)index];
+                var candidate = reader.RuntimeRef().ValueSessions[(int)index];
                 if (candidate.FrameId == reader.FrameId
                     && candidate.Kind == NativeBurstDispatchValueSessionKindV2.CompletionRead
                     && candidate.State == NativeBurstDispatchValueSessionStateV2.ConsumeSealed
                     && candidate.CompletionOrdinal == session.CompletionOrdinal)
                 {
-                    return Latch(reader.Runtime, reader.FrameId, BurstContextResult.AlreadyCommitted);
+                    return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.AlreadyCommitted);
                 }
             }
 
             session.State = NativeBurstDispatchValueSessionStateV2.ConsumeSealed;
-            WriteSession(reader.Runtime, sessionOrdinal, session);
+            WriteSession(reader.RuntimeRef(), sessionOrdinal, session);
             return BurstContextResult.Success;
         }
 
@@ -947,7 +947,7 @@ namespace AIBT.Burst
                 return result;
             }
 
-            if (!SameRuntime(startWriter.Runtime, faultCancelWriter.Runtime)
+            if (!SameRuntime(startWriter.RuntimeRef(), faultCancelWriter.RuntimeRef())
                 || startWriter.FrameId != faultCancelWriter.FrameId
                 || startWriter.BindingOrdinal != faultCancelWriter.BindingOrdinal
                 || startSession.Kind != NativeBurstDispatchValueSessionKindV2.StartWrite
@@ -957,45 +957,45 @@ namespace AIBT.Burst
                 || binding.Kind != NativeBurstDispatchBindingKindV2.AsyncOperation
                 || cancelBinding.Kind != NativeBurstDispatchBindingKindV2.AsyncOperation)
             {
-                return Latch(startWriter.Runtime, startWriter.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(startWriter.RuntimeRef(), startWriter.FrameId, BurstContextResult.InvalidHandle);
             }
 
             var startComplete = ValidateSessionComplete(
-                startWriter.Runtime,
+                startWriter.RuntimeRef(),
                 in startSession,
                 in binding);
             if (startComplete != BurstContextResult.Success)
             {
-                return Latch(startWriter.Runtime, startWriter.FrameId, startComplete);
+                return Latch(startWriter.RuntimeRef(), startWriter.FrameId, startComplete);
             }
 
             var cancelComplete = ValidateSessionComplete(
-                faultCancelWriter.Runtime,
+                faultCancelWriter.RuntimeRef(),
                 in cancelSession,
                 in cancelBinding);
             if (cancelComplete != BurstContextResult.Success)
             {
-                return Latch(startWriter.Runtime, startWriter.FrameId, cancelComplete);
+                return Latch(startWriter.RuntimeRef(), startWriter.FrameId, cancelComplete);
             }
 
-            if (!TryTransaction(startWriter.Runtime, startWriter.FrameId, out var transaction)
+            if (!TryTransaction(startWriter.RuntimeRef(), startWriter.FrameId, out var transaction)
                 || transaction.NextOperationSequence == ulong.MaxValue)
             {
-                return Latch(startWriter.Runtime, startWriter.FrameId, BurstContextResult.Overflow);
+                return Latch(startWriter.RuntimeRef(), startWriter.FrameId, BurstContextResult.Overflow);
             }
 
             if (!CanSealReversible(
-                    startWriter.Runtime,
+                    startWriter.RuntimeRef(),
                     in transaction,
                     1UL,
                     (ulong)binding.PrimaryValueSize + binding.SecondaryValueSize,
                     1UL))
             {
-                return Latch(startWriter.Runtime, startWriter.FrameId, BurstContextResult.CapacityExceeded);
+                return Latch(startWriter.RuntimeRef(), startWriter.FrameId, BurstContextResult.CapacityExceeded);
             }
 
             if (!TryActiveFrame(
-                    startWriter.Runtime,
+                    startWriter.RuntimeRef(),
                     startWriter.FrameId,
                     startWriter.ValidationToken,
                     out _,
@@ -1015,9 +1015,9 @@ namespace AIBT.Burst
             startSession.State = NativeBurstDispatchValueSessionStateV2.Sealed;
             cancelSession.OperationId = operationId;
             cancelSession.State = NativeBurstDispatchValueSessionStateV2.Sealed;
-            WriteSession(startWriter.Runtime, startOrdinal, startSession);
-            WriteSession(startWriter.Runtime, cancelOrdinal, cancelSession);
-            WriteTransaction(startWriter.Runtime, transaction);
+            WriteSession(startWriter.RuntimeRef(), startOrdinal, startSession);
+            WriteSession(startWriter.RuntimeRef(), cancelOrdinal, cancelSession);
+            WriteTransaction(startWriter.RuntimeRef(), transaction);
             return BurstContextResult.Success;
         }
 
@@ -1036,65 +1036,65 @@ namespace AIBT.Burst
 
             if (session.Kind != NativeBurstDispatchValueSessionKindV2.CancelWrite)
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            var complete = ValidateSessionComplete(writer.Runtime, in session, in binding);
+            var complete = ValidateSessionComplete(writer.RuntimeRef(), in session, in binding);
             if (complete != BurstContextResult.Success)
             {
-                return Latch(writer.Runtime, writer.FrameId, complete);
+                return Latch(writer.RuntimeRef(), writer.FrameId, complete);
             }
 
             if (!TryActiveFrame(
-                    writer.Runtime,
+                    writer.RuntimeRef(),
                     writer.FrameId,
                     writer.ValidationToken,
                     out _,
                     out var request,
                     out _)
                 || !TryResolvedBinding(
-                    writer.Runtime,
+                    writer.RuntimeRef(),
                     in request,
                     in binding,
                     out var resolved)
                 || !TryFindActiveOperation(
-                    writer.Runtime,
+                    writer.RuntimeRef(),
                     session.OperationId,
                     resolved.TargetOrdinal,
                     in binding,
                     out var operationOrdinal))
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            var operation = writer.Runtime.Operations[(int)operationOrdinal];
+            var operation = writer.RuntimeRef().Operations[(int)operationOrdinal];
             operation.State = NativeBurstDispatchOperationStateV2.Tombstoned;
-            var runtime = writer.Runtime;
-            runtime.Operations[(int)operationOrdinal] = operation;
+            var operations = writer.RuntimeRef().Operations;
+            operations[(int)operationOrdinal] = operation;
             session.State = NativeBurstDispatchValueSessionStateV2.Sealed;
-            WriteSession(writer.Runtime, sessionOrdinal, session);
+            WriteSession(writer.RuntimeRef(), sessionOrdinal, session);
 
-            if (!TryTransaction(writer.Runtime, writer.FrameId, out var transaction)
-                || (ulong)transaction.CommandCount + 1UL > (ulong)writer.Runtime.Commands.Length
+            if (!TryTransaction(writer.RuntimeRef(), writer.FrameId, out var transaction)
+                || (ulong)transaction.CommandCount + 1UL > (ulong)writer.RuntimeRef().Commands.Length
                 || (ulong)transaction.CommandPayloadByteCount + binding.SecondaryValueSize
-                    > (ulong)writer.Runtime.CommandPayloadBytes.Length)
+                    > (ulong)writer.RuntimeRef().CommandPayloadBytes.Length)
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.CapacityExceeded);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.CapacityExceeded);
             }
 
             AppendCommand(
-                writer.Runtime,
+                writer.RuntimeRef(),
                 ref transaction,
                 NativeBurstDispatchCommandKindV2.Cancel,
                 resolved.TargetOrdinal,
                 session.OperationId,
                 session.StagingOffset,
                 binding.SecondaryValueSize);
-            WriteTransaction(writer.Runtime, transaction);
+            WriteTransaction(writer.RuntimeRef(), transaction);
             return BurstContextResult.Success;
         }
 
-        internal static void PrepareFrame(BurstDispatchBackingV2 runtime, uint frameId)
+        internal static void PrepareFrame(in BurstDispatchBackingV2 runtime, uint frameId)
         {
             if (!runtime.TransactionControl.IsCreated || runtime.TransactionControl.Length != 1)
             {
@@ -1109,7 +1109,7 @@ namespace AIBT.Burst
         }
 
         internal static BurstContextResult TryPreflightFramePublish(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId)
         {
             if (!TryTransaction(runtime, frameId, out var transaction))
@@ -1194,7 +1194,7 @@ namespace AIBT.Burst
                 : Latch(runtime, frameId, BurstContextResult.CapacityExceeded);
         }
 
-        internal static void PublishFrame(BurstDispatchBackingV2 runtime, uint frameId)
+        internal static void PublishFrame(in BurstDispatchBackingV2 runtime, uint frameId)
         {
             if (!TryTransaction(runtime, frameId, out var transaction)
                 || !TryActiveFrame(runtime, frameId, out _, out var request, out _))
@@ -1225,7 +1225,8 @@ namespace AIBT.Burst
                     {
                         var completion = runtime.Completions[(int)session.CompletionOrdinal];
                         completion.State = NativeBurstDispatchCompletionStateV2.Consumed;
-                        runtime.Completions[(int)session.CompletionOrdinal] = completion;
+                        var completions = runtime.Completions;
+                        completions[(int)session.CompletionOrdinal] = completion;
                         break;
                     }
                     case NativeBurstDispatchValueSessionKindV2.EffectWrite:
@@ -1257,7 +1258,8 @@ namespace AIBT.Burst
                             faultOffset,
                             binding.SecondaryValueSize);
                         transaction.CommandPayloadByteCount += binding.SecondaryValueSize;
-                        runtime.Operations[(int)transaction.OperationCount] = new NativeBurstDispatchOperationV2(
+                        var operations = runtime.Operations;
+                        operations[(int)transaction.OperationCount] = new NativeBurstDispatchOperationV2(
                             session.OperationId,
                             resolved.TargetOrdinal,
                             binding.PrimaryTypeNumericId,
@@ -1278,7 +1280,7 @@ namespace AIBT.Burst
             WriteTransaction(runtime, transaction);
         }
 
-        internal static void DiscardFrame(BurstDispatchBackingV2 runtime, uint frameId)
+        internal static void DiscardFrame(in BurstDispatchBackingV2 runtime, uint frameId)
         {
             if (!TryTransaction(runtime, frameId, out var transaction))
             {
@@ -1293,14 +1295,14 @@ namespace AIBT.Burst
 
         internal static BurstContextResult GateFrameCarrier(in BurstDispatchFrame frame)
         {
-            var gate = GateRole(frame.Runtime, frame.Role);
+            var gate = GateRole(frame.RuntimeRef(), frame.Role);
             if (gate != BurstContextResult.Success)
             {
                 return gate;
             }
 
             return TryActiveFrame(
-                    frame.Runtime,
+                    frame.RuntimeRef(),
                     frame.FrameId,
                     frame.ValidationToken,
                     out var control,
@@ -1315,20 +1317,20 @@ namespace AIBT.Burst
             => GateFrameCarrier(in frame) == BurstContextResult.Success;
 
         internal static BurstContextResult GateCarrierRole(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             NativeBurstBatchRoleV2 role)
             => GateRole(runtime, role);
 
         internal static BurstContextResult GateConfigurationReader(in BurstConfigurationReader reader)
         {
-            var gate = GateRole(reader.Runtime, reader.Role);
+            var gate = GateRole(reader.RuntimeRef(), reader.Role);
             if (gate != BurstContextResult.Success)
             {
                 return gate;
             }
 
             return TryActiveFrame(
-                    reader.Runtime,
+                    reader.RuntimeRef(),
                     reader.FrameId,
                     reader.ValidationToken,
                     out var control,
@@ -1344,14 +1346,14 @@ namespace AIBT.Burst
 
         internal static BurstContextResult GateMemoryAccessor(in BurstMemoryAccessor accessor)
         {
-            var gate = GateRole(accessor.Runtime, accessor.Role);
+            var gate = GateRole(accessor.RuntimeRef(), accessor.Role);
             if (gate != BurstContextResult.Success)
             {
                 return gate;
             }
 
             return TryActiveFrame(
-                    accessor.Runtime,
+                    accessor.RuntimeRef(),
                     accessor.FrameId,
                     accessor.ValidationToken,
                     out var control,
@@ -1381,7 +1383,7 @@ namespace AIBT.Burst
             resolved = default;
             accessToken = default;
             var gate = GateContext(
-                reader.Runtime,
+                reader.RuntimeRef(),
                 reader.FrameId,
                 reader.ValidationToken,
                 reader.Role,
@@ -1391,12 +1393,12 @@ namespace AIBT.Burst
             if (gate != BurstContextResult.Success || control.Cursor != reader.RequestOrdinal)
             {
                 return gate == BurstContextResult.Success
-                    ? Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle)
+                    ? Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle)
                     : gate;
             }
 
             if (!TryFindValueField(
-                    reader.Runtime.ConfigurationFields,
+                    reader.RuntimeRef().ConfigurationFields,
                     dispatchCase.FirstConfigurationField,
                     dispatchCase.ConfigurationFieldCount,
                     fieldOrdinal,
@@ -1405,9 +1407,9 @@ namespace AIBT.Burst
                     out var fieldOffset,
                     out _)
                 || (ulong)request.ConfigurationOffset + fieldOffset + 4UL
-                    > (ulong)reader.Runtime.ConfigurationBytes.Length)
+                    > (ulong)reader.RuntimeRef().ConfigurationBytes.Length)
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.TypeMismatch);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.TypeMismatch);
             }
 
             // A generated handle persists the compiled per-node blackboard access ordinal.  That
@@ -1417,27 +1419,27 @@ namespace AIBT.Burst
             // catalog-stable link from this generated field to its binding; use it to select the
             // binding and retain the encoded value only as the compiler's non-sentinel authority.
             var encodedAccessOrdinal = ReadUInt32(
-                reader.Runtime.ConfigurationBytes,
+                reader.RuntimeRef().ConfigurationBytes,
                 request.ConfigurationOffset + fieldOffset);
             if (encodedAccessOrdinal == uint.MaxValue)
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
             var matchingLocalOrdinal = uint.MaxValue;
             for (uint candidateLocalOrdinal = 0; candidateLocalOrdinal < dispatchCase.BindingCount; candidateLocalOrdinal++)
             {
                 var candidateGlobalOrdinal = dispatchCase.FirstBinding + candidateLocalOrdinal;
-                if (candidateGlobalOrdinal >= reader.Runtime.Bindings.Length)
+                if (candidateGlobalOrdinal >= reader.RuntimeRef().Bindings.Length)
                 {
-                    return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                    return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
                 }
 
-                var candidate = reader.Runtime.Bindings[(int)candidateGlobalOrdinal];
+                var candidate = reader.RuntimeRef().Bindings[(int)candidateGlobalOrdinal];
                 if (candidate.ConfigurationFieldOrdinal != fieldOrdinal) continue;
                 if (matchingLocalOrdinal != uint.MaxValue)
                 {
-                    return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                    return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
                 }
 
                 matchingLocalOrdinal = candidateLocalOrdinal;
@@ -1446,18 +1448,18 @@ namespace AIBT.Burst
             if (matchingLocalOrdinal == uint.MaxValue
                 || matchingLocalOrdinal >= request.ResolvedBindingCount)
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
             globalBindingOrdinal = dispatchCase.FirstBinding + matchingLocalOrdinal;
             var resolvedOrdinal = request.FirstResolvedBinding + matchingLocalOrdinal;
-            if (resolvedOrdinal >= reader.Runtime.ResolvedBindings.Length)
+            if (resolvedOrdinal >= reader.RuntimeRef().ResolvedBindings.Length)
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            var binding = reader.Runtime.Bindings[(int)globalBindingOrdinal];
-            resolved = reader.Runtime.ResolvedBindings[(int)resolvedOrdinal];
+            var binding = reader.RuntimeRef().Bindings[(int)globalBindingOrdinal];
+            resolved = reader.RuntimeRef().ResolvedBindings[(int)resolvedOrdinal];
             if (binding.BindingOrdinal != matchingLocalOrdinal
                 || resolved.BindingOrdinal != matchingLocalOrdinal
                 || binding.ConfigurationFieldOrdinal != fieldOrdinal
@@ -1467,7 +1469,7 @@ namespace AIBT.Burst
                 || binding.SecondaryTypeNumericId != secondaryTypeNumericId
                 || binding.SecondaryTypeVersion != secondaryTypeVersion)
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.TypeMismatch);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.TypeMismatch);
             }
 
             accessToken = BindingAccessToken(
@@ -1479,7 +1481,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult TryResolveOpaqueHandle(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -1547,7 +1549,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult GateContext(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             NativeBurstBatchRoleV2 role,
@@ -1581,7 +1583,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult GateRole(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             NativeBurstBatchRoleV2 role)
         {
             var claims = runtime.ExecutionClaim;
@@ -1611,7 +1613,7 @@ namespace AIBT.Burst
         }
 
         private static bool TryActiveFrame(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             ulong validationToken,
             out NativeBurstDispatchControlV2 control,
@@ -1629,7 +1631,7 @@ namespace AIBT.Burst
         }
 
         private static bool TryActiveFrame(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             out NativeBurstDispatchControlV2 control,
             out NativeBurstDispatchRequestV2 request,
@@ -1669,7 +1671,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult Latch(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             BurstContextResult failure)
         {
@@ -1682,7 +1684,8 @@ namespace AIBT.Burst
             if (control.FirstFailure == BurstContextResult.Success)
             {
                 control.FirstFailure = failure;
-                runtime.Control[0] = control;
+                var controls = runtime.Control;
+                controls[0] = control;
             }
 
             return failure;
@@ -1717,14 +1720,14 @@ namespace AIBT.Burst
                 && operationId.NodeIndex == new RuntimeNodeIndex(request.RuntimeNodeIndex)
                 && operationId.ActivationGeneration == request.ActivationGeneration;
 
-        private static bool SameRuntime(BurstDispatchBackingV2 left, BurstDispatchBackingV2 right)
+        private static bool SameRuntime(in BurstDispatchBackingV2 left, in BurstDispatchBackingV2 right)
             => left.OwnerId != 0
                 && left.OwnerId == right.OwnerId
                 && left.Generation == right.Generation
                 && left.Control.Equals(right.Control);
 
         private static bool TryResolvedBinding(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             in NativeBurstDispatchRequestV2 request,
             in NativeBurstDispatchBindingV2 binding,
             out NativeBurstDispatchResolvedBindingV2 resolved)
@@ -1746,7 +1749,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult TryAllocateBlackboardReader(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             uint bindingOrdinal,
             in NativeBurstDispatchBindingV2 binding,
@@ -1802,7 +1805,7 @@ namespace AIBT.Burst
         }
 
         private static BurstContextResult TryAllocateSession(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             uint bindingOrdinal,
             NativeBurstDispatchValueSessionKindV2 kind,
@@ -1847,7 +1850,7 @@ namespace AIBT.Burst
         }
 
         private static void InitializeSession(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             ref NativeBurstDispatchTransactionControlV2 transaction,
             uint frameId,
             uint bindingOrdinal,
@@ -1869,7 +1872,8 @@ namespace AIBT.Burst
                 CopyRange(source, sourceOffset, runtime.ValueStagingBytes, stagingOffset, valueSize);
             }
 
-            runtime.ValueSessions[(int)sessionOrdinal] = new NativeBurstDispatchValueSessionV2
+            var sessions = runtime.ValueSessions;
+            sessions[(int)sessionOrdinal] = new NativeBurstDispatchValueSessionV2
             {
                 FrameId = frameId,
                 BindingOrdinal = bindingOrdinal,
@@ -1886,7 +1890,7 @@ namespace AIBT.Burst
         }
 
         private static bool TryTransaction(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint frameId,
             out NativeBurstDispatchTransactionControlV2 transaction)
         {
@@ -1924,7 +1928,7 @@ namespace AIBT.Burst
             session = default;
             binding = default;
             var gate = GateContext(
-                reader.Runtime,
+                reader.RuntimeRef(),
                 reader.FrameId,
                 reader.ValidationToken,
                 reader.Role,
@@ -1937,27 +1941,27 @@ namespace AIBT.Burst
             }
 
             if (!reader.TryGetSessionOrdinal(out sessionOrdinal)
-                || !TryTransaction(reader.Runtime, reader.FrameId, out var transaction)
+                || !TryTransaction(reader.RuntimeRef(), reader.FrameId, out var transaction)
                 || sessionOrdinal >= transaction.SessionCount)
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            session = reader.Runtime.ValueSessions[(int)sessionOrdinal];
+            session = reader.RuntimeRef().ValueSessions[(int)sessionOrdinal];
             if (session.FrameId != reader.FrameId
                 || session.BindingOrdinal != reader.BindingOrdinal
-                || session.BindingOrdinal >= reader.Runtime.Bindings.Length
+                || session.BindingOrdinal >= reader.RuntimeRef().Bindings.Length
                 || !IsReader(session.Kind))
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.InvalidHandle);
             }
 
             if (session.State != expectedState)
             {
-                return Latch(reader.Runtime, reader.FrameId, BurstContextResult.AlreadyCommitted);
+                return Latch(reader.RuntimeRef(), reader.FrameId, BurstContextResult.AlreadyCommitted);
             }
 
-            binding = reader.Runtime.Bindings[(int)session.BindingOrdinal];
+            binding = reader.RuntimeRef().Bindings[(int)session.BindingOrdinal];
             return BurstContextResult.Success;
         }
 
@@ -1972,7 +1976,7 @@ namespace AIBT.Burst
             session = default;
             binding = default;
             var gate = GateContext(
-                writer.Runtime,
+                writer.RuntimeRef(),
                 writer.FrameId,
                 writer.ValidationToken,
                 writer.Role,
@@ -1985,27 +1989,27 @@ namespace AIBT.Burst
             }
 
             if (!writer.TryGetSessionOrdinal(out sessionOrdinal)
-                || !TryTransaction(writer.Runtime, writer.FrameId, out var transaction)
+                || !TryTransaction(writer.RuntimeRef(), writer.FrameId, out var transaction)
                 || sessionOrdinal >= transaction.SessionCount)
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            session = writer.Runtime.ValueSessions[(int)sessionOrdinal];
+            session = writer.RuntimeRef().ValueSessions[(int)sessionOrdinal];
             if (session.FrameId != writer.FrameId
                 || session.BindingOrdinal != writer.BindingOrdinal
-                || session.BindingOrdinal >= writer.Runtime.Bindings.Length
+                || session.BindingOrdinal >= writer.RuntimeRef().Bindings.Length
                 || IsReader(session.Kind))
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.InvalidHandle);
             }
 
             if (session.State != expectedState)
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.AlreadyCommitted);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.AlreadyCommitted);
             }
 
-            binding = writer.Runtime.Bindings[(int)session.BindingOrdinal];
+            binding = writer.RuntimeRef().Bindings[(int)session.BindingOrdinal];
             return BurstContextResult.Success;
         }
 
@@ -2047,34 +2051,34 @@ namespace AIBT.Burst
 
             if (session.Kind != expectedKind)
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.InvalidHandle);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.InvalidHandle);
             }
 
-            var complete = ValidateSessionComplete(writer.Runtime, in session, in binding);
+            var complete = ValidateSessionComplete(writer.RuntimeRef(), in session, in binding);
             if (complete != BurstContextResult.Success)
             {
-                return Latch(writer.Runtime, writer.FrameId, complete);
+                return Latch(writer.RuntimeRef(), writer.FrameId, complete);
             }
 
             if (reservesCommand
-                && (!TryTransaction(writer.Runtime, writer.FrameId, out var transaction)
+                && (!TryTransaction(writer.RuntimeRef(), writer.FrameId, out var transaction)
                     || !CanSealReversible(
-                        writer.Runtime,
+                        writer.RuntimeRef(),
                         in transaction,
                         1,
                         binding.PrimaryValueSize,
                         reservesOperation ? 1UL : 0UL)))
             {
-                return Latch(writer.Runtime, writer.FrameId, BurstContextResult.CapacityExceeded);
+                return Latch(writer.RuntimeRef(), writer.FrameId, BurstContextResult.CapacityExceeded);
             }
 
             session.State = NativeBurstDispatchValueSessionStateV2.Sealed;
-            WriteSession(writer.Runtime, sessionOrdinal, session);
+            WriteSession(writer.RuntimeRef(), sessionOrdinal, session);
             return BurstContextResult.Success;
         }
 
         private static BurstContextResult ValidateSessionComplete(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             in NativeBurstDispatchValueSessionV2 session,
             in NativeBurstDispatchBindingV2 binding)
         {
@@ -2109,7 +2113,7 @@ namespace AIBT.Burst
         }
 
         private static bool AllFieldsMarked(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint stagingOffset,
             uint firstField,
             uint fieldCount)
@@ -2138,7 +2142,7 @@ namespace AIBT.Burst
         }
 
         private static bool CanSealReversible(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             in NativeBurstDispatchTransactionControlV2 transaction,
             ulong addedCommands,
             ulong addedPayloadBytes,
@@ -2174,7 +2178,7 @@ namespace AIBT.Burst
         }
 
         private static bool HasPublishedCapacity(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             in NativeBurstDispatchTransactionControlV2 transaction,
             ulong stagedCommands,
             ulong stagedPayloadBytes,
@@ -2185,7 +2189,7 @@ namespace AIBT.Burst
                 && (ulong)transaction.OperationCount + stagedOperations <= (ulong)runtime.Operations.Length;
 
         private static bool TryFindActiveOperation(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             OperationId operationId,
             uint targetOrdinal,
             in NativeBurstDispatchBindingV2 binding,
@@ -2223,7 +2227,7 @@ namespace AIBT.Burst
         }
 
         private static void AppendCommand(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             ref NativeBurstDispatchTransactionControlV2 transaction,
             NativeBurstDispatchCommandKindV2 kind,
             uint targetOrdinal,
@@ -2238,7 +2242,8 @@ namespace AIBT.Burst
                 runtime.CommandPayloadBytes,
                 payloadOffset,
                 payloadSize);
-            runtime.Commands[(int)transaction.CommandCount] = new NativeBurstDispatchCommandV2(
+            var commands = runtime.Commands;
+            commands[(int)transaction.CommandCount] = new NativeBurstDispatchCommandV2(
                 kind,
                 targetOrdinal,
                 operationId,
@@ -2530,7 +2535,7 @@ namespace AIBT.Burst
         }
 
         private static void WriteSession(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             uint sessionOrdinal,
             NativeBurstDispatchValueSessionV2 session)
         {
@@ -2539,7 +2544,7 @@ namespace AIBT.Burst
         }
 
         private static void WriteTransaction(
-            BurstDispatchBackingV2 runtime,
+            in BurstDispatchBackingV2 runtime,
             NativeBurstDispatchTransactionControlV2 transaction)
         {
             NativeBurstDispatchTransactionLedgerV2.Advance(ref transaction);

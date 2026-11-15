@@ -108,6 +108,17 @@ This is an estimate from the profile, not a measurement.
   Its tree has no blackboard keys ("shared" in the benchmark names means one shared program
   shape), so option 3(a) admits it.
 
+**Note after P10-003 (stage F1).** F1 made the existing main-thread framing cheaper, so the baseline
+J2 is compared with moved: `n-io-wait1` Immediate at N = 1000 is now about 1.97 ms per frame
+(was 3.66–3.75 ms), and `shared-reactive16` 54 ms (was 128 ms). The 0.5–0.8 ms J2 estimate above is
+unchanged, so J2's main-thread gain over Immediate shrinks from 4.5–7× to about 2.5–4× for
+`n-io-wait1`. Most of the remaining cost per dispatch (≈1.2–1.7 µs) is now the node body and the
+bridge running as IL2CPP code (`ExecuteImmediate` is not Burst on the main thread); a J2 job would
+run the same bridge Burst-compiled. A generator-emitted Burst `ExecuteImmediate` would reach part
+of that gain without J2 (estimated up to ≈40% of a single-host dispatch, not measured;
+`Planning~/Evidence/P10-003/README.md`, section 2.4). This note changes no decision; the status
+stays Proposed.
+
 ## Risks
 
 - **Native dispatch framing.** Re-implementing it is the bulk of the work. Equivalence has to be

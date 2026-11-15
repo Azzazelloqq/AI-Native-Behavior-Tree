@@ -11,6 +11,7 @@ namespace AIBT
             List<GeneratedDispatchGroupExecutorV2.Member> groupScratch,
             GeneratedDispatchGroupWorkspaceV2 workspace = null)
         {
+            SchedulerFrameProfileV1.StepStart();
             for (var index = 0; index < pending.Count; index++)
             {
                 var member = pending[index];
@@ -39,6 +40,7 @@ namespace AIBT
                     if (ReferenceEquals(candidateMember.Host.GeneratedDispatchAdapter?.Catalog, catalog))
                         groupScratch.Add(candidateMember);
                 }
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupScan);
                 if (groupScratch.Count == 1)
                 {
                     ResolveSingle(groupScratch[0], next);
@@ -57,6 +59,7 @@ namespace AIBT
                         var groupedMember = groupScratch[memberIndex];
                         if (groupedMember.Host.TryResumeBatchedDriveAfterDispatch()) next.Add(groupedMember.Host);
                     }
+                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.GroupResume);
                     continue;
                 }
 

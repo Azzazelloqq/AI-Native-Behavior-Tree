@@ -697,13 +697,18 @@ namespace AIBT
             var request = new DispatchRequest(_pendingStep, _updateId, _timeMicroseconds);
             NodeStatus status;
             BurstContextResult result;
+            SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.SingleDispatches, 1);
             if (TryReserveGeneratedEffectCapacity(request.NodeIndex, out var reserveFailure))
+            {
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Reserve);
                 result = _dispatch(in request, out status);
+            }
             else
             {
                 result = reserveFailure;
                 status = NodeStatus.Failure;
             }
+            SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Return);
             if (!_ready) return false; // A reentrant call may already have faulted the host.
             return CompletePendingDispatch(result, status);
         }
@@ -783,12 +788,15 @@ namespace AIBT
                 if (result == BurstContextResult.Success
                     && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
                     status = NodeStatus.Failure;
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.EffectCapture);
                 if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out var failure))
                 {
                     Fail(failure, "Callback rejected: " + result);
                     return false;
                 }
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.MachineComplete);
                 _recorder.RecordDispatchCompletion(_updateId, step, status);
+                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.TraceComplete);
                 return true;
             }
             finally
@@ -854,24 +862,33 @@ namespace AIBT
                         var request = new DispatchRequest(step, _updateId, _timeMicroseconds);
                     NodeStatus status;
                     BurstContextResult result;
+                    SchedulerFrameProfileV1.StepStart();
+                    SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.SingleDispatches, 1);
                     if (TryReserveGeneratedEffectCapacity(request.NodeIndex, out var reserveFailure))
+                    {
+                        SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Reserve);
                         result = _dispatch(in request, out status);
+                    }
                     else
                     {
                         result = reserveFailure;
                         status = NodeStatus.Failure;
                     }
+                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Return);
                     SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostDispatch);
                     if (!_ready) return; // A reentrant call may already have faulted the host.
                     if (result == BurstContextResult.Success
                         && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
                         status = NodeStatus.Failure;
+                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.EffectCapture);
                     if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out failure))
                     {
                         Fail(failure, "Callback rejected: " + result);
                         return;
                     }
+                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.MachineComplete);
                     _recorder.RecordDispatchCompletion(_updateId, step, status);
+                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.TraceComplete);
                     SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostComplete);
                 }
                 else if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting)
