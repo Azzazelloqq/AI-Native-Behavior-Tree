@@ -236,18 +236,163 @@ namespace AIBT.Tests.Integration.NativeRuntime
             Assert.That(explicitAgent.LastResult, Is.EqualTo(NodeStatus.Success));
         }
 
+        [TestCase("interactive")]
+        [TestCase("background")]
+        [TestCase("forced-immediate")]
+        [TestCase("forced-budgeted")]
+        [TestCase("forced-batched-jobs")]
+        [TestCase("forced-pipelined-jobs")]
+        public void EverySchedulingProfile_RunsRestartingAndEmittingAgentsThroughTheFacade(string kind)
+        {
+            var profile = ProfileFor(kind);
+            var reader = Prepare(ReaderTree);
+            var effect = Prepare(EffectTree);
+            var restarting = new List<NativeTreeAgent>();
+            var emitting = new List<NativeTreeAgent>();
+            var hits = new int[3];
+            for (var index = 0; index < 3; index++)
+            {
+                var agent = Spawn(reader, NativeTreeRestartMode.Always, profile: profile);
+                agent.SetFact("live-target", 1f);
+                restarting.Add(agent);
+                var emitter = Spawn(effect, NativeTreeRestartMode.Never, profile: profile);
+                var slot = index;
+                emitter.OnEffect("hit", (int value) => hits[slot] += value == 17 ? 1 : 1000);
+                emitter.SetFact("live-target", 1f);
+                emitting.Add(emitter);
+            }
+
+            Frames(12);
+
+            // A PipelinedJobs round spans scheduler frames, so at cadence 1 a tree advances one
+            // update about every third frame; every other policy advances one update per frame.
+            var pipelined = kind == "forced-pipelined-jobs";
+            var minimumRuns = pipelined ? 2 : 6;
+            var minimumHits = pipelined ? 3 : 6;
+            foreach (var agent in restarting)
+            {
+                Assert.That(agent.LastError, Is.Null, kind);
+                Assert.That(agent.CompletedRuns, Is.GreaterThanOrEqualTo(minimumRuns), kind + ": the restarting tree completes and restarts.");
+                Assert.That(agent.LastResult, Is.EqualTo(NodeStatus.Success), kind);
+            }
+            for (var index = 0; index < emitting.Count; index++)
+            {
+                Assert.That(emitting[index].LastError, Is.Null, kind);
+                Assert.That(emitting[index].IsRunning, Is.True, kind);
+                Assert.That(hits[index], Is.InRange(minimumHits, 12), kind + ": one effect per update, delivered by name.");
+            }
+            Assert.That(_world.LastWorldFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None), kind);
+        }
+
+        [Test]
+        public void ForcedJobsProfileWithoutJobsCapabilities_FaultsWithAnExplanation()
+        {
+            // P10-001 root cause of the "NativeCapacityPlanInvalid" fault seen through the facade:
+            // the world's scheduler had no SchedulerJobsCapabilities, which is never defaulted.
+            var agent = Spawn(Prepare(ReaderTree), NativeTreeRestartMode.Always,
+                profile: Forced(SchedulingPolicy.BatchedJobsSameFrame, false));
+            string fault = null;
+            agent.Faulted += message => fault = message;
+
+            LogAssert.Expect(LogType.Error, new Regex("Forced scheduling policy is not supported"));
+            LogAssert.Expect(LogType.Error, new Regex("SetJobsCapabilities"));
+            Frames(1);
+
+            Assert.That(fault, Does.StartWith("The native host stopped: NativeCapacityPlanInvalid."));
+            Assert.That(fault, Does.Contain("BatchedJobsSameFrame").And.Contain("SetJobsCapabilities"));
+            Assert.That(agent.Host, Is.Null);
+        }
+
+        [Test]
+        public void LeavingAndJoiningTheWorld_KeepsTheRegistrationOrderOfEffectDelivery()
+        {
+            // P10-001: unregistering leaves a vacant slot that is compacted later (O(1) amortized);
+            // effects are still delivered in registration order, survivors first, newcomers last.
+            var asset = Prepare(EffectTree);
+            var order = new List<int>();
+            var agents = new List<NativeTreeAgent>();
+            NativeTreeAgent SpawnEmitter(int label)
+            {
+                var agent = Spawn(asset, NativeTreeRestartMode.Never);
+                agent.OnEffect("hit", (int _) => order.Add(label));
+                agent.SetFact("live-target", 1f);
+                return agent;
+            }
+            for (var label = 0; label < 12; label++) agents.Add(SpawnEmitter(label));
+            Frames(1);
+            Assert.That(order, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }));
+
+            foreach (var leaving in new[] { 1, 2, 4, 5, 7, 8, 10 }) agents[leaving].Deactivate();
+            Assert.That(_world.RegisteredParticipantCount, Is.EqualTo(5));
+            Assert.That(_scheduler.RegisteredCount, Is.EqualTo(5));
+            agents.Add(SpawnEmitter(12));
+            agents.Add(SpawnEmitter(13));
+            agents[4].Activate();
+            agents[4].SetFact("live-target", 1f);
+            order.Clear();
+            Frames(1);
+            Assert.That(order, Is.EqualTo(new[] { 0, 3, 6, 9, 11, 12, 13, 4 }), "Survivors keep their order; rejoiners go last.");
+
+            foreach (var agent in agents) agent.Deactivate();
+            Assert.That(_world.RegisteredParticipantCount, Is.Zero);
+            Assert.That(_scheduler.RegisteredCount, Is.Zero);
+            agents[0].Activate();
+            agents[0].SetFact("live-target", 1f);
+            order.Clear();
+            Frames(1);
+            Assert.That(order, Is.EqualTo(new[] { 0 }));
+        }
+
         // ------------------------------------------------------------------ helpers
 
-        private NativeTreeAgent Spawn(ProductionTreeAsset asset, NativeTreeRestartMode restart, bool activate = true)
+        private NativeTreeAgent Spawn(
+            ProductionTreeAsset asset, NativeTreeRestartMode restart, bool activate = true, SchedulingProfile profile = null)
         {
             var gameObject = Track(new GameObject("AIBT.Tests.P9004.Agent" + _agents.Count));
             var agent = gameObject.AddComponent<NativeTreeAgent>();
             agent.Tree = asset;
             agent.World = _world;
             agent.RestartMode = restart;
+            if (profile != null) agent.Profile = profile;
             _agents.Add(agent);
             if (activate) agent.Activate();
             return agent;
+        }
+
+        /// <summary>
+        /// P10-001: the non-default profiles. A forced Jobs policy needs the coordinator's own
+        /// <see cref="SchedulerJobsCapabilities"/> (never a hidden default), so those cases set it.
+        /// </summary>
+        private SchedulingProfile ProfileFor(string kind)
+        {
+            switch (kind)
+            {
+                case "interactive": return SchedulingProfile.Interactive;
+                case "background": return SchedulingProfile.Background;
+                case "forced-immediate": return Forced(SchedulingPolicy.Immediate, false);
+                case "forced-budgeted": return Forced(SchedulingPolicy.Budgeted, false);
+                case "forced-batched-jobs":
+                    _scheduler.SetJobsCapabilities(JobsCapabilities(pipelined: false));
+                    return Forced(SchedulingPolicy.BatchedJobsSameFrame, false);
+                case "forced-pipelined-jobs":
+                    _scheduler.SetJobsCapabilities(JobsCapabilities(pipelined: true));
+                    return Forced(SchedulingPolicy.PipelinedJobs, true);
+                default: throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
+            }
+        }
+
+        private static SchedulingProfile Forced(SchedulingPolicy policy, bool pipelining)
+        {
+            Assert.That(SchedulingProfile.TryCreate("tests.p10001." + policy, 0, 1u, null, null, pipelining, policy,
+                out var profile, out var error), Is.True, error.ToString());
+            return profile;
+        }
+
+        private static SchedulerJobsCapabilities JobsCapabilities(bool pipelined)
+        {
+            Assert.That(SchedulerJobsCapabilities.TryCreate(1.0, 1.0, 1u, 64u, 64u, pipelined, out var capabilities, out var error),
+                Is.True, error.ToString());
+            return capabilities;
         }
 
         private void Frames(int count)

@@ -1,0 +1,520 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "aibt.perf.shared-reactive64",
+  "name": "shared-reactive64",
+  "root": "root",
+  "blackboard": {},
+  "nodes": {
+    "root": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "children": [
+        "c0",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "c6",
+        "c7",
+        "c8",
+        "c9",
+        "c10",
+        "c11",
+        "c12",
+        "c13",
+        "c14",
+        "c15",
+        "c16",
+        "c17",
+        "c18",
+        "c19",
+        "c20",
+        "c21",
+        "c22",
+        "c23",
+        "c24",
+        "c25",
+        "c26",
+        "c27",
+        "c28",
+        "c29",
+        "c30",
+        "c31",
+        "c32",
+        "c33",
+        "c34",
+        "c35",
+        "c36",
+        "c37",
+        "c38",
+        "c39",
+        "c40",
+        "c41",
+        "c42",
+        "c43",
+        "c44",
+        "c45",
+        "c46",
+        "c47",
+        "c48",
+        "c49",
+        "c50",
+        "c51",
+        "c52",
+        "c53",
+        "c54",
+        "c55",
+        "c56",
+        "c57",
+        "c58",
+        "c59",
+        "c60",
+        "c61",
+        "hold"
+      ]
+    },
+    "c0": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c1": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c2": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c3": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c4": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c5": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c6": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c7": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c8": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c9": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c10": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c11": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c12": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c13": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c14": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c15": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c16": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c17": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c18": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c19": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c20": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c21": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c22": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c23": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c24": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c25": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c26": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c27": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c28": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c29": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c30": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c31": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c32": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c33": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c34": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c35": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c36": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c37": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c38": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c39": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c40": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c41": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c42": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c43": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c44": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c45": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c46": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c47": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c48": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c49": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c50": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c51": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c52": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c53": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c54": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c55": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c56": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c57": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c58": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c59": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c60": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c61": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "hold": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 4000000000
+      }
+    }
+  }
+}

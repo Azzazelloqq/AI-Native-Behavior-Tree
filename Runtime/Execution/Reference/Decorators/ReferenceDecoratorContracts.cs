@@ -119,7 +119,8 @@ namespace AIBT
         {
             if (durationMicroseconds <= 0) throw new ArgumentOutOfRangeException(nameof(durationMicroseconds));
             if (blockedResult != NodeStatus.Success && blockedResult != NodeStatus.Failure) throw new ArgumentOutOfRangeException(nameof(blockedResult));
-            if (!Enum.IsDefined(typeof(ReferenceCooldownStartPolicy), startPolicy)) throw new ArgumentOutOfRangeException(nameof(startPolicy));
+            // A range check instead of Enum.IsDefined, which boxes on every cooldown activation (P10-001).
+            if ((byte)startPolicy > (byte)ReferenceCooldownStartPolicy.OnSuccessfulExit) throw new ArgumentOutOfRangeException(nameof(startPolicy));
             DurationMicroseconds = durationMicroseconds;
             BlockedResult = blockedResult;
             StartPolicy = startPolicy;

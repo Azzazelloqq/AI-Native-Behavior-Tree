@@ -26,8 +26,9 @@ namespace AIBT
             uint childCount)
         {
             if (childCount == 0) throw new ArgumentOutOfRangeException(nameof(childCount));
-            if (!Enum.IsDefined(typeof(ReferenceParallelPolicy), policy)) throw new ArgumentOutOfRangeException(nameof(policy));
-            if (!Enum.IsDefined(typeof(ReferenceParallelTieBreak), tieBreak)) throw new ArgumentOutOfRangeException(nameof(tieBreak));
+            // Range checks instead of Enum.IsDefined, which boxes; this runs on every parallel activation (P10-001).
+            if ((byte)policy > (byte)ReferenceParallelPolicy.Threshold) throw new ArgumentOutOfRangeException(nameof(policy));
+            if ((byte)tieBreak > (byte)ReferenceParallelTieBreak.SuccessFirst) throw new ArgumentOutOfRangeException(nameof(tieBreak));
             if (policy == ReferenceParallelPolicy.Threshold)
             {
                 if (successThreshold == 0 || failureThreshold == 0

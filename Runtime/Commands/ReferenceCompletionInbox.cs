@@ -65,6 +65,14 @@ namespace AIBT
         {
             if (batch == null) throw new ArgumentNullException(nameof(batch));
             if (activationGenerations == null) throw new ArgumentNullException(nameof(activationGenerations));
+            if (batch.Records.Count == 0)
+            {
+                // The common case on every update: nothing arrived, so nothing to normalize and no
+                // per-update lists to allocate (P10-001). Pending ordering is unchanged.
+                _pending.Sort(PendingCompletionComparer.Instance);
+                return DiagnosticCollection.Empty;
+            }
+
             var diagnostics = new List<Diagnostic>();
             var records = new List<CompletionRecord>(batch.Records.Count);
             for (var index = 0; index < batch.Records.Count; index++) records.Add(batch.Records[index]);

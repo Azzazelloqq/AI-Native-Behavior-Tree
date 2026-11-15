@@ -15,9 +15,10 @@ It has two runtime layers that share one tree format and one editor:
 | Node touches the scene | directly (Transform, components, other objects) | never; it reads facts and emits effects |
 | Standard nodes | 52 `aibt.unity.*` nodes (movement, navigation, animation, ...) | 4 `aibt.native.*` nodes, plus the core composites and decorators |
 | Live debugging in the graph | every node, live blackboard values | active path, just-finished nodes, root result |
-| Best for | gameplay AI for tens to hundreds of characters, fast iteration | large crowds, zero GC per tick, Burst jobs |
+| Main-thread cost, IL2CPP Player ([measured](Documentation~/performance.md)) | ≈1.2 µs per agent-tick for a 15-node tree, 0 B allocated | ≈3.8 µs per agent-update waiting in one leaf, ≈8 µs for a looping 16-node tree, 0 B while the tree runs; each restart allocates |
+| Best for | gameplay AI, fast iteration; about 800 agents ticking every frame in 1 ms of main thread, thousands with `Interval` ticking | zero GC while running, deterministic Burst execution, a simulation kept off the scene |
 
-Start with the managed layer. Move a tree to the native layer when profiling says you need it.
+Start with the managed layer. Move a tree to the native layer when you need what it guarantees (zero GC while running, deterministic Burst execution).
 
 Requirements: Unity 6 (`6000.0` or newer; this release is verified on `6000.7.0b1`), Burst
 `1.8.29`, Collections `6.5.0`, Newtonsoft JSON `3.2.2` (installed as dependencies). The package is
@@ -284,11 +285,14 @@ enabled.
 
 ## Which layer to choose
 
-- **Managed** when nodes need the scene (physics queries, animation, NavMesh, audio), when you
-  iterate on gameplay, or for up to a few hundred agents. A tree is ready as soon as it is saved.
-- **Native** for large populations, deterministic Burst execution and zero GC per tick, when the
-  game can express the world as facts and effects. It needs a shard and a catalog assembly and a
-  prepared runtime asset.
+- **Managed** when nodes need the scene (physics queries, animation, NavMesh, audio) and when you
+  iterate on gameplay. A tree is ready as soon as it is saved. A warmed-up tick allocates nothing;
+  a 15-node tree costs about 1.2 µs per agent-tick in an IL2CPP Player, so about 800 agents ticking
+  every frame fit in 1 ms of main thread, and many more with `TickMode = Interval`.
+- **Native** for deterministic Burst execution and zero GC while trees run, when the game can
+  express the world as facts and effects. It needs a shard and a catalog assembly and a prepared
+  runtime asset. For small trees it costs more main-thread time per agent than the managed layer
+  (see [Performance](Documentation~/performance.md)); choose it for its guarantees, not for speed.
 - Both layers use the same `.aibt` format, core composites, editor and validator, but a tree's leaf
   nodes belong to one layer: the managed `aibt.unity.*` nodes do not run in a `NativeTreeAgent`,
   and generated Burst nodes do not run in a `BehaviorTreeAgent`.
@@ -310,6 +314,13 @@ enabled.
   before the agent is enabled. See the [P9-006 evidence](Planning~/Evidence/P9-006/README.md).
 - MCP `search_nodes` returns 50 nodes per page by default; pass `count` or page with `offset`.
 - Condition interrupts (`ConditionInterrupt`) exist only in the managed layer.
+- A `NativeTreeAgent` profile that forces `BatchedJobsSameFrame` or `PipelinedJobs` needs
+  `SchedulerJobsCapabilities` on its world's `ProductionTreeScheduler` (there is no default);
+  without them the agent faults with a message that says so. See [Performance](Documentation~/performance.md).
+- Every native restart (`NativeTreeRestartMode`) destroys and re-creates the agent's
+  `ProductionTreeHost`, which allocates. For a tree that finishes every few ticks, loop inside the
+  tree (a repeater at the root) instead of restarting it.
+- Fixed-string blackboard values allocate when written and read in the managed layer.
 - The reference Preview window does not run managed `BtAction`/`BtCondition` nodes.
 - The live graph samples node states about 30 times a second; a node that starts and finishes
   between two samples is not flashed.
@@ -340,6 +351,7 @@ assets and read a running host's trace through the same Editor operations. See
 - [Architecture](Documentation~/architecture.md), [Scope](Documentation~/scope.md),
   [Architectural decisions](Documentation~/decisions.md),
   [Normative specifications](Documentation~/specifications/conventions.md)
+- [Performance](Documentation~/performance.md): measured cost of both layers and how to keep it low.
 - [Benchmarks](Documentation~/benchmarks.md), [Testing strategy](Documentation~/testing.md)
 - [Roadmap and phase history](Documentation~/roadmap.md), [Changelog](CHANGELOG.md)
 - [Samples](Samples~/README.md), [Contributing](CONTRIBUTING.md)

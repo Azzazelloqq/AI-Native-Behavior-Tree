@@ -210,7 +210,7 @@ namespace AIBT
                 return Fail(BlackboardStorageDiagnosticCodes.TypeMismatch, "The enum write contract does not match the compiled slot contract.");
             }
 
-            if (!BlackboardBuiltInCodec.TryEncode(value, builtIn, out var bytes))
+            if (!BlackboardBuiltInCodec.TryEncode(value, builtIn, EncodeScratch(builtIn), out var bytes))
             {
                 return Fail(BlackboardStorageDiagnosticCodes.InvalidValue, "The write value is invalid for its declared built-in type.");
             }
@@ -311,14 +311,29 @@ namespace AIBT
                 return Fail(BlackboardStorageDiagnosticCodes.TypeMismatch, "The enum write contract does not match the compiled slot contract.");
             }
 
-            if (!BlackboardBuiltInCodec.TryEncode(value, builtIn, out var bytes))
+            if (!BlackboardBuiltInCodec.TryEncode(value, builtIn, EncodeScratch(builtIn), out var bytes))
                 return Fail(BlackboardStorageDiagnosticCodes.InvalidValue, "The write value is invalid for its declared built-in type.");
             return WriteBytes(slotIndex, slot, bytes, null);
         }
 
         internal BlackboardResetResult Reset()
         {
-            var changedSlots = new List<uint>();
+            var changes = new List<BlackboardSlotChange>();
+            if (!TryReset(changes, out var diagnostic)) return BlackboardResetResult.Failed(diagnostic);
+            return changes.Count == 0
+                ? BlackboardResetResult.Unchanged
+                : new BlackboardResetResult(true, changes.ToArray(), null);
+        }
+
+        /// <summary>
+        /// Same reset as <see cref="Reset"/>, appending the changed slots to
+        /// <paramref name="changes"/> instead of allocating a result (P10-001). On failure nothing
+        /// is changed and nothing is appended.
+        /// </summary>
+        internal bool TryReset(List<BlackboardSlotChange> changes, out Diagnostic diagnostic)
+        {
+            var changedSlots = _changedSlots;
+            changedSlots.Clear();
             for (var index = 0; index < _program.BlackboardSlots.Count; index++)
             {
                 var slot = _program.BlackboardSlots[index];
@@ -326,28 +341,32 @@ namespace AIBT
                 var expected = Slice(_defaults, slot.Offset, slot.Size);
                 if (!TryAreEqual(slot, current, expected, out var equal))
                 {
-                    return ResetFail(
+                    diagnostic = Create(
                         BlackboardStorageDiagnosticCodes.EqualityFault,
-                        "The registered blackboard equality contract threw during reset.");
+                        "The registered blackboard equality contract threw during reset.",
+                        _treeInstanceId);
+                    return false;
                 }
 
                 if (equal) continue;
                 if (_slotVersions[index] == ulong.MaxValue)
                 {
-                    return ResetFail(BlackboardStorageDiagnosticCodes.VersionOverflow, "A blackboard slot version cannot advance without wrapping.");
+                    diagnostic = Create(BlackboardStorageDiagnosticCodes.VersionOverflow, "A blackboard slot version cannot advance without wrapping.", _treeInstanceId);
+                    return false;
                 }
 
                 changedSlots.Add((uint)index);
             }
 
-            if (changedSlots.Count == 0) return BlackboardResetResult.Unchanged;
+            diagnostic = null;
+            if (changedSlots.Count == 0) return true;
 
             if (Revision == ulong.MaxValue)
             {
-                return ResetFail(BlackboardStorageDiagnosticCodes.VersionOverflow, "The tree blackboard revision cannot advance without wrapping.");
+                diagnostic = Create(BlackboardStorageDiagnosticCodes.VersionOverflow, "The tree blackboard revision cannot advance without wrapping.", _treeInstanceId);
+                return false;
             }
 
-            var changes = new BlackboardSlotChange[changedSlots.Count];
             for (var changedIndex = 0; changedIndex < changedSlots.Count; changedIndex++)
             {
                 var slotIndex = changedSlots[changedIndex];
@@ -356,13 +375,27 @@ namespace AIBT
                 expected.CopyTo(Slice(_arena, slot.Offset, slot.Size));
                 var oldVersion = _slotVersions[slotIndex];
                 var newVersion = ++_slotVersions[slotIndex];
-                changes[changedIndex] = new BlackboardSlotChange(
-                    slotIndex, slot.StableKeyId, oldVersion, newVersion);
+                changes.Add(new BlackboardSlotChange(slotIndex, slot.StableKeyId, oldVersion, newVersion));
             }
 
             Revision++;
-            return new BlackboardResetResult(true, changes, null);
+            return true;
         }
+
+        private readonly List<uint> _changedSlots = new List<uint>();
+
+        /// <summary>
+        /// Reused buffer a built-in write encodes into before it is compared with and copied over
+        /// the slot, so writes do not allocate (P10-001). Grows once to the largest slot written.
+        /// </summary>
+        private Span<byte> EncodeScratch(BlackboardTypeDescriptor descriptor)
+        {
+            var size = checked((int)descriptor.Size);
+            if (_encodeScratch == null || _encodeScratch.Length < size) _encodeScratch = new byte[size];
+            return _encodeScratch;
+        }
+
+        private byte[] _encodeScratch;
 
         private BlackboardStorageResult WriteBytes(
             uint slotIndex,
@@ -449,9 +482,6 @@ namespace AIBT
 
         private BlackboardStorageResult Fail(DiagnosticCode code, string message)
             => BlackboardStorageResult.Failed(Create(code, message, _treeInstanceId));
-
-        private BlackboardResetResult ResetFail(DiagnosticCode code, string message)
-            => BlackboardResetResult.Failed(Create(code, message, _treeInstanceId));
 
         private static Diagnostic Create(DiagnosticCode code, string message, TreeInstanceId treeInstanceId)
             => BlackboardStorageDiagnostics.Create(code, message, treeInstanceId);

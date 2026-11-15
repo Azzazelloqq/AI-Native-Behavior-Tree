@@ -1,0 +1,24 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "aibt.perf.shared-reactive2",
+  "name": "shared-reactive2",
+  "root": "root",
+  "blackboard": {},
+  "nodes": {
+    "root": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "children": [
+        "hold"
+      ]
+    },
+    "hold": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 4000000000
+      }
+    }
+  }
+}

@@ -201,7 +201,7 @@ namespace AIBT
             if (host.LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None)
             {
                 _resultReported = true;
-                Fault("The native host stopped: " + host.LastFailure.Code + ".");
+                Fault("The native host stopped: " + host.LastFailure.Code + "." + ForcedJobsHint());
                 return;
             }
             if (!host.LastRootResult.HasValue) return;
@@ -268,6 +268,22 @@ namespace AIBT
             Debug.LogError("AIBT NativeTreeAgent '" + name + "': " + error, this);
             try { Faulted?.Invoke(error); }
             catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        /// <summary>
+        /// P10-001: a profile forcing a Jobs policy fails every update (NativeCapacityPlanInvalid)
+        /// until the world's scheduler has <see cref="SchedulerJobsCapabilities"/>; there is no
+        /// hidden default for them (ADR-P7-033), so the fault names the missing call.
+        /// </summary>
+        private string ForcedJobsHint()
+        {
+            var forced = _profile.ForcedPolicy;
+            if (forced != SchedulingPolicy.BatchedJobsSameFrame && forced != SchedulingPolicy.PipelinedJobs) return string.Empty;
+            var world = _joinedWorld != null ? _joinedWorld : _world;
+            var scheduler = world != null ? world.Scheduler : null;
+            if (scheduler == null || scheduler.HasJobsCapabilities) return string.Empty;
+            return " The profile forces " + forced.Value + ", which needs SchedulerJobsCapabilities on the world's"
+                + " ProductionTreeScheduler (ProductionTreeScheduler.SetJobsCapabilities) before the first frame.";
         }
 
         private ProductionTreeWorld ResolveWorld()

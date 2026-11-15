@@ -1,0 +1,28 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "aibt.perf.native-move1",
+  "name": "native-move1",
+  "root": "move",
+  "blackboard": {
+    "distance": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 100.0
+    }
+  },
+  "nodes": {
+    "move": {
+      "type": "aibt.samples.first-agent.move",
+      "typeVersion": 1,
+      "parameters": {
+        "speed": 1.5,
+        "stop-distance": 0.25
+      },
+      "bindings": {
+        "distance": "distance"
+      }
+    }
+  }
+}

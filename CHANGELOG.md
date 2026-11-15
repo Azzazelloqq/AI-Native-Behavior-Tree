@@ -4,6 +4,29 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Performance (P10-001)
+
+- Managed layer: a warmed-up `BehaviorTreeAgent` tick no longer allocates, including reactive
+  re-evaluation, parallels, restarts and blackboard `Set`/`Get`/`TryGet` from game code
+  (fixed-string values excepted). Execution order, statuses, traces and diagnostics are unchanged;
+  `ManagedTickAllocationTests` guards it. In an IL2CPP Player (stripping High) 1 000 agents with a
+  15-node tree went from 3.8 ms to 1.2 ms of main thread per frame and from ≈430 B per agent-tick
+  with GC every ~14 frames to 0 B and no GC; per-node handler lookups are resolved once per node.
+- Add `BehaviorTreeAgent.StaggerIntervalTicks` (off by default): Interval agents keep individual
+  phases so agents spawned together do not tick on the same frame; every tick receives real time.
+- Native layer: registering and unregistering a host with `ProductionTreeScheduler` and
+  `ProductionTreeWorld` is O(1) (it was a scan of all hosts, O(n²) for n spawns or restarts);
+  restarting 20 000 `native-shape15` agents went from 578 ms to 315 ms per frame. A participant that
+  leaves the world inside an effect handler no longer makes the next participant's effects wait a
+  frame.
+- `BatchedJobsSameFrame`: `NativeBatchedLifecycleOwnerV1` checked lane uniqueness by comparing every
+  pair each round; it now uses a set (same checks, same failures).
+- A `NativeTreeAgent` whose profile forces a Jobs policy without `SchedulerJobsCapabilities` on its
+  world's scheduler now faults with a message naming `ProductionTreeScheduler.SetJobsCapabilities`.
+  Every scheduling profile is tested through the facade.
+- Add `Documentation~/performance.md` (measured cost of both layers) and the Player harness in
+  `Benchmarks~/Phase10/PlayerPerf/`.
+
 ### User guide and acceptance (P9-006)
 
 - `README.md` is now a user guide: five-minute starts for the managed (`BehaviorTreeAgent`) and

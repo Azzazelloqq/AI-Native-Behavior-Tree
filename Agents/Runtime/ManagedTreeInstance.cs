@@ -54,6 +54,8 @@ namespace AIBT.Agents
         private readonly List<uint> _watched = new List<uint>();
         private readonly Dictionary<string, KeySlot> _keys;
         private readonly string[] _keyNames;
+        private readonly uint[] _keySlots;
+        private readonly BlackboardValue[] _keptValues;
         private readonly BlackboardValueType[] _slotTypes;
         private readonly long[] _slotChangedAt;
         private readonly byte[] _nodeStates;
@@ -140,6 +142,9 @@ namespace AIBT.Agents
             }
 
             _keyNames = names.ToArray();
+            _keySlots = new uint[_keyNames.Length];
+            for (var index = 0; index < _keyNames.Length; index++) _keySlots[index] = _keys[_keyNames[index]].Slot;
+            _keptValues = new BlackboardValue[_keyNames.Length];
             Blackboard = new AgentBlackboard(this);
 
             // Nodes are created after the blackboard is resolvable so key parameters bind at once.
@@ -230,12 +235,14 @@ namespace AIBT.Agents
         internal bool Restart(bool resetBlackboard)
         {
             AbortActive();
+            // A reused buffer instead of a new array per restart (P10-001); every entry is
+            // overwritten here before it is read below.
             BlackboardValue[] kept = null;
             if (!resetBlackboard)
             {
-                kept = new BlackboardValue[_keyNames.Length];
+                kept = _keptValues;
                 for (var index = 0; index < _keyNames.Length; index++)
-                    _machine.TryReadBlackboardSlot(_keys[_keyNames[index]].Slot, out kept[index]);
+                    _machine.TryReadBlackboardSlot(_keySlots[index], out kept[index]);
             }
 
             var envelope = _machine.Restart();
@@ -254,7 +261,7 @@ namespace AIBT.Agents
                 for (var index = 0; index < _keyNames.Length; index++)
                 {
                     if (kept[index].IsValid)
-                        _machine.TryWriteBlackboardSlot(_keys[_keyNames[index]].Slot, kept[index], RuntimeNodeIndex.Invalid);
+                        _machine.TryWriteBlackboardSlot(_keySlots[index], kept[index], RuntimeNodeIndex.Invalid);
                 }
             }
 

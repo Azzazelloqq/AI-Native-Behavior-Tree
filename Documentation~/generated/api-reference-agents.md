@@ -98,6 +98,7 @@ Runs a behavior tree on this GameObject. Assign a tree and press Play: no genera
 - `PROPERTY System.Boolean HasFaulted`
 - `PROPERTY System.Boolean IsRunning`
 - `PROPERTY System.Boolean RestartOnComplete`
+- `PROPERTY System.Boolean StaggerIntervalTicks`
 - `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.AgentReference> References`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastResult`
 - `PROPERTY System.Single TickInterval`

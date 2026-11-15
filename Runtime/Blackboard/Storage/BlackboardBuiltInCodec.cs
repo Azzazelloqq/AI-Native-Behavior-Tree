@@ -88,6 +88,36 @@ namespace AIBT
             }
         }
 
+        /// <summary>
+        /// Allocation-free variant of <see cref="TryEncode(BlackboardValue, BlackboardTypeDescriptor, out byte[])"/>:
+        /// writes the same bytes into <paramref name="scratch"/> and returns them as
+        /// <paramref name="bytes"/> (P10-001). Fixed strings still allocate while encoding.
+        /// </summary>
+        internal static bool TryEncode(
+            BlackboardValue value,
+            BlackboardTypeDescriptor descriptor,
+            Span<byte> scratch,
+            out ReadOnlySpan<byte> bytes)
+        {
+            bytes = default;
+            if (!value.IsValid || value.Type != descriptor.ValueType) return false;
+            try
+            {
+                var size = CompiledBlackboardValueEncoder.EncodedSize(value);
+                if (size != descriptor.Size || size > scratch.Length) return false;
+                var destination = scratch.Slice(0, size);
+                destination.Clear();
+                CompiledBlackboardValueEncoder.EncodeInto(value, destination);
+                bytes = destination;
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                bytes = default;
+                return false;
+            }
+        }
+
         private static bool TryDecodeFixedString(
             BlackboardValueType type,
             ReadOnlySpan<byte> source,
@@ -127,19 +157,13 @@ namespace AIBT
         private static ulong ReadUInt64(ReadOnlySpan<byte> source, int offset)
             => ReadUInt32(source, offset) | ((ulong)ReadUInt32(source, offset + 4) << 32);
 
+        // Little-endian IEEE 754 bits reinterpreted in place: the value BitConverter returned from
+        // a copied (and, on big-endian hosts, reversed) array, without that array (P10-001).
         private static float ReadFloat32(ReadOnlySpan<byte> source, int offset)
-        {
-            var bytes = source.Slice(offset, 4).ToArray();
-            if (!BitConverter.IsLittleEndian) Array.Reverse(bytes);
-            return BitConverter.ToSingle(bytes, 0);
-        }
+            => new FloatBits { UInt32 = ReadUInt32(source, offset) }.Float32;
 
         private static double ReadFloat64(ReadOnlySpan<byte> source, int offset)
-        {
-            var bytes = source.Slice(offset, 8).ToArray();
-            if (!BitConverter.IsLittleEndian) Array.Reverse(bytes);
-            return BitConverter.ToDouble(bytes, 0);
-        }
+            => new FloatBits { UInt64 = ReadUInt64(source, offset) }.Float64;
 
         private static bool IsZero(ReadOnlySpan<byte> source, int start)
         {

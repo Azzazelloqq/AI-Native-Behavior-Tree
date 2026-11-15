@@ -1,0 +1,148 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "aibt.perf.unity-shape15-none",
+  "name": "unity-shape15-none",
+  "root": "priority",
+  "blackboard": {
+    "target-visible": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": false
+    },
+    "alert": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0.0
+    },
+    "phase": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0.0
+    }
+  },
+  "nodes": {
+    "priority": {
+      "type": "aibt.core.memory-selector",
+      "typeVersion": 1,
+      "children": [
+        "chase",
+        "patrol"
+      ]
+    },
+    "chase": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "sees",
+        "alert-on",
+        "c-wait"
+      ]
+    },
+    "sees": {
+      "type": "aibt.unity.is-true",
+      "typeVersion": 1,
+      "parameters": {
+        "key": "target-visible",
+        "interrupt": "none"
+      }
+    },
+    "alert-on": {
+      "type": "aibt.unity.set-float",
+      "typeVersion": 1,
+      "parameters": {
+        "key": "alert",
+        "value": 1.0
+      }
+    },
+    "c-wait": {
+      "type": "aibt.unity.wait-frames",
+      "typeVersion": 1,
+      "parameters": {
+        "frames": 5
+      }
+    },
+    "patrol": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "alert-off",
+        "step1",
+        "chk1",
+        "wait1",
+        "step2",
+        "chk2",
+        "wait2",
+        "ok",
+        "skip"
+      ]
+    },
+    "alert-off": {
+      "type": "aibt.unity.set-float",
+      "typeVersion": 1,
+      "parameters": {
+        "key": "alert",
+        "value": 0.0
+      }
+    },
+    "step1": {
+      "type": "aibt.unity.set-float",
+      "typeVersion": 1,
+      "parameters": {
+        "key": "phase",
+        "value": 1.0
+      }
+    },
+    "chk1": {
+      "type": "aibt.unity.compare-float",
+      "typeVersion": 1,
+      "parameters": {
+        "key": "phase",
+        "comparison": "greater-or-equal",
+        "value": 1.0
+      }
+    },
+    "wait1": {
+      "type": "aibt.unity.wait-frames",
+      "typeVersion": 1,
+      "parameters": {
+        "frames": 10
+      }
+    },
+    "step2": {
+      "type": "aibt.unity.set-float",
+      "typeVersion": 1,
+      "parameters": {
+        "key": "phase",
+        "value": 2.0
+      }
+    },
+    "chk2": {
+      "type": "aibt.unity.compare-float",
+      "typeVersion": 1,
+      "parameters": {
+        "key": "phase",
+        "comparison": "greater-or-equal",
+        "value": 2.0
+      }
+    },
+    "wait2": {
+      "type": "aibt.unity.wait-frames",
+      "typeVersion": 1,
+      "parameters": {
+        "frames": 10
+      }
+    },
+    "ok": {
+      "type": "aibt.unity.succeed",
+      "typeVersion": 1
+    },
+    "skip": {
+      "type": "aibt.unity.succeed",
+      "typeVersion": 1
+    }
+  }
+}

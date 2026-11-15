@@ -1,0 +1,6 @@
+{
+  "name": "AIBT.Perf.Editor",
+  "references": ["AIBT.Runtime", "AIBT.Agents", "AIBT.Authoring", "AIBT.Editor", "AIBT.Perf", "AIBT.Perf.Catalog"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

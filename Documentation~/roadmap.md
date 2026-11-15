@@ -102,6 +102,12 @@ shard (P9-002), the rewritten graph editor with live debugging (P9-003), the `Na
 facade with automatic preparation (P9-004), short `AIBT.Native` node attributes (P9-005), and the
 user guide and clean-consumer acceptance (P9-006). See `CHANGELOG.md` and `Planning~/Evidence/P9-*`.
 
+Phase 10 (P10, performance) removed the per-tick managed allocations of the managed layer, made
+forced Jobs profiles usable through `NativeTreeAgent` (they need `SchedulerJobsCapabilities` on the
+world's scheduler), made scheduler and world registration O(1) amortized, added optional Interval
+staggering, and re-measured both layers in an IL2CPP Player (P10-001). See
+[Performance](performance.md) and `Planning~/Evidence/P10-001`.
+
 ### Design goals
 
 - Scale from a few agents to large populations without forcing one execution strategy.

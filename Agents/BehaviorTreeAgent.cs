@@ -31,6 +31,10 @@ namespace AIBT
     {
         private static readonly Dictionary<TextAsset, BehaviorTreeSource> JsonSources = new Dictionary<TextAsset, BehaviorTreeSource>();
 
+        // Fractional part of the golden ratio: successive multiples spread evenly over [0, 1).
+        private const double StaggerStep = 0.6180339887498949;
+        private static long s_staggerSequence;
+
         [Tooltip("The behavior tree to run (.aibt asset).")]
         [SerializeField] private BehaviorTreeSource _tree;
 
@@ -43,6 +47,9 @@ namespace AIBT
         [Tooltip("Seconds between ticks when Tick Mode is Interval.")]
         [Min(0f)]
         [SerializeField] private float _tickInterval = 0.1f;
+
+        [Tooltip("Interval mode only: start each agent at a different point of its interval, so many agents spread their ticks over frames instead of all ticking on the same frame. Only the first tick comes earlier; later ticks keep the interval.")]
+        [SerializeField] private bool _staggerIntervalTicks;
 
         [Tooltip("Start the tree again from its root after it finishes. Blackboard values are kept.")]
         [SerializeField] private bool _restartOnComplete = true;
@@ -67,6 +74,8 @@ namespace AIBT
         private bool _faultReported;
         private bool _warnedMissingTree;
         private float _accumulatedTime;
+        private float _staggerElapsed;
+        private bool _intervalPhaseAssigned;
 
         /// <summary>Raised when the root finishes, before an automatic restart.</summary>
         public event Action<NodeStatus> Completed;
@@ -96,6 +105,20 @@ namespace AIBT
         {
             get => _tickInterval;
             set => _tickInterval = Mathf.Max(0f, value);
+        }
+
+        /// <summary>
+        /// Interval mode only. When true, each agent starts at a different point of its interval
+        /// (spread evenly in creation order, without touching <see cref="UnityEngine.Random"/>), so
+        /// agents created on the same frame tick on different frames instead of all together.
+        /// Each agent keeps its own phase, also after a frame longer than the interval (such as
+        /// the frame after spawning many agents); every tick still receives the real time since
+        /// the previous one, and the agent still ticks once per interval. Off by default.
+        /// </summary>
+        public bool StaggerIntervalTicks
+        {
+            get => _staggerIntervalTicks;
+            set => _staggerIntervalTicks = value;
         }
 
         public bool RestartOnComplete
@@ -311,13 +334,42 @@ namespace AIBT
             }
 
             if (_tickMode == AgentTickMode.Manual) return;
-            var delta = _useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+            AdvanceFrame(_useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime);
+        }
+
+        /// <summary>One frame of automatic ticking with this frame's delta; Update's body, separate for tests.</summary>
+        internal void AdvanceFrame(float delta)
+        {
+            if (_instance == null || _tickMode == AgentTickMode.Manual) return;
             if (_tickMode == AgentTickMode.Interval)
             {
-                _accumulatedTime += delta;
-                if (_accumulatedTime < _tickInterval) return;
-                delta = _accumulatedTime;
-                _accumulatedTime = 0f;
+                if (_staggerIntervalTicks && _tickInterval > 0f)
+                {
+                    if (!_intervalPhaseAssigned)
+                    {
+                        // Start part of the way into the interval; that part is not real time,
+                        // so the tick's delta is counted separately below.
+                        _intervalPhaseAssigned = true;
+                        _accumulatedTime += NextStaggerPhase() * _tickInterval;
+                    }
+
+                    _accumulatedTime += delta;
+                    _staggerElapsed += delta;
+                    if (_accumulatedTime < _tickInterval) return;
+                    // Keep the remainder, so the phase survives a frame longer than the interval
+                    // (such as the frame after spawning many agents); still one tick per frame,
+                    // with the real time since the previous tick.
+                    _accumulatedTime = Mathf.Repeat(_accumulatedTime, _tickInterval);
+                    delta = _staggerElapsed;
+                    _staggerElapsed = 0f;
+                }
+                else
+                {
+                    _accumulatedTime += delta;
+                    if (_accumulatedTime < _tickInterval) return;
+                    delta = _accumulatedTime;
+                    _accumulatedTime = 0f;
+                }
             }
 
             Tick(delta);
@@ -328,6 +380,13 @@ namespace AIBT
             // Let running nodes exit so they can release what they started.
             if (_instance != null && !_ticking) _instance.Stop();
             _instance = null;
+        }
+
+        private static float NextStaggerPhase()
+        {
+            var sequence = ++s_staggerSequence;
+            var phase = sequence * StaggerStep;
+            return (float)(phase - Math.Floor(phase));
         }
 
         private void EnsureInitialized()
@@ -344,6 +403,8 @@ namespace AIBT
             _pendingRestart = false;
             _pendingStop = false;
             _accumulatedTime = 0f;
+            _staggerElapsed = 0f;
+            _intervalPhaseAssigned = false;
             Build();
         }
 

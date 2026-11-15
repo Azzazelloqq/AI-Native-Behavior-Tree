@@ -49,6 +49,10 @@ namespace AIBT
             internal bool Urgent;
             internal bool InFlight;
             internal double LastMeasuredMicroseconds;
+            // P10-001: position in _registrations (removal leaves a vacant slot, see
+            // TryUnregister) and the catalog this registration counts toward in _cohortCounts.
+            internal int Slot;
+            internal GeneratedBurstCatalogV2 CohortCatalog;
         }
 
         private sealed class PipelinedRun
@@ -101,7 +105,12 @@ namespace AIBT
                 => unchecked((RuntimeHelpers.GetHashCode(Catalog) * 397) ^ RuntimeHelpers.GetHashCode(Profile));
         }
 
+        // Registration order, with null for a removed registration until the next compaction
+        // (P10-001): unregistering is O(1) and the survivors keep their relative order.
         private readonly List<Registration> _registrations = new List<Registration>();
+        private readonly Dictionary<GroupWorkspaceKey, int> _cohortCounts = new Dictionary<GroupWorkspaceKey, int>();
+        private int _vacantRegistrationSlots;
+        private int _registrationsWithoutCatalog;
         private readonly Dictionary<ProductionTreeHost, Registration> _byHost = new Dictionary<ProductionTreeHost, Registration>();
         private readonly List<Registration> _due = new List<Registration>();
         private readonly Dictionary<SchedulingProfile, double> _consumedByProfileThisFrame = new Dictionary<SchedulingProfile, double>();
@@ -122,7 +131,10 @@ namespace AIBT
         public ProductionTreeScheduler() => _compareDue = CompareDue;
 
         /// <summary>Registered host count, for inspection/tests -- not itself a scheduling input.</summary>
-        public int RegisteredCount => _registrations.Count;
+        public int RegisteredCount => _byHost.Count;
+
+        /// <summary>True once <see cref="SetJobsCapabilities"/> configured Jobs tuning (P10-001: lets the facade explain a forced-Jobs fault).</summary>
+        internal bool HasJobsCapabilities => _jobsCapabilities.HasValue;
 
         /// <summary>The active budget source. <see cref="SchedulerBudgetMode.Unbounded"/> by default -- see <see cref="SetUnboundedBudget"/>.</summary>
         public SchedulerBudgetMode BudgetMode => _budgetMode;
@@ -207,23 +219,29 @@ namespace AIBT
                 return false;
             }
             var catalog = host.GeneratedDispatchAdapter?.Catalog;
-            var cohortAfterRegistration = catalog == null ? 0 : CountCohort(catalog, profile) + 1;
-            if (RequiresGroupWorkspace(profile) && catalog != null && cohortAfterRegistration > 1
-                && !TryPrewarmGroupWorkspace(catalog, profile, cohortAfterRegistration))
+            if (RequiresGroupWorkspace(profile) && catalog != null)
             {
-                host.ClearOwner(this);
-                throw new InvalidOperationException("Unable to prewarm the fixed grouped-dispatch workspace.");
+                var cohortAfterRegistration = CountCohort(catalog, profile) + 1;
+                if (cohortAfterRegistration > 1
+                    && !TryPrewarmGroupWorkspace(catalog, profile, cohortAfterRegistration))
+                {
+                    host.ClearOwner(this);
+                    throw new InvalidOperationException("Unable to prewarm the fixed grouped-dispatch workspace.");
+                }
             }
             var registration = new Registration
             {
                 Host = host,
                 Profile = profile,
                 NextEligibleFrame = _frame,
+                Slot = _registrations.Count,
+                CohortCatalog = catalog,
             };
             _registrations.Add(registration);
             _byHost.Add(host, registration);
-            if (_frameEntries.Capacity < _registrations.Count)
-                _frameEntries.Capacity = _registrations.Count;
+            AddToCohort(registration);
+            if (_frameEntries.Capacity < _byHost.Count)
+                _frameEntries.Capacity = _byHost.Count;
             error = SchedulerRegistrationError.None;
             return true;
         }
@@ -238,9 +256,12 @@ namespace AIBT
             if (host == null) throw new ArgumentNullException(nameof(host));
             if (!_byHost.TryGetValue(host, out var registration)) return false;
             if (registration.InFlight) DrainPipelinedRunContaining(host);
-            _registrations.Remove(registration);
+            _registrations[registration.Slot] = null;
+            _vacantRegistrationSlots++;
+            RemoveFromCohort(registration);
             _byHost.Remove(host);
             host.ClearOwner(this);
+            CompactRegistrationsIfSparse();
             return true;
         }
 
@@ -335,6 +356,7 @@ namespace AIBT
             for (var index = 0; index < _registrations.Count; index++)
             {
                 var registration = _registrations[index];
+                if (registration == null) continue;
                 if (!registration.InFlight && !registration.Eligible && registration.NextEligibleFrame <= _frame)
                 {
                     registration.Eligible = true;
@@ -653,8 +675,11 @@ namespace AIBT
         private void OnDestroy()
         {
             while (_pipelinedRuns.Count > 0) DrainPipelinedRunAt(_pipelinedRuns.Count - 1);
-            for (var index = 0; index < _registrations.Count; index++) _registrations[index].Host?.ClearOwner(this);
+            for (var index = 0; index < _registrations.Count; index++) _registrations[index]?.Host?.ClearOwner(this);
             _registrations.Clear();
+            _cohortCounts.Clear();
+            _vacantRegistrationSlots = 0;
+            _registrationsWithoutCatalog = 0;
             _byHost.Clear();
             _due.Clear();
             _consumedByProfileThisFrame.Clear();
@@ -667,12 +692,22 @@ namespace AIBT
             => profile.ForcedPolicy == SchedulingPolicy.BatchedJobsSameFrame
                 || profile.ForcedPolicy == SchedulingPolicy.PipelinedJobs;
 
+        /// <summary>
+        /// Registered hosts with this profile whose host currently uses this catalog. A host's
+        /// catalog is fixed from bootstrap until it leaves the scheduler, so registrations counted
+        /// under the catalog they had when registering answer this in O(1) (P10-001). Only a host
+        /// registered before its bootstrap could gain a catalog later; while one is registered the
+        /// count falls back to the exact scan.
+        /// </summary>
         private int CountCohort(GeneratedBurstCatalogV2 catalog, SchedulingProfile profile)
         {
+            if (_registrationsWithoutCatalog == 0)
+                return _cohortCounts.TryGetValue(new GroupWorkspaceKey(catalog, profile), out var counted) ? counted : 0;
             var count = 0;
             for (var index = 0; index < _registrations.Count; index++)
             {
                 var registration = _registrations[index];
+                if (registration == null) continue;
                 if (ReferenceEquals(registration.Profile, profile)
                     && ReferenceEquals(registration.Host.GeneratedDispatchAdapter?.Catalog, catalog))
                 {
@@ -680,6 +715,51 @@ namespace AIBT
                 }
             }
             return count;
+        }
+
+        private void AddToCohort(Registration registration)
+        {
+            if (registration.CohortCatalog == null)
+            {
+                _registrationsWithoutCatalog++;
+                return;
+            }
+            var key = new GroupWorkspaceKey(registration.CohortCatalog, registration.Profile);
+            _cohortCounts.TryGetValue(key, out var count);
+            _cohortCounts[key] = count + 1;
+        }
+
+        private void RemoveFromCohort(Registration registration)
+        {
+            if (registration.CohortCatalog == null)
+            {
+                _registrationsWithoutCatalog--;
+                return;
+            }
+            var key = new GroupWorkspaceKey(registration.CohortCatalog, registration.Profile);
+            if (!_cohortCounts.TryGetValue(key, out var count)) return;
+            if (count <= 1) _cohortCounts.Remove(key);
+            else _cohortCounts[key] = count - 1;
+        }
+
+        /// <summary>
+        /// Drops vacant slots once they are at least half of the list, keeping the survivors'
+        /// order: amortized O(1) per unregistration. No loop over _registrations calls out to
+        /// code that could unregister, so compacting here never shifts an index in use.
+        /// </summary>
+        private void CompactRegistrationsIfSparse()
+        {
+            if (_vacantRegistrationSlots == 0 || _vacantRegistrationSlots * 2 < _registrations.Count) return;
+            var write = 0;
+            for (var read = 0; read < _registrations.Count; read++)
+            {
+                var registration = _registrations[read];
+                if (registration == null) continue;
+                registration.Slot = write;
+                _registrations[write++] = registration;
+            }
+            _registrations.RemoveRange(write, _registrations.Count - write);
+            _vacantRegistrationSlots = 0;
         }
 
         private bool TryPrewarmGroupWorkspace(

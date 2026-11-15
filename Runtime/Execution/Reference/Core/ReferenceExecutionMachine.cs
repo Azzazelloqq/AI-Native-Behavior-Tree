@@ -22,6 +22,8 @@ namespace AIBT
         private readonly uint[] _activationGenerations;
         private readonly bool[] _cooldownInitialized;
         private readonly List<ReferenceFrame> _frames = new List<ReferenceFrame>();
+        private readonly ReferenceFrame[] _nodeFrames;
+        private readonly NodeBinding[] _nodeBindings;
         private readonly ReferenceOperationLedger _operationLedger;
         private readonly ReferenceCompletionInbox _completionInbox;
         private readonly ReferenceCommandBuffer _commandBuffer;
@@ -32,6 +34,7 @@ namespace AIBT
         private readonly ReferenceObserverRuntimeState[] _observerStates;
         private readonly ReferenceObserverReadServices _observerReadServices;
         private readonly List<int> _observerQueue = new List<int>();
+        private readonly List<int> _newlyQueuedObservers = new List<int>();
         private readonly List<BlackboardSlotChange> _pendingResetChanges = new List<BlackboardSlotChange>();
         private readonly List<Diagnostic> _asyncDiagnostics = new List<Diagnostic>();
         private readonly Diagnostic _blackboardConstructionDiagnostic;
@@ -83,10 +86,12 @@ namespace AIBT
             _parallelRegistry = parallelRegistry ?? ReferenceParallelRegistry.Empty;
             _observerRegistry = observerRegistry ?? ReferenceObserverConditionRegistry.Empty;
             _traceSink = traceSink ?? NullReferenceTraceSink.Instance;
+            _nodeBindings = ResolveNodeBindings();
             _configuration = Copy(program.ConfigBlob);
             _nodeMemory = new byte[checked((int)program.Header.InstanceNodeMemorySize)];
             _activationGenerations = new uint[program.Nodes.Count];
             _cooldownInitialized = new bool[program.Nodes.Count];
+            _nodeFrames = new ReferenceFrame[program.Nodes.Count];
             _operationLedger = new ReferenceOperationLedger(treeInstanceId);
             _completionInbox = new ReferenceCompletionInbox(_operationLedger);
             _commandBuffer = new ReferenceCommandBuffer(treeInstanceId);
@@ -473,20 +478,21 @@ namespace AIBT
                         new DiagnosticCollection(new[] { _blackboardConstructionDiagnostic })));
                 }
 
-                var blackboardReset = _blackboard.Reset();
-                if (!blackboardReset.Success)
+                // Reset straight into the pending-change list, then drop the older entries: same
+                // changes, same order, no per-restart result arrays (P10-001). A failed reset
+                // appends nothing and keeps the older entries, as before.
+                var olderPendingChanges = _pendingResetChanges.Count;
+                if (!_blackboard.TryReset(_pendingResetChanges, out var resetDiagnostic))
                 {
                     return Deliver(Envelope(
                         ReferenceExecutionProgress.Rejected,
                         _terminalResult,
                         0,
-                        new DiagnosticCollection(new[] { blackboardReset.Diagnostic })));
+                        new DiagnosticCollection(new[] { resetDiagnostic })));
                 }
+                _pendingResetChanges.RemoveRange(0, olderPendingChanges);
                 Array.Clear(_nodeMemory, 0, _nodeMemory.Length);
                 Array.Clear(_cooldownInitialized, 0, _cooldownInitialized.Length);
-                _pendingResetChanges.Clear();
-                for (var index = 0; index < blackboardReset.Changes.Count; index++)
-                    _pendingResetChanges.Add(blackboardReset.Changes[index]);
                 _observerQueue.Clear();
                 for (var index = 0; index < _observerStates.Length; index++)
                 {
@@ -544,7 +550,7 @@ namespace AIBT
 
             if (_frames.Count == 0)
             {
-                _frames.Add(new ReferenceFrame(new RuntimeNodeIndex(_program.Header.RootNodeIndex)));
+                _frames.Add(ActivateFrame(new RuntimeNodeIndex(_program.Header.RootNodeIndex)));
             }
             else
             {
@@ -672,28 +678,30 @@ namespace AIBT
 
             var frame = _frames[_frames.Count - 1];
             var node = _program.Nodes[(int)frame.NodeIndex.Value];
-            if (_parallelRegistry.Contains(node.NodeTypeId, node.NodeTypeVersion))
+            ref readonly var binding = ref _nodeBindings[frame.NodeIndex.Value];
+            if (binding.IsParallel)
             {
                 return AdvanceParallel(frame, node);
             }
 
-            if (_decoratorRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out var decoratorKind))
+            if (binding.HasDecorator)
             {
-                return AdvanceDecorator(frame, node, decoratorKind);
+                return AdvanceDecorator(frame, node, binding.DecoratorKind);
             }
 
-            if (_reactiveCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out var reactiveHandler))
+            if (binding.HasReactive)
             {
-                return AdvanceReactiveComposite(frame, node, reactiveHandler);
+                return AdvanceReactiveComposite(frame, node, binding.Reactive);
             }
 
-            if (_memoryCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out var compositeHandler))
+            if (binding.HasMemory)
             {
                 if (frame.ReactiveResetPending) return ResetMemoryCompositeForReevaluation(frame, node);
-                return AdvanceMemoryComposite(frame, node, compositeHandler);
+                return AdvanceMemoryComposite(frame, node, binding.Memory);
             }
 
-            if (!_leafRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out var handler))
+            var handler = binding.Leaf;
+            if (!binding.HasLeaf)
             {
                 return Fault(
                     ReferenceExecutionDiagnosticCodes.MissingHandler,
@@ -842,12 +850,12 @@ namespace AIBT
             for (var depth = startDepth; depth < _frames.Count; depth++)
             {
                 var frame = _frames[depth];
-                var node = _program.Nodes[(int)frame.NodeIndex.Value];
-                if (_decoratorRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out var kind)
-                    && kind == ReferenceDecoratorKind.Timeout
+                ref readonly var binding = ref _nodeBindings[frame.NodeIndex.Value];
+                if (binding.HasDecorator
+                    && binding.DecoratorKind == ReferenceDecoratorKind.Timeout
                     && frame.ConfigurationDecoded
                     && frame.ChildSelected
-                    && _currentUpdate.TimeMicroseconds >= ReadInt64(node))
+                    && _currentUpdate.TimeMicroseconds >= ReadInt64(_program.Nodes[(int)frame.NodeIndex.Value]))
                 {
                     _timeoutOwnerDepth = depth;
                     _abortForTimeout = true;
@@ -884,9 +892,7 @@ namespace AIBT
             {
                 case ReferenceFrameState.Inactive:
                     if (!TryBeginActivation(frame, node, out failure)) return failure;
-                    frame.ParallelBranches = new ReferenceParallelBranch[node.Children.Count];
-                    for (uint ordinal = 0; ordinal < node.Children.Count; ordinal++)
-                        frame.ParallelBranches[ordinal] = new ReferenceParallelBranch(ordinal);
+                    frame.ParallelBranches = frame.CreateParallelBranches(node.Children.Count);
                     frame.State = ReferenceFrameState.Entered;
                     Emit(ReferenceTraceEventKind.NodeEntered, frame.NodeIndex);
                     return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
@@ -965,7 +971,7 @@ namespace AIBT
             if (branch.State == ReferenceParallelChildState.NotStarted)
             {
                 var childTableIndex = checked((int)(node.Children.Offset + ordinal));
-                _frames.Add(new ReferenceFrame(new RuntimeNodeIndex(_program.ChildIndices[childTableIndex])));
+                _frames.Add(ActivateFrame(new RuntimeNodeIndex(_program.ChildIndices[childTableIndex])));
             }
             else
             {
@@ -978,7 +984,7 @@ namespace AIBT
                 }
 
                 var branchStartDepth = _frames.Count;
-                _frames.AddRange(branch.SuspendedFrames);
+                AppendFrames(branch.SuspendedFrames);
                 branch.SuspendedFrames = null;
                 if (!PrepareExpiredTimeoutForNewUpdate(branchStartDepth))
                 {
@@ -1094,7 +1100,7 @@ namespace AIBT
                 }
 
                 frame.ActiveParallelBranchOrdinal = ordinal;
-                _frames.AddRange(branch.SuspendedFrames);
+                AppendFrames(branch.SuspendedFrames);
                 branch.SuspendedFrames = null;
                 var reason = frame.State == ReferenceFrameState.Aborting
                     ? frame.AbortReason
@@ -1118,15 +1124,13 @@ namespace AIBT
             for (var ownerDepth = _frames.Count - 2; ownerDepth >= 0; ownerDepth--)
             {
                 var owner = _frames[ownerDepth];
-                var node = _program.Nodes[(int)owner.NodeIndex.Value];
-                if (!_parallelRegistry.Contains(node.NodeTypeId, node.NodeTypeVersion)
+                if (!_nodeBindings[owner.NodeIndex.Value].IsParallel
                     || owner.ActiveParallelBranchOrdinal < 0)
                     continue;
 
                 var branch = owner.ParallelBranches[owner.ActiveParallelBranchOrdinal];
                 branch.State = ReferenceParallelChildState.Running;
-                branch.SuspendedFrames = _frames.GetRange(ownerDepth + 1, _frames.Count - ownerDepth - 1);
-                _frames.RemoveRange(ownerDepth + 1, _frames.Count - ownerDepth - 1);
+                branch.Suspend(_frames, ownerDepth + 1);
                 owner.ActiveParallelBranchOrdinal = -1;
                 return true;
             }
@@ -1202,7 +1206,7 @@ namespace AIBT
             var childIndex = _program.ChildIndices[checked((int)node.Children.Offset)];
             frame.ChildSelected = true;
             frame.State = ReferenceFrameState.Running;
-            _frames.Add(new ReferenceFrame(new RuntimeNodeIndex(childIndex)));
+            _frames.Add(ActivateFrame(new RuntimeNodeIndex(childIndex)));
             return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
         }
 
@@ -1394,8 +1398,7 @@ namespace AIBT
             // update anyway, through the normative reactive reset.
             for (var above = 0; above < depth; above++)
             {
-                var ancestor = _program.Nodes[(int)_frames[above].NodeIndex.Value];
-                if (_reactiveCompositeRegistry.TryGet(ancestor.NodeTypeId, ancestor.NodeTypeVersion, out _)) return false;
+                if (_nodeBindings[_frames[above].NodeIndex.Value].HasReactive) return false;
             }
 
             var owner = _frames[depth];
@@ -1433,8 +1436,7 @@ namespace AIBT
             for (var depth = startDepth; depth < _frames.Count; depth++)
             {
                 var candidate = _frames[depth];
-                var node = _program.Nodes[(int)candidate.NodeIndex.Value];
-                if (_reactiveCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out _)
+                if (_nodeBindings[candidate.NodeIndex.Value].HasReactive
                     && candidate.LastReactiveResetUpdateId != _currentUpdate.UpdateId)
                 {
                     _reactiveResetOwnerDepth = depth;
@@ -1455,6 +1457,73 @@ namespace AIBT
                 NodeAbortReason.Explicit,
                 _frames[_reactiveResetOwnerDepth].NodeIndex,
                 forReactiveReset: true);
+        }
+
+        /// <summary>
+        /// Resolves every node's handlers once. The registries are immutable after construction,
+        /// so these are the answers the per-step lookups gave, without up to five dictionary
+        /// lookups per step and per active frame on every update (P10-001). The call sites keep
+        /// their order of checks (parallel, decorator, reactive, memory, leaf).
+        /// </summary>
+        private NodeBinding[] ResolveNodeBindings()
+        {
+            var bindings = new NodeBinding[_program.Nodes.Count];
+            for (var index = 0; index < bindings.Length; index++)
+            {
+                var node = _program.Nodes[index];
+                ref var binding = ref bindings[index];
+                binding.IsParallel = _parallelRegistry.Contains(node.NodeTypeId, node.NodeTypeVersion);
+                binding.HasDecorator = _decoratorRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out binding.DecoratorKind);
+                binding.HasReactive = _reactiveCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out binding.Reactive);
+                binding.HasMemory = _memoryCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out binding.Memory);
+                binding.HasLeaf = _leafRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out binding.Leaf);
+            }
+
+            return bindings;
+        }
+
+        private struct NodeBinding
+        {
+            internal bool IsParallel;
+            internal bool HasDecorator;
+            internal ReferenceDecoratorKind DecoratorKind;
+            internal bool HasReactive;
+            internal IReferenceReactiveCompositeHandler Reactive;
+            internal bool HasMemory;
+            internal IReferenceMemoryCompositeHandler Memory;
+            internal bool HasLeaf;
+            internal IReferenceLeafHandler Leaf;
+        }
+
+        /// <summary>
+        /// Appends suspended frames to the execution stack. List.AddRange copies through a
+        /// temporary array under Mono and IL2CPP, which allocated on every parallel resume (P10-001).
+        /// </summary>
+        private void AppendFrames(List<ReferenceFrame> frames)
+        {
+            for (var index = 0; index < frames.Count; index++) _frames.Add(frames[index]);
+        }
+
+        /// <summary>
+        /// The inactive frame for a new activation of <paramref name="nodeIndex"/>. A node is on
+        /// the execution stack at most once, so its single frame object is reset and reused
+        /// instead of allocated on every child activation (P10-001).
+        /// </summary>
+        private ReferenceFrame ActivateFrame(RuntimeNodeIndex nodeIndex)
+        {
+            if (!nodeIndex.IsValid || nodeIndex.Value >= (uint)_nodeFrames.Length) return new ReferenceFrame(nodeIndex);
+            var frame = _nodeFrames[nodeIndex.Value];
+            if (frame == null)
+            {
+                frame = new ReferenceFrame(nodeIndex);
+                _nodeFrames[nodeIndex.Value] = frame;
+            }
+            else
+            {
+                frame.Reset(nodeIndex);
+            }
+
+            return frame;
         }
 
         private ReferenceExecutionEnvelope EnterComposite(ReferenceFrame frame, CompiledNodeRecord node)
@@ -1501,7 +1570,7 @@ namespace AIBT
             var childTableIndex = checked((int)(node.Children.Offset + cursor));
             var childNodeIndex = new RuntimeNodeIndex(_program.ChildIndices[childTableIndex]);
             frame.State = ReferenceFrameState.Running;
-            _frames.Add(new ReferenceFrame(childNodeIndex));
+            _frames.Add(ActivateFrame(childNodeIndex));
             return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
         }
 
@@ -1639,7 +1708,8 @@ namespace AIBT
             {
                 var context = CreateNodeContext(frame, node);
                 status = handler.Tick(ref context);
-                if (!Enum.IsDefined(typeof(NodeStatus), status))
+                // Range check instead of Enum.IsDefined, which boxes on every leaf tick (P10-001).
+                if ((byte)status > (byte)NodeStatus.Running)
                 {
                     throw new InvalidOperationException("A reference leaf returned an undefined node status.");
                 }
@@ -2012,7 +2082,8 @@ namespace AIBT
 
         private void QueueObserversForSlot(uint slotIndex)
         {
-            var newlyQueued = new List<int>();
+            var newlyQueued = _newlyQueuedObservers;
+            newlyQueued.Clear();
             for (var observerIndex = 0; observerIndex < _program.Observers.Count; observerIndex++)
             {
                 var observer = _program.Observers[observerIndex];
@@ -2036,11 +2107,27 @@ namespace AIBT
                 _observerQueue.Insert(insert, observerIndex);
                 newlyQueued.Add(observerIndex);
             }
-            newlyQueued.Sort((left, right) => _program.Observers[left].ObserverNodeIndex.CompareTo(
-                _program.Observers[right].ObserverNodeIndex));
+            // Order by observer node index. An insertion sort instead of List.Sort with a lambda,
+            // which allocated a delegate on every blackboard write (P10-001); observers that share
+            // a node index emit identical trace events, so the order among them is not observable.
+            for (var sorted = 1; sorted < newlyQueued.Count; sorted++)
+            {
+                var value = newlyQueued[sorted];
+                var key = _program.Observers[value].ObserverNodeIndex;
+                var position = sorted - 1;
+                while (position >= 0 && _program.Observers[newlyQueued[position]].ObserverNodeIndex > key)
+                {
+                    newlyQueued[position + 1] = newlyQueued[position];
+                    position--;
+                }
+
+                newlyQueued[position + 1] = value;
+            }
+
             for (var index = 0; index < newlyQueued.Count; index++)
                 Emit(ReferenceTraceEventKind.ObserverQueued,
                     new RuntimeNodeIndex(_program.Observers[newlyQueued[index]].ObserverNodeIndex));
+            newlyQueued.Clear();
         }
 
         private ReferenceExecutionEnvelope EvaluateNextObserver()
@@ -2235,13 +2322,10 @@ namespace AIBT
                 }
                 var activeBranch = retained.ParallelFrame.ParallelBranches[activeOrdinal];
                 activeBranch.State = ReferenceParallelChildState.Running;
-                activeBranch.SuspendedFrames = _frames.GetRange(
-                    parallelDepth + 1,
-                    _frames.Count - parallelDepth - 1);
-                _frames.RemoveRange(parallelDepth + 1, _frames.Count - parallelDepth - 1);
+                activeBranch.Suspend(_frames, parallelDepth + 1);
             }
             retained.ParallelFrame.ActiveParallelBranchOrdinal = retained.Ordinal;
-            _frames.AddRange(retained.Frames);
+            AppendFrames(retained.Frames);
             retained.ParallelFrame.ParallelBranches[retained.Ordinal].SuspendedFrames = null;
             ownerDepth = parallelDepth + 1 + retained.OwnerDepth;
             return true;
@@ -2264,8 +2348,7 @@ namespace AIBT
             for (var depth = _frames.Count - 2; depth >= 0; depth--)
             {
                 var frame = _frames[depth];
-                var node = _program.Nodes[(int)frame.NodeIndex.Value];
-                if (_parallelRegistry.Contains(node.NodeTypeId, node.NodeTypeVersion)
+                if (_nodeBindings[frame.NodeIndex.Value].IsParallel
                     && frame.ActiveParallelBranchOrdinal >= 0)
                     return true;
             }
@@ -2531,7 +2614,7 @@ namespace AIBT
             out ReferenceExecutionEnvelope rejected,
             ReferenceUpdateContext? attemptedUpdate = null)
         {
-            if (!Enum.IsDefined(typeof(NodeAbortReason), reason))
+            if ((byte)reason > (byte)NodeAbortReason.Timeout)
             {
                 rejected = Reject("An abort reason from the accepted contract is required.", attemptedUpdate);
                 return false;

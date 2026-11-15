@@ -1,0 +1,163 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "aibt.perf.native-shape15",
+  "name": "native-shape15",
+  "root": "priority",
+  "blackboard": {
+    "target-visible": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": false
+    },
+    "alert": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0.0
+    },
+    "phase": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0.0
+    }
+  },
+  "nodes": {
+    "priority": {
+      "type": "aibt.core.memory-selector",
+      "typeVersion": 1,
+      "children": [
+        "chase",
+        "patrol"
+      ]
+    },
+    "chase": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "sees",
+        "alert-on",
+        "c-wait"
+      ]
+    },
+    "sees": {
+      "type": "aibt.native.bool-is-true",
+      "typeVersion": 1,
+      "bindings": {
+        "key": "target-visible"
+      }
+    },
+    "alert-on": {
+      "type": "aibt.native.set-float",
+      "typeVersion": 1,
+      "parameters": {
+        "value": 1.0
+      },
+      "bindings": {
+        "key": "alert"
+      }
+    },
+    "c-wait": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 5
+      }
+    },
+    "patrol": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "alert-off",
+        "step1",
+        "chk1",
+        "wait1",
+        "step2",
+        "chk2",
+        "wait2",
+        "ok",
+        "skip"
+      ]
+    },
+    "alert-off": {
+      "type": "aibt.native.set-float",
+      "typeVersion": 1,
+      "parameters": {
+        "value": 0.0
+      },
+      "bindings": {
+        "key": "alert"
+      }
+    },
+    "step1": {
+      "type": "aibt.native.set-float",
+      "typeVersion": 1,
+      "parameters": {
+        "value": 1.0
+      },
+      "bindings": {
+        "key": "phase"
+      }
+    },
+    "chk1": {
+      "type": "aibt.native.float-at-least",
+      "typeVersion": 1,
+      "parameters": {
+        "threshold": 1.0
+      },
+      "bindings": {
+        "key": "phase"
+      }
+    },
+    "wait1": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 10
+      }
+    },
+    "step2": {
+      "type": "aibt.native.set-float",
+      "typeVersion": 1,
+      "parameters": {
+        "value": 2.0
+      },
+      "bindings": {
+        "key": "phase"
+      }
+    },
+    "chk2": {
+      "type": "aibt.native.float-at-least",
+      "typeVersion": 1,
+      "parameters": {
+        "threshold": 2.0
+      },
+      "bindings": {
+        "key": "phase"
+      }
+    },
+    "wait2": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 10
+      }
+    },
+    "ok": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "skip": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    }
+  }
+}

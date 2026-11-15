@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P10-001", "phase": 10, "title": "Managed zero-allocation tick, native facade scheduling and re-measurement", "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-001-performance.md",
+      "dependsOn": ["P9-001", "P9-004"],
+      "owns": ["Documentation~/performance.md", "Planning~/Evidence/P10-001/"]
+    },
+    {
       "id": "P9-006", "phase": 9, "title": "User guide and consumer acceptance", "status": "review", "kind": "integration",
       "card": "Planning~/Tasks/P9/P9-006-user-guide-and-acceptance.md",
       "dependsOn": ["P9-001", "P9-002", "P9-003", "P9-004", "P9-005"],

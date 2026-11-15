@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace AIBT
@@ -7,12 +8,31 @@ namespace AIBT
     {
         public static byte[] Encode(BlackboardValue value)
         {
+            var bytes = new byte[EncodedSize(value)];
+            EncodeInto(value, bytes);
+            return bytes;
+        }
+
+        /// <summary>The canonical encoded size of <paramref name="value"/>; throws like <see cref="Encode"/> for an invalid value.</summary>
+        internal static int EncodedSize(BlackboardValue value)
+        {
             if (!value.IsValid || !BuiltInBlackboardTypes.TryGet(value.Type, out var descriptor))
             {
                 throw new ArgumentException("A valid built-in blackboard value is required.", nameof(value));
             }
 
-            var bytes = new byte[descriptor.Size];
+            return checked((int)descriptor.Size);
+        }
+
+        /// <summary>
+        /// Writes the canonical encoding of <paramref name="value"/> into the first
+        /// <see cref="EncodedSize"/> bytes of <paramref name="bytes"/>, which must be zeroed.
+        /// Allocation-free for every type except fixed strings (P10-001).
+        /// </summary>
+        internal static void EncodeInto(BlackboardValue value, Span<byte> bytes)
+        {
+            var size = EncodedSize(value);
+            if (bytes.Length < size) throw new ArgumentException("The destination is shorter than the encoded value.", nameof(bytes));
             switch (value.Type)
             {
                 case BlackboardValueType.Bool:
@@ -29,11 +49,11 @@ namespace AIBT
                     break;
                 case BlackboardValueType.Float32:
                     value.TryGetFloat32(out var float32Value);
-                    WriteBitConverterBytes(bytes, 0, BitConverter.GetBytes(float32Value));
+                    WriteFloat32(bytes, 0, float32Value);
                     break;
                 case BlackboardValueType.Float64:
                     value.TryGetFloat64(out var float64Value);
-                    WriteBitConverterBytes(bytes, 0, BitConverter.GetBytes(float64Value));
+                    WriteUInt64(bytes, 0, new FloatBits { Float64 = float64Value }.UInt64);
                     break;
                 case BlackboardValueType.Float2:
                     value.TryGetFloat2(out var float2Value);
@@ -90,8 +110,6 @@ namespace AIBT
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), "The value type has no Phase 1 built-in encoding.");
             }
-
-            return bytes;
         }
 
         private static int FixedStringCapacity(BlackboardValueType type)
@@ -106,7 +124,7 @@ namespace AIBT
             }
         }
 
-        private static void WriteFixedString(byte[] destination, string value, int capacity)
+        private static void WriteFixedString(Span<byte> destination, string value, int capacity)
         {
             var utf8 = Encoding.UTF8.GetBytes(value);
             if (utf8.Length > capacity || utf8.Length > ushort.MaxValue)
@@ -116,27 +134,15 @@ namespace AIBT
 
             destination[0] = (byte)utf8.Length;
             destination[1] = (byte)(utf8.Length >> 8);
-            Buffer.BlockCopy(utf8, 0, destination, 2, utf8.Length);
+            new ReadOnlySpan<byte>(utf8).CopyTo(destination.Slice(2));
         }
 
-        private static void WriteFloat32(byte[] destination, int offset, float value)
-            => WriteBitConverterBytes(destination, offset, BitConverter.GetBytes(value));
+        // IEEE 754 bits in little-endian byte order: the same bytes BitConverter.GetBytes wrote
+        // (reversed on big-endian hosts) without allocating an array per value.
+        private static void WriteFloat32(Span<byte> destination, int offset, float value)
+            => WriteUInt32(destination, offset, new FloatBits { Float32 = value }.UInt32);
 
-        private static void WriteBitConverterBytes(byte[] destination, int offset, byte[] source)
-        {
-            if (BitConverter.IsLittleEndian)
-            {
-                Buffer.BlockCopy(source, 0, destination, offset, source.Length);
-                return;
-            }
-
-            for (var index = 0; index < source.Length; index++)
-            {
-                destination[offset + index] = source[source.Length - index - 1];
-            }
-        }
-
-        private static void WriteUInt32(byte[] destination, int offset, uint value)
+        private static void WriteUInt32(Span<byte> destination, int offset, uint value)
         {
             destination[offset] = (byte)value;
             destination[offset + 1] = (byte)(value >> 8);
@@ -144,10 +150,20 @@ namespace AIBT
             destination[offset + 3] = (byte)(value >> 24);
         }
 
-        private static void WriteUInt64(byte[] destination, int offset, ulong value)
+        private static void WriteUInt64(Span<byte> destination, int offset, ulong value)
         {
             WriteUInt32(destination, offset, (uint)value);
             WriteUInt32(destination, offset + 4, (uint)(value >> 32));
         }
+    }
+
+    /// <summary>Reinterprets IEEE 754 values as their bit patterns without allocating.</summary>
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct FloatBits
+    {
+        [FieldOffset(0)] internal float Float32;
+        [FieldOffset(0)] internal uint UInt32;
+        [FieldOffset(0)] internal double Float64;
+        [FieldOffset(0)] internal ulong UInt64;
     }
 }

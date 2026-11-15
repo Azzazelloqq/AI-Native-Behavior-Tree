@@ -8,6 +8,7 @@ namespace AIBT
     internal sealed class NativeBatchedLifecycleOwnerV1
     {
         private Lane[] _lanes;
+        private bool[] _seenLanes;
         private JobHandle _dependency;
         private byte _state;
 
@@ -30,24 +31,19 @@ namespace AIBT
                     NativeResourceKindV1.LifecycleBatchLanes);
                 return false;
             }
+            // P10-001: one set instead of comparing every pair (O(n^2) per round dominated
+            // BatchedJobsSameFrame at thousands of agents); same check, same first failure.
+            var owners = new System.Collections.Generic.HashSet<ulong>();
             for (var index = 0; index < machines.Length; index++)
             {
                 var ownerId = machines[index].SchedulingOwnerId;
-                if (ownerId == 0)
+                if (ownerId == 0 || !owners.Add(ownerId))
                 {
                     failure = new NativeRuntimeFailureV1(
                         NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid,
                         NativeResourceKindV1.LifecycleBatchLanes);
                     return false;
                 }
-                for (var previous = 0; previous < index; previous++)
-                    if (machines[previous].SchedulingOwnerId == ownerId)
-                    {
-                        failure = new NativeRuntimeFailureV1(
-                            NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid,
-                            NativeResourceKindV1.LifecycleBatchLanes);
-                        return false;
-                    }
             }
             var lanes = new Lane[machines.Length];
             try
@@ -72,7 +68,7 @@ namespace AIBT
                         Success = new NativeArray<byte>(1, allocator, NativeArrayOptions.ClearMemory),
                     };
                 }
-                owner = new NativeBatchedLifecycleOwnerV1 { _lanes = lanes, _state = 1 };
+                owner = new NativeBatchedLifecycleOwnerV1 { _lanes = lanes, _seenLanes = new bool[lanes.Length], _state = 1 };
                 failure = default;
                 return true;
             }
@@ -190,14 +186,23 @@ namespace AIBT
                 return false;
             if (activeLaneIds == null) return activeLaneCount == _lanes.Length;
             if (activeLaneIds.Length < activeLaneCount) return false;
-            for (var index = 0; index < activeLaneCount; index++)
+            // P10-001: a reused seen-flag per lane instead of comparing every pair (O(n^2)); same
+            // result. The flags set here are cleared again before returning.
+            var seen = _seenLanes;
+            var valid = true;
+            var marked = 0;
+            for (; marked < activeLaneCount; marked++)
             {
-                var laneId = activeLaneIds[index];
-                if (laneId < 0 || laneId >= _lanes.Length) return false;
-                for (var previous = 0; previous < index; previous++)
-                    if (activeLaneIds[previous] == laneId) return false;
+                var laneId = activeLaneIds[marked];
+                if (laneId < 0 || laneId >= _lanes.Length || seen[laneId])
+                {
+                    valid = false;
+                    break;
+                }
+                seen[laneId] = true;
             }
-            return true;
+            for (var index = 0; index < marked; index++) seen[activeLaneIds[index]] = false;
+            return valid;
         }
 
         internal bool TryDispose(out NativeRuntimeFailureV1 failure)
@@ -211,6 +216,7 @@ namespace AIBT
             }
             for (var index = _lanes.Length - 1; index >= 0; index--) _lanes[index].Dispose();
             _lanes = null;
+            _seenLanes = null;
             _state = 3;
             failure = default;
             return true;
