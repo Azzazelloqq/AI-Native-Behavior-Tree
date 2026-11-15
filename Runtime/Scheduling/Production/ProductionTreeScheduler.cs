@@ -119,6 +119,9 @@ namespace AIBT
             new Dictionary<GroupWorkspaceKey, GeneratedDispatchGroupWorkspaceV2>();
         private readonly List<PipelinedRun> _pipelinedRuns = new List<PipelinedRun>();
         private readonly List<SchedulerFrameEntry> _frameEntries = new List<SchedulerFrameEntry>();
+        // P10-002: BatchedJobsSameFrame round storage and the group's host list, reused every frame.
+        private readonly ProductionBatchedGroupDriverV1 _batchedDriver = new ProductionBatchedGroupDriverV1();
+        private readonly List<ProductionTreeHost> _batchedGroupHosts = new List<ProductionTreeHost>();
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private readonly Comparison<Registration> _compareDue;
         private uint _frame;
@@ -327,6 +330,8 @@ namespace AIBT
         private void Update()
         {
             using var _ = s_FrameMarker.Auto();
+            SchedulerFrameProfileV1.Start();
+            SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.Frames, 1);
             _frame++;
             LastFrameIndex = _frame;
             LastFrameOverran = false;
@@ -351,6 +356,7 @@ namespace AIBT
             AdvancePipelinedRuns(unbounded, ref remaining);
             worldBridge?.DeliverEffects();
             worldBridge?.FlushIdleInputs();
+            SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.WorldBridge);
 
             _due.Clear();
             for (var index = 0; index < _registrations.Count; index++)
@@ -367,9 +373,11 @@ namespace AIBT
             if (_due.Count == 0)
             {
                 worldBridge?.DeliverEffects();
+                SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.WorldBridge);
                 return;
             }
             _due.Sort(_compareDue);
+            SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.DueCollect);
 
             var dueIndex = 0;
             while (dueIndex < _due.Count)
@@ -410,6 +418,8 @@ namespace AIBT
                         if (registration.LastMeasuredMicroseconds <= 0.0) LastFrameOverran = true;
                     }
 
+                    SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.ImmediateHosts, 1);
+                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.Bookkeeping);
                     _stopwatch.Restart();
                     registration.Host.DriveOneUpdate();
                     _stopwatch.Stop();
@@ -438,7 +448,9 @@ namespace AIBT
 
                 dueIndex = DriveForcedJobsGroup(dueIndex, unbounded, frozenAllowance, ref remaining);
             }
+            SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.Bookkeeping);
             worldBridge?.DeliverEffects();
+            SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.WorldBridge);
         }
 
         /// <summary>
@@ -574,7 +586,14 @@ namespace AIBT
                 }
             }
 
-            var groupHosts = new List<ProductionTreeHost>(groupCount);
+            // A pipelined run keeps its host list; a same-frame group reuses one list.
+            List<ProductionTreeHost> groupHosts;
+            if (pipelined) groupHosts = new List<ProductionTreeHost>(groupCount);
+            else
+            {
+                _batchedGroupHosts.Clear();
+                groupHosts = _batchedGroupHosts;
+            }
             for (var member = startIndex; member < groupEnd; member++) groupHosts.Add(_due[member].Host);
 
             _stopwatch.Restart();
@@ -621,8 +640,11 @@ namespace AIBT
                 return groupEnd;
             }
 
-            var groupOk = ProductionBatchedGroupDriverV1.TryRun(
+            SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.BatchedGroups, 1);
+            SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.GroupSetup);
+            var groupOk = _batchedDriver.TryRun(
                 groupHosts, explanation.BatchSize, out var totalSteps, out _, workspace);
+            _batchedGroupHosts.Clear();
             _stopwatch.Stop();
             var elapsedMicroseconds = _stopwatch.Elapsed.TotalMilliseconds * 1000.0;
             LastFrameConsumedMicroseconds += elapsedMicroseconds;
@@ -686,6 +708,7 @@ namespace AIBT
             _jobsWorkEstimators.Clear();
             foreach (var workspace in _groupWorkspaces.Values) workspace.TryDispose(out _);
             _groupWorkspaces.Clear();
+            _batchedDriver.Dispose();
         }
 
         private static bool RequiresGroupWorkspace(SchedulingProfile profile)

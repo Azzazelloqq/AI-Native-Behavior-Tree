@@ -113,6 +113,24 @@ tree about once every three frames (a round spans frames), so it does a third of
 per unit of work it is not cheaper. Keep the default unless a measurement of your own tree on your
 target says otherwise.
 
+The table above was measured before P10-002. Since P10-002, `BatchedJobsSameFrame` reuses its round
+storage and schedules one parallel job per round, and a warmed-up frame allocates 0 B. The quick
+benchmark (`Invoke-Perf.ps1 -Quick`, IL2CPP, 2 runs; main-thread µs per agent and frame) then gives:
+
+| Tree | profile | N=1 000 | N=5 000 | B per agent-tick |
+|---|---|---:|---:|---:|
+| `io-wait1` | default (`Immediate`) | 3.8 | 4.4 | 0 |
+| | `BatchedJobsSameFrame` | 3.2 | 3.7 | 0 |
+| `shared-loop16` | default (`Immediate`) | 8.3 | 8.7 | 0 |
+| | `BatchedJobsSameFrame` | 6.8 | 7.6 | 0 |
+| `io-move1-fact-effect` | default (`Immediate`) | 5.0 | 5.6 | 0 |
+| | `BatchedJobsSameFrame` | 6.5 | 16.0 | 0 |
+| `shared-reactive16` | default (`Immediate`) | 128 | 127 | 0 |
+| | `BatchedJobsSameFrame` | 119 | 125 | 0 |
+
+These numbers exclude worker time. Trees with facts and effects are still slower under Jobs,
+because the group dispatch path costs more per member (`Planning~/Evidence/P10-002/README.md`).
+
 ## Advice
 
 - Start with the managed layer and `EveryFrame`; switch slow-changing agents to `Interval`, and turn

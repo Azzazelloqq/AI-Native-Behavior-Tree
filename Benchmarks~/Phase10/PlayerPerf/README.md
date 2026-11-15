@@ -24,10 +24,34 @@ python analyze.py <output folder>            # writes summary.json and tables.md
 `-Step Prepare` regenerates the trees (`gen_trees.py`), prepares the native runtime assets and
 writes the scene; `-Step Build` builds a non-development Player (`-Backend il2cpp|mono`,
 `-Stripping High`); `-Step Run` runs every scenario `-Runs` times. `-Only a,b` keeps the scenarios
-whose id contains one of the parts, `-Quick` shortens warm-up and measurement, `-MaxN`/`-MinN`
+whose id contains one of the parts, `-Short` shortens warm-up and measurement, `-MaxN`/`-MinN`
 bound the population. Raw output goes to `<project>/PerfResults/raw/<backend>-<timestamp>/`
 (`-OutDir` to change it): `environment.json`, `runs.jsonl` (one line per scenario, N and run) and
 one CSV per run with a row per measured frame.
+
+## Quick mode and frame profile (P10-002)
+
+`-Step Run -Quick` runs a fixed set of 20 cases for a before/after check of a runtime change:
+N = 1000 and 5000 of `n-io-wait1`, `n-shared-loop16`, `n-shared-reactive16` and
+`n-io-move1-fact-effect`, each with and without `-jobs`, plus `m-unity15-both` and
+`m-shared-shape15`. The cases run 2 times by default, with 120 warm-up and 250 measured frames,
+which takes about 10 minutes in an IL2CPP Player.
+
+- **Baseline.** `-SaveBaseline` writes the summary to `-Baseline` (default
+  `<OutDir parent>/quick-baseline-<backend>.json`).
+- **Comparison.** Without `-SaveBaseline` the run is compared with that file: `quick.py compare`
+  prints a before/after table and exits with code 2 when a single-threaded case (not `-jobs`) is
+  more than 5% slower.
+- **Location.** Keep `-OutDir` outside a Unity project's `Temp/`: the Editor clears `Temp/` when it
+  restarts.
+
+`-DefineSymbols AIBT_SCHEDULER_FRAME_PROFILE` builds a Player with the scheduler's per-stage frame
+profile (`SchedulerFrameProfileV1`). Without the define its calls are compiled out.
+
+- **Output.** The runner writes a `frameProfile` object per scenario to `runs.jsonl`.
+- **Report.** `python profile.py <run folder>` writes `profile.json` and prints the median µs per
+  frame for each stage, rounds per frame, lanes per round and dispatches per frame.
+- **Not for timing.** Use the profile build to see where time goes, not as the timing reference.
 
 ## What is measured
 

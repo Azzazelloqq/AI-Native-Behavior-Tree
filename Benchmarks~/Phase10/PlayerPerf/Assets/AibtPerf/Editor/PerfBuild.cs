@@ -116,8 +116,11 @@ namespace AIBT.Perf.Editor
             PlayerSettings.usePlayerLog = true;
             PlayerSettings.resizableWindow = true;
 
+            // P10-002: extra defines, e.g. AIBT_SCHEDULER_FRAME_PROFILE for the per-stage frame profile.
+            var defines = Arg("-perfDefines", string.Empty);
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
+                extraScriptingDefines = string.IsNullOrEmpty(defines) ? null : defines.Split(';'),
                 scenes = new[] { ScenePath },
                 locationPathName = output,
                 target = BuildTarget.StandaloneWindows64,
@@ -127,7 +130,7 @@ namespace AIBT.Perf.Editor
             });
             var summary = report.summary;
             var line = "AIBT_PERF_BUILD|result=" + summary.result + "|backend=" + backend + "|stripping=" + stripping
-                + "|development=" + development + "|errors=" + summary.totalErrors + "|warnings=" + summary.totalWarnings
+                + "|development=" + development + "|defines=" + defines + "|errors=" + summary.totalErrors + "|warnings=" + summary.totalWarnings
                 + "|size=" + summary.totalSize + "|seconds=" + (int)summary.totalTime.TotalSeconds;
             Debug.Log(line);
             File.WriteAllText(Path.ChangeExtension(output, ".build.txt"), line + "\n");

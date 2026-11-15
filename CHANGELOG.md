@@ -4,6 +4,20 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Performance (P10-002)
+
+- `BatchedJobsSameFrame`: the group driver reuses its round storage across frames
+  (`NativeBatchedLifecyclePoolV1`, internal) and schedules one Burst parallel-for job per round
+  instead of one job per lane. A warmed-up frame of non-restarting trees allocates 0 B (it was
+  ≈1.1 KB per agent tick for one waiting leaf). Main-thread time per frame in an IL2CPP Player
+  dropped by 11–41% on the quick benchmark. Tick order, statuses, effect order, traces and
+  diagnostics are unchanged; `JobsPolicyEquivalenceTests` compares Immediate and
+  BatchedJobsSameFrame frame by frame.
+- Add `Invoke-Perf.ps1 -Quick` (20 cases with a baseline comparison) and an opt-in frame profile
+  (`AIBT_SCHEDULER_FRAME_PROFILE`, compiled out otherwise) to the Player harness.
+- Draft ADR `Documentation~/decisions/ADR-P10-002-agent-frame-jobs.md` (Proposed) for advancing a
+  whole agent frame inside one job.
+
 ### Performance (P10-001)
 
 - Managed layer: a warmed-up `BehaviorTreeAgent` tick no longer allocates, including reactive

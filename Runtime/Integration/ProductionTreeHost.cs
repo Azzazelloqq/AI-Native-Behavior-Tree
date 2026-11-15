@@ -462,6 +462,7 @@ namespace AIBT
                     _recorder.RecordExecutionResumed(_updateId);
                     _suspended = false;
                 }
+                SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostBegin);
                 RunSegment(StepBudget, false);
             }
             catch (Exception exception)
@@ -839,6 +840,7 @@ namespace AIBT
                     }
                 }
                 else advanced = _agents[0].Machine.TryAdvance(out step, out failure);
+                SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostAdvance);
                 if (!advanced)
                 {
                     Fail(failure, "Cannot advance execution.");
@@ -846,6 +848,7 @@ namespace AIBT
                 }
                     _hasExecuted = true;
                     _recorder.RecordStep(_updateId, step);
+                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostRecord);
                     if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
                     {
                         var request = new DispatchRequest(step, _updateId, _timeMicroseconds);
@@ -858,6 +861,7 @@ namespace AIBT
                         result = reserveFailure;
                         status = NodeStatus.Failure;
                     }
+                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostDispatch);
                     if (!_ready) return; // A reentrant call may already have faulted the host.
                     if (result == BurstContextResult.Success
                         && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
@@ -868,6 +872,7 @@ namespace AIBT
                         return;
                     }
                     _recorder.RecordDispatchCompletion(_updateId, step, status);
+                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostComplete);
                 }
                 else if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting)
                 {
@@ -878,6 +883,7 @@ namespace AIBT
                         if (step.HasRootStatus) LastRootResult = step.RootStatus;
                         _ready = false;
                     }
+                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostRecord);
                     return;
                 }
             }

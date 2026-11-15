@@ -6,11 +6,15 @@ param(
     [string]$Stripping = 'High',
     [string]$PlayerDir,
     [string]$OutDir = '',
-    [int]$Runs = 3,
+    [int]$Runs = 0,
     [string]$Only = '',
     [int]$MaxN = 0,
     [int]$MinN = 0,
     [switch]$Quick,
+    [switch]$Short,
+    [string]$Baseline = '',
+    [switch]$SaveBaseline,
+    [string]$DefineSymbols = '',
     [switch]$DeepProfile,
     [string[]]$ExtraPlayerArgs = @(),
     [int]$BuildTimeoutSeconds = 3600,
@@ -23,6 +27,9 @@ if (-not $OutDir) { $OutDir = Join-Path $project 'PerfResults\raw' }
 $logs = Join-Path (Split-Path -Parent $OutDir) 'logs'
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 $stamp = [DateTime]::Now.ToString('yyyyMMdd-HHmmss')
+if ($Runs -le 0) { $Runs = $(if ($Quick) { 2 } else { 3 }) }
+if (-not $Baseline) { $Baseline = Join-Path (Split-Path -Parent $OutDir) "quick-baseline-$Backend.json" }
+$started = [DateTime]::Now
 
 function Invoke-Bounded([string]$File, [string[]]$Arguments, [int]$Timeout, [string]$What) {
     $quoted = $Arguments | ForEach-Object { if ($_ -match '[\s"]') { '"' + $_ + '"' } else { $_ } }
@@ -41,8 +48,10 @@ if ($Step -in 'Prepare', 'All') {
 if ($Step -in 'Build', 'All') {
     $log = Join-Path $logs "build-$Backend-$stamp.log"
     $exe = Join-Path $PlayerDir 'AibtPerf.exe'
-    $code = Invoke-Bounded $UnityPath @('-batchmode', '-nographics', '-projectPath', $project, '-executeMethod', 'AIBT.Perf.Editor.PerfBuild.Build',
-        '-perfPlayerOutput', $exe, '-perfBackend', $Backend, '-perfStripping', $Stripping, '-perfDevelopment', $(if ($DeepProfile) { 'true' } else { 'false' }), '-perfDeep', $(if ($DeepProfile) { 'true' } else { 'false' }), '-logFile', $log) $BuildTimeoutSeconds 'Build'
+    $buildArgs = @('-batchmode', '-nographics', '-projectPath', $project, '-executeMethod', 'AIBT.Perf.Editor.PerfBuild.Build',
+        '-perfPlayerOutput', $exe, '-perfBackend', $Backend, '-perfStripping', $Stripping, '-perfDevelopment', $(if ($DeepProfile) { 'true' } else { 'false' }), '-perfDeep', $(if ($DeepProfile) { 'true' } else { 'false' }), '-logFile', $log)
+    if ($DefineSymbols) { $buildArgs += @('-perfDefines', $DefineSymbols) }
+    $code = Invoke-Bounded $UnityPath $buildArgs $BuildTimeoutSeconds 'Build'
     if ($code -ne 0) { throw "Build failed ($code), see $log" }
     Get-Content (Join-Path $PlayerDir 'AibtPerf.build.txt')
 }
@@ -53,11 +62,26 @@ if ($Step -in 'Run', 'All') {
     $log = Join-Path $out 'player.log'
     $arguments = @('-logFile', $log, '-screen-fullscreen', '0', '-screen-width', '640', '-screen-height', '360', '-perfOut', $out, '-perfRuns', "$Runs")
     if ($Only) { $arguments += @('-perfOnly', $Only) }
-    if ($Quick) { $arguments += '-perfQuick' }
+    if ($Quick) { $arguments += @('-perfSet', 'quick') }
+    if ($Short) { $arguments += '-perfQuick' }
     if ($MaxN -gt 0) { $arguments += @('-perfMaxN', "$MaxN") }
     if ($MinN -gt 0) { $arguments += @('-perfMinN', "$MinN") }
     $arguments += $ExtraPlayerArgs
     $code = Invoke-Bounded $exe $arguments $PlayerTimeoutSeconds 'Player'
     Write-Host "Player exit $code. Output: $out"
     Select-String -Path $log -Pattern 'AIBT_PERF\|(START|DONE|FAULT)|Exception|error' | Select-Object -First 40 | ForEach-Object { $_.Line }
+    Write-Host ("Run took {0:N1} min" -f ([DateTime]::Now - $started).TotalMinutes)
+    if ($Quick) {
+        & python (Join-Path $PSScriptRoot 'quick.py') summarize $out
+        if ($SaveBaseline) {
+            Copy-Item (Join-Path $out 'quick.json') $Baseline -Force
+            Write-Host "Saved quick baseline: $Baseline"
+        } elseif (Test-Path $Baseline) {
+            & python (Join-Path $PSScriptRoot 'quick.py') compare $Baseline $out
+            Write-Host "Compared with $Baseline (exit $LASTEXITCODE; 2 = a single-threaded scenario is more than 5% slower)"
+        } else {
+            Write-Host "No quick baseline at $Baseline; run once with -SaveBaseline."
+        }
+    }
 }
+Write-Host ("Total {0:N1} min" -f ([DateTime]::Now - $started).TotalMinutes)

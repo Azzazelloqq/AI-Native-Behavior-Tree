@@ -100,6 +100,11 @@ namespace AIBT.Perf
         private int _windowFrames;
         private int _measuredFrames;
         private int _measuredGc;
+        // P10-002: per-stage scheduler frame profile, present only in a Player built with
+        // AIBT_SCHEDULER_FRAME_PROFILE (Invoke-Perf.ps1 -DefineSymbols); read through reflection.
+        private System.Reflection.MethodInfo _profileReset;
+        private System.Reflection.MethodInfo _profileSnapshot;
+        private string _profile;
 
         private void Start()
         {
@@ -112,6 +117,7 @@ namespace AIBT.Perf
             _runs = int.Parse(Arg("-perfRuns", "3"), CultureInfo.InvariantCulture);
             var only = Arg("-perfOnly", string.Empty);
             var quick = Array.IndexOf(args, "-perfQuick") >= 0;
+            var set = Arg("-perfSet", "full");
             Directory.CreateDirectory(_out);
 
             _systemMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory");
@@ -131,7 +137,12 @@ namespace AIBT.Perf
                 _sources[entry.name] = source;
             }
 
-            BuildPlan(quick);
+            if (set == "quick") BuildQuickPlan();
+            else BuildPlan(quick);
+            var profileType = typeof(ProductionTreeScheduler).Assembly.GetType("AIBT.SchedulerFrameProfileV1");
+            const System.Reflection.BindingFlags any = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+            _profileReset = profileType?.GetMethod("Reset", any);
+            _profileSnapshot = profileType?.GetMethod("Snapshot", any);
             var maxN = int.Parse(Arg("-perfMaxN", "1000000"), CultureInfo.InvariantCulture);
             var minN = int.Parse(Arg("-perfMinN", "0"), CultureInfo.InvariantCulture);
             _plan.RemoveAll(s => s.N > maxN || s.N < minN);
@@ -161,6 +172,8 @@ namespace AIBT.Perf
             env.Append(",\"gcAllocInFrameValid\":").Append(_gcAllocInFrame.Valid ? "true" : "false");
             env.Append(",\"systemMemoryValid\":").Append(_systemMemory.Valid ? "true" : "false");
             env.Append(",\"runs\":").Append(_runs);
+            env.Append(",\"set\":\"").Append(set).Append('"');
+            env.Append(",\"frameProfile\":").Append(_profileSnapshot != null ? "true" : "false");
             env.Append(",\"scenarios\":").Append(_plan.Count);
             env.Append(",\"started\":\"").Append(DateTime.UtcNow.ToString("o")).Append("\"}");
             File.WriteAllText(Path.Combine(_out, "environment.json"), env.ToString());
@@ -231,6 +244,33 @@ namespace AIBT.Perf
             if (quick) foreach (var s in _plan) { s.Warmup = 30; s.Measure = 60; }
         }
 
+        /// <summary>
+        /// P10-002 quick set: the scenarios the Jobs speed-up is judged by, N = 1 000 and 5 000, each
+        /// native one under the default profile (Immediate) and under BatchedJobsSameFrame, plus two
+        /// managed controls. Fixed warm-up and measurement so that runs are comparable.
+        /// </summary>
+        private void BuildQuickPlan()
+        {
+            foreach (var n in new[] { 1000, 5000 })
+            {
+                foreach (var tree in new[] { "native-wait1", "shared-loop16", "shared-reactive16", "native-move1" })
+                {
+                    var label = tree == "native-wait1" ? "n-io-wait1"
+                        : tree == "native-move1" ? "n-io-move1-fact-effect" : "n-" + tree;
+                    foreach (var jobs in new[] { false, true })
+                    {
+                        var s = Native(jobs ? label + "-jobs" : label, tree, n);
+                        s.Jobs = jobs;
+                        if (tree == "native-move1") { s.Feeder = FeederMode.NativeFactDistance; s.EffectHandler = true; }
+                        Add(s);
+                    }
+                }
+                Add(Managed("m-unity15-both", "unity-shape15-both", n));
+                Add(Managed("m-shared-shape15", "shared-shape15", n));
+            }
+            foreach (var s in _plan) { s.Warmup = 120; s.Measure = 250; }
+        }
+
         private void Add(Scenario s) => _plan.Add(s);
 
         private static Scenario Managed(string id, string tree, int n) => new Scenario { Id = id, Kind = ScenarioKind.Managed, Tree = tree, N = n };
@@ -297,6 +337,7 @@ namespace AIBT.Perf
                     ++_frame;
                     if (_frame < s.Measure && !(_frame >= 30 && PerfClock.Watch.ElapsedMilliseconds - _phaseStart > 20000)) break;
                     _measuredFrames = _frame;
+                    _profile = _profileSnapshot != null ? (string)_profileSnapshot.Invoke(null, null) : null;
                     _measuredGc = GC.CollectionCount(0) - _gcStart;
                     _csv.Dispose();
                     _csv = null;
@@ -527,6 +568,7 @@ namespace AIBT.Perf
                 var world = GameObject.Find("AIBT Native World");
                 if (world != null) _scheduler = world.GetComponent<ProductionTreeScheduler>();
             }
+            _profileReset?.Invoke(null, null);
             _effectStart = PerfClock.EffectCount;
             _spottedStart = PerfClock.SpottedCount;
             _gcStart = GC.CollectionCount(0);
@@ -583,8 +625,9 @@ namespace AIBT.Perf
                 .Append(",\"spotted\":").Append(PerfClock.SpottedCount - _spottedStart)
                 .Append(",\"running\":").Append(running)
                 .Append(",\"nativeCompletedRuns\":").Append(completed)
-                .Append(",\"faultsTotal\":").Append(_faults)
-                .Append('}');
+                .Append(",\"faultsTotal\":").Append(_faults);
+            if (_profile != null) _meta.Append(",\"frameProfile\":").Append(_profile);
+            _meta.Append('}');
             File.AppendAllText(Path.Combine(_out, "runs.jsonl"), _meta + "\n");
             Debug.Log("AIBT_PERF|RUN|" + _meta);
         }

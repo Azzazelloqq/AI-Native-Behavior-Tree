@@ -4,6 +4,7 @@
   "references": [
     "AIBT.Runtime",
     "AIBT.Authoring",
+    "AIBT.Authoring.BuiltInLeaves",
     "AIBT.BehaviorCases.Tests",
     "AIBT.CodeGen.GenerationTests",
     "AIBT.CodeGen.P7039ExternalTreeWrite.Tests",
