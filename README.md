@@ -1,159 +1,347 @@
-# AI-Native Behavior Tree
+# AI-Native Behavior Tree (AIBT)
 
-**AIBT** is a deterministic behavior-tree authoring, compilation, and reference-execution package for Unity, designed for humans and AI agents.
+AIBT is a behavior-tree package for Unity. You draw a tree in a graph editor (or write it as
+JSON), give it to a component on a GameObject, and press Play. Nodes are small C# classes. The same
+trees and node contracts are readable by people, by the validator and compiler, and by AI tools
+(CLI and MCP).
 
-Command-driven agents: [CLI and MCP setup](Documentation~/cli.md). Both adapters reuse the same
-Editor operations; CLI can start/recover the bridge in an already-open project without a manual
-Start click. MCP remains available for protocol clients and custom project tools.
+It has two runtime layers that share one tree format and one editor:
 
-Agents can inspect operation schemas, edit/validate project-native trees, prepare a catalog-pinned
-runtime asset and inspect a specific host's bounded native trace. Reference simulation remains a
-separate backend. Expected-outcome node cases report behavior proof separately from dispatch.
+| | Managed layer | Native layer |
+| --- | --- | --- |
+| Component | `BehaviorTreeAgent` | `NativeTreeAgent` |
+| Tree asset | the `.aibt` file itself | a prepared `ProductionTreeAsset` (made from the `.aibt` file) |
+| Custom node | a class deriving from `BtAction` / `BtCondition` | a `partial struct` with `[AibtAction]` / `[AibtCondition]`, compiled by a source generator to Burst |
+| Node touches the scene | directly (Transform, components, other objects) | never; it reads facts and emits effects |
+| Standard nodes | 52 `aibt.unity.*` nodes (movement, navigation, animation, ...) | 4 `aibt.native.*` nodes, plus the core composites and decorators |
+| Live debugging in the graph | every node, live blackboard values | active path, just-finished nodes, root result |
+| Best for | gameplay AI for tens to hundreds of characters, fast iteration | large crowds, zero GC per tick, Burst jobs |
 
-The project targets a future Burst-compatible, zero-GC-per-tick production path; a readable visual editor; machine-readable contracts; reproducible performance research; and an optional MCP integration. DOTS Entities is not required.
+Start with the managed layer. Move a tree to the native layer when profiling says you need it.
 
-Phase 2 adds the generated Burst dispatch and fixed-capacity native executor while preserving the Phase 1 semantic oracle. The initialized native paths have focused zero-GC evidence, Windows x64 and Android ARM64 each have an actual non-Development IL2CPP/Burst build, and the single-thread Web backend passes Chrome and Firefox conformance. Device performance, Safari/mobile Web, automatic policy selection, and any performance default or threshold are not claimed.
+Requirements: Unity 6 (`6000.0` or newer; this release is verified on `6000.7.0b1`), Burst
+`1.8.29`, Collections `6.5.0`, Newtonsoft JSON `3.2.2` (installed as dependencies). The package is
+`0.1.0` and its editor and AI integration are experimental. MIT license.
 
-Phase 3 adds editor tooling on `UnityEditor.Experimental.GraphView`, including graph rendering, layout, semantic editing operations, validation, reference preview and native tracing. The Graph Editor now exposes initial tree editing and draft saving; preview, live debugging, project registry integration and parts of layout organization remain separate or incomplete. The editor is experimental.
+## Install
 
-Phase 4 measures scheduling and batching on real, non-Editor Players (Windows x64, Android ARM64, single-thread Web) and implements a calibrated work-estimation/batching model plus an `Auto` policy-selection heuristic. `Auto` currently underperforms the best fixed policy (`Immediate`/`Budgeted`/`BatchedJobsSameFrame`/`PipelinedJobs`) in most measured cases — reported honestly, not tuned away — and runtime autotuning was evaluated and rejected in favor of the static calibrated model. No performance default, regression threshold, or supported-hardware-class claim is adopted anywhere in the package.
+Add the package to `Packages/manifest.json` from a local checkout (or use **Add package from disk**
+in Package Manager):
 
-Phase 5 adds hot reload for the reference-executor backend: a resolved compatibility model (construct-fresh-and-selectively-copy by stable authoring node ID, never in-place mutation), full restart, localized subtree restart, idle-instance compatible state migration, and an explicit, explained Editor workflow. Measured evidence shows compatible migration costs roughly half of a full restart at the same tree size, on both Editor and a real Windows Player. Native-backend hot reload does not exist yet, and migration is scoped to an idle old instance (a genuinely active one falls back to full restart) — both disclosed, not silently assumed.
-
-Phase 6 adds a real, working MCP integration: a standalone `dotnet` MCP server (`MCP~/Server/`) bridged to the Unity Editor (`AIBT.Mcp`), with discovery, authoring, validation/compilation/simulation, test/benchmark, and custom-node-generation tools, a fail-closed permission model, custom MCP tool providers a consuming project can register via inversion of control, and generated agent documentation (node catalog, workflow guide, recipes, anti-patterns). Every tool is live-verified against a real MCP client (the official `@modelcontextprotocol/inspector` CLI), including generating, compiling, testing, and applying a genuinely new custom node end-to-end. Its original trace and project-node-discovery gaps were addressed in later Phase 7 work; see the production-host and editor limitations below for the current integration boundaries.
-
-Phase 7 adds native tracing, project leaf registration, profiling, stress tests, contract migration, native hot reload, samples and release tooling. A production Play-mode host and world integration were implemented after the original integration gate; see [Production tree host](Documentation~/production-host.md) and the Swarm Arena sample. The editor and MCP remain experimental, the Graph Editor creates `v2` trees while preserving existing `v1` trees, and the package has not declared 1.0.
-
-> Status: Phases 1 through 7 are complete (`P2-025`, `P3-013`, `P4-009`, `P5-010`, `P6-012`, and `P7-016` integration gates all accepted — see `Planning~/Evidence/`). `1.0.0` has not been declared; that remains a separate owner decision per `Planning~/USER_ACTIONS.md`.
-
-## Design goals
-
-- Scale from a few agents to large populations without forcing one execution strategy.
-- Keep semantic authoring, visual layout, and compiled runtime data separate.
-- Make custom nodes safe to generate, inspect, validate, test, and compile.
-- Give human and AI authors the same versioned node registry and validation rules.
-- Preserve readable graphs through deterministic auto-layout, manual pinning, groups, comments, and reroutes.
-- Measure scheduling and batching decisions on real platforms instead of relying on a magic agent threshold.
-
-## Repository map
-
-| Path | Responsibility |
-| --- | --- |
-| `Runtime/` | Compiled tree representation, execution state, scheduler, blackboard, commands |
-| `Authoring/` | Semantic authoring model, validation, compilation contracts |
-| `Editor/` | Experimental graph authoring, layout, validation, preview, and debugger components |
-| `CodeGen~/` | Generated Burst dispatch, analyzers, and templates |
-| `MCP/` | Unity-side MCP bridge (Editor-only): discovery, authoring, verification, node-development, and custom-tool-provider support |
-| `MCP~/Server/` | Standalone MCP server (external `dotnet` process) |
-| `Schemas~/` | Draft schemas for canonical files and tool contracts |
-| `Tests/` | Runtime and editor behavior tests |
-| `Benchmarks~/` | Reproducible performance and platform research |
-| `Documentation~/` | Architecture, scope, roadmap, and development rules |
-
-## Architectural outline
-
-```text
-Visual Editor       MCP / AI tools       Text authoring
-      \                   |                    /
-       +----------- Authoring Model ----------+
-                         |
-                  Validate / Compile
-                         |
-                Immutable Runtime Program
-                         |
-       Reference oracle / Native generated executor
-                         |
-       Snapshot -> Execute -> Reduce -> Publish
+```json
+"com.azzazello.aibt": "file:C:/path/to/AIBT"
 ```
 
-The runtime does not depend on the editor, MCP, an LLM provider, or DOTS Entities. See [Architecture](Documentation~/architecture.md) and [Scope](Documentation~/scope.md).
+Then open **Window > Package Manager > AI-Native Behavior Tree > Samples** and import **Simple
+Agent** (managed layer) and **First Agent** (native layer). Each has a setup menu that builds a demo
+scene.
 
-## Data files
+## Five-minute start: managed layer
 
-- `*.aibt.json` — canonical semantic tree.
-- `*.aibt.layout.json` — shared presentation layout, groups, comments, and edge routing.
-- `.aibt/policy.json` — project-specific validation and style rules.
-- `*.aibtcase.json` — behavior scenarios used by simulation and tests.
+1. Import **Simple Agent**, run **AIBT > Samples > Simple Agent > Create Demo**, press Play. A guard
+   patrols, chases a wanderer while it sees it and returns; a scout keeps its distance. Select the
+   guard and open **AIBT > Graph Editor**: the graph follows the running tree live.
+2. Your own tree: **AIBT > Graph Editor > New**, add nodes with right-click or **Space**, **Save**
+   (it asks for an `.aibt` path). Add **Behavior Tree Agent** (`AIBT/Behavior Tree Agent`) to a
+   GameObject and drag the `.aibt` file into its **Tree** field. Press Play.
+3. Your own node: a class with `[BtNode]`. Public fields are the parameters a tree author edits
+   (`perSecond` appears as `per-second`); a `BbKey<T>` field is a blackboard key the author picks.
+   The node appears in the editor's node search after the scripts compile; no registration, catalog
+   or code generation is involved.
 
-Unity assets and runtime buffers are imported or compiled outputs, not the semantic source of truth.
+```csharp
+[BtNode("game.heal", Category = "Combat", Summary = "Restores health until it is full.")]
+public sealed class HealNode : BtAction
+{
+    public float perSecond = 25f;  // a parameter: the tree author edits it in the graph ("per-second")
+    public BbKey<float> health;    // a blackboard key: the tree author picks which one
 
-## Development baseline
+    protected override NodeStatus OnTick()
+    {
+        var value = Mathf.Min(100f, Get(health) + perSecond * DeltaTime);
+        Set(health, value);
+        return value >= 100f ? NodeStatus.Success : NodeStatus.Running;
+    }
+}
 
-- Unity 6 (`6000.0` or newer); validated development baseline: `6000.5.8f1`.
-- Burst `1.8.29`.
-- Unity Collections `6.5.0`.
-- MIT license.
+[BtNode("game.is-low-health", Category = "Combat", Summary = "Holds while health is below a threshold.")]
+public sealed class IsLowHealthNode : BtCondition
+{
+    public float threshold = 30f;
+    public BbKey<float> health;
 
-Additional platforms and Unity versions are supported only after validation by the compatibility and benchmark matrix.
+    protected override bool Check() => Get(health) < threshold;
+}
+```
+
+An action returns `Running` to be ticked again, or `Success`/`Failure` to finish. Override
+`OnEnter`, `OnAbort` (the tree interrupted it while Running) and `OnExit` (always, after success,
+failure or abort) when the node starts or cleans something up, and `OnInitialize` to cache
+components once. A condition answers in one tick and must not change game state; its `interrupt`
+field (`None`, `Self`, `LowerPriority`, `Both`, set per node in the graph) makes a running branch
+re-check it every tick. Inside a node you have `Agent`, `gameObject`, `transform`, `GetComponent<T>()`,
+`DeltaTime`, `TreeTime`, `Blackboard`, `ResolveGameObject(reference)`,
+`ResolveComponent<T>(reference)` and `WarnOnce(message)`. One node instance exists per agent, so
+private fields are per-agent state.
+
+`BehaviorTreeAgent` options: **Tick Mode** (`EveryFrame`, `Interval`, or `Manual` with
+`agent.Tick(deltaTime)`), **Restart On Complete** (on by default: when the root finishes, the tree
+starts again and the blackboard is kept), **Use Unscaled Time**, **References** and **Event
+Responses** (below). From code: `Restart(resetBlackboard)`, `Stop()`, `IsRunning`, `LastResult`,
+`Completed`, `Faulted`, `LastError`. A node that throws stops the tree and raises `Faulted` once.
+
+## Five-minute start: native layer
+
+1. Import **First Agent**, run **AIBT > Samples > First Agent > Create Demo**, press Play. A cube
+   walks to a goal; when it arrives the tree succeeds, the goal moves and the tree starts again.
+2. The node is a Burst struct with the short `AIBT.Native` attributes. Value types come from the
+   field types; the blackboard access comes from the handle type. Only `Tick` is required
+   (`Enter`, `Abort`, `Exit` are optional). From `Samples~/FirstAgent/Nodes/MoveNode.cs`:
+
+```csharp
+[AibtCatalogShard("aibt.samples.first-agent", 1u)]
+public partial struct FirstAgentShard { }
+
+public partial struct MoveConfig
+{
+    [AibtParam("speed")] public float Speed;
+    [AibtParam("stop-distance")] public float StopDistance;
+    [AibtKey("distance")] public BlackboardReadHandle<float> Distance;
+    [AibtCommand("move-speed")] public CommandHandle<float> MoveSpeed;
+}
+
+public partial struct MoveMemory { }
+
+[AibtAction("aibt.samples.first-agent.move")]
+public partial struct MoveNode
+{
+    public static NodeStatus Tick(in MoveConfig config, ref MoveMemory memory, ref BurstTickContext context)
+    {
+        if (config.Speed <= 0f || config.StopDistance < 0f) return NodeStatus.Failure;
+        if (FirstAgentShard.BurstAccess.TryRead(ref context, config.Distance, out var distance) != BurstContextResult.Success)
+            return NodeStatus.Failure;
+        if (distance <= config.StopDistance) return NodeStatus.Success;
+        return FirstAgentShard.BurstAccess.TryEmit(ref context, config.MoveSpeed, in config.Speed) == BurstContextResult.Success
+            ? NodeStatus.Running : NodeStatus.Failure;
+    }
+}
+```
+
+3. Nodes live in a *shard* assembly and are selected by a *catalog* in a second assembly. Both
+   reference `AIBT.Runtime` and the packaged analyzer (`"analyzers": ["GUID:31a3f09584684895a0a72916d3ad4de0"]`
+   in the `.asmdef`; copy the sample's `Nodes/` and `Catalog/` asmdefs). The catalog, from
+   `Samples~/FirstAgent/Catalog/FirstAgentCatalog.cs`:
+
+```csharp
+[AibtCatalogSet("aibt.samples.first-agent.catalog", 1u, typeof(FirstAgentShard))]
+public static partial class FirstAgentCatalog { }
+```
+
+4. Open the tree in **AIBT > Graph Editor** and use **More > Prepare Runtime Asset**: it compiles
+   the tree against your catalog into a `ProductionTreeAsset`. Add **Native Tree Agent**
+   (`AIBT/Native Tree Agent`) to a GameObject and assign that asset. Gameplay code feeds facts and
+   handles effects by name. From `Samples~/FirstAgent/Runtime/FirstAgent.cs`:
+
+```csharp
+private void Awake()
+{
+    _agent = GetComponent<NativeTreeAgent>();
+    _agent.OnEffect("move-speed", (float speed) =>
+        transform.position = Vector3.MoveTowards(transform.position, _goal.position, speed * Time.deltaTime));
+    _agent.Completed += result =>
+    {
+        if (result != NodeStatus.Success) return;
+        _goal.position = Vector3.Scale(_goal.position, new Vector3(-1f, 1f, 1f)); // reached: send the goal to the other side
+        ReportDistance();
+    };
+}
+
+private void Update() => ReportDistance();
+
+private void ReportDistance() => _agent.SetFact("distance", Vector3.Distance(transform.position, _goal.position));
+```
+
+`NativeTreeAgent` shares one program per asset and catalog between agents, joins a world (the
+assigned `ProductionTreeWorld` or one shared `AIBT Native World`), restarts by **Restart Mode**
+(`Always`, `Never`, `OnSuccess`, `OnFailure`) and releases its native memory when disabled. It
+also has `Restart()`, `Stop()`, `IsRunning`, `LastResult`, `CompletedRuns`, `Completed`, `Faulted`
+and `LastError`. The low-level path (`ProductionTreeAsset.TryCreateProgram`,
+`ProductionTreeProgram.TryBootstrap`, `ProductionTreeHost`, `IProductionTreeWorldParticipant`) is
+still available: see [Production tree host](Documentation~/production-host.md) and the
+**Swarm Arena** sample. Long attribute forms, async actions and conditions:
+[Burst node authoring](Documentation~/burst-node-authoring.md) and the **Public Burst Nodes** sample.
+
+## Exchanging data with game code
+
+| Direction | Managed (`BehaviorTreeAgent`) | Native (`NativeTreeAgent`) |
+| --- | --- | --- |
+| Node acts on the scene | directly, inside the node | not possible; emit an effect |
+| Game writes a value for the tree | `agent.Blackboard.Set("key", value)` | `agent.SetFact("key", value)` |
+| Game reads a value the tree wrote | `agent.Blackboard.Get<T>("key")`, `TryGet`, `GetOrDefault` | through an effect |
+| Tree tells the game something happened | `aibt.unity.raise-event` + `agent.Events.Subscribe(name, handler)` or **Event Responses** in the inspector | `agent.OnEffect("command", handler)` |
+| Tree uses another scene object | **References** list (name → object), `agent.SetReference(name, obj)` | pass its position or state as a fact |
+| Tree finished | `Completed` event | `Completed` event |
+
+Managed blackboard keys are declared in the graph's Blackboard panel; `Get`/`Set` accept `bool`,
+`int`, `long`, `float`, `double`, `Vector2`, `Vector3`, `Quaternion` and `string` for the matching
+key type. Values written by game code are seen on
+the tree's next tick and survive restarts. The blackboard holds values, not objects: a node that
+acts on another object takes a string `reference` parameter (empty means the agent itself) and
+resolves it from the agent's **References** list; a missing reference fails the node with one
+warning, never an exception. A gameplay component using all of these:
+
+```csharp
+[RequireComponent(typeof(BehaviorTreeAgent))]
+public sealed class Fighter : MonoBehaviour
+{
+    public Transform enemy;
+    private BehaviorTreeAgent _agent;
+
+    public float Health => _agent.Blackboard.Get<float>("health");          // tree -> game
+
+    public void TakeDamage(float amount) =>
+        _agent.Blackboard.Set("health", Health - amount);                   // game -> tree
+
+    private void Start()
+    {
+        _agent = GetComponent<BehaviorTreeAgent>();
+        _agent.SetReference("enemy", enemy);                                // nodes use reference "enemy"
+        _agent.Events.Subscribe("healed", agent => Debug.Log(agent.name + " is healed"));
+        _agent.Completed += result => Debug.Log("Tree finished: " + result);
+    }
+}
+```
+
+Native facts are Tree-scope keys of the same type that no node writes; supported types are bool,
+int, long, float, double, `Float2Value`, `Float3Value`/`Vector3` and `QuaternionValue`. They are
+written at the scheduler's safe boundary and kept across restarts; a wrong key or type is logged
+once and ignored. Effects are the node's `[AibtCommand]` ids, delivered on the main thread after
+the node's update commits, for Int32, Float32 and Float3/`Vector3`; a throwing handler is logged
+and does not block later effects.
+
+A key that no node writes or binds as a key parameter is reported in the graph as the note
+**AIBT2043 Input key '...'**. That is expected for keys gameplay code feeds (native facts always
+are such keys); it is a reminder, not a problem.
+
+## Working in the graph editor
+
+Open **AIBT > Graph Editor**, or double-click an `.aibt` file. The left panel lists the project's
+trees with their state (`Valid`, errors, `Needs native compile`).
+
+- **Adding nodes.** Right-click the canvas, press **Space**, or drop an edge on empty canvas to open
+  the node search. Composites and decorators are listed directly; conditions and actions are grouped
+  by category (Movement, Navigation, Blackboard, ...). Type to filter.
+- **Connecting.** Drag from a port to connect or reparent. Child order is the number badge on each
+  child, changed with **Alt+Left/Right** or the context menu, never by position.
+- **Shortcuts.** **Ctrl+S** save (tree and layout together), **Ctrl+Z/Ctrl+Y** undo/redo (semantic
+  and layout edits share one history, also in Edit > Undo), **Ctrl+D** duplicate, **Delete**,
+  **F** frame, **Ctrl+Shift+L** auto layout (pinned nodes stay).
+- **Inspector.** The selected node's parameters as typed fields; contract defaults are greyed
+  (right-click > Reset to default); blackboard-key fields list only keys of the expected type.
+  The Blackboard panel declares keys, their types and defaults. The Problems list shows validation
+  errors, warnings and notes; click one to select its node.
+- **Live debugging.** In Play Mode select a GameObject whose agent runs the open tree; the graph
+  attaches automatically (or press **Debug**). Running nodes pulse, finished nodes flash green, red
+  or grey, the active path is highlighted and the Blackboard panel shows live values. For a
+  `NativeTreeAgent` the view shows the active path, just-finished nodes and the root result.
+  Editing or closing the graph detaches it; it never changes the running agent.
+- **Preparing native trees.** **More > Prepare Runtime Asset** creates or updates a
+  `ProductionTreeAsset` (its GUID is kept). The asset records its source and catalog: saving the
+  source or changing the catalog re-prepares it automatically. Its inspector shows the state
+  (`Current`, `SourceChanged`, `CatalogChanged`, `SourceMissing`, `CatalogMissing`, `Unknown`)
+  with **Prepare Now / Prepare Again**. **More > Check Native Compile** compiles without writing.
+- **Preview** (**AIBT > Behavior Tree Preview**) steps a tree in the reference executor without
+  entering Play Mode. It does not run trees with `BtAction`/`BtCondition` nodes; those run only in
+  a `BehaviorTreeAgent`.
+
+Details: [Visual editor and layout](Documentation~/editor-and-layout.md).
+
+## Standard nodes
+
+The full, generated reference with every parameter, default and status is
+[node-catalog.md](Documentation~/generated/node-catalog.md). Summary:
+
+| Category | Nodes |
+| --- | --- |
+| Composites | `aibt.core.memory-sequence`, `memory-selector`, `reactive-sequence`, `reactive-selector`, `parallel` |
+| Decorators | `aibt.core.inverter`, `succeeder`, `failer`, `repeater`, `timeout`, `cooldown` |
+| Flow (7) | `aibt.unity.wait-seconds`, `wait-random`, `wait-frames`, `wait-until`, `idle`, `succeed`, `fail` |
+| Blackboard (21) | `set-bool`, `set-int`, `set-float`, `set-vector3`, `copy-*`, `increment-int`, `increment-float`, `toggle-bool`, `is-true`, `compare-int`, `compare-float`, `compare-*-keys`, `is-vector3-set`, `random-int`, `random-float`, `random-point`, `distance` |
+| Movement (7) | `move-towards`, `move-direction`, `look-at`, `rotate-towards`, `turn-by`, `keep-distance`, `is-within-distance` |
+| Navigation (2) | `nav-move-to`, `nav-stop` (needs the AI module) |
+| Animation (3) | `animator-trigger`, `animator-bool`, `animator-float` (needs the Animation module) |
+| GameObject (4) | `set-active`, `destroy-self`, `get-position`, `has-reference` |
+| Audio (1) | `play-audio` (needs the Audio module) |
+| Events (1) | `raise-event` |
+| Checks (5) | `line-of-sight` (needs Physics), `random-chance`, `start-cooldown`, `is-cooldown-ready`, `time-since-changed` |
+| Debug (1) | `log` |
+| Native (4) | `aibt.native.bool-is-true`, `float-at-least`, `set-float`, `wait-microseconds` (native layer only) |
+| Built-in leaves | `aibt.stdlib.wait`, `aibt.stdlib.random-condition` (both layers) |
+
+`aibt.unity.*` nodes run only in `BehaviorTreeAgent`; `aibt.native.*` nodes only in
+`NativeTreeAgent`. Nodes that need an optional Unity module are compiled only when the module is
+enabled.
+
+## Which layer to choose
+
+- **Managed** when nodes need the scene (physics queries, animation, NavMesh, audio), when you
+  iterate on gameplay, or for up to a few hundred agents. A tree is ready as soon as it is saved.
+- **Native** for large populations, deterministic Burst execution and zero GC per tick, when the
+  game can express the world as facts and effects. It needs a shard and a catalog assembly and a
+  prepared runtime asset.
+- Both layers use the same `.aibt` format, core composites, editor and validator, but a tree's leaf
+  nodes belong to one layer: the managed `aibt.unity.*` nodes do not run in a `NativeTreeAgent`,
+  and generated Burst nodes do not run in a `BehaviorTreeAgent`.
+
+## Known limits
+
+- Native live view shows only the active path, just-finished nodes and the root result: no exit
+  statuses of inner nodes, no nodes that start and finish within one frame, no native blackboard
+  values.
+- After an automatic re-prepare, running native hosts keep the program they started with; restart
+  them (or re-enter Play Mode) to pick up the new snapshot.
+- Runtime assets prepared before P9-004 have no recorded source and catalog and show `Unknown` until
+  prepared once more.
+- Player builds with managed code stripping: AIBT creates `[BtNode]` classes and resolves the
+  native catalog recorded in a runtime asset by reflection. The package adds a build step
+  (`AibtLinkXmlProcessor`) that preserves every `[BtNode]` class and `[AibtCatalogSet]` catalog in
+  the Player's assemblies, verified with IL2CPP and stripping level High. If you load node or
+  catalog types some other way, assign `NativeTreeAgent.CatalogFactory = YourCatalog.TryCreateRuntimeCatalog`
+  before the agent is enabled. See the [P9-006 evidence](Planning~/Evidence/P9-006/README.md).
+- MCP `search_nodes` returns 50 nodes per page by default; pass `count` or page with `offset`.
+- Condition interrupts (`ConditionInterrupt`) exist only in the managed layer.
+- The reference Preview window does not run managed `BtAction`/`BtCondition` nodes.
+- The live graph samples node states about 30 times a second; a node that starts and finishes
+  between two samples is not flashed.
+- The package has not declared `1.0`; public APIs are experimental.
+
+## AI tools and command line
+
+Agents and scripts can inspect node contracts, edit and validate trees, compile, prepare runtime
+assets and read a running host's trace through the same Editor operations. See
+[CLI and MCP setup](Documentation~/cli.md) and [AI and MCP integration](Documentation~/ai-and-mcp.md).
 
 ## Documentation
 
-Start with [First production agent](Documentation~/consumer-quickstart.md): the **First Agent**
-sample prepares a runtime asset in the Editor, runs a generated Float32-configured Action without
-Authoring in its gameplay assembly, and connects live tracing to the source graph.
-
-The graph now provides **Prepare Runtime**, **Preview** and **Debug Selected**. Dragging ports
-connects/reparents children in explicit append order; moving nodes never changes execution order.
-Shared preview/trace annotations preserve the authoring graph's layout and detach on source edits.
-Native-only project nodes still require reference providers for preview.
-
-### Graph Editor (experimental)
-
-Open **AIBT > Graph Editor**. **New** creates an unsaved version 2 tree with a sequence root; select a node
-and use **Add Child** to choose a registered built-in node. Select a node to edit its supported
-parameters in the right-hand panel. **Earlier** and **Later** change semantic child order; the
-number shown on each child reflects that order, independently of its canvas position. **Detach**,
-**Attach To**, **Set Root** and **Remove Branch** modify the structure. Tree edits and layout moves
-have separate undo/redo controls.
-
-**Save** writes the canonical tree, including an incomplete draft. Reference validation reports
-errors that prevent compilation. **Save Layout** writes positions separately; save tree changes
-first. Both saves reject a file changed externally since it was opened. **Check Native** compiles
-the current version 2 draft with discovered generated contracts and displays compiler diagnostics;
-it does not execute the program or verify Player integration. The catalog discovers
-registered project reference nodes and generated player-node contracts; discovery problems are
-shown in the browser. Reference validation does not establish whether a project-generated native
-node is executable. The Blackboard panel creates tree-scoped Bool, Int32, Int64, Float32, Float64,
-Float2 and Float3 variables with optional defaults. IDs are stable and also serve as names. Generated
-nodes expose compatible blackboard bindings in the selected node panel. Removing a variable leaves
-its existing bindings visible for repair. Existing version 1 trees are not automatically migrated;
-generated bindings require version 2. Agent/shared contracts and other value types remain read-only
-in this editor. **Debug Selected** maps a matching live host onto this graph; **Preview** shares
-the same view with the reference controls.
-
-For a running agent, select its GameObject with a bootstrapped `ProductionTreeHost` and open
-**AIBT > Attach Selected Host Trace**. The timeline reads the host's existing channel without
-changing execution. Source-node highlighting requires a verified graph/program mapping and is not
-inferred by this command; trace records remain available by runtime node index.
-
-**AIBT > Behavior Tree Preview** runs the managed reference executor with built-in leaves and
-discovered project reference providers. Managed/main-thread and nondeterministic nodes require
-the corresponding explicit toggles. Generated native-only nodes need a reference behavior to
-run here; a reference preview is not a live native-agent debugger. Each provider must create a
-fresh behavior per node; its state is not migrated by the separate hot-reload preview.
-
-To inspect complete production-node examples, import **Showcase Trees** from Unity Package Manager,
-open **AIBT > Graph Editor**, and select an imported tree or use **Open Tree**. Each tree includes
-a saved layout.
-
-To run the production-boundary gameplay sample, import **Swarm Arena** from the same package's
-**Samples** tab, then open its imported `SwarmArena.unity` scene. Its sample README describes the
-controls, live telemetry, debugger attachment, and the boundary between live orientation and Player
-benchmark evidence.
-
-- [Scope](Documentation~/scope.md)
-- [Architecture](Documentation~/architecture.md)
-- [Execution and scheduling](Documentation~/execution-and-scheduling.md)
-- [Data formats](Documentation~/data-formats.md)
+- [First production agent](Documentation~/consumer-quickstart.md): native layer step by step.
 - [Visual editor and layout](Documentation~/editor-and-layout.md)
-- [AI and MCP integration](Documentation~/ai-and-mcp.md)
+- [Burst node authoring](Documentation~/burst-node-authoring.md)
+- [Production tree host](Documentation~/production-host.md)
+- [Execution and scheduling](Documentation~/execution-and-scheduling.md)
 - [Hot reload](Documentation~/hot-reload.md)
-- [Benchmarks](Documentation~/benchmarks.md)
-- [Testing strategy](Documentation~/testing.md)
-- [Roadmap](Documentation~/roadmap.md)
-- [Architectural decisions](Documentation~/decisions.md)
-- [Normative specifications](Documentation~/specifications/conventions.md)
-- [Agent master plan](Planning~/MASTER_PLAN.md)
-- [Machine-readable work items](Planning~/work-items.json)
-- [User and infrastructure actions](Planning~/USER_ACTIONS.md)
-- [Contributing](CONTRIBUTING.md)
+- [Data formats](Documentation~/data-formats.md): `.aibt` / `.aibt.json` trees, `.aibt.layout.json`
+  layouts, `.aibt/policy.json`, `.aibtcase.json` behavior cases.
+- Generated reference: [node catalog](Documentation~/generated/node-catalog.md), API for
+  [AIBT.Agents](Documentation~/generated/api-reference-agents.md),
+  [AIBT.Runtime](Documentation~/generated/api-reference-runtime.md),
+  [AIBT.Authoring](Documentation~/generated/api-reference-authoring.md),
+  [AIBT.Editor](Documentation~/generated/api-reference-editor.md),
+  [AIBT.Mcp](Documentation~/generated/api-reference-mcp.md).
+- [Architecture](Documentation~/architecture.md), [Scope](Documentation~/scope.md),
+  [Architectural decisions](Documentation~/decisions.md),
+  [Normative specifications](Documentation~/specifications/conventions.md)
+- [Benchmarks](Documentation~/benchmarks.md), [Testing strategy](Documentation~/testing.md)
+- [Roadmap and phase history](Documentation~/roadmap.md), [Changelog](CHANGELOG.md)
+- [Samples](Samples~/README.md), [Contributing](CONTRIBUTING.md)
+- Planning: [master plan](Planning~/MASTER_PLAN.md), [work items](Planning~/work-items.json),
+  [user and infrastructure actions](Planning~/USER_ACTIONS.md)

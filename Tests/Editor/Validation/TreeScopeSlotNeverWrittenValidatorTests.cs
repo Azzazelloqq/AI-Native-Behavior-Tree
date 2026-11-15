@@ -42,6 +42,52 @@ namespace AIBT.Tests.Editor.Validation
         }
 
         [Test]
+        public void TreeScopeKeyWithNoNodeWriter_IsDescribedAsAnInputGameCodeSets()
+        {
+            // P9-006: keys gameplay code writes (agent.Blackboard.Set / NativeTreeAgent.SetFact) are
+            // the documented path, so the note names that path instead of reading as a defect.
+            var manifest = Manifest("game.reader", reads: new[] { "target-visible" }, writes: Array.Empty<string>());
+            var registry = new NodeRegistryBuilder().AddUserExtension(manifest).Build().Registry;
+            var document = Document(
+                new[] { Node("root", manifest.TypeId) },
+                blackboard: new[] { Key("target-visible", "target-visible", BlackboardScope.Tree) });
+
+            var diagnostic = TreeValidator.Validate(document, registry)
+                .Single(item => item.Code == TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten);
+
+            Assert.That(diagnostic.Severity, Is.EqualTo(DiagnosticSeverity.Info));
+            Assert.That(diagnostic.Message, Does.StartWith("Input key 'target-visible':"),
+                "The key is named, so several input keys stay distinct notes in the graph's Problems list.");
+            Assert.That(diagnostic.Message, Does.Contain("Blackboard.Set"));
+            Assert.That(diagnostic.Message, Does.Contain("SetFact"));
+            Assert.That(diagnostic.Message, Does.Not.Contain("declares Write access"));
+        }
+
+        [Test]
+        public void KeysAManagedNodeBindsThroughABlackboardKeyParameter_AreNotReportedAsInputs()
+        {
+            // P9-006: blackboard-key parameters (managed nodes, ADR-P9-001) do not say whether the node
+            // reads or writes the key, so a bound key may be node-written and is not reported. A key no
+            // node binds at all still is.
+            const string json = @"{ ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tree.managed-inputs"", ""name"": ""Inputs"", ""root"": ""set"",
+  ""blackboard"": {
+    ""flag"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": false },
+    ""unused"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": false } },
+  ""nodes"": { ""set"": { ""type"": ""aibt.unity.set-bool"", ""typeVersion"": 1, ""parameters"": { ""key"": ""flag"", ""value"": true } } } }";
+            var read = CanonicalTreeJson.Parse(json, documentId: "trees/inputs.aibt");
+            Assert.That(read.Document, Is.Not.Null);
+            var options = AIBT.Agents.ManagedTreeProgram.CreateOptions("trees/inputs.aibt");
+            var diagnostics = TreeValidator.Validate(read.Document, AIBT.Tests.Editor.Agents.StandardNodeKit.Nodes.Registry,
+                options.Policy.CreateValidationOptions(options.SourceId));
+
+            Assert.That(diagnostics.Where(item => item.Severity == DiagnosticSeverity.Error), Is.Empty,
+                string.Join("\n", diagnostics.Select(item => item.Code.Value + ": " + item.Message)));
+            var inputs = diagnostics.Where(item => item.Code == TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten).ToArray();
+            Assert.That(inputs.Length, Is.EqualTo(1));
+            Assert.That(inputs[0].Message, Does.StartWith("Input key 'unused':"));
+        }
+
+        [Test]
         public void TreeScopeKeyANodeWrites_NeverEmitsTheDiagnostic()
         {
             var manifest = Manifest("game.writer", reads: Array.Empty<string>(), writes: new[] { "owned" });

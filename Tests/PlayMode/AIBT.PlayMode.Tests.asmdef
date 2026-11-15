@@ -1,0 +1,29 @@
+{
+  "name": "AIBT.PlayMode.Tests",
+  "rootNamespace": "AIBT.Tests.PlayMode",
+  "references": [
+    "AIBT.Runtime",
+    "AIBT.Agents",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.unity.modules.ai",
+      "expression": "1.0.0",
+      "define": "AIBT_UNITY_AI"
+    }
+  ],
+  "noEngineReferences": false
+}

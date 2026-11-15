@@ -52,6 +52,15 @@ Copy-Item -LiteralPath (Join-Path $aibtRoot 'Runtime') -Destination (Join-Path $
 Copy-Item -LiteralPath (Join-Path $aibtRoot 'Authoring') -Destination (Join-Path $assets 'AIBT\Authoring') -Recurse
 Copy-Item -LiteralPath (Join-Path $aibtRoot 'Editor') -Destination (Join-Path $assets 'AIBT\Editor') -Recurse
 Copy-Item -LiteralPath (Join-Path $aibtRoot 'MCP') -Destination (Join-Path $assets 'AIBT\MCP') -Recurse
+# P9-006: the managed agent layer (AIBT.Agents, P9-001) and the generated-code analyzer that the
+# native standard shard (AIBT.StandardNodes) needs to compile. Optional so the same script can
+# dump a baseline from a commit that predates them.
+foreach ($optional in @('Agents', 'Analyzers')) {
+    $optionalSource = Join-Path $aibtRoot $optional
+    if (Test-Path -LiteralPath $optionalSource -PathType Container) {
+        Copy-Item -LiteralPath $optionalSource -Destination (Join-Path $assets ('AIBT\' + $optional)) -Recurse
+    }
+}
 Copy-Item -LiteralPath $dumpTemplate -Destination (Join-Path $assets 'Editor\PublicApiDump.cs')
 Copy-Item -LiteralPath (Join-Path $sourceProjectRoot 'ProjectSettings\ProjectVersion.txt') -Destination (Join-Path $settings 'ProjectVersion.txt')
 $manifest = [ordered]@{
@@ -60,6 +69,11 @@ $manifest = [ordered]@{
         'com.unity.collections' = '6.5.0'
         'com.unity.nuget.newtonsoft-json' = '3.2.2'
         'com.unity.modules.jsonserialize' = '1.0.0'
+        # Built-in modules AIBT.Agents compiles its optional nodes against (versionDefines).
+        'com.unity.modules.ai' = '1.0.0'
+        'com.unity.modules.animation' = '1.0.0'
+        'com.unity.modules.audio' = '1.0.0'
+        'com.unity.modules.physics' = '1.0.0'
     }
 } | ConvertTo-Json -Depth 4
 [IO.File]::WriteAllText((Join-Path $packages 'manifest.json'), $manifest, [Text.UTF8Encoding]::new($false))

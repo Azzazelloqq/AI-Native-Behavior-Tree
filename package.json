@@ -24,7 +24,7 @@
     },
     {
       "displayName": "First Agent",
-      "description": "Editor-prepared tree, Float32 custom Action, typed inputs, committed effects and live graph tracing.",
+      "description": "NativeTreeAgent with a Burst node in the short AIBT.Native form, a generated catalog, an Editor-prepared runtime asset, facts, effects and live graph debugging.",
       "path": "Samples~/FirstAgent"
     },
     {
@@ -39,7 +39,7 @@
     },
     {
       "displayName": "Swarm Arena",
-      "description": "Reactive patrol, pursuit, danger avoidance and cooldown attack through the public production world bridge.",
+      "description": "Low-level native path: one reactive tree for many agents through ProductionTreeHost and ProductionTreeWorld (patrol, pursuit, danger avoidance, cooldown attack).",
       "path": "Samples~/SwarmArena"
     }
   ],

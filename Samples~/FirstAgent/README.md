@@ -6,7 +6,7 @@
    Success, the goal jumps to the other side and the tree starts again. The generated Burst node
    owns the decision; the Unity component only reports the distance and applies movement.
 4. Open `first-agent.aibt.json` in **AIBT > Graph Editor** and select the cube during Play: the
-   graph highlights the running node live (or press **Debug Selected**, or **Debug in Graph** in the
+   graph highlights the running node live (or press **Debug**, or **Debug in Graph** in the
    `NativeTreeAgent` inspector).
 5. Change `speed` in the graph and Save. The runtime asset `FirstAgent.runtime.asset` is prepared
    again automatically (its inspector shows whether it is up to date). Agents already running keep
@@ -31,7 +31,8 @@ node's update commits.
 
 The node and catalog are separate generated assemblies, as required by the supported Burst ABI.
 The Player never reads JSON or compiles trees: the asset is compiled in the Editor. The agent finds
-the catalog recorded in the asset by name; if your build strips it, assign
+the catalog recorded in the asset by name; the package's build step keeps that catalog type in a
+stripped Player. To choose the catalog yourself, assign
 `NativeTreeAgent.CatalogFactory = YourCatalog.TryCreateRuntimeCatalog` before the agent is enabled.
 
 The low-level path (`ProductionTreeAsset.TryCreateProgram`, `ProductionTreeProgram.TryBootstrap`,

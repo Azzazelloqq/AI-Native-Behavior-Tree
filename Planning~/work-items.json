@@ -4,7 +4,7 @@
   "sourceBranch": "main",
   "items": [
     {
-      "id": "P9-006", "phase": 9, "title": "User guide and consumer acceptance", "status": "draft", "kind": "integration",
+      "id": "P9-006", "phase": 9, "title": "User guide and consumer acceptance", "status": "review", "kind": "integration",
       "card": "Planning~/Tasks/P9/P9-006-user-guide-and-acceptance.md",
       "dependsOn": ["P9-001", "P9-002", "P9-003", "P9-004", "P9-005"],
       "owns": ["README.md", "Samples~/README.md", "Planning~/Evidence/P9-006/"]

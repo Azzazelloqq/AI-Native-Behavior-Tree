@@ -1,5 +1,9 @@
 # First production agent
 
+This page walks through the native layer (`NativeTreeAgent`, generated Burst nodes, prepared
+runtime assets). For the managed layer (`BehaviorTreeAgent` and C# `BtAction`/`BtCondition`
+nodes), start with the **Simple Agent** sample and the five-minute start in `README.md`.
+
 Import **First Agent** through AIBT's Package Manager Samples tab, then run **AIBT > Samples >
 First Agent > Create Demo** and press Play. The cube moves to the goal using one generated Action,
 typed external input and a committed Float32 effect. Its runtime assembly has no Authoring reference.
@@ -11,7 +15,7 @@ typed external input and a committed Float32 effect. Its runtime assembly has no
 2. Add your generated nodes, Tree-scope variables and bindings. Float32 parameters accept ordinary
    fractional values; their units are part of your node contract. Drag ports to connect or reparent
    a child. Connections append in semantic order; **Earlier/Later** change that explicit order.
-3. Save, then **Prepare Runtime** and choose your generated catalog. Preparation compiles with
+3. Save, then **More > Prepare Runtime Asset** and choose your generated catalog. Preparation compiles with
    exactly its declared shards and creates a `ProductionTreeAsset` at your selected asset path.
    Updating an existing runtime asset preserves its Unity GUID. A different asset type is refused.
 4. Assign this compiled asset to a `NativeTreeAgent` (or your own integration component). The
@@ -39,7 +43,7 @@ A fact must be a Tree-scope key of the same type that no node writes; a wrong ke
 and ignored. Facts are kept across restarts. A throwing effect handler is logged and does not block
 later effects. The agent resolves the catalog from the type recorded in the asset; assign
 `CatalogFactory` from code (for example `ProjectCatalog.TryCreateRuntimeCatalog`) when code
-stripping may remove that type in a Player build. Disabling the agent stops its host, leaves the
+stripping may remove that type in a Player build (see "Player builds" below). Disabling the agent stops its host, leaves the
 world and releases the program; the last agent disposes it.
 
 ### Low-level path
@@ -72,13 +76,24 @@ requested from a callback finishes cleanup after that callback. `program.TryDisp
 native hosts retain its catalog, so deferred cleanup can be retried explicitly. Root Success/Failure
 still stops execution and does not automatically restart or pool an instance.
 
+## Player builds
+
+The Player never reads JSON or compiles native trees; the runtime asset is compiled in the Editor.
+`NativeTreeAgent` resolves the catalog type recorded in the asset by reflection and
+`BehaviorTreeAgent` creates `[BtNode]` classes by reflection, so a Player with managed code
+stripping would lose them. The package's build step `AibtLinkXmlProcessor` writes an additional
+link.xml for every `[BtNode]` class and `[AibtCatalogSet]` catalog in the Player's assemblies.
+P9-006 verified a Windows IL2CPP Player with stripping level High: without that step every managed
+tree failed with unknown node types and the native agent reported its catalog as stripped; with
+it both samples ran. Assigning `CatalogFactory` from code remains the explicit alternative.
+
 ## Inspect execution
 
 **Preview** opens reference controls annotating the same graph. Built-in leaves work directly;
 project native-only nodes require an explicit reference provider. Preview does not execute native
 gameplay effects.
 
-During Play, select an agent GameObject and click **Debug Selected** in its source graph. The
+During Play, select an agent GameObject (the open graph attaches automatically) or click **Debug** in its source graph. The
 host supplies its exact immutable program/debug map. For a `NativeTreeAgent` the graph shows the
 active path, nodes that just finished and the root result; exit statuses of inner nodes, nodes that
 start and finish within one frame and native blackboard values are not shown. A mismatched source is refused. Trace

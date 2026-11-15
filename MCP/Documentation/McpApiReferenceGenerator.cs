@@ -26,8 +26,8 @@ namespace AIBT.Mcp.Documentation
     /// </summary>
     internal static class McpApiReferenceGenerator
     {
-        private static readonly string[] AssemblyFolders = { "Runtime", "Authoring", "Editor", "MCP" };
-        private static readonly string[] AssemblyNames = { "AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "AIBT.Mcp" };
+        private static readonly string[] AssemblyFolders = { "Runtime", "Authoring", "Editor", "MCP", "Agents" };
+        private static readonly string[] AssemblyNames = { "AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "AIBT.Mcp", "AIBT.Agents" };
 
         // (namespace, folder) -- MCP/'s own real assembly name is "AIBT.Mcp" but its source folder
         // is "MCP", so folder-name and assembly-name are looped in lockstep by index below rather
@@ -35,7 +35,7 @@ namespace AIBT.Mcp.Documentation
         internal static IReadOnlyDictionary<string, string> Generate()
         {
             var summaries = CollectTypeSummaries();
-            var result = new Dictionary<string, string>(4);
+            var result = new Dictionary<string, string>(AssemblyNames.Length);
             for (var index = 0; index < AssemblyNames.Length; index++)
             {
                 result[AssemblyNames[index]] = GenerateForAssembly(AssemblyNames[index], summaries);

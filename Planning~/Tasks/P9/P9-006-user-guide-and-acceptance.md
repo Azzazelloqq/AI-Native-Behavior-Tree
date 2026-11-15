@@ -1,6 +1,6 @@
 # P9-006 — User guide and consumer acceptance
 
-Status: `Draft`
+Status: `Review`
 
 ## Authorization and dependencies
 

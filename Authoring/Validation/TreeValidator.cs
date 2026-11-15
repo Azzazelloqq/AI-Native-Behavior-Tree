@@ -495,6 +495,7 @@ namespace AIBT.Authoring
                 ValidateChildPolicy(document, node, manifest, options, diagnostics);
                 ValidateParameters(document, node, manifest, options, diagnostics);
                 ValidateAccess(document, node, manifest, blackboard, options, diagnostics, writtenTreeKeys);
+                CollectKeyParameterTargets(node, manifest, writtenTreeKeys);
                 ValidateObserver(document, node, graph, blackboard, manifest, options, diagnostics);
                 ValidateNodeCapabilities(document, node, manifest, options, diagnostics);
             }
@@ -502,9 +503,30 @@ namespace AIBT.Authoring
         }
 
         /// <summary>
+        /// P9-006: a managed node binds keys through blackboard-key parameters (ADR-P9-001), which do
+        /// not say whether the node reads or writes the key, so such a key counts as possibly written
+        /// by a node for <see cref="ValidateBlackboardWriteCoverage"/>. Manifest access
+        /// declarations are unaffected.
+        /// </summary>
+        private static void CollectKeyParameterTargets(NodeDocument node, NodeManifest manifest, ICollection<string> writtenTreeKeys)
+        {
+            var properties = node.Parameters?.Properties;
+            if (properties == null) return;
+            for (var index = 0; index < properties.Count; index++)
+            {
+                var property = properties[index];
+                if (property == null || string.IsNullOrEmpty(property.Name)) continue;
+                if (!TryFindParameter(manifest.Parameters, property.Name, out var contract)
+                    || contract.Type != NodeParameterType.BlackboardKey) continue;
+                if (property.Value != null && property.Value.TryGetString(out var keyId) && !string.IsNullOrEmpty(keyId)) writtenTreeKeys.Add(keyId);
+            }
+        }
+
+        /// <summary>
         /// P7-039 (ADR-P7-039): flags every declared Tree-scope key no node in the tree ever writes
         /// -- purely informational (the document already validates), a heads-up that the key is
-        /// eligible for a native <c>ProductionTreeHost</c> external write.
+        /// eligible for a native <c>ProductionTreeHost</c> external write. P9-006: worded as an
+        /// input-key note, because writing such keys from gameplay code is the documented path.
         /// </summary>
         private static void ValidateBlackboardWriteCoverage(
             TreeDocument document,
@@ -517,7 +539,8 @@ namespace AIBT.Authoring
             {
                 if (key.Scope != BlackboardScope.Tree || writtenTreeKeys.Contains(key.Id)) continue;
                 diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten,
-                    "No node in this tree declares Write access to this Tree-scope key.",
+                    "Input key '" + key.Id + "': no node in this tree writes it, so it keeps its default until game code sets it "
+                    + "(BehaviorTreeAgent.Blackboard.Set or NativeTreeAgent.SetFact). Expected for keys gameplay feeds.",
                     BlackboardPointer(key.Id), document.TreeId));
             }
         }

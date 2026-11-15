@@ -211,6 +211,7 @@ namespace AIBT.Tests.Editor.Documentation
             AssertFileMatches(Path.Combine(directory, "api-reference-authoring.md"), apiReference["AIBT.Authoring"]);
             AssertFileMatches(Path.Combine(directory, "api-reference-editor.md"), apiReference["AIBT.Editor"]);
             AssertFileMatches(Path.Combine(directory, "api-reference-mcp.md"), apiReference["AIBT.Mcp"]);
+            AssertFileMatches(Path.Combine(directory, "api-reference-agents.md"), apiReference["AIBT.Agents"]);
         }
 
         // P7-014's own literal acceptance criterion, proven mechanically: every public
@@ -220,8 +221,8 @@ namespace AIBT.Tests.Editor.Documentation
         public void GeneratedApiReferenceCoversEveryPublicMemberInAllFourAssemblies()
         {
             var directory = FindGeneratedDocumentationDirectory();
-            var assemblyNames = new[] { "AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "AIBT.Mcp" };
-            var fileNames = new[] { "api-reference-runtime.md", "api-reference-authoring.md", "api-reference-editor.md", "api-reference-mcp.md" };
+            var assemblyNames = new[] { "AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "AIBT.Mcp", "AIBT.Agents" };
+            var fileNames = new[] { "api-reference-runtime.md", "api-reference-authoring.md", "api-reference-editor.md", "api-reference-mcp.md", "api-reference-agents.md" };
 
             for (var index = 0; index < assemblyNames.Length; index++)
             {

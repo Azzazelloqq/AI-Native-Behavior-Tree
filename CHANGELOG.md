@@ -4,6 +4,28 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### User guide and acceptance (P9-006)
+
+- `README.md` is now a user guide: five-minute starts for the managed (`BehaviorTreeAgent`) and
+  native (`NativeTreeAgent`) layers, exchanging data with game code, the graph editor, a standard
+  node table, choosing a layer and known limits. Its code is compiled and checked against the
+  sources by `UserGuideSnippetTests`. The phase history moved to `Documentation~/roadmap.md`.
+- Generated API reference now covers `AIBT.Agents` (`Documentation~/generated/api-reference-agents.md`).
+- `AIBT2043` names the key and reads as an input-key note ("Input key 'k': no node in this tree
+  writes it ... game code sets it"). Keys a managed node binds through a `blackboard-key`
+  parameter are no longer reported, because such a parameter may be written by the node. Severity
+  (Info) and the rule for manifest access declarations are unchanged.
+- Add a build step (`AibtLinkXmlProcessor`, an `IUnityLinkerProcessor`) that preserves every
+  `[BtNode]` class and `[AibtCatalogSet]` catalog in a Player built with managed code stripping.
+  Without it a Windows IL2CPP Player with stripping High could not compile any managed tree
+  (standard and project nodes were stripped) and `NativeTreeAgent` could not resolve its catalog.
+- Add `AIBT.PlayMode.Tests` with a Play Mode test for `aibt.unity.nav-move-to` path following.
+- `Tools~/Verification/P7/Audit/Get-FullPublicApi.ps1` copies `Agents/` and `Analyzers/` into its
+  isolated project and dumps `AIBT.Agents` and `AIBT.StandardNodes` too.
+- `McpVerificationToolDispatcherTests.CompileReturnsTheSameContentHashAsADirectReferenceCompilerCall`
+  compares with the project node catalog the tool uses; its old expectation missed the native
+  standard shard and failed in every project.
+
 ### Native agent facade (P9-004)
 
 - Add `NativeTreeAgent`: assign a prepared `ProductionTreeAsset` and press Play. It shares one

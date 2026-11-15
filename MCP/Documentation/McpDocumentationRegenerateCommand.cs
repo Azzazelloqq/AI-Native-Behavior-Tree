@@ -29,6 +29,7 @@ namespace AIBT.Mcp.Documentation
             File.WriteAllText(Path.Combine(directory, "api-reference-authoring.md"), apiReference["AIBT.Authoring"]);
             File.WriteAllText(Path.Combine(directory, "api-reference-editor.md"), apiReference["AIBT.Editor"]);
             File.WriteAllText(Path.Combine(directory, "api-reference-mcp.md"), apiReference["AIBT.Mcp"]);
+            File.WriteAllText(Path.Combine(directory, "api-reference-agents.md"), apiReference["AIBT.Agents"]);
 
             Debug.Log("AIBT generated documentation written to " + directory);
         }

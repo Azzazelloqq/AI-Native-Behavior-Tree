@@ -1,18 +1,16 @@
 # Samples
 
-Start with [`SimpleAgent`](SimpleAgent/README.md): one `BehaviorTreeAgent` component, three small
-node classes and a guard that patrols, chases and returns. It needs no generated catalog.
+Import samples from **Window > Package Manager > AI-Native Behavior Tree > Samples**.
 
-Start with [`ShowcaseTrees`](ShowcaseTrees/README.md): two readable production-node trees with saved
-layouts. Open **AIBT > Graph Editor**, then pass either `.aibt.json` path to `OpenFromPath` through
-your Editor integration or MCP. The current graph window has no file-picker control.
+| Sample | Layer | What it shows |
+| --- | --- | --- |
+| [Simple Agent](SimpleAgent/README.md) | managed | Start here. `BehaviorTreeAgent`, standard `aibt.unity.*` nodes, one custom `BtAction`, gameplay code writing the blackboard and handling events. Menu **AIBT > Samples > Simple Agent > Create Demo**. |
+| [First Agent](FirstAgent/README.md) | native | `NativeTreeAgent`, a Burst node with the short `AIBT.Native` attributes, a generated catalog, an Editor-prepared runtime asset, facts and effects. Menu **AIBT > Samples > First Agent > Create Demo**. |
+| [Swarm Arena](SwarmArena/README.md) | native, low level | One reactive tree for many agents through `ProductionTreeHost` and `ProductionTreeWorld`: patrol, pursuit, danger avoidance, cooldown attack. A gameplay and debugging sample, not a benchmark. |
+| [Public Burst Nodes](BurstNodes/README.md) | native | Condition and asynchronous Action nodes with the long public Burst API. |
+| [Showcase Trees](ShowcaseTrees/README.md) | either | Readable production-node trees with saved layouts; open them in **AIBT > Graph Editor**. |
 
-Additional samples will be added as vertical slices stabilize. Planned coverage includes patrol and
-combat, event-driven reactions, async commands, managed integration, scheduling policies, behavior
-cases, and MCP authoring. Custom Burst nodes, hot reload, and visual organization now have examples.
-
-[`SwarmArena`](SwarmArena/README.md) is the importable production gameplay showcase: one reactive
-tree drives patrol, pursuit, danger avoidance and cooldown attack through public world facts and
-typed effects. It is a gameplay/debugging sample, not a benchmark result.
+`CustomMcpToolProvider`, `FullExample` and `SemanticSlice` are reference material for MCP tool
+providers, hot-reload compatibility and the semantic slice; they are not listed in Package Manager.
 
 Samples demonstrate supported APIs; they do not define hidden runtime contracts.

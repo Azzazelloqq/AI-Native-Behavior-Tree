@@ -107,15 +107,12 @@ namespace AIBT.Tests.Editor.Mcp.Verification
             Assert.That(toolHash, Is.Not.Null.And.Not.Empty);
 
             var document = CanonicalTreeJson.Parse(File.ReadAllText(TreePath("valid.aibt.json")), documentId: "valid.aibt.json").Document;
-            // The registry an empty project gets (P9-001): the built-in nodes plus the managed
-            // nodes AIBT.Agents ships, and nothing else.
-            var packageManagedNodes = typeof(AIBT.BtNode).Assembly.GetTypes()
-                .Where(type => !type.IsAbstract && typeof(AIBT.BtNode).IsAssignableFrom(type)
-                    && type.IsDefined(typeof(AIBT.BtNodeAttribute), false));
-            var packageNodes = AIBT.Agents.ManagedNodeSet.Create(packageManagedNodes);
-            Assert.That(packageNodes.Problems, Is.Empty, string.Join("\n", packageNodes.Problems));
-            Assert.That(packageNodes.Types, Is.Not.Empty);
-            var registry = packageNodes.Registry;
+            // The registry the compile tool uses: the project node catalog. Which node types that
+            // catalog contains is ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog's concern;
+            // here only the tool-vs-direct compile equivalence is checked. P9-006: the previous
+            // expectation (built-ins plus AIBT.Agents nodes) missed the native standard shard that
+            // every project's catalog includes since P9-002, so it failed in a clean consumer too.
+            var registry = AIBT.Editor.Registry.ProjectNodeCatalogCache.Current.Registry;
             var options = new ReferenceCompilerOptions("valid.aibt.json", ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 0));
             var direct = ReferenceCompiler.Compile(document, registry, options);
 
