@@ -1620,6 +1620,68 @@ namespace AIBT
             return true;
         }
 
+        /// <summary>
+        /// P10-009: returns this machine's mutable instance state to exactly what <see cref="TryCreate(NativeArray{NativeCompiledNodeRecordV1}, NativeArray{uint}, NativeArray{NativeLifecycleNodeBindingV1}, NativeArray{byte}, NativeArray{NativeFrameStateV1}, NativeArray{uint}, NativeArray{NativeLifecycleControlV1}, NativeArray{byte}, NativeArray{byte}, NativeArray{NativeParallelBranchStateV1}, out NativeLifecycleMachineV1, out NativeRuntimeFailureV1)"/>
+        /// leaves over freshly allocated (zeroed) storage, with a new owner id: node memory, frames,
+        /// generations and cooldown flags zero, parallel branch records re-numbered, one fresh
+        /// control record. Immutable program data (nodes, children, bindings, configuration) is kept.
+        /// The simulation container's restart in place; never used by hosts.
+        /// </summary>
+        internal bool TryResetInstance(out NativeRuntimeFailureV1 failure)
+        {
+            if (!IsCreated)
+            {
+                failure = LifetimeFailure();
+                return false;
+            }
+            if (!NativeOwnerIdentityV1.TryNext(out var ownerId))
+            {
+                failure = new NativeRuntimeFailureV1(
+                    NativeRuntimeDiagnosticCodeV1.NativeCapacityArithmeticOverflow,
+                    NativeResourceKindV1.LeaseCounter);
+                return false;
+            }
+            for (var index = 0; index < _memory.Length; index++) _memory[index] = 0;
+            for (var index = 0; index < _frames.Length; index++) _frames[index] = default;
+            for (var index = 0; index < _generations.Length; index++) _generations[index] = 0u;
+            if (_cooldownInitialized.IsCreated)
+                for (var index = 0; index < _cooldownInitialized.Length; index++) _cooldownInitialized[index] = 0;
+            if (_parallelBranches.IsCreated)
+                for (var index = 0; index < _parallelBranches.Length; index++)
+                    _parallelBranches[index] = new NativeParallelBranchStateV1 { CapacityOrdinal = (uint)index };
+            _control[0] = new NativeLifecycleControlV1
+            {
+                OwnerId = ownerId,
+                Generation = 1u,
+                SuspendedFrameStart = (uint)_frames.Length,
+            };
+            failure = default;
+            return true;
+        }
+
+        /// <summary>P10-009: test-only read of the mutable instance state, owner id excluded, for the reset-equals-fresh proof.</summary>
+        internal void CopyInstanceStateForTests(System.Collections.Generic.List<byte> into)
+        {
+            into.Clear();
+            for (var index = 0; index < _memory.Length; index++) into.Add(_memory[index]);
+            AppendBytes(into, _frames);
+            AppendBytes(into, _generations);
+            if (_cooldownInitialized.IsCreated) AppendBytes(into, _cooldownInitialized);
+            if (_parallelBranches.IsCreated) AppendBytes(into, _parallelBranches);
+            var control = _control[0];
+            control.OwnerId = 0;
+            var controls = new NativeArray<NativeLifecycleControlV1>(1, Allocator.Temp);
+            controls[0] = control;
+            AppendBytes(into, controls);
+            controls.Dispose();
+        }
+
+        private static void AppendBytes<T>(System.Collections.Generic.List<byte> into, NativeArray<T> array) where T : struct
+        {
+            var bytes = array.Reinterpret<byte>(Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<T>());
+            for (var index = 0; index < bytes.Length; index++) into.Add(bytes[index]);
+        }
+
         private static bool ValidBinding(
             NativeCompiledNodeRecordV1 node,
             NativeLifecycleNodeKindV1 kind,

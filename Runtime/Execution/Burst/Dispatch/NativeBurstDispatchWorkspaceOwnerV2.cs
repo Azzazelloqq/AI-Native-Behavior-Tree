@@ -588,6 +588,27 @@ namespace AIBT.Execution.Burst.Dispatch
             return true;
         }
 
+        /// <summary>
+        /// P10-009: forgets the transaction ledger this workspace bound to at its first request and
+        /// the ledger floors it tracked since, so the next request binds to a new ledger exactly as
+        /// a newly created workspace would. For the simulation container's restart of an agent in
+        /// place (its slot gets a new ledger token and tree instance id). Refused unless idle.
+        /// </summary>
+        internal bool TryResetLedgerBinding()
+        {
+            if (_disposed || _hasDependency || _state != NativeBurstDispatchWorkspaceStateV2.Idle) return false;
+            _ledgerToken = 0;
+            _ledgerTreeInstanceId = default;
+            _nextOperationSequenceFloor = 0;
+            _mutationVersionFloor = 0;
+            _requestMutationVersion = 0;
+            _commandCountFloor = 0;
+            _commandPayloadByteCountFloor = 0;
+            _operationCountFloor = 0;
+            _catalogValidated = false;
+            return true;
+        }
+
         internal bool TryDispose(out BurstContextResult failure)
         {
             if (_disposed)

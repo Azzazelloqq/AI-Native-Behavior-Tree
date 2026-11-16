@@ -41,33 +41,14 @@ namespace AIBT
         }
 
         private static long s_nextTreeInstanceId;
-        private SchedulingAgent[] _agents;
-        private DispatchLifecycle _dispatch;
-        private GeneratedTreeDispatchAdapterV2 _generatedDispatch;
+        // P10-009: the MonoBehaviour-free native instance and its update bookkeeping. The host keeps
+        // Unity's object model, the clock, the drive lock and the scheduler registration.
+        private readonly ProductionTreeAgentCore _core;
         private Func<long> _clock;
-        private NativeTraceRecorderV1 _recorder;
-        private ulong _updateId;
-        private long _timeMicroseconds;
-        private bool _ready;
-        private bool _bootstrapped;
-        private bool _updateOpen;
-        private bool _suspended;
-        private bool _hasExecuted;
         private bool _driving;
-        private bool _destroyRequested;
-        private bool _disposed;
         private ProductionTreeScheduler _owner;
-        private NativeLifecycleStepResultV1 _pendingStep;
-        private bool _hasPendingStep;
-        private int _configuredEffectQueueCapacity;
-        private ProductionTreeEffectQueue _effectQueue;
-        private ulong _stepsThisUpdate;
-        private uint _maximumStepsPerUpdate = DefaultMaximumStepsPerUpdate;
-        // P10-004: JobsAgentFrame per-agent logs and job-transport storage, created on first use.
-        private UnsafeList<AgentFrameTraceEventV1> _agentFrameTrace;
-        private UnsafeList<ProductionTreeEffect> _agentFrameEffects;
-        private NativeArray<byte> _agentFrameEmptyBytes;
-        private NativeArray<NativeParallelBranchStateV1> _agentFrameEmptyParallel;
+
+        public ProductionTreeHost() => _core = new ProductionTreeAgentCore(this);
 
         /// <summary>
         /// P10-004: default for <see cref="MaximumStepsPerUpdate"/>. The largest tree measured in the
@@ -86,11 +67,11 @@ namespace AIBT
         /// </summary>
         public uint MaximumStepsPerUpdate
         {
-            get => _maximumStepsPerUpdate;
+            get => _core.MaximumStepsPerUpdate;
             set
             {
                 if (value == 0u) throw new ArgumentOutOfRangeException(nameof(value), "At least one step per update is required.");
-                _maximumStepsPerUpdate = value;
+                _core.MaximumStepsPerUpdate = value;
             }
         }
 
@@ -98,42 +79,28 @@ namespace AIBT
         internal bool AgentFrameFallbackReported { get; set; }
 
         /// <summary>Lifecycle steps taken by the current (or last) logical update.</summary>
-        internal ulong StepsThisUpdate => _stepsThisUpdate;
+        internal ulong StepsThisUpdate => _core.StepsThisUpdate;
 
-        /// <summary>
-        /// Counts one step against <see cref="MaximumStepsPerUpdate"/> before it is taken. Returns
-        /// false, after failing this host, when the update has already used its whole allowance.
-        /// </summary>
-        private bool TryCountStep()
-        {
-            if (_stepsThisUpdate >= _maximumStepsPerUpdate)
-            {
-                FailStepLimit();
-                return false;
-            }
-            _stepsThisUpdate++;
-            return true;
-        }
-
-        internal void FailStepLimit()
-            => Fail(
-                new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeUpdateStepLimitExceeded),
-                "The update needed more than MaximumStepsPerUpdate (" + _maximumStepsPerUpdate + ") lifecycle steps.");
+        internal void FailStepLimit() => _core.FailStepLimit();
 
         /// <summary>The instance-owned trace channel, available until destruction.</summary>
-        public NativeTraceChannelOwnerV1 TraceChannelOwner { get; private set; }
+        public NativeTraceChannelOwnerV1 TraceChannelOwner => _core.TraceChannelOwner;
         /// <summary>The exact immutable program used by this host, including its source debug map.</summary>
-        public CompiledProgram Program { get; private set; }
+        public CompiledProgram Program => _core.Program;
         /// <summary>Terminal root result, retained without automatic restart.</summary>
-        public NodeStatus? LastRootResult { get; private set; }
+        public NodeStatus? LastRootResult => _core.LastRootResult;
         /// <summary>The failure that stopped this host; None before any failure.</summary>
-        public NativeRuntimeFailureV1 LastFailure { get; private set; }
+        public NativeRuntimeFailureV1 LastFailure => _core.LastFailure;
         /// <summary>Logical updates started, excluding budget-resume frames.</summary>
-        public ulong TotalUpdates => _updateId;
+        public ulong TotalUpdates => _core.TotalUpdates;
         /// <summary>Stable per-instance identity assigned at bootstrap; 0 before bootstrap. Used for deterministic coordinator ordering (<see cref="ProductionTreeScheduler"/>) -- never reused across instances within a process.</summary>
-        public ulong InstanceId { get; private set; }
+        public ulong InstanceId => _core.InstanceId;
         /// <summary>Null selects Immediate; otherwise limits native steps per frame. Zero pauses progress.</summary>
-        public uint? StepBudget { get; set; }
+        public uint? StepBudget
+        {
+            get => _core.StepBudget;
+            set => _core.StepBudget = value;
+        }
 
         /// <summary>
         /// Configures bounded public effect delivery before generated bootstrap. Omit this call to
@@ -144,25 +111,18 @@ namespace AIBT
         public bool TryConfigureEffectDelivery(int capacity, out NativeRuntimeFailureV1 failure)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
-            if (_bootstrapped || _disposed || _driving)
-            {
-                failure = InvalidLifetime();
-                return false;
-            }
-            _configuredEffectQueueCapacity = capacity;
-            failure = default;
-            return true;
+            return _core.TryConfigureEffectDelivery(capacity, _driving, out failure);
         }
 
         /// <summary>True only at the P7-039-safe boundary where external Tree facts may be flushed.</summary>
         public bool CanAcceptExternalTreeWrites
-            => _bootstrapped && _generatedDispatch != null && _ready && !_disposed && !_destroyRequested && !_driving;
+            => _core.Bootstrapped && _core.GeneratedDispatch != null && _core.Ready && !_core.Disposed && !_core.DestroyRequested && !_driving;
 
         // The scheduler-owned world bridge must not turn a normal cross-frame PipelinedJobs lock
         // into a host failure. Unlike external writes, a terminal host may still have committed
         // effects to drain, so this deliberately does not require _ready.
         internal bool CanDrainEffects
-            => _bootstrapped && _generatedDispatch != null && !_disposed && !_destroyRequested && !_driving;
+            => _core.Bootstrapped && _core.GeneratedDispatch != null && !_core.Disposed && !_core.DestroyRequested && !_driving;
 
         /// <summary>
         /// Delivers buffered generated effects in deterministic command order. This main-thread
@@ -177,17 +137,18 @@ namespace AIBT
                 failure = InvalidLifetime();
                 return false;
             }
-            if (_effectQueue == null)
+            var effectQueue = _core.EffectQueue;
+            if (effectQueue == null)
             {
                 failure = default;
                 return true;
             }
             try
             {
-                while (_effectQueue.TryPeek(out var effect))
+                while (effectQueue.TryPeek(out var effect))
                 {
                     receiver.Receive(in effect);
-                    _effectQueue.RemoveHead();
+                    effectQueue.RemoveHead();
                 }
                 failure = default;
                 return true;
@@ -205,7 +166,7 @@ namespace AIBT
         /// group wave uses this to fold this host's own pending request into a shared batch -- never
         /// exposed for any other purpose.
         /// </summary>
-        internal GeneratedTreeDispatchAdapterV2 GeneratedDispatchAdapter => _generatedDispatch;
+        internal GeneratedTreeDispatchAdapterV2 GeneratedDispatchAdapter => _core.GeneratedDispatch;
 
         /// <summary>
         /// This host's own machine value -- a bundle of <c>NativeArray</c> handles, not a snapshot;
@@ -214,7 +175,7 @@ namespace AIBT
         /// <c>TryAdvance</c> as part of a shared <c>NativeBatchedLifecycleOwnerV1</c> Job, between
         /// a <see cref="TryBeginBatchedRound"/> and this host's next barrier.
         /// </summary>
-        internal NativeLifecycleMachineV1 Machine => _agents[0].Machine;
+        internal NativeLifecycleMachineV1 Machine => _core.Machine;
 
         /// <summary>
         /// Editor live-debug read of this host's active node path (runtime node indices, root
@@ -225,8 +186,8 @@ namespace AIBT
         {
             if (into == null) throw new ArgumentNullException(nameof(into));
             into.Clear();
-            if (!_bootstrapped || _disposed || _driving || _agents == null) return false;
-            _agents[0].Machine.CopyActivePath(into);
+            if (!_core.Bootstrapped || _core.Disposed || _driving || !_core.HasAgents) return false;
+            _core.Machine.CopyActivePath(into);
             return true;
         }
 
@@ -250,9 +211,13 @@ namespace AIBT
         /// </summary>
         public bool TryBootstrap(CompiledProgram program, DispatchLifecycle dispatch,
             NativeTraceChannelCapacityV1 traceCapacity, Func<long> clock, out NativeRuntimeFailureV1 failure)
-            => TryBootstrapCore(
-                program, dispatch, traceCapacity, clock,
-                new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId)), out failure);
+        {
+            var treeInstanceId = new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId));
+            if (!_core.TryBootstrapCore(program, dispatch, traceCapacity, treeInstanceId, _driving, out failure))
+                return false;
+            _clock = clock ?? ReadScaledTime;
+            return true;
+        }
 
         /// <summary>
         /// Bootstraps production-owned generated dispatch. The catalog supplies every callback
@@ -267,75 +232,15 @@ namespace AIBT
         {
             if (definition == null) throw new ArgumentNullException(nameof(definition));
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
-            if (_bootstrapped || _disposed || _driving)
+            if (_core.Bootstrapped || _core.Disposed || _driving)
             {
                 failure = InvalidLifetime();
                 return false;
             }
             var treeInstanceId = new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId));
-            ProductionTreeEffectQueue effectQueue = null;
-            if (_configuredEffectQueueCapacity != 0)
-                effectQueue = new ProductionTreeEffectQueue(_configuredEffectQueueCapacity);
-            if (!GeneratedTreeDispatchAdapterV2.TryCreate(
-                    definition, catalog, treeInstanceId, out var adapter, out var contextFailure))
-            {
-                failure = new NativeRuntimeFailureV1(
-                    contextFailure == BurstContextResult.CapacityExceeded
-                        ? NativeRuntimeDiagnosticCodeV1.NativeInstanceCapacityExceeded
-                        : NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid);
+            if (!_core.TryBootstrapGenerated(definition, catalog, traceCapacity, treeInstanceId, _driving, out failure))
                 return false;
-            }
-            if (!TryBootstrapCore(
-                    definition.Binding.SemanticProgram, adapter.Dispatch,
-                    traceCapacity, clock, treeInstanceId, out failure))
-            {
-                adapter.Dispose();
-                return false;
-            }
-            _generatedDispatch = adapter;
-            _effectQueue = effectQueue;
-            return true;
-        }
-
-        private bool TryBootstrapCore(
-            CompiledProgram program,
-            DispatchLifecycle dispatch,
-            NativeTraceChannelCapacityV1 traceCapacity,
-            Func<long> clock,
-            TreeInstanceId treeInstanceId,
-            out NativeRuntimeFailureV1 failure)
-        {
-            if (program == null) throw new ArgumentNullException(nameof(program));
-            if (dispatch == null) throw new ArgumentNullException(nameof(dispatch));
-            if (_bootstrapped || _disposed || _driving)
-            {
-                failure = InvalidLifetime();
-                return false;
-            }
-            var kinds = new NativeLifecycleNodeKindV1[program.Nodes.Count];
-            for (var index = 0; index < kinds.Length; index++)
-                kinds[index] = NativeHotReloadInstance.ClassifyKind(program.Nodes[index].NodeTypeId);
-            if (!SchedulingPolicyDriver.TryCreateAgents(program, kinds, 1, Allocator.Persistent, out _agents, out failure))
-                return false;
-            var instanceId = treeInstanceId.Value;
-            // BudgetYielded/ExecutionResumed are Detailed events in the existing trace contract.
-            if (!NativeTraceChannelOwnerV1.TryCreate(traceCapacity, NativeTraceLevelV1.Detailed,
-                    new TreeInstanceId(instanceId), 0, Allocator.Persistent, out var owner, out var traceFailure))
-            {
-                _agents[0].Dispose();
-                _agents = null;
-                failure = new NativeRuntimeFailureV1(traceFailure.Code);
-                return false;
-            }
-            _dispatch = dispatch;
-            Program = program;
             _clock = clock ?? ReadScaledTime;
-            TraceChannelOwner = owner;
-            _recorder = new NativeTraceRecorderV1(owner, new NativeHash256V1(program.Header.CompiledContentHash), instanceId);
-            InstanceId = instanceId;
-            _bootstrapped = true;
-            _ready = true;
-            failure = default;
             return true;
         }
 
@@ -394,18 +299,19 @@ namespace AIBT
         {
             handle = default;
             if (string.IsNullOrEmpty(stableKey)) throw new ArgumentException("A stable blackboard key is required.", nameof(stableKey));
-            if (!_bootstrapped || _disposed)
+            if (!_core.Bootstrapped || _core.Disposed)
             {
                 failure = InvalidLifetime();
                 return false;
             }
-            if (_generatedDispatch == null)
+            var generatedDispatch = _core.GeneratedDispatch;
+            if (generatedDispatch == null)
             {
                 failure = new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid);
                 return false;
             }
             var stableKeyId = StableHash.Fnv1A64(stableKey);
-            if (!_generatedDispatch.TryResolveExternalTreeWrite(
+            if (!generatedDispatch.TryResolveExternalTreeWrite(
                     stableKeyId, expectedType, out var slotIndex, out var slot, out var burstFailure))
             {
                 failure = new NativeRuntimeFailureV1(MapExternalWriteFailure(burstFailure));
@@ -442,7 +348,7 @@ namespace AIBT
             try
             {
                 candidate[0] = value;
-                if (!_generatedDispatch.TryWriteExternalTreeValue(
+                if (!_core.GeneratedDispatch.TryWriteExternalTreeValue(
                         handle.SlotIndex, handle.Slot, candidate, out changed, out var burstFailure))
                 {
                     failure = new NativeRuntimeFailureV1(MapExternalWriteFailure(burstFailure));
@@ -489,6 +395,23 @@ namespace AIBT
         }
 
         /// <summary>
+        /// Reads the clock and opens the next logical update, or resumes a budget-suspended one.
+        /// Returns false when nothing may run this call (the clock callback stopped the host, or the
+        /// clock or update begin failed and the host is now stopped).
+        /// </summary>
+        private bool TryOpenOrResumeUpdate()
+        {
+            if (!_core.UpdateOpen)
+            {
+                var now = _clock();
+                if (!_core.Ready || _core.DestroyRequested) return false;
+                return _core.TryBeginUpdateAt(now);
+            }
+            _core.ResumeIfSuspended();
+            return true;
+        }
+
+        /// <summary>
         /// One drive step -- identical body to the standalone per-frame <c>Update</c> message, and
         /// the only entry point <see cref="ProductionTreeScheduler"/> uses once this host is
         /// registered. Never called directly by application code; use a coordinator or let this
@@ -496,42 +419,27 @@ namespace AIBT
         /// </summary>
         internal void DriveOneUpdate()
         {
-            if (!_ready || !isActiveAndEnabled || _disposed) return;
+            if (!_core.Ready || !isActiveAndEnabled || _core.Disposed) return;
             if (_driving)
             {
-                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                _core.Fail(InvalidLifetime(), ProductionTreeAgentFailureDetail.Reentrant);
                 return;
             }
             _driving = true;
             try
             {
-                if (!_updateOpen)
-                {
-                    var now = _clock();
-                    if (!_ready || _destroyRequested) return;
-                    if (now < 0 || (_updateId != 0 && now < _timeMicroseconds))
-                    {
-                        Fail(InvalidLifetime(), "Clock must return nonnegative, nondecreasing microseconds.");
-                        return;
-                    }
-                    if (!BeginUpdate(now)) return;
-                }
-                else if (_suspended)
-                {
-                    _recorder.RecordExecutionResumed(_updateId);
-                    _suspended = false;
-                }
+                if (!TryOpenOrResumeUpdate()) return;
                 SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostBegin);
-                RunSegment(StepBudget, false);
+                _core.RunSegment(StepBudget, false);
             }
             catch (Exception exception)
             {
-                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+                _core.Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
             }
             finally
             {
                 _driving = false;
-                if (_destroyRequested) DisposeHost();
+                if (_core.DestroyRequested) DisposeHost();
             }
         }
 
@@ -541,7 +449,7 @@ namespace AIBT
         /// flight. A second overlapping wave step is refused, matching the existing single-driver
         /// invariant this host has always held (<see cref="_driving"/>).
         /// </summary>
-        internal bool HasPendingDispatch => _hasPendingStep;
+        internal bool HasPendingDispatch => _core.HasPendingDispatch;
 
         /// <summary>
         /// Advances until the next dispatch requirement -- returned unresolved for a caller-owned
@@ -555,39 +463,24 @@ namespace AIBT
         internal bool TryAdvanceToNextDispatch(out DispatchRequest request)
         {
             request = default;
-            if (!_ready || !isActiveAndEnabled || _disposed || _destroyRequested || _hasPendingStep) return false;
+            if (!_core.Ready || !isActiveAndEnabled || _core.Disposed || _core.DestroyRequested || _core.HasPendingDispatch) return false;
             if (_driving)
             {
-                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                _core.Fail(InvalidLifetime(), ProductionTreeAgentFailureDetail.Reentrant);
                 return false;
             }
             _driving = true;
             var resolvedWithinThisCall = false;
             try
             {
-                if (!_updateOpen)
-                {
-                    var now = _clock();
-                    if (!_ready || _destroyRequested) return false;
-                    if (now < 0 || (_updateId != 0 && now < _timeMicroseconds))
-                    {
-                        Fail(InvalidLifetime(), "Clock must return nonnegative, nondecreasing microseconds.");
-                        return false;
-                    }
-                    if (!BeginUpdate(now)) return false;
-                }
-                else if (_suspended)
-                {
-                    _recorder.RecordExecutionResumed(_updateId);
-                    _suspended = false;
-                }
-                var found = AdvanceOneStepForGroupedDispatch(out request);
-                resolvedWithinThisCall = !_hasPendingStep;
+                if (!TryOpenOrResumeUpdate()) return false;
+                var found = _core.AdvanceOneStepForGroupedDispatch(out request);
+                resolvedWithinThisCall = !_core.HasPendingDispatch;
                 return found;
             }
             catch (Exception exception)
             {
-                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+                _core.Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
                 resolvedWithinThisCall = true;
                 return false;
             }
@@ -599,49 +492,9 @@ namespace AIBT
                 if (resolvedWithinThisCall)
                 {
                     _driving = false;
-                    if (_destroyRequested) DisposeHost();
+                    if (_core.DestroyRequested) DisposeHost();
                 }
             }
-        }
-
-        private bool AdvanceOneStepForGroupedDispatch(out DispatchRequest request)
-        {
-            // NativeLifecycleStepKindV1 has several internal-progress kinds (CompositeEntered,
-            // ChildSelected, ...) that carry nothing for a caller to act on -- exactly what
-            // RunSegment's own while loop already keeps calling TryAdvance through. A wave barrier
-            // is reached only at DispatchRequired (return it unresolved) or Completed/Waiting
-            // (nothing pending this update); every other kind must keep advancing right here.
-            request = default;
-            while (_ready)
-            {
-                if (!TryCountStep()) return false;
-                if (!_agents[0].Machine.TryAdvance(out var step, out var failure))
-                {
-                    Fail(failure, "Cannot advance execution.");
-                    return false;
-                }
-                _hasExecuted = true;
-                _recorder.RecordStep(_updateId, step);
-                if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
-                {
-                    _pendingStep = step;
-                    _hasPendingStep = true;
-                    request = new DispatchRequest(step, _updateId, _timeMicroseconds);
-                    return true;
-                }
-                if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting)
-                {
-                    _updateOpen = false;
-                    _recorder.RecordUpdateEnded(_updateId, step.HasRootStatus, step.RootStatus);
-                    if (step.Kind == NativeLifecycleStepKindV1.Completed)
-                    {
-                        if (step.HasRootStatus) LastRootResult = step.RootStatus;
-                        _ready = false;
-                    }
-                    break;
-                }
-            }
-            return false;
         }
 
         /// <summary>What one externally-supplied lifecycle step meant for a <see cref="ProductionTreeScheduler"/>'s own BatchedJobsSameFrame/PipelinedJobs group round.</summary>
@@ -670,39 +523,30 @@ namespace AIBT
         {
             included = false;
             machine = default;
-            if (_disposed || _destroyRequested || !_ready || !isActiveAndEnabled || _hasPendingStep)
+            if (_core.Disposed || _core.DestroyRequested || !_core.Ready || !isActiveAndEnabled || _core.HasPendingDispatch)
                 return true; // not eligible this round -- not a caller error.
             if (_driving)
             {
-                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                _core.Fail(InvalidLifetime(), ProductionTreeAgentFailureDetail.Reentrant);
                 return false;
             }
             _driving = true;
             try
             {
-                if (!_updateOpen)
+                if (!_core.UpdateOpen)
                 {
                     var now = _clock();
-                    if (!_ready || _destroyRequested) { included = false; return true; }
-                    if (now < 0 || (_updateId != 0 && now < _timeMicroseconds))
-                    {
-                        Fail(InvalidLifetime(), "Clock must return nonnegative, nondecreasing microseconds.");
-                        return false;
-                    }
-                    if (!BeginUpdate(now)) return false;
+                    if (!_core.Ready || _core.DestroyRequested) { included = false; return true; }
+                    if (!_core.TryBeginUpdateAt(now)) return false;
                 }
-                else if (_suspended)
-                {
-                    _recorder.RecordExecutionResumed(_updateId);
-                    _suspended = false;
-                }
-                machine = _agents[0].Machine;
+                else _core.ResumeIfSuspended();
+                machine = _core.Machine;
                 included = true;
                 return true;
             }
             catch (Exception exception)
             {
-                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+                _core.Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
                 return false;
             }
             finally
@@ -714,7 +558,7 @@ namespace AIBT
         /// <summary>
         /// Applies one externally-advanced lifecycle step (already produced by the group driver's
         /// own batched Job) to this host's own recorder/terminal bookkeeping -- the exact same
-        /// per-step handling <see cref="AdvanceOneStepForGroupedDispatch"/> already applies, minus
+        /// per-step handling the grouped-dispatch advance already applies, minus
         /// the loop and the <c>TryAdvance</c> call itself, since the step was advanced elsewhere.
         /// Must only be called between a <see cref="TryBeginBatchedRound"/> that returned
         /// <c>included: true</c> (or a prior round's own <see cref="BatchedStepOutcome.Continue"/>)
@@ -730,60 +574,17 @@ namespace AIBT
         /// </summary>
         internal BatchedStepOutcome TryHandleBatchedStepResult(
             NativeLifecycleStepResultV1 step, bool enforceStepLimit, out DispatchRequest request)
-        {
-            request = default;
-            if (enforceStepLimit)
-            {
-                if (!TryCountStep()) return BatchedStepOutcome.Terminal;
-            }
-            else _stepsThisUpdate++;
-            _hasExecuted = true;
-            _recorder.RecordStep(_updateId, step);
-            if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
-            {
-                _pendingStep = step;
-                _hasPendingStep = true;
-                request = new DispatchRequest(step, _updateId, _timeMicroseconds);
-                return BatchedStepOutcome.DispatchRequired;
-            }
-            if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting)
-            {
-                _updateOpen = false;
-                _recorder.RecordUpdateEnded(_updateId, step.HasRootStatus, step.RootStatus);
-                if (step.Kind == NativeLifecycleStepKindV1.Completed)
-                {
-                    if (step.HasRootStatus) LastRootResult = step.RootStatus;
-                    _ready = false;
-                }
-                return BatchedStepOutcome.Terminal;
-            }
-            return BatchedStepOutcome.Continue;
-        }
+            => _core.TryHandleBatchedStepResult(step, enforceStepLimit, out request);
 
         /// <summary>
         /// Resolves this host's own currently-pending dispatch requirement through its normal
-        /// single-instance callback (the same call <see cref="RunSegment"/> already makes) --
+        /// single-instance callback (the same call <c>RunSegment</c> already makes) --
         /// for a group driver's round with no other same-catalog member to batch with this frame.
         /// </summary>
         internal bool TryResolveSinglePendingDispatch()
         {
-            if (!_hasPendingStep) return false;
-            var request = new DispatchRequest(_pendingStep, _updateId, _timeMicroseconds);
-            NodeStatus status;
-            BurstContextResult result;
-            SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.SingleDispatches, 1);
-            if (TryReserveGeneratedEffectCapacity(request.NodeIndex, out var reserveFailure))
-            {
-                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Reserve);
-                result = _dispatch(in request, out status);
-            }
-            else
-            {
-                result = reserveFailure;
-                status = NodeStatus.Failure;
-            }
-            SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Return);
-            if (!_ready) return false; // A reentrant call may already have faulted the host.
+            if (!_core.TryResolveSinglePendingDispatch(out var result, out var status)) return false;
+            if (!_core.Ready) return false; // A reentrant call may already have faulted the host.
             return CompletePendingDispatch(result, status);
         }
 
@@ -794,11 +595,11 @@ namespace AIBT
         /// </summary>
         internal bool TryResumeBatchedDriveAfterDispatch()
         {
-            if (_disposed || _destroyRequested || !_ready || !isActiveAndEnabled || _hasPendingStep)
+            if (_core.Disposed || _core.DestroyRequested || !_core.Ready || !isActiveAndEnabled || _core.HasPendingDispatch)
                 return false;
             if (_driving)
             {
-                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                _core.Fail(InvalidLifetime(), ProductionTreeAgentFailureDetail.Reentrant);
                 return false;
             }
             _driving = true;
@@ -809,19 +610,14 @@ namespace AIBT
         internal void ReleaseBatchedDrive()
         {
             _driving = false;
-            if (_destroyRequested) DisposeHost();
+            if (_core.DestroyRequested) DisposeHost();
         }
 
         /// <summary>
         /// P10-004: why this host cannot run inside a JobsAgentFrame job, or
         /// <see cref="AgentFrameFallbackReason.None"/> when it can.
         /// </summary>
-        internal AgentFrameFallbackReason GetAgentFrameFallback()
-        {
-            if (_generatedDispatch == null) return AgentFrameFallbackReason.ManagedDispatch;
-            if (StepBudget.HasValue) return AgentFrameFallbackReason.StepBudgetConfigured;
-            return _generatedDispatch.GetAgentFrameFallback();
-        }
+        internal AgentFrameFallbackReason GetAgentFrameFallback() => _core.GetAgentFrameFallback();
 
         /// <summary>
         /// P10-004: the begin half of <see cref="DriveOneUpdate"/> for a JobsAgentFrame group: the same
@@ -833,65 +629,31 @@ namespace AIBT
         internal void BeginAgentFrame(out bool included, ref AgentFrameAgentV1 agent)
         {
             included = false;
-            if (!_ready || !isActiveAndEnabled || _disposed) return;
+            if (!_core.Ready || !isActiveAndEnabled || _core.Disposed) return;
             if (_driving)
             {
-                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                _core.Fail(InvalidLifetime(), ProductionTreeAgentFailureDetail.Reentrant);
                 return;
             }
             _driving = true;
             try
             {
-                if (!_updateOpen)
-                {
-                    var now = _clock();
-                    if (!_ready || _destroyRequested) return;
-                    if (now < 0 || (_updateId != 0 && now < _timeMicroseconds))
-                    {
-                        Fail(InvalidLifetime(), "Clock must return nonnegative, nondecreasing microseconds.");
-                        return;
-                    }
-                    if (!BeginUpdate(now)) return;
-                }
-                else if (_suspended)
-                {
-                    _recorder.RecordExecutionResumed(_updateId);
-                    _suspended = false;
-                }
+                if (!TryOpenOrResumeUpdate()) return;
                 // RunSegment's own loop condition: nothing runs once the host stopped or is destroying.
-                if (!_ready || _destroyRequested) return;
-                if (!_agentFrameTrace.IsCreated)
-                {
-                    _agentFrameTrace = new UnsafeList<AgentFrameTraceEventV1>(64, Allocator.Persistent);
-                    _agentFrameEffects = new UnsafeList<ProductionTreeEffect>(_effectQueue != null ? 8 : 1, Allocator.Persistent);
-                    _agentFrameEmptyBytes = new NativeArray<byte>(0, Allocator.Persistent);
-                    _agentFrameEmptyParallel = new NativeArray<NativeParallelBranchStateV1>(0, Allocator.Persistent);
-                }
-                agent.Machine = _agents[0].Machine;
-                agent.Machine.TryAttachCreatedEmptyJobStorage(_agentFrameEmptyBytes, _agentFrameEmptyParallel);
-                agent.Slots = _generatedDispatch.GetAgentFrameSlots();
-                agent.TreeValues = _generatedDispatch.TreeValues;
-                agent.TreeVersions = _generatedDispatch.TreeVersions;
-                agent.TimeMicroseconds = _timeMicroseconds;
-                agent.StepsThisUpdate = _stepsThisUpdate;
-                agent.MaximumSteps = _maximumStepsPerUpdate;
-                agent.EffectFree = _effectQueue != null ? _effectQueue.Free : -1;
-                agent.TraceEnabled = _recorder.IsRecording ? (byte)1 : (byte)0;
-                agent.Trace = _agentFrameTrace;
-                agent.Effects = _agentFrameEffects;
-                agent.Outcome = AgentFrameOutcomeV1.None;
+                if (!_core.Ready || _core.DestroyRequested) return;
+                _core.FillAgentFrame(ref agent);
                 included = true;
             }
             catch (Exception exception)
             {
-                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+                _core.Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
             }
             finally
             {
                 if (!included)
                 {
                     _driving = false;
-                    if (_destroyRequested) DisposeHost();
+                    if (_core.DestroyRequested) DisposeHost();
                 }
             }
         }
@@ -905,57 +667,17 @@ namespace AIBT
         {
             try
             {
-                // The job may have grown the logs; keep the current allocations.
-                _agentFrameTrace = agent.Trace;
-                _agentFrameEffects = agent.Effects;
-                _stepsThisUpdate = agent.StepsThisUpdate;
-                if (agent.Executed != 0) _hasExecuted = true;
-                for (var index = 0; index < _agentFrameTrace.Length; index++)
-                {
-                    var record = _agentFrameTrace[index];
-                    if (record.IsCompletion != 0) _recorder.RecordDispatchCompletion(_updateId, record.Step, record.Status);
-                    else _recorder.RecordStep(_updateId, record.Step);
-                }
-                if (_effectQueue != null)
-                {
-                    for (var index = 0; index < _agentFrameEffects.Length; index++)
-                        _effectQueue.TryEnqueue(in _agentFrameEffects.ElementAt(index));
-                }
-                switch (agent.Outcome)
-                {
-                    case AgentFrameOutcomeV1.Terminal:
-                        var step = agent.TerminalStep;
-                        _updateOpen = false;
-                        _recorder.RecordUpdateEnded(_updateId, step.HasRootStatus, step.RootStatus);
-                        if (step.Kind == NativeLifecycleStepKindV1.Completed)
-                        {
-                            if (step.HasRootStatus) LastRootResult = step.RootStatus;
-                            _ready = false;
-                        }
-                        break;
-                    case AgentFrameOutcomeV1.AdvanceFailed:
-                        Fail(agent.Failure, "Cannot advance execution.");
-                        break;
-                    case AgentFrameOutcomeV1.CallbackRejected:
-                        Fail(agent.Failure, "Callback rejected: " + agent.RejectedResult);
-                        break;
-                    case AgentFrameOutcomeV1.StepLimit:
-                        FailStepLimit();
-                        break;
-                    default:
-                        Fail(InvalidLifetime(), "The agent-frame job did not run this host's update.");
-                        break;
-                }
+                _core.FinishAgentFrame(ref agent);
             }
             catch (Exception exception)
             {
-                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+                _core.Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
             }
             finally
             {
                 agent.Outcome = AgentFrameOutcomeV1.None;
                 _driving = false;
-                if (_destroyRequested) DisposeHost();
+                if (_core.DestroyRequested) DisposeHost();
             }
         }
 
@@ -967,12 +689,12 @@ namespace AIBT
         {
             try
             {
-                Fail(failure, detail);
+                _core.Fail(failure, detail);
             }
             finally
             {
                 _driving = false;
-                if (_destroyRequested) DisposeHost();
+                if (_core.DestroyRequested) DisposeHost();
             }
         }
 
@@ -984,31 +706,18 @@ namespace AIBT
         /// </summary>
         internal void FailUnsupportedForcedPolicy()
         {
-            Fail(
+            _core.Fail(
                 new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid),
                 "Forced scheduling policy is not supported by this coordinator's own current configuration.");
         }
 
         internal void FailExternalScheduling(NativeRuntimeFailureV1 failure)
         {
-            Fail(failure, "The coordinator's externally-driven scheduling round failed.");
+            _core.Fail(failure, "The coordinator's externally-driven scheduling round failed.");
         }
 
         internal bool TryReserveGeneratedEffectCapacity(uint nodeIndex, out BurstContextResult failure)
-        {
-            if (_effectQueue == null)
-            {
-                failure = BurstContextResult.Success;
-                return true;
-            }
-            if (_generatedDispatch != null && _generatedDispatch.TryReserveEffectCapacity(nodeIndex, _effectQueue))
-            {
-                failure = BurstContextResult.Success;
-                return true;
-            }
-            failure = BurstContextResult.CapacityExceeded;
-            return false;
-        }
+            => _core.TryReserveGeneratedEffectCapacity(nodeIndex, out failure);
 
         /// <summary>
         /// Resolves the single dispatch requirement <see cref="TryAdvanceToNextDispatch"/> most
@@ -1017,171 +726,24 @@ namespace AIBT
         /// </summary>
         internal bool CompletePendingDispatch(BurstContextResult result, NodeStatus status)
         {
-            if (!_hasPendingStep) return false;
-            var step = _pendingStep;
-            _hasPendingStep = false;
+            if (!_core.HasPendingDispatch) return false;
             try
             {
-                if (!_ready) return false; // A reentrant call may already have faulted the host.
-                if (result == BurstContextResult.Success
-                    && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
-                    status = NodeStatus.Failure;
-                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.EffectCapture);
-                if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out var failure))
-                {
-                    Fail(failure, "Callback rejected: " + result);
-                    return false;
-                }
-                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.MachineComplete);
-                _recorder.RecordDispatchCompletion(_updateId, step, status);
-                SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.TraceComplete);
-                return true;
+                return _core.CompletePendingDispatch(result, status);
             }
             finally
             {
                 _driving = false;
-                if (_destroyRequested) DisposeHost();
+                if (_core.DestroyRequested) DisposeHost();
             }
         }
 
-        private bool BeginUpdate(long timeMicroseconds)
-        {
-            if (_updateId == ulong.MaxValue)
-            {
-                Fail(new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityArithmeticOverflow), "Update ID overflow.");
-                return false;
-            }
-            var nextId = _updateId + 1;
-            if (!_agents[0].Machine.TryBeginUpdate(nextId, timeMicroseconds, out var failure))
-            {
-                Fail(failure, "Cannot begin update.");
-                return false;
-            }
-            _updateId = nextId;
-            _timeMicroseconds = timeMicroseconds;
-            _updateOpen = true;
-            _stepsThisUpdate = 0;
-            _recorder.RecordUpdateStarted(_updateId);
-            return true;
-        }
-
-        private void RunSegment(uint? limit, bool destroying)
-        {
-            // The machine owns persistent cursors. This budget counts just this frame segment.
-            // A callback and its acknowledgement always complete atomically.
-            var budget = default(NativeBudgetStateV1);
-            if (limit.HasValue) NativeLifecycleBudgetDriverV1.TryBeginSegment(limit.Value, ref budget);
-            while (_ready && (destroying || !_destroyRequested))
-            {
-                NativeLifecycleStepResultV1 step;
-                NativeRuntimeFailureV1 failure;
-                bool advanced;
-                if (limit.HasValue)
-                {
-                    advanced = NativeLifecycleBudgetDriverV1.TryAdvance(ref _agents[0].Machine, ref budget, out var kind, out step, out failure);
-                    if (advanced && kind == NativeBudgetAdvanceKindV1.Suspended)
-                    {
-                        _suspended = true;
-                        _recorder.RecordBudgetYielded(_updateId);
-                        return;
-                    }
-                }
-                else
-                {
-                    // P10-004: Immediate (and teardown) is bounded per update; Budgeted yields.
-                    if (!TryCountStep()) return;
-                    advanced = _agents[0].Machine.TryAdvance(out step, out failure);
-                }
-                SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostAdvance);
-                if (!advanced)
-                {
-                    Fail(failure, "Cannot advance execution.");
-                    return;
-                }
-                    _hasExecuted = true;
-                    _recorder.RecordStep(_updateId, step);
-                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostRecord);
-                    if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
-                    {
-                        var request = new DispatchRequest(step, _updateId, _timeMicroseconds);
-                    NodeStatus status;
-                    BurstContextResult result;
-                    SchedulerFrameProfileV1.StepStart();
-                    SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.SingleDispatches, 1);
-                    if (TryReserveGeneratedEffectCapacity(request.NodeIndex, out var reserveFailure))
-                    {
-                        SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Reserve);
-                        result = _dispatch(in request, out status);
-                    }
-                    else
-                    {
-                        result = reserveFailure;
-                        status = NodeStatus.Failure;
-                    }
-                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Return);
-                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostDispatch);
-                    if (!_ready) return; // A reentrant call may already have faulted the host.
-                    if (result == BurstContextResult.Success
-                        && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
-                        status = NodeStatus.Failure;
-                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.EffectCapture);
-                    if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out failure))
-                    {
-                        Fail(failure, "Callback rejected: " + result);
-                        return;
-                    }
-                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.MachineComplete);
-                    _recorder.RecordDispatchCompletion(_updateId, step, status);
-                    SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.TraceComplete);
-                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostComplete);
-                }
-                else if (step.Kind == NativeLifecycleStepKindV1.Completed || step.Kind == NativeLifecycleStepKindV1.Waiting)
-                {
-                    _updateOpen = false;
-                    _recorder.RecordUpdateEnded(_updateId, step.HasRootStatus, step.RootStatus);
-                    if (step.Kind == NativeLifecycleStepKindV1.Completed)
-                    {
-                        if (step.HasRootStatus) LastRootResult = step.RootStatus;
-                        _ready = false;
-                    }
-                    SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostRecord);
-                    return;
-                }
-            }
-        }
-
-        private static NativeRuntimeFailureV1 InvalidLifetime()
-            => new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid);
-
-        private bool TryCaptureGeneratedEffects(uint nodeIndex, out BurstContextResult failure)
-        {
-            if (_effectQueue == null)
-            {
-                failure = BurstContextResult.Success;
-                return true;
-            }
-            if (_generatedDispatch == null)
-            {
-                failure = BurstContextResult.InvalidHandle;
-                return false;
-            }
-            return _generatedDispatch.TryConsumePublishedEffects(nodeIndex, _effectQueue, out failure);
-        }
-
-        private void Fail(NativeRuntimeFailureV1 failure, string detail)
-        {
-            if (LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None) return;
-            LastFailure = failure;
-            _ready = false;
-            _recorder?.ReleaseWriter();
-            Debug.LogError("AIBT ProductionTreeHost: " + failure.Code + ": " + detail, this);
-        }
+        private static NativeRuntimeFailureV1 InvalidLifetime() => ProductionTreeAgentCore.InvalidLifetime();
 
         /// <summary>Permanently stops this host, cancels active work and releases its storage. Reentrant calls finish cleanup after the current callback.</summary>
         public void Stop()
         {
-            if (_destroyRequested) return;
-            _destroyRequested = true;
+            if (!_core.RequestDestroy()) return;
             _owner?.TryUnregister(this);
             if (!_driving) DisposeHost();
         }
@@ -1190,53 +752,21 @@ namespace AIBT
 
         private void DisposeHost()
         {
-            if (_disposed) return;
-            _disposed = true;
+            if (!_core.BeginDispose()) return;
             _driving = true;
             try
             {
-                if (_ready && _hasExecuted)
-                {
-                    if (!_updateOpen && !BeginUpdate(_timeMicroseconds)) return;
-                    if (_suspended)
-                    {
-                        _recorder.RecordExecutionResumed(_updateId);
-                        _suspended = false;
-                    }
-                    // Beginning an eligible update can already queue reactive/timeout cancellation.
-                    // Teardown promotes that pending subtree cancellation to a whole-tree stop.
-                    if (_agents[0].Machine.TryRequestAbort(BurstNodeAbortReason.TreeStopped, out var failure, replacePendingForTreeStop: true))
-                        RunSegment(null, true);
-                    else Fail(failure, "Cannot cancel active work during destruction.");
-                }
+                _core.RunTeardown();
             }
             catch (Exception exception)
             {
-                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+                _core.Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
             }
             finally
             {
-                _ready = false;
                 _driving = false;
-                _recorder?.ReleaseWriter();
-                if (TraceChannelOwner != null && TraceChannelOwner.State != NativeOwnerStateV1.Disposed)
-                    TraceChannelOwner.TryDispose(out _);
-                if (_agents != null)
-                {
-                    _agents[0].Dispose();
-                    _agents = null;
-                }
-                _dispatch = null;
-                _generatedDispatch?.Dispose();
-                _generatedDispatch = null;
-                _effectQueue = null;
+                _core.ReleaseStorage();
                 _clock = null;
-                if (_agentFrameTrace.IsCreated) _agentFrameTrace.Dispose();
-                if (_agentFrameEffects.IsCreated) _agentFrameEffects.Dispose();
-                if (_agentFrameEmptyBytes.IsCreated) _agentFrameEmptyBytes.Dispose();
-                if (_agentFrameEmptyParallel.IsCreated) _agentFrameEmptyParallel.Dispose();
-                _agentFrameTrace = default;
-                _agentFrameEffects = default;
             }
         }
     }

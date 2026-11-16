@@ -16,7 +16,7 @@ namespace AIBT
         private static readonly ProfilerMarker DispatchMarker = new ProfilerMarker("AIBT.Production.GeneratedDispatch");
         private readonly GeneratedTreeRuntimeDefinitionV2 _definition;
         private readonly GeneratedBurstCatalogV2 _catalog;
-        private readonly TreeInstanceId _treeInstanceId;
+        private TreeInstanceId _treeInstanceId;
         private readonly DispatchSlot[] _slots;
         private readonly uint _agentBaseOffset;
         private NativeArray<byte> _treeValues;
@@ -515,6 +515,64 @@ namespace AIBT
             }
         }
 
+        /// <summary>
+        /// P10-009: makes this adapter a fresh instance of the same tree with
+        /// <paramref name="treeInstanceId"/>, reusing every allocation: Tree/Agent-scope values back to
+        /// their compiled defaults with version 0, and every generated leaf slot as
+        /// <c>DispatchSlot.TryCreate</c> leaves it (memory, ledger, activation state, random
+        /// stream words zero). The simulation container's restart in place; never used by hosts.
+        /// </summary>
+        internal bool TryResetInstance(TreeInstanceId treeInstanceId)
+        {
+            if (_disposed || !treeInstanceId.IsValid) return false;
+            for (var index = 0; index < _slots.Length; index++)
+                if (_slots[index] != null && !_slots[index].TryResetInstance(treeInstanceId)) return false;
+            for (var index = 0; index < _treeValues.Length; index++) _treeValues[index] = 0;
+            InitializeTreeDefaults(_definition.Binding, _treeValues, _agentBaseOffset);
+            for (var index = 0; index < _treeVersions.Length; index++) _treeVersions[index] = 0;
+            _treeInstanceId = treeInstanceId;
+            return true;
+        }
+
+        /// <summary>
+        /// P10-009: seeds every random-capable generated leaf's stream as
+        /// <c>Documentation~/specifications/time-and-random-v1.md</c> requires (root seed, semantic
+        /// hash, this instance's tree instance id, runtime node index). Hosts never call this: their
+        /// stream words stay as created (see <c>Planning~/Evidence/P10-009/README.md</c>).
+        /// </summary>
+        internal void SeedRandomStreams(ulong rootSeed, NativeHash256V1 semanticHash)
+        {
+            if (_disposed) return;
+            for (var index = 0; index < _slots.Length; index++)
+                _slots[index]?.SeedRandomStream(rootSeed, semanticHash, _treeInstanceId);
+        }
+
+        internal TreeInstanceId TreeInstanceId => _treeInstanceId;
+
+        /// <summary>P10-009: the stream words of one node's slot, for tests; false when the node has no stream.</summary>
+        internal bool TryReadRandomStream(uint nodeIndex, out ulong state, out ulong increment)
+        {
+            state = 0;
+            increment = 0;
+            return !_disposed && nodeIndex < _slots.Length && _slots[nodeIndex] != null
+                && _slots[nodeIndex].TryReadRandomStream(out state, out increment);
+        }
+
+        /// <summary>P10-009: test-only copy of every per-instance byte (ledger tokens excluded) for the reset-equals-fresh proof.</summary>
+        internal void CopyInstanceStateForTests(System.Collections.Generic.List<byte> into)
+        {
+            into.Clear();
+            for (var index = 0; index < _treeValues.Length; index++) into.Add(_treeValues[index]);
+            for (var index = 0; index < _treeVersions.Length; index++) AppendU64(into, _treeVersions[index]);
+            AppendU64(into, _treeInstanceId.Value);
+            for (var index = 0; index < _slots.Length; index++) _slots[index]?.AppendInstanceStateForTests(into);
+        }
+
+        private static void AppendU64(System.Collections.Generic.List<byte> into, ulong value)
+        {
+            for (var shift = 0; shift < 64; shift += 8) into.Add((byte)(value >> shift));
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -609,6 +667,8 @@ namespace AIBT
             private NativeArray<NativeBurstDispatchCommandV2> _publishedCommands;
             private NativeArray<byte> _publishedPayload;
             private uint _maximumEffectCommandCount;
+            // P10-009: the ledger's first operation sequence, kept for a reset in place.
+            private ulong _firstOperationSequence;
             // P10-004: activation generation and published-command counts live in native memory so
             // the JobsAgentFrame framing (AgentFrameCoreV1) continues exactly where this slot left off.
             private NativeArray<AgentFrameSlotStateV1> _state;
@@ -728,6 +788,7 @@ namespace AIBT
                     };
                     NativeBurstDispatchTransactionLedgerV2.Initialize(ref transaction);
                     created._transaction[0] = transaction;
+                    created._firstOperationSequence = capacity.BindingCapacity.FirstOperationSequence;
                     var shape = catalog.CreateWorkspaceShape();
                     if (!NativeBurstDispatchWorkspaceOwnerV2.TryCreate(
                             in shape, in capacity, Allocator.Persistent,
@@ -1033,6 +1094,79 @@ namespace AIBT
                     PublishedPayload = _publishedPayload,
                     Workspace = _workspace.GetAgentFrameArrays(),
                 };
+            }
+
+            /// <summary>P10-009: this slot as <see cref="TryCreate"/> leaves it, under a new ledger and tree instance id.</summary>
+            internal bool TryResetInstance(TreeInstanceId treeInstanceId)
+            {
+                if (_disposed || _workspace == null || !_workspace.TryResetLedgerBinding()) return false;
+                if (!NativeOwnerIdentityV1.TryNext(out var ledgerToken)) return false;
+                Clear(_memory);
+                Clear(_randomStates);
+                Clear(_randomIncrements);
+                Clear(_bindingValues);
+                Clear(_completions);
+                Clear(_completionPayload);
+                Clear(_commands);
+                Clear(_commandPayload);
+                Clear(_operations);
+                Clear(_publishedCommands);
+                Clear(_publishedPayload);
+                _state[0] = default;
+                var transaction = new NativeBurstDispatchTransactionControlV2
+                {
+                    LedgerToken = ledgerToken,
+                    TreeInstanceId = treeInstanceId,
+                    NextOperationSequence = _firstOperationSequence,
+                };
+                NativeBurstDispatchTransactionLedgerV2.Initialize(ref transaction);
+                _transaction[0] = transaction;
+                return true;
+            }
+
+            internal void SeedRandomStream(ulong rootSeed, NativeHash256V1 semanticHash, TreeInstanceId treeInstanceId)
+            {
+                if (_disposed || _randomStates.Length == 0) return;
+                if (!NativeRandomStreamDerivationV1.TryDerive(rootSeed, semanticHash, treeInstanceId.Value, _nodeIndex, out var stream))
+                    return;
+                _randomStates[0] = stream.State;
+                _randomIncrements[0] = stream.Increment;
+            }
+
+            internal bool TryReadRandomStream(out ulong state, out ulong increment)
+            {
+                state = 0;
+                increment = 0;
+                if (_disposed || _randomStates.Length == 0) return false;
+                state = _randomStates[0];
+                increment = _randomIncrements[0];
+                return true;
+            }
+
+            internal void AppendInstanceStateForTests(System.Collections.Generic.List<byte> into)
+            {
+                Append(into, _memory);
+                Append(into, _randomStates);
+                Append(into, _randomIncrements);
+                Append(into, _bindingValues);
+                Append(into, _commands);
+                Append(into, _commandPayload);
+                Append(into, _operations);
+                Append(into, _publishedCommands);
+                Append(into, _publishedPayload);
+                Append(into, _state);
+                var transaction = _transaction[0];
+                transaction.LedgerToken = 0;
+                var copy = new NativeArray<NativeBurstDispatchTransactionControlV2>(1, Allocator.Temp);
+                copy[0] = transaction;
+                Append(into, copy);
+                copy.Dispose();
+            }
+
+            private static void Append<T>(System.Collections.Generic.List<byte> into, NativeArray<T> array) where T : struct
+            {
+                var bytes = array.Reinterpret<byte>(UnsafeUtility.SizeOf<T>());
+                for (var index = 0; index < bytes.Length; index++) into.Add(bytes[index]);
             }
 
             internal bool TryAppendPublishedCommand(
