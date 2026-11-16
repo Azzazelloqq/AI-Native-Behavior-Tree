@@ -4,6 +4,16 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Simulation container design (P10-008, documentation only)
+
+- Proposed `ADR-P10-008`: a GameObject-free `TreeSimulation` container stepped by the game with
+  `Step(tick)`, with groups per program, pooled agent slots with generation handles, think
+  rate/phase/wake, bulk inputs through the existing snapshot bindings, struct commands through the
+  existing command bindings, and externally completed actions with cancel events. It includes the
+  status of each requirement with code evidence, the ABI impact (no ABI v2 change), owner
+  decisions, the proof plan and stages G1–G5. Review document for the game team:
+  `Documentation~/proposals/simulation-container-review.md`. No code, API or behaviour changes.
+
 ### Automatic JobsAgentFrame selection (P10-007)
 
 - **Default behaviour change.** A `ProductionTreeScheduler` now runs hosts whose profile forces no
