@@ -54,7 +54,8 @@ namespace AIBT
             bool pipelinedLatencyAllowed, uint updateCadence,
             SchedulerFrameDisposition disposition, double consumedMicroseconds,
             ulong executedSteps, ulong observedLatencyFrames, NodeStatus? terminalOutcome,
-            NativeRuntimeFailureV1 failure)
+            NativeRuntimeFailureV1 failure,
+            AgentFrameFallbackReason agentFrameFallback = AgentFrameFallbackReason.None)
         {
             HostInstanceId = hostInstanceId;
             ProfileId = profile.Id;
@@ -84,6 +85,7 @@ namespace AIBT
             ObservedLatencyFrames = observedLatencyFrames;
             TerminalOutcome = terminalOutcome;
             Failure = failure;
+            AgentFrameFallback = agentFrameFallback;
         }
 
         public ulong HostInstanceId { get; }
@@ -114,5 +116,10 @@ namespace AIBT
         public ulong ObservedLatencyFrames { get; }
         public NodeStatus? TerminalOutcome { get; }
         public NativeRuntimeFailureV1 Failure { get; }
+        /// <summary>
+        /// P10-004: why a host whose profile forces <see cref="SchedulingPolicy.JobsAgentFrame"/> ran
+        /// as Immediate this frame (<see cref="SelectedPolicy"/> is then Immediate); None otherwise.
+        /// </summary>
+        public AgentFrameFallbackReason AgentFrameFallback { get; }
     }
 }

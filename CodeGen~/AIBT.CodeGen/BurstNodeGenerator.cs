@@ -1424,10 +1424,12 @@ namespace AIBT.CodeGen
             builder.AppendLine("        var handshake = new global::AIBT.Burst.BurstCatalogHandshake(2u, Fingerprint, NodeRegistryFingerprint, 1u, 1u, ConfigurationLayoutFingerprint, MemoryLayoutFingerprint, AccessLayoutFingerprint);");
             builder.Append("        return global::AIBT.GeneratedBurstCatalogV2.TryCreate(Executor, in handshake, global::System.Convert.FromBase64String(\"").Append(runtimeLayout).AppendLine("\"), allocator, out catalog, out failure);");
             builder.AppendLine("    }");
-            builder.AppendLine("    private sealed class GeneratedExecutor : global::AIBT.Burst.IGeneratedBurstCatalogExecutorV2");
+            builder.AppendLine("    private sealed class GeneratedExecutor : global::AIBT.Burst.IGeneratedBurstCatalogExecutorV2, global::AIBT.AgentFrame.IGeneratedAgentFrameExecutorV1");
             builder.AppendLine("    {");
             builder.AppendLine("        public global::AIBT.Burst.BurstExecutionResult ExecuteImmediate(ref global::AIBT.Burst.BurstExecutionBatch batch) { return " + catalogSet.Name + ".ExecuteImmediate(ref batch); }");
             builder.AppendLine("        public global::Unity.Jobs.JobHandle Schedule(ref global::AIBT.Burst.BurstExecutionBatch batch, global::Unity.Jobs.JobHandle dependency) { return " + catalogSet.Name + ".Schedule(ref batch, dependency); }");
+            // P10-004: JobsAgentFrame entry -- one Burst work item runs one agent's whole update.
+            builder.AppendLine("        public global::Unity.Jobs.JobHandle ScheduleAgentFrame(global::AIBT.AgentFrame.AgentFrameJobDataV1 data, int agentCount, int innerBatchCount, global::Unity.Jobs.JobHandle dependency) { return global::Unity.Jobs.IJobForExtensions.ScheduleParallel(new AibtAgentFrameJob { Data = data }, agentCount, innerBatchCount, dependency); }");
             EmitEffectDescriptorLookup(builder, nodes);
             builder.AppendLine("    }");
             builder.AppendLine("    public static global::AIBT.Burst.BurstCatalogValidationResult Validate(in global::AIBT.Burst.BurstCatalogHandshake handshake)");
@@ -1467,6 +1469,8 @@ namespace AIBT.CodeGen
             builder.AppendLine("        return global::Unity.Jobs.IJobExtensions.Schedule(new CatalogJob { Batch = scheduledView }, dependency);");
             builder.AppendLine("    }");
             builder.AppendLine("    [global::Unity.Burst.BurstCompile] private struct CatalogJob : global::Unity.Jobs.IJob { public global::AIBT.Burst.BurstExecutionBatch Batch; public void Execute() { ExecuteImmediate(ref Batch); } }");
+            builder.Append("    private struct AibtAgentFrameBody : global::AIBT.AgentFrame.IAgentFrameBodyV1 { public global::AIBT.Burst.BurstExecutionResult Execute(ref global::AIBT.Burst.BurstExecutionBatch batch) { return ").Append(catalogSet.Name).AppendLine(".ExecuteImmediate(ref batch); } }");
+            builder.AppendLine("    [global::Unity.Burst.BurstCompile] private struct AibtAgentFrameJob : global::Unity.Jobs.IJobFor { public global::AIBT.AgentFrame.AgentFrameJobDataV1 Data; public void Execute(int index) { global::AIBT.AgentFrame.AgentFrameJobRunnerV1.ExecuteAgent<AibtAgentFrameBody>(ref Data, index); } }");
             builder.AppendLine("    private static bool Equal(global::AIBT.Burst.BurstHash256 left, global::AIBT.Burst.BurstHash256 right) { return left.Word0 == right.Word0 && left.Word1 == right.Word1 && left.Word2 == right.Word2 && left.Word3 == right.Word3 && left.Word4 == right.Word4 && left.Word5 == right.Word5 && left.Word6 == right.Word6 && left.Word7 == right.Word7; }");
             builder.AppendLine("    [global::Unity.Burst.BurstCompile]");
             builder.AppendLine("    private static global::AIBT.Burst.BurstContextResult ExecuteCase(ref global::AIBT.Burst.BurstExecutionBatch batch, uint instanceOrdinal, uint runtimeNodeIndex, uint catalogCaseIndex, global::AIBT.Burst.BurstCallbackPhase phase)");

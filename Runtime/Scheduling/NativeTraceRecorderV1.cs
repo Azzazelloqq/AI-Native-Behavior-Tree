@@ -28,6 +28,9 @@ namespace AIBT.Runtime.Scheduling
         private readonly ulong _treeInstanceId;
         private NativeTraceChannelLeaseV1 _lease;
         private bool _hasLease;
+
+        /// <summary>P10-004: true while records are being written (the JobsAgentFrame job logs only then).</summary>
+        internal bool IsRecording => _hasLease;
         private ulong _sequence;
         private bool _rootExitRecorded;
 

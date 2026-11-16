@@ -77,7 +77,12 @@ namespace AIBT
         /// </summary>
         public ProductionTreeCatalogFactory CatalogFactory { get; set; }
 
-        /// <summary>Scheduling profile used when joining the world. Assign before the agent is enabled.</summary>
+        /// <summary>
+        /// Scheduling profile used when joining the world. Assign before the agent is enabled.
+        /// <see cref="SchedulingProfile.JobsAgentFrame"/> runs each agent's whole update in a Burst job
+        /// (P10-004); it needs no <see cref="SchedulerJobsCapabilities"/>, and an agent the job cannot
+        /// run falls back to Immediate with a reason on its frame entry.
+        /// </summary>
         public SchedulingProfile Profile
         {
             get => _profile;

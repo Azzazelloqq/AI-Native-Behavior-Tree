@@ -524,6 +524,57 @@ namespace AIBT.Tests.Runtime.Scheduling.Production
             return (double)field.GetValue(registration);
         }
 
+        [Test]
+        public void MaximumStepsPerUpdate_DefaultsToOneMillion_AndRejectsZero()
+        {
+            // P10-004: the per-update step limit applies to every policy; the default only stops a
+            // tree that never yields.
+            Assert.That(ProductionTreeHost.DefaultMaximumStepsPerUpdate, Is.EqualTo(1000000u));
+            var host = CreateBootstrappedHost();
+            Assert.That(host.MaximumStepsPerUpdate, Is.EqualTo(ProductionTreeHost.DefaultMaximumStepsPerUpdate));
+            Assert.That(() => host.MaximumStepsPerUpdate = 0u, Throws.TypeOf<System.ArgumentOutOfRangeException>());
+            Assert.That(host.MaximumStepsPerUpdate, Is.EqualTo(ProductionTreeHost.DefaultMaximumStepsPerUpdate));
+            host.MaximumStepsPerUpdate = 7u;
+            Assert.That(host.MaximumStepsPerUpdate, Is.EqualTo(7u));
+        }
+
+        [Test]
+        public void JobsAgentFrame_ManagedDispatchHost_RunsAsImmediate_AndReportsTheReasonOnce()
+        {
+            // P10-004: a host whose node bodies are a managed delegate cannot run in the job. It runs
+            // DriveOneUpdate in its due position, its entry names the reason, and the scheduler warns
+            // once per host, not every frame.
+            var scheduler = CreateScheduler();
+            var host = CreateBootstrappedHost();
+            Assert.That(scheduler.TryRegister(host, SchedulingProfile.JobsAgentFrame, out var error), Is.True, error.ToString());
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"cannot run in a JobsAgentFrame job \(ManagedDispatch\)"));
+            InvokePrivate(scheduler, "Update");
+            InvokePrivate(scheduler, "Update");
+            UnityEngine.TestTools.LogAssert.NoUnexpectedReceived();
+
+            Assert.That(host.TotalUpdates, Is.EqualTo(2uL));
+            Assert.That(scheduler.FrameEntryCount, Is.EqualTo(1));
+            Assert.That(scheduler.TryGetFrameEntry(0, out var entry), Is.True);
+            Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.Immediate));
+            Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.ManagedDispatch));
+            Assert.That(entry.Disposition, Is.EqualTo(SchedulerFrameDisposition.Executed));
+            Assert.That(entry.SelectionSource, Is.EqualTo(SchedulerFrameSelectionSource.DirectHostPath));
+            Assert.That(entry.SelectionReason, Is.EqualTo(SchedulerSelectionReason.ForcedByCaller));
+        }
+
+        [Test]
+        public void ImmediateProfile_EntriesReportNoAgentFrameFallback()
+        {
+            var scheduler = CreateScheduler();
+            var host = CreateBootstrappedHost();
+            Assert.That(scheduler.TryRegister(host, out var error), Is.True, error.ToString());
+            InvokePrivate(scheduler, "Update");
+            Assert.That(scheduler.TryGetFrameEntry(0, out var entry), Is.True);
+            Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.None));
+        }
+
         private ProductionTreeScheduler CreateScheduler()
         {
             _schedulerObject = new GameObject("AIBT.Tests.P7033.Scheduler");

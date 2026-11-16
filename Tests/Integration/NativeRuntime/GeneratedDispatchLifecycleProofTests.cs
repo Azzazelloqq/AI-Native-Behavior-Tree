@@ -578,6 +578,81 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        /// <summary>
+        /// P10-004: a scheduler destroyed while a JobsAgentFrame batch is being begun (from the first
+        /// host's clock, read when its update begins) begins no later member, still runs and finishes
+        /// the member already begun (its drive lock is released), throws nothing, and releases the
+        /// driver's Persistent agent table once the batch unwinds.
+        /// </summary>
+        [Test]
+        public void SchedulerDestroyedInsideAnAgentFrameBatch_ReleasesTheAgentTableAndHosts()
+        {
+            var artifact = MaterializeGenerationShard();
+            var compiled = CompileFixture(artifact);
+            Assert.That(GeneratedDispatchLifecycleProofCatalog.TryCreateRuntimeCatalog(
+                Allocator.Persistent, out var catalog, out var failure), Is.True, failure.ToString());
+            var schedulerObject = new GameObject("AIBT.Tests.P10004.DestroyInBatchScheduler");
+            var hostObjectA = new GameObject("AIBT.Tests.P10004.DestroyInBatchHostA");
+            var hostObjectB = new GameObject("AIBT.Tests.P10004.DestroyInBatchHostB");
+            try
+            {
+                Assert.That(compiled.TryCreateRuntimeDefinitionV2(
+                    catalog, artifact.RegisteredTypes, out var definition, out failure), Is.True, failure.ToString());
+                Assert.That(catalog.Executor, Is.InstanceOf<AIBT.AgentFrame.IGeneratedAgentFrameExecutorV1>(),
+                    "The generated catalog carries the agent-frame entry.");
+                var scheduler = schedulerObject.AddComponent<ProductionTreeScheduler>();
+                var driver = (ProductionAgentFrameDriverV1)typeof(ProductionTreeScheduler)
+                    .GetField("_agentFrameDriver", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(scheduler);
+
+                var destroyedInBatch = false;
+                long Clock()
+                {
+                    if (!destroyedInBatch)
+                    {
+                        destroyedInBatch = true;
+                        InvokePrivate(scheduler, "OnDestroy");
+                    }
+                    return 123_456L;
+                }
+                var traceCapacity = new NativeTraceChannelCapacityV1(
+                    recordCapacity: 65, payloadCapacity: 0, maximumPayloadBytes: 0, emissionCapacity: 256);
+                var hostA = hostObjectA.AddComponent<ProductionTreeHost>();
+                var hostB = hostObjectB.AddComponent<ProductionTreeHost>();
+                Assert.That(hostA.TryBootstrap(definition, catalog, traceCapacity, Clock, out var bootstrapFailureA),
+                    Is.True, bootstrapFailureA.Code.ToString());
+                Assert.That(hostB.TryBootstrap(definition, catalog, traceCapacity, () => 123_456L, out var bootstrapFailureB),
+                    Is.True, bootstrapFailureB.Code.ToString());
+                Assert.That(scheduler.TryRegister(hostA, SchedulingProfile.JobsAgentFrame, out var registerErrorA), Is.True, registerErrorA.ToString());
+                Assert.That(scheduler.TryRegister(hostB, SchedulingProfile.JobsAgentFrame, out var registerErrorB), Is.True, registerErrorB.ToString());
+                Assert.That(hostA.InstanceId, Is.LessThan(hostB.InstanceId), "Precondition: host A is due first.");
+                Assert.That(driver.IsDisposed, Is.False);
+
+                Assert.That(() => InvokePrivate(scheduler, "Update"), Throws.Nothing);
+
+                Assert.That(destroyedInBatch, Is.True, "The scheduler must have been destroyed inside the batch.");
+                Assert.That(driver.IsDisposed, Is.True,
+                    "The driver's Persistent agent table must be released once the interrupted batch unwinds.");
+                Assert.That(hostA.TotalUpdates, Is.EqualTo(1uL), "The member begun before the destroy ran.");
+                Assert.That(hostA.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None));
+                Assert.That(hostB.TotalUpdates, Is.Zero, "No member is begun after the scheduler is destroyed.");
+                // No drive lock is left held on either host.
+                var driving = typeof(ProductionTreeHost).GetField("_driving", BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That((bool)driving.GetValue(hostA), Is.False, "Host A's drive lock was released.");
+                Assert.That((bool)driving.GetValue(hostB), Is.False);
+                hostB.DriveOneUpdate();
+                Assert.That(hostB.TotalUpdates, Is.EqualTo(1uL), "Host B can still be driven.");
+            }
+            finally
+            {
+                InvokeOnDestroy(hostObjectA);
+                UnityEngine.Object.DestroyImmediate(hostObjectA);
+                InvokeOnDestroy(hostObjectB);
+                UnityEngine.Object.DestroyImmediate(hostObjectB);
+                UnityEngine.Object.DestroyImmediate(schedulerObject);
+                Assert.That(catalog.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+            }
+        }
+
         private static void InvokePrivate(object target, string methodName)
             => target.GetType().GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance).Invoke(target, null);
 

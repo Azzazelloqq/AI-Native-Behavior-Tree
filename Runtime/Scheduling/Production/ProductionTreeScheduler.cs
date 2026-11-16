@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using AIBT.AgentFrame;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -122,6 +123,12 @@ namespace AIBT
         // P10-002: BatchedJobsSameFrame round storage and the group's host list, reused every frame.
         private readonly ProductionBatchedGroupDriverV1 _batchedDriver = new ProductionBatchedGroupDriverV1();
         private readonly List<ProductionTreeHost> _batchedGroupHosts = new List<ProductionTreeHost>();
+        // P10-004: JobsAgentFrame batch storage, reused every frame.
+        private readonly ProductionAgentFrameDriverV1 _agentFrameDriver = new ProductionAgentFrameDriverV1();
+        private readonly List<Registration> _agentFrameGroup = new List<Registration>();
+        private readonly List<Registration> _agentFrameBatch = new List<Registration>();
+        private readonly List<ProductionTreeHost> _agentFrameHosts = new List<ProductionTreeHost>();
+        private readonly Func<ProductionTreeHost, bool> _isRegistered;
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private readonly Comparison<Registration> _compareDue;
         private uint _frame;
@@ -131,7 +138,11 @@ namespace AIBT
         private SchedulerJobsCapabilities? _jobsCapabilities;
         private ProductionTreeWorld _worldBridge;
 
-        public ProductionTreeScheduler() => _compareDue = CompareDue;
+        public ProductionTreeScheduler()
+        {
+            _compareDue = CompareDue;
+            _isRegistered = host => _byHost.ContainsKey(host);
+        }
 
         /// <summary>Registered host count, for inspection/tests -- not itself a scheduling input.</summary>
         public int RegisteredCount => _byHost.Count;
@@ -387,6 +398,12 @@ namespace AIBT
                 // callback may have unregistered a not-yet-driven later entry in this same frame.
                 // Honor that immediately rather than driving a host that just left this scheduler.
                 if (!_byHost.ContainsKey(registration.Host)) { dueIndex++; continue; }
+
+                if (registration.Profile.ForcedPolicy == SchedulingPolicy.JobsAgentFrame)
+                {
+                    dueIndex = DriveAgentFrameGroup(dueIndex, unbounded, frozenAllowance, ref remaining);
+                    continue;
+                }
 
                 var forcedJobs = registration.Profile.ForcedPolicy == SchedulingPolicy.BatchedJobsSameFrame
                     || registration.Profile.ForcedPolicy == SchedulingPolicy.PipelinedJobs;
@@ -681,6 +698,171 @@ namespace AIBT
             return groupEnd;
         }
 
+        /// <summary>
+        /// P10-004: one run of consecutive due entries sharing one profile that forces
+        /// <see cref="SchedulingPolicy.JobsAgentFrame"/> and one catalog. Budget admission is the
+        /// Immediate path's own (each member's last measured cost against what remains). Members the
+        /// job can run are driven in batches of consecutive job-eligible members, one job per batch;
+        /// a member that cannot run in the job runs <see cref="ProductionTreeHost.DriveOneUpdate"/>
+        /// in its own due position and its entry reports the <see cref="AgentFrameFallbackReason"/>.
+        /// Needs no <see cref="SchedulerJobsCapabilities"/>. Returns the index just past the run.
+        /// </summary>
+        private int DriveAgentFrameGroup(int startIndex, bool unbounded, double frozenAllowance, ref double remaining)
+        {
+            var registration = _due[startIndex];
+            var catalog = registration.Host.GeneratedDispatchAdapter?.Catalog;
+            var groupEnd = startIndex + 1;
+            while (groupEnd < _due.Count)
+            {
+                var candidate = _due[groupEnd];
+                if (!_byHost.ContainsKey(candidate.Host)) break;
+                if (candidate.Profile != registration.Profile) break;
+                if (!ReferenceEquals(candidate.Host.GeneratedDispatchAdapter?.Catalog, catalog)) break;
+                groupEnd++;
+            }
+            // The scheduler may be destroyed from a callback below, which clears _due: work from a copy.
+            _agentFrameGroup.Clear();
+            for (var member = startIndex; member < groupEnd; member++) _agentFrameGroup.Add(_due[member]);
+            var executor = catalog?.Executor as IGeneratedAgentFrameExecutorV1;
+
+            var admittedMicroseconds = 0.0;
+            var deferFrom = -1;
+            _agentFrameBatch.Clear();
+            for (var member = 0; member < _agentFrameGroup.Count; member++)
+            {
+                var current = _agentFrameGroup[member];
+                if (!_byHost.ContainsKey(current.Host)) continue;
+                if (!unbounded)
+                {
+                    var share = current.Profile.MaximumBudgetShare;
+                    if (share.HasValue)
+                    {
+                        _consumedByProfileThisFrame.TryGetValue(current.Profile, out var consumedForProfile);
+                        if (consumedForProfile + admittedMicroseconds >= share.Value * frozenAllowance)
+                        {
+                            AddDeferredShareEntry(current);
+                            continue;
+                        }
+                    }
+                    if (current.LastMeasuredMicroseconds > 0.0
+                        && admittedMicroseconds + current.LastMeasuredMicroseconds > remaining)
+                    {
+                        LastFrameOverran = true;
+                        deferFrom = startIndex + member;
+                        break;
+                    }
+                    if (current.LastMeasuredMicroseconds <= 0.0) LastFrameOverran = true;
+                    admittedMicroseconds += current.LastMeasuredMicroseconds;
+                }
+
+                var fallback = executor == null
+                    ? (current.Host.GeneratedDispatchAdapter == null
+                        ? AgentFrameFallbackReason.ManagedDispatch
+                        : AgentFrameFallbackReason.CatalogWithoutAgentFrameEntry)
+                    : current.Host.GetAgentFrameFallback();
+                if (fallback == AgentFrameFallbackReason.None)
+                {
+                    _agentFrameBatch.Add(current);
+                    continue;
+                }
+                RunAgentFrameBatch(executor, unbounded, ref remaining);
+                if (!_byHost.ContainsKey(current.Host)) continue;
+                DriveAgentFrameFallback(current, fallback, unbounded, ref remaining);
+            }
+            RunAgentFrameBatch(executor, unbounded, ref remaining);
+            _agentFrameGroup.Clear();
+
+            if (deferFrom >= 0 && deferFrom < _due.Count)
+            {
+                AddDeferredBudgetEntries(deferFrom);
+                return _due.Count; // due-sorted: nothing after this would outrank it, so stop admitting.
+            }
+            return groupEnd;
+        }
+
+        private void RunAgentFrameBatch(IGeneratedAgentFrameExecutorV1 executor, bool unbounded, ref double remaining)
+        {
+            if (_agentFrameBatch.Count == 0) return;
+            _agentFrameHosts.Clear();
+            for (var index = 0; index < _agentFrameBatch.Count; index++) _agentFrameHosts.Add(_agentFrameBatch[index].Host);
+            _stopwatch.Restart();
+            _agentFrameDriver.Run(executor, _agentFrameHosts, _isRegistered, out _);
+            _stopwatch.Stop();
+            _agentFrameHosts.Clear();
+            var elapsedMicroseconds = _stopwatch.Elapsed.TotalMilliseconds * 1000.0;
+            LastFrameConsumedMicroseconds += elapsedMicroseconds;
+            if (!unbounded)
+            {
+                remaining -= elapsedMicroseconds;
+                if (remaining < 0.0) LastFrameOverran = true;
+            }
+            var perMember = elapsedMicroseconds / _agentFrameBatch.Count;
+            for (var index = 0; index < _agentFrameBatch.Count; index++)
+            {
+                var member = _agentFrameBatch[index];
+                member.LastMeasuredMicroseconds = perMember;
+                if (!unbounded && member.Profile.MaximumBudgetShare.HasValue)
+                {
+                    _consumedByProfileThisFrame.TryGetValue(member.Profile, out var consumedSoFar);
+                    _consumedByProfileThisFrame[member.Profile] = consumedSoFar + perMember;
+                }
+                member.Urgent = false;
+                member.Eligible = false;
+                member.NextEligibleFrame = _frame + member.Profile.UpdateCadence;
+                AddAgentFrameEntry(member, SchedulingPolicy.JobsAgentFrame, AgentFrameFallbackReason.None, perMember,
+                    member.Host.StepsThisUpdate);
+            }
+            _agentFrameBatch.Clear();
+        }
+
+        private void DriveAgentFrameFallback(
+            Registration registration, AgentFrameFallbackReason fallback, bool unbounded, ref double remaining)
+        {
+            if (!registration.Host.AgentFrameFallbackReported)
+            {
+                registration.Host.AgentFrameFallbackReported = true;
+                UnityEngine.Debug.LogWarning(
+                    "AIBT ProductionTreeScheduler: host " + registration.Host.InstanceId + " ('" + registration.Host.name
+                    + "') cannot run in a JobsAgentFrame job (" + fallback + ") and runs as Immediate.",
+                    registration.Host);
+            }
+            _stopwatch.Restart();
+            registration.Host.DriveOneUpdate();
+            _stopwatch.Stop();
+            var elapsedMicroseconds = _stopwatch.Elapsed.TotalMilliseconds * 1000.0;
+            registration.LastMeasuredMicroseconds = elapsedMicroseconds;
+            LastFrameConsumedMicroseconds += elapsedMicroseconds;
+            if (!unbounded)
+            {
+                remaining -= elapsedMicroseconds;
+                if (remaining < 0.0) LastFrameOverran = true;
+                if (registration.Profile.MaximumBudgetShare.HasValue)
+                {
+                    _consumedByProfileThisFrame.TryGetValue(registration.Profile, out var consumedSoFar);
+                    _consumedByProfileThisFrame[registration.Profile] = consumedSoFar + elapsedMicroseconds;
+                }
+            }
+            registration.Urgent = false;
+            registration.Eligible = false;
+            registration.NextEligibleFrame = _frame + registration.Profile.UpdateCadence;
+            var policy = registration.Host.StepBudget.HasValue ? SchedulingPolicy.Budgeted : SchedulingPolicy.Immediate;
+            AddAgentFrameEntry(registration, policy, fallback, elapsedMicroseconds, 0);
+        }
+
+        private void AddAgentFrameEntry(
+            Registration registration, SchedulingPolicy policy, AgentFrameFallbackReason fallback,
+            double consumedMicroseconds, ulong executedSteps)
+        {
+            _frameEntries.Add(CreateEntry(
+                registration, policy, SchedulerFrameSelectionSource.DirectHostPath,
+                SchedulerSelectionReason.ForcedByCaller, false, 0.0, 0.0, 0.0,
+                SchedulerEstimateConfidence.None, 0, 0, 0.0, false, 0.0, false,
+                false, registration.Profile.UpdateCadence,
+                registration.Host.LastFailure.Code == NativeRuntimeDiagnosticCodeV1.None
+                    ? SchedulerFrameDisposition.Executed : SchedulerFrameDisposition.Failed,
+                consumedMicroseconds, executedSteps, 0, fallback));
+        }
+
         private static int CompareDue(Registration a, Registration b)
         {
             var aDeadline = a.Profile.MaximumResponseLatencyFrames.HasValue
@@ -709,6 +891,10 @@ namespace AIBT
             foreach (var workspace in _groupWorkspaces.Values) workspace.TryDispose(out _);
             _groupWorkspaces.Clear();
             _batchedDriver.Dispose();
+            _agentFrameDriver.Dispose();
+            _agentFrameGroup.Clear();
+            _agentFrameBatch.Clear();
+            _agentFrameHosts.Clear();
         }
 
         private static bool RequiresGroupWorkspace(SchedulingProfile profile)
@@ -948,7 +1134,8 @@ namespace AIBT
             double configuredStepBudget, bool exceedsConfiguredStepBudget,
             bool pipelinedLatencyAllowed, uint updateCadence,
             SchedulerFrameDisposition disposition, double consumedMicroseconds,
-            ulong executedSteps, ulong observedLatencyFrames)
+            ulong executedSteps, ulong observedLatencyFrames,
+            AgentFrameFallbackReason agentFrameFallback = AgentFrameFallbackReason.None)
         {
             var hasDeadline = registration.Profile.MaximumResponseLatencyFrames.HasValue;
             var deadline = hasDeadline
@@ -961,7 +1148,7 @@ namespace AIBT
                 hasConfiguredStepBudget, configuredStepBudget, exceedsConfiguredStepBudget,
                 pipelinedLatencyAllowed, updateCadence,
                 disposition, consumedMicroseconds, executedSteps, observedLatencyFrames,
-                registration.Host.LastRootResult, registration.Host.LastFailure);
+                registration.Host.LastRootResult, registration.Host.LastFailure, agentFrameFallback);
         }
 
         private void AddDeferredBudgetEntries(int startIndex)

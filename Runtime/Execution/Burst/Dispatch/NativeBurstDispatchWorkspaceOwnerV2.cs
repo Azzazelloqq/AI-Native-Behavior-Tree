@@ -802,6 +802,38 @@ namespace AIBT.Execution.Burst.Dispatch
             return true;
         }
 
+        /// <summary>
+        /// P10-004: this owner's own native arrays, for the JobsAgentFrame framing that runs one
+        /// request at a time inside a Burst job (<c>AgentFrameCoreV1</c>) while this owner is idle.
+        /// The owner keeps ownership; the copy holds handles to the same memory.
+        /// </summary>
+        internal NativeBurstDispatchWorkspaceArraysV1 GetAgentFrameArrays()
+            => new NativeBurstDispatchWorkspaceArraysV1
+            {
+                Handshake = _handshake,
+                Capacity = _capacity,
+                HasBindings = _hasBindings ? (byte)1 : (byte)0,
+                HasCanonicalMetadata = _hasCanonicalMetadata ? (byte)1 : (byte)0,
+                Control = _control,
+                ExecutionClaim = _executionClaim,
+                FrameCompletionClaim = _frameCompletionClaim,
+                Cases = _cases,
+                Requests = _requests,
+                ConfigurationFields = _configurationFields,
+                MemoryFields = _memoryFields,
+                Bindings = _bindings,
+                ValueFields = _valueFields,
+                CaseCanonicalRanges = _caseCanonicalRanges,
+                BindingCanonicalRanges = _bindingCanonicalRanges,
+                CanonicalRules = _canonicalRules,
+                MemoryStaging = _memoryStaging,
+                MemoryWritten = _memoryWritten,
+                RequestStatuses = _requestStatuses,
+                ValueSessions = _valueSessions,
+                ValueStagingBytes = _valueStagingBytes,
+                ValueMarks = _valueMarks,
+            };
+
         private BurstDispatchBackingV2 CreateBacking()
             => new BurstDispatchBackingV2(
                 _handshake,

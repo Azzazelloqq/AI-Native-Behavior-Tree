@@ -21,6 +21,7 @@ namespace AIBT
         private readonly uint _agentBaseOffset;
         private NativeArray<byte> _treeValues;
         private NativeArray<ulong> _treeVersions;
+        private UnsafeList<AgentFrameSlotV1> _agentFrameSlots;
         private bool _disposed;
 
         private GeneratedTreeDispatchAdapterV2(
@@ -295,6 +296,69 @@ namespace AIBT
         /// <summary>The exact catalog identity this instance was bound to -- a group wave's own grouping key (only instances sharing one catalog can share one batch call).</summary>
         internal GeneratedBurstCatalogV2 Catalog => _catalog;
 
+        internal NativeArray<byte> TreeValues => _treeValues;
+        internal NativeArray<ulong> TreeVersions => _treeVersions;
+
+        /// <summary>
+        /// P10-004: whether a JobsAgentFrame job can run this tree, and if not why. Generated hosts
+        /// already refuse Shared-scope bindings and async/completion bindings at creation, so the
+        /// last two reasons are defensive.
+        /// </summary>
+        internal AgentFrameFallbackReason GetAgentFrameFallback()
+        {
+            if (!(_catalog.Executor is AIBT.AgentFrame.IGeneratedAgentFrameExecutorV1))
+                return AgentFrameFallbackReason.CatalogWithoutAgentFrameEntry;
+            var binding = _definition.Binding;
+            for (var index = 0; index < binding.Accesses.Count; index++)
+            {
+                var access = binding.Accesses[index];
+                if (access.Scope == BlackboardScope.Shared && access.Mode != NativeBlackboardAccessModeV2.Read)
+                    return AgentFrameFallbackReason.SharedOrWorldScopeWrite;
+            }
+            for (var nodeIndex = 0; nodeIndex < _slots.Length; nodeIndex++)
+            {
+                if (_slots[nodeIndex] == null) continue;
+                var dispatchCase = _catalog.Cases[(int)_slots[nodeIndex].CaseIndex];
+                for (uint local = 0; local < dispatchCase.BindingCount; local++)
+                {
+                    var kind = _catalog.Bindings[(int)(dispatchCase.FirstBinding + local)].Kind;
+                    if (kind == NativeBurstDispatchBindingKindV2.AsyncOperation
+                        || kind == NativeBurstDispatchBindingKindV2.Completion)
+                        return AgentFrameFallbackReason.AsyncOrManagedLeaf;
+                }
+            }
+            return AgentFrameFallbackReason.None;
+        }
+
+        /// <summary>P10-004: this tree's slot table for the JobsAgentFrame job (indexed by node), built once.</summary>
+        internal UnsafeList<AgentFrameSlotV1> GetAgentFrameSlots()
+        {
+            if (_disposed) return default;
+            if (_agentFrameSlots.IsCreated) return _agentFrameSlots;
+            var slots = new UnsafeList<AgentFrameSlotV1>(_slots.Length, Allocator.Persistent);
+            for (var index = 0; index < _slots.Length; index++)
+            {
+                slots.Add(_slots[index] == null
+                    ? default
+                    : _slots[index].CreateAgentFrameSlot(_definition.Binding, _catalog, _agentBaseOffset));
+            }
+            _agentFrameSlots = slots;
+            return _agentFrameSlots;
+        }
+
+        private void DisposeAgentFrameSlots()
+        {
+            if (!_agentFrameSlots.IsCreated) return;
+            for (var index = 0; index < _agentFrameSlots.Length; index++)
+            {
+                ref var slot = ref _agentFrameSlots.ElementAt(index);
+                if (slot.Resolutions.IsCreated) slot.Resolutions.Dispose();
+                if (slot.EffectDescriptors.IsCreated) slot.EffectDescriptors.Dispose();
+            }
+            _agentFrameSlots.Dispose();
+            _agentFrameSlots = default;
+        }
+
         /// <summary>
         /// Prepares one node's own request/config/memory/binding data for a
         /// <see cref="ProductionTreeScheduler"/> group wave, without touching this slot's own
@@ -445,6 +509,7 @@ namespace AIBT
         {
             if (_disposed) return;
             _disposed = true;
+            DisposeAgentFrameSlots();
             DisposeSlots(_slots);
             Dispose(ref _treeVersions);
             Dispose(ref _treeValues);
@@ -533,11 +598,29 @@ namespace AIBT
             private NativeArray<NativeBurstDispatchTransactionControlV2> _transaction;
             private NativeArray<NativeBurstDispatchCommandV2> _publishedCommands;
             private NativeArray<byte> _publishedPayload;
-            private uint _publishedCommandCount;
-            private uint _publishedPayloadByteCount;
             private uint _maximumEffectCommandCount;
-            private uint _activationGeneration;
+            // P10-004: activation generation and published-command counts live in native memory so
+            // the JobsAgentFrame framing (AgentFrameCoreV1) continues exactly where this slot left off.
+            private NativeArray<AgentFrameSlotStateV1> _state;
             private bool _disposed;
+
+            private uint _activationGeneration
+            {
+                get => _state[0].ActivationGeneration;
+                set { var state = _state[0]; state.ActivationGeneration = value; _state[0] = state; }
+            }
+
+            private uint _publishedCommandCount
+            {
+                get => _disposed ? 0u : _state[0].PublishedCommandCount;
+                set { var state = _state[0]; state.PublishedCommandCount = value; _state[0] = state; }
+            }
+
+            private uint _publishedPayloadByteCount
+            {
+                get => _disposed ? 0u : _state[0].PublishedPayloadByteCount;
+                set { var state = _state[0]; state.PublishedPayloadByteCount = value; _state[0] = state; }
+            }
 
             private DispatchSlot(uint nodeIndex, uint caseIndex, BindingResolution[] resolutions, uint maximumEffectCommandCount)
             {
@@ -617,6 +700,7 @@ namespace AIBT
                     created._transaction = new NativeArray<NativeBurstDispatchTransactionControlV2>(1, Allocator.Persistent);
                     created._publishedCommands = new NativeArray<NativeBurstDispatchCommandV2>((int)capacity.BindingCapacity.MaxCommands, Allocator.Persistent);
                     created._publishedPayload = new NativeArray<byte>((int)capacity.BindingCapacity.MaxCommandPayloadBytes, Allocator.Persistent);
+                    created._state = new NativeArray<AgentFrameSlotStateV1>(1, Allocator.Persistent, NativeArrayOptions.ClearMemory);
                     for (uint offset = 0; offset < dispatchCase.ConfigurationSize; offset++)
                         created._configuration[(int)offset] = binding.SemanticProgram.ConfigBlob[(int)(node.ConfigOffset + offset)];
                     for (var index = 0; index < resolutions.Length; index++)
@@ -860,8 +944,85 @@ namespace AIBT
 
             internal void ClearPublishedCommands()
             {
-                _publishedCommandCount = 0;
-                _publishedPayloadByteCount = 0;
+                var state = _state[0];
+                state.PublishedCommandCount = 0;
+                state.PublishedPayloadByteCount = 0;
+                _state[0] = state;
+            }
+
+            /// <summary>
+            /// P10-004: handles to this slot's storage for the JobsAgentFrame job, with its binding
+            /// resolutions laid out against the tree-value buffer and its effect descriptors looked
+            /// up once. The returned resolution and descriptor arrays are the caller's to dispose.
+            /// </summary>
+            internal AgentFrameSlotV1 CreateAgentFrameSlot(
+                NativeProgramBlackboardBindingV2 programBinding,
+                GeneratedBurstCatalogV2 catalog,
+                uint agentBaseOffset)
+            {
+                var node = programBinding.SemanticProgram.Nodes[(int)_nodeIndex];
+                var dispatchCase = catalog.Cases[(int)_caseIndex];
+                var resolutions = new NativeArray<AgentFrameResolutionV1>(_resolutions.Length, Allocator.Persistent);
+                var descriptors = new NativeArray<AgentFrameEffectDescriptorV1>((int)_maximumEffectCommandCount, Allocator.Persistent);
+                var descriptorIndex = 0;
+                for (var index = 0; index < _resolutions.Length; index++)
+                {
+                    var resolution = _resolutions[index];
+                    var native = new AgentFrameResolutionV1
+                    {
+                        IsBlackboard = resolution.IsBlackboard ? (byte)1 : (byte)0,
+                        Writes = resolution.WritesBlackboard ? (byte)1 : (byte)0,
+                        TargetOrdinal = resolution.TargetOrdinal,
+                        LiveOffset = resolution.LiveOffset,
+                    };
+                    if (resolution.IsBlackboard)
+                    {
+                        var slot = programBinding.Slots[(int)resolution.TargetOrdinal];
+                        var baseOffset = slot.Scope == BlackboardScope.Agent ? agentBaseOffset : 0u;
+                        native.StorageOffset = baseOffset + slot.Offset;
+                        native.Size = slot.Size;
+                    }
+                    else if (resolution.Kind == NativeBurstDispatchBindingKindV2.EffectCommand)
+                    {
+                        var found = catalog.Executor.TryGetEffectDescriptor(_caseIndex, resolution.TargetOrdinal, out var descriptor);
+                        descriptors[descriptorIndex++] = new AgentFrameEffectDescriptorV1
+                        {
+                            TargetOrdinal = resolution.TargetOrdinal,
+                            Descriptor = descriptor,
+                            Found = found ? (byte)1 : (byte)0,
+                        };
+                    }
+                    resolutions[index] = native;
+                }
+                return new AgentFrameSlotV1
+                {
+                    Present = 1,
+                    ActivationMemory = node.MemoryLifetime == NodeMemoryLifetime.Activation ? (byte)1 : (byte)0,
+                    NodeIndex = _nodeIndex,
+                    CaseIndex = _caseIndex,
+                    NodeTypeId = node.NodeTypeId,
+                    NodeTypeVersion = node.NodeTypeVersion,
+                    BindingCount = dispatchCase.BindingCount,
+                    MaximumEffectCommandCount = _maximumEffectCommandCount,
+                    State = _state,
+                    Resolutions = resolutions,
+                    EffectDescriptors = descriptors,
+                    Configuration = _configuration,
+                    Memory = _memory,
+                    RandomStates = _randomStates,
+                    RandomIncrements = _randomIncrements,
+                    ResolvedBindings = _resolvedBindings,
+                    BindingValues = _bindingValues,
+                    Completions = _completions,
+                    CompletionPayload = _completionPayload,
+                    Commands = _commands,
+                    CommandPayload = _commandPayload,
+                    Operations = _operations,
+                    Transaction = _transaction,
+                    PublishedCommands = _publishedCommands,
+                    PublishedPayload = _publishedPayload,
+                    Workspace = _workspace.GetAgentFrameArrays(),
+                };
             }
 
             internal bool TryAppendPublishedCommand(
@@ -894,6 +1055,7 @@ namespace AIBT
                 _disposed = true;
                 _workspace?.TryDispose(out _);
                 _workspace = null;
+                GeneratedTreeDispatchAdapterV2.Dispose(ref _state);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _publishedPayload);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _publishedCommands);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _transaction);

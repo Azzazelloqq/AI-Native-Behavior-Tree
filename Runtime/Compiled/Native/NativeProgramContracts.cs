@@ -28,6 +28,12 @@ namespace AIBT
         NativeTraceCapacityExceeded = 4310,
         NativeLifetimeStateInvalid = 4311,
         NativeLiveJobOwnershipViolation = 4312,
+        /// <summary>
+        /// P10-004: one logical update needed more lifecycle steps than the host's
+        /// <c>ProductionTreeHost.MaximumStepsPerUpdate</c> allows (a tree that completes instantly
+        /// under a repeater, for example). The host stops instead of looping forever.
+        /// </summary>
+        NativeUpdateStepLimitExceeded = 4313,
     }
 
     public enum NativeResourceKindV1 : byte

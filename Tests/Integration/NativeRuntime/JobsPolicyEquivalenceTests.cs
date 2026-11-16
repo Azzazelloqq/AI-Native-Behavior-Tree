@@ -122,6 +122,216 @@ namespace AIBT.Tests.Integration.NativeRuntime
             AssertSame(normal, batched, "forced BatchedJobsSameFrame");
         }
 
+        [Test]
+        public void JobsAgentFrame_IsObservablyIdenticalToImmediate_FrameByFrame()
+        {
+            // P10-004: the whole update of every agent runs inside one Burst job work item. Every
+            // frame's trace records, root result, running state, run count, error, delivered effects
+            // in order, and every byte of each agent's Tree/Agent blackboard storage must equal the
+            // forced Immediate run. Run asserts every frame entry ran in the job with no fallback.
+            var trees = new[] { Prepare(SequenceTree), Prepare(ReactiveEffectTree), Prepare(LoopTree) };
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true);
+            var agentFrame = Run(trees, Mode.ForcedAgentFrame, withTreeValues: true);
+
+            Assert.That(immediate.Effects, Is.GreaterThan(20), "Effects are delivered.");
+            Assert.That(immediate.Restarts, Is.GreaterThan(20), "Trees complete and restart.");
+            Assert.That(immediate.Lines.Count(l => l.Contains(" NodeAbortStarted ")), Is.GreaterThan(5), "Reactive aborts happen.");
+            Assert.That(agentFrame.AgentFrameEntries, Is.GreaterThan(FrameCount * 6), "Agents ran in the agent-frame job.");
+            AssertSame(immediate, agentFrame, "JobsAgentFrame");
+        }
+
+        [Test]
+        public void JobsAgentFrame_StepBudgetHosts_FallBackInTheirDuePosition_AndMatchImmediate()
+        {
+            // P10-004: every other agent carries a per-host step budget, which the job does not
+            // implement. Those agents run DriveOneUpdate between job batches, in due order; the frame's
+            // outcome must still equal a forced Immediate run of the same configuration.
+            var trees = new[] { Prepare(SequenceTree), Prepare(ReactiveEffectTree), Prepare(LoopTree) };
+            void Budget(List<NativeTreeAgent> agents)
+            {
+                for (var index = 0; index < agents.Count; index += 2) agents[index].Host.StepBudget = 1000000u;
+            }
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true, prepare: Budget);
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"cannot run in a JobsAgentFrame job \(StepBudgetConfigured\)"));
+            var agentFrame = Run(trees, Mode.ForcedAgentFrame, withTreeValues: true, prepare: Budget,
+                allowedFallback: AgentFrameFallbackReason.StepBudgetConfigured);
+
+            // A restart creates a new host without the budget, so fewer entries fall back as the run goes on.
+            Assert.That(agentFrame.FallbackEntries, Is.GreaterThan(FrameCount), "Budgeted agents fell back.");
+            Assert.That(agentFrame.AgentFrameEntries, Is.GreaterThan(FrameCount * 5), "The others ran in the job.");
+            AssertSame(immediate, agentFrame, "JobsAgentFrame with step-budget fallbacks");
+        }
+
+        [Test]
+        public void JobsAgentFrame_CatalogWithoutAgentFrameEntry_FallsBackForEveryAgent_AndMatchesImmediate()
+        {
+            // P10-004: a catalog generated before P10-004 has no agent-frame entry. Simulated by
+            // wrapping the catalog's executor in one that implements only the V2 executor interface.
+            var trees = new[] { Prepare(SequenceTree), Prepare(ReactiveEffectTree), Prepare(LoopTree) };
+            var swapped = new List<(object Catalog, object Executor)>();
+            var executorProperty = typeof(GeneratedBurstCatalogV2).GetProperty("Executor", BindingFlags.Instance | BindingFlags.NonPublic);
+            void Swap(List<NativeTreeAgent> agents)
+            {
+                foreach (var agent in agents)
+                {
+                    var catalog = agent.Host.GeneratedDispatchAdapter.Catalog;
+                    var executor = (IGeneratedBurstCatalogExecutorV2)executorProperty.GetValue(catalog);
+                    if (executor is LegacyExecutor) continue;
+                    swapped.Add((catalog, executor));
+                    executorProperty.SetValue(catalog, new LegacyExecutor(executor));
+                }
+            }
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true);
+            Outcome agentFrame;
+            try
+            {
+                UnityEngine.TestTools.LogAssert.Expect(LogType.Warning,
+                    new System.Text.RegularExpressions.Regex(@"cannot run in a JobsAgentFrame job \(CatalogWithoutAgentFrameEntry\)"));
+                agentFrame = Run(trees, Mode.ForcedAgentFrame, withTreeValues: true, prepare: Swap,
+                    allowedFallback: AgentFrameFallbackReason.CatalogWithoutAgentFrameEntry);
+            }
+            finally
+            {
+                foreach (var (catalog, executor) in swapped) executorProperty.SetValue(catalog, executor);
+            }
+
+            Assert.That(swapped, Is.Not.Empty, "The catalog's executor was replaced.");
+            Assert.That(agentFrame.AgentFrameEntries, Is.Zero);
+            Assert.That(agentFrame.FallbackEntries, Is.GreaterThan(FrameCount * 10));
+            AssertSame(immediate, agentFrame, "JobsAgentFrame on a catalog without an agent-frame entry");
+        }
+
+        private sealed class LegacyExecutor : IGeneratedBurstCatalogExecutorV2
+        {
+            private readonly IGeneratedBurstCatalogExecutorV2 _inner;
+            internal LegacyExecutor(IGeneratedBurstCatalogExecutorV2 inner) => _inner = inner;
+            public BurstExecutionResult ExecuteImmediate(ref BurstExecutionBatch batch) => _inner.ExecuteImmediate(ref batch);
+            public Unity.Jobs.JobHandle Schedule(ref BurstExecutionBatch batch, Unity.Jobs.JobHandle dependency) => _inner.Schedule(ref batch, dependency);
+            public bool TryGetEffectDescriptor(uint catalogCaseIndex, uint bindingOrdinal, out ProductionTreeEffectDescriptor descriptor)
+                => _inner.TryGetEffectDescriptor(catalogCaseIndex, bindingOrdinal, out descriptor);
+        }
+
+        // A repeater over an instant leaf never yields inside one update.
+        private const string SpinTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p10004.spin"", ""name"": ""P10-004 spin"",
+  ""root"": ""loop"",
+  ""blackboard"": {
+    ""score"": { ""type"": ""Float32"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": 0.0 }
+  },
+  ""nodes"": {
+    ""loop"": { ""type"": ""aibt.core.repeater"", ""typeVersion"": 1, ""children"": [""set""], ""parameters"": { ""count"": 4000000000, ""stopOnFailure"": false } },
+    ""set"": { ""type"": ""aibt.native.set-float"", ""typeVersion"": 1, ""parameters"": { ""value"": 1.0 }, ""bindings"": { ""key"": ""score"" } }
+  }
+}";
+
+        // The same shape, bounded: finishes inside one update well under the test's step limit.
+        private const string BoundedRepeatTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p10004.bounded"", ""name"": ""P10-004 bounded"",
+  ""root"": ""loop"",
+  ""blackboard"": {
+    ""score"": { ""type"": ""Float32"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": 0.0 }
+  },
+  ""nodes"": {
+    ""loop"": { ""type"": ""aibt.core.repeater"", ""typeVersion"": 1, ""children"": [""set""], ""parameters"": { ""count"": 50, ""stopOnFailure"": false } },
+    ""set"": { ""type"": ""aibt.native.set-float"", ""typeVersion"": 1, ""parameters"": { ""value"": 1.0 }, ""bindings"": { ""key"": ""score"" } }
+  }
+}";
+
+        [Test]
+        public void StepLimit_StopsATreeThatNeverYields_UnderImmediateBatchedJobsAndJobsAgentFrame()
+        {
+            // P10-004: MaximumStepsPerUpdate fails the host with NativeUpdateStepLimitExceeded under
+            // every policy (inside the Burst job for JobsAgentFrame), and leaves a tree that finishes
+            // within the limit alone.
+            var spin = Prepare(SpinTree);
+            var bounded = Prepare(BoundedRepeatTree);
+            const uint limit = 1000u;
+            var ignoreFailingMessages = UnityEngine.TestTools.LogAssert.ignoreFailingMessages;
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+            try
+            {
+                foreach (var mode in new[] { Mode.ForcedImmediate, Mode.ForcedBatchedJobs, Mode.ForcedAgentFrame })
+                {
+                    var worldObject = Track(new GameObject("AIBT.Tests.P10004.StepLimitWorld." + mode));
+                    var scheduler = worldObject.AddComponent<ProductionTreeScheduler>();
+                    var world = worldObject.AddComponent<ProductionTreeWorld>();
+                    InvokePrivate(world, "Awake");
+                    InvokePrivate(world, "OnEnable");
+                    var profile = ProfileFor(mode, scheduler);
+                    var expectedPolicy = mode == Mode.ForcedImmediate ? SchedulingPolicy.Immediate
+                        : mode == Mode.ForcedBatchedJobs ? SchedulingPolicy.BatchedJobsSameFrame : SchedulingPolicy.JobsAgentFrame;
+
+                    NativeTreeAgent Create(ProductionTreeAsset tree, string name)
+                    {
+                        var agent = Track(new GameObject("AIBT.Tests.P10004." + name + "." + mode)).AddComponent<NativeTreeAgent>();
+                        agent.Tree = tree;
+                        agent.World = world;
+                        agent.RestartMode = NativeTreeRestartMode.Never;
+                        agent.Profile = profile;
+                        agent.Activate();
+                        agent.Host.MaximumStepsPerUpdate = limit;
+                        return agent;
+                    }
+                    var spinning = Create(spin, "Spin");
+                    var finishing = Create(bounded, "Bounded");
+                    var spinHost = spinning.Host;
+                    var finishingHost = finishing.Host;
+                    try
+                    {
+                        InvokePrivate(scheduler, "Update");
+
+                        Assert.That(spinHost.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeUpdateStepLimitExceeded), mode.ToString());
+                        Assert.That(spinHost.StepsThisUpdate, Is.EqualTo((ulong)limit), mode + ": stopped exactly at the limit");
+                        Assert.That(finishingHost.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None), mode.ToString());
+                        Assert.That(finishingHost.LastRootResult, Is.EqualTo(NodeStatus.Success), mode.ToString());
+                        Assert.That(finishingHost.StepsThisUpdate, Is.GreaterThan(50uL).And.LessThan((ulong)limit), mode.ToString());
+                        Assert.That(scheduler.FrameEntryCount, Is.EqualTo(2), mode.ToString());
+                        for (var index = 0; index < scheduler.FrameEntryCount; index++)
+                        {
+                            Assert.That(scheduler.TryGetFrameEntry(index, out var entry), Is.True);
+                            Assert.That(entry.SelectedPolicy, Is.EqualTo(expectedPolicy), mode.ToString());
+                            Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.None), mode.ToString());
+                            // BatchedJobsSameFrame entries carry the group's disposition (unchanged by P10-004).
+                            if (mode != Mode.ForcedBatchedJobs)
+                                Assert.That(entry.Disposition, Is.EqualTo(entry.HostInstanceId == spinHost.InstanceId
+                                    ? SchedulerFrameDisposition.Failed : SchedulerFrameDisposition.Executed), mode.ToString());
+                        }
+                    }
+                    finally
+                    {
+                        spinning.Deactivate();
+                        finishing.Deactivate();
+                    }
+                }
+            }
+            finally
+            {
+                UnityEngine.TestTools.LogAssert.ignoreFailingMessages = ignoreFailingMessages;
+            }
+        }
+
+        private static SchedulingProfile ProfileFor(Mode mode, ProductionTreeScheduler scheduler)
+        {
+            switch (mode)
+            {
+                case Mode.ForcedImmediate:
+                    return Forced(SchedulingPolicy.Immediate);
+                case Mode.ForcedBatchedJobs:
+                    Assert.That(SchedulerJobsCapabilities.TryCreate(1.0, 1.0, 1u, 64u, 64u, false, out var capabilities, out var error),
+                        Is.True, error.ToString());
+                    scheduler.SetJobsCapabilities(capabilities);
+                    return Forced(SchedulingPolicy.BatchedJobsSameFrame);
+                case Mode.ForcedAgentFrame:
+                    return SchedulingProfile.JobsAgentFrame;
+                default:
+                    return null;
+            }
+        }
+
         // P10-003: per-frame SHA-256 (first 16 hex digits) of every observation of
         // AllPolicies_MatchTheOutcomeRecordedBeforeP10003_FrameByFrame, recorded on the runtime at
         // 4dee8ec (before any dispatch-framing change). One entry per frame.
@@ -227,7 +437,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
             // and every byte of each agent's Tree/Agent blackboard storage) must equal what the
             // unoptimized runtime produced, under all three profiles.
             var trees = new[] { Prepare(SequenceTree), Prepare(ReactiveEffectTree), Prepare(LoopTree) };
-            foreach (var mode in new[] { Mode.DefaultProfile, Mode.ForcedImmediate, Mode.ForcedBatchedJobs })
+            foreach (var mode in new[] { Mode.DefaultProfile, Mode.ForcedImmediate, Mode.ForcedBatchedJobs, Mode.ForcedAgentFrame })
             {
                 var outcome = Run(trees, mode, withTreeValues: true);
                 var digests = FrameDigests(outcome.Lines);
@@ -393,6 +603,70 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        [Test]
+        public void WarmedUpJobsAgentFrameFrames_DoNotAllocateManagedMemory()
+        {
+            // P10-004: the same population under JobsAgentFrame. The driver's agent table, each host's
+            // trace and effect lists and the job storage are kept across frames. Zero tolerance.
+            var recorder = UnityEngine.Profiling.Recorder.Get("GC.Alloc");
+            recorder.FilterToCurrentThread();
+            object kept = null;
+            Assert.That(CountAllocations(recorder, () => kept = new byte[64], 10), Is.EqualTo(10), "The recorder must see allocations.");
+            Assert.That(kept, Is.Not.Null);
+
+            var trees = new[] { Prepare(LoopTree), Prepare(ReactiveEffectTree) };
+            var worldObject = Track(new GameObject("AIBT.Tests.P10004.AllocationWorld"));
+            var scheduler = worldObject.AddComponent<ProductionTreeScheduler>();
+            var world = worldObject.AddComponent<ProductionTreeWorld>();
+            InvokePrivate(world, "Awake");
+            InvokePrivate(world, "OnEnable");
+            var update = (Action)Delegate.CreateDelegate(typeof(Action), scheduler,
+                typeof(ProductionTreeScheduler).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic));
+
+            var agents = new List<NativeTreeAgent>();
+            var effects = 0;
+            try
+            {
+                for (var index = 0; index < 32; index++)
+                {
+                    var agent = Track(new GameObject("AIBT.Tests.P10004.AllocationAgent" + index)).AddComponent<NativeTreeAgent>();
+                    agent.Tree = trees[index % trees.Length];
+                    agent.World = world;
+                    agent.RestartMode = NativeTreeRestartMode.Never;
+                    agent.Profile = SchedulingProfile.JobsAgentFrame;
+                    agent.OnEffect("hit", (int value) => effects++);
+                    agent.Activate();
+                    agent.SetFact("live-target", 1f);
+                    if (index % trees.Length == 1) agent.SetFact("armed", true);
+                    agents.Add(agent);
+                }
+                for (var frame = 0; frame < 60; frame++) update();
+                var effectsBefore = effects;
+
+                var allocations = CountAllocations(recorder, update, 200);
+
+                Assert.That(effects - effectsBefore, Is.EqualTo(200 * 16), "Every emitter delivers one effect per frame while measured.");
+                foreach (var agent in agents)
+                {
+                    Assert.That(agent.LastError, Is.Null);
+                    Assert.That(agent.IsRunning, Is.True, "The trees keep running; nothing restarts.");
+                }
+                Assert.That(scheduler.FrameEntryCount, Is.EqualTo(agents.Count));
+                for (var index = 0; index < scheduler.FrameEntryCount; index++)
+                {
+                    Assert.That(scheduler.TryGetFrameEntry(index, out var entry), Is.True);
+                    Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.JobsAgentFrame), "The frame ran in the agent-frame job.");
+                    Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.None));
+                }
+                Assert.That(allocations, Is.Zero,
+                    allocations + " managed allocation(s) in 200 warmed-up JobsAgentFrame frames; the tolerance is zero.");
+            }
+            finally
+            {
+                foreach (var agent in agents) if (agent != null) agent.Deactivate();
+            }
+        }
+
         private static int CountAllocations(UnityEngine.Profiling.Recorder recorder, Action action, int calls)
         {
             recorder.enabled = false;
@@ -402,13 +676,15 @@ namespace AIBT.Tests.Integration.NativeRuntime
             return recorder.sampleBlockCount;
         }
 
-        private enum Mode { DefaultProfile, ForcedImmediate, ForcedBatchedJobs }
+        private enum Mode { DefaultProfile, ForcedImmediate, ForcedBatchedJobs, ForcedAgentFrame }
 
         private sealed class Outcome
         {
             internal readonly List<string> Lines = new List<string>();
             internal int Effects;
             internal int Restarts;
+            internal int AgentFrameEntries;
+            internal int FallbackEntries;
         }
 
         private static void AssertSame(Outcome expected, Outcome actual, string what)
@@ -430,7 +706,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             return text.ToString();
         }
 
-        private Outcome Run(ProductionTreeAsset[] trees, Mode mode, bool withTreeValues = false)
+        private Outcome Run(ProductionTreeAsset[] trees, Mode mode, bool withTreeValues = false,
+            Action<List<NativeTreeAgent>> prepare = null, AgentFrameFallbackReason allowedFallback = AgentFrameFallbackReason.None)
         {
             var outcome = new Outcome();
             var worldObject = Track(new GameObject("AIBT.Tests.P10002.World." + mode));
@@ -447,6 +724,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 scheduler.SetJobsCapabilities(capabilities);
                 profile = Forced(SchedulingPolicy.BatchedJobsSameFrame);
             }
+            if (mode == Mode.ForcedAgentFrame) profile = SchedulingProfile.JobsAgentFrame;
 
             var agents = new List<NativeTreeAgent>();
             var frame = 0;
@@ -468,6 +746,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 agents.Add(agent);
             }
 
+            prepare?.Invoke(agents);
+
             try
             {
                 for (frame = 0; frame < FrameCount; frame++)
@@ -479,6 +759,24 @@ namespace AIBT.Tests.Integration.NativeRuntime
                         if (index % trees.Length == 1) agents[index].SetFact("armed", (frame / (3 + index % 4)) % 3 != 2);
                     }
                     InvokePrivate(scheduler, "Update");
+                    if (mode == Mode.ForcedAgentFrame)
+                    {
+                        for (var entryIndex = 0; entryIndex < scheduler.FrameEntryCount; entryIndex++)
+                        {
+                            Assert.That(scheduler.TryGetFrameEntry(entryIndex, out var entry), Is.True);
+                            if (entry.AgentFrameFallback != AgentFrameFallbackReason.None)
+                            {
+                                Assert.That(entry.AgentFrameFallback, Is.EqualTo(allowedFallback), "frame " + frame + ": fallback reason");
+                                Assert.That(entry.SelectedPolicy, Is.EqualTo(
+                                    allowedFallback == AgentFrameFallbackReason.StepBudgetConfigured
+                                        ? SchedulingPolicy.Budgeted : SchedulingPolicy.Immediate), "frame " + frame + ": fallback policy");
+                                outcome.FallbackEntries++;
+                                continue;
+                            }
+                            Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.JobsAgentFrame), "frame " + frame);
+                            outcome.AgentFrameEntries++;
+                        }
+                    }
                     for (var index = 0; index < agents.Count; index++)
                     {
                         var agent = agents[index];

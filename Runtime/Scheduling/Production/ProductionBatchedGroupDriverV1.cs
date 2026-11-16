@@ -124,7 +124,8 @@ namespace AIBT
                 for (var index = 0; index < count; index++)
                 {
                     var host = _open[index];
-                    var outcome = host.TryHandleBatchedStepResult(_pool.GetResult(index), out var request);
+                    // P10-004: BatchedJobsSameFrame enforces the per-update step limit.
+                    var outcome = host.TryHandleBatchedStepResult(_pool.GetResult(index), true, out var request);
                     if (outcome == ProductionTreeHost.BatchedStepOutcome.Terminal)
                     {
                         host.ReleaseBatchedDrive();

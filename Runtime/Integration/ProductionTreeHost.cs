@@ -3,6 +3,7 @@ using System.Threading;
 using AIBT.Burst;
 using AIBT.Runtime.Scheduling;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 namespace AIBT
@@ -60,6 +61,64 @@ namespace AIBT
         private bool _hasPendingStep;
         private int _configuredEffectQueueCapacity;
         private ProductionTreeEffectQueue _effectQueue;
+        private ulong _stepsThisUpdate;
+        private uint _maximumStepsPerUpdate = DefaultMaximumStepsPerUpdate;
+        // P10-004: JobsAgentFrame per-agent logs and job-transport storage, created on first use.
+        private UnsafeList<AgentFrameTraceEventV1> _agentFrameTrace;
+        private UnsafeList<ProductionTreeEffect> _agentFrameEffects;
+        private NativeArray<byte> _agentFrameEmptyBytes;
+        private NativeArray<NativeParallelBranchStateV1> _agentFrameEmptyParallel;
+
+        /// <summary>
+        /// P10-004: default for <see cref="MaximumStepsPerUpdate"/>. The largest tree measured in the
+        /// package's tests and benchmarks needs a few hundred lifecycle steps per update (see
+        /// <c>Documentation~/performance.md</c>), so one million only stops a tree that never yields.
+        /// </summary>
+        public const uint DefaultMaximumStepsPerUpdate = 1000000u;
+
+        /// <summary>
+        /// P10-004: the most lifecycle steps one logical update may take under Immediate,
+        /// BatchedJobsSameFrame and JobsAgentFrame execution. A tree that needs more (for example a
+        /// repeater over a subtree that completes in the same update) stops this host with
+        /// <see cref="NativeRuntimeDiagnosticCodeV1.NativeUpdateStepLimitExceeded"/> instead of
+        /// looping forever. Budgeted hosts (<see cref="StepBudget"/>) and PipelinedJobs are not
+        /// limited by it: they already yield between frames. Must be at least 1.
+        /// </summary>
+        public uint MaximumStepsPerUpdate
+        {
+            get => _maximumStepsPerUpdate;
+            set
+            {
+                if (value == 0u) throw new ArgumentOutOfRangeException(nameof(value), "At least one step per update is required.");
+                _maximumStepsPerUpdate = value;
+            }
+        }
+
+        /// <summary>P10-004: set once the scheduler has logged this host's JobsAgentFrame fallback.</summary>
+        internal bool AgentFrameFallbackReported { get; set; }
+
+        /// <summary>Lifecycle steps taken by the current (or last) logical update.</summary>
+        internal ulong StepsThisUpdate => _stepsThisUpdate;
+
+        /// <summary>
+        /// Counts one step against <see cref="MaximumStepsPerUpdate"/> before it is taken. Returns
+        /// false, after failing this host, when the update has already used its whole allowance.
+        /// </summary>
+        private bool TryCountStep()
+        {
+            if (_stepsThisUpdate >= _maximumStepsPerUpdate)
+            {
+                FailStepLimit();
+                return false;
+            }
+            _stepsThisUpdate++;
+            return true;
+        }
+
+        internal void FailStepLimit()
+            => Fail(
+                new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeUpdateStepLimitExceeded),
+                "The update needed more than MaximumStepsPerUpdate (" + _maximumStepsPerUpdate + ") lifecycle steps.");
 
         /// <summary>The instance-owned trace channel, available until destruction.</summary>
         public NativeTraceChannelOwnerV1 TraceChannelOwner { get; private set; }
@@ -555,6 +614,7 @@ namespace AIBT
             request = default;
             while (_ready)
             {
+                if (!TryCountStep()) return false;
                 if (!_agents[0].Machine.TryAdvance(out var step, out var failure))
                 {
                     Fail(failure, "Cannot advance execution.");
@@ -661,8 +721,22 @@ namespace AIBT
         /// and this host's next barrier.
         /// </summary>
         internal BatchedStepOutcome TryHandleBatchedStepResult(NativeLifecycleStepResultV1 step, out DispatchRequest request)
+            => TryHandleBatchedStepResult(step, false, out request);
+
+        /// <summary>
+        /// P10-004: <paramref name="enforceStepLimit"/> applies <see cref="MaximumStepsPerUpdate"/>
+        /// (BatchedJobsSameFrame). A step past the limit is not handled: this host fails and the
+        /// caller receives <see cref="BatchedStepOutcome.Terminal"/> to release its drive lock.
+        /// </summary>
+        internal BatchedStepOutcome TryHandleBatchedStepResult(
+            NativeLifecycleStepResultV1 step, bool enforceStepLimit, out DispatchRequest request)
         {
             request = default;
+            if (enforceStepLimit)
+            {
+                if (!TryCountStep()) return BatchedStepOutcome.Terminal;
+            }
+            else _stepsThisUpdate++;
             _hasExecuted = true;
             _recorder.RecordStep(_updateId, step);
             if (step.Kind == NativeLifecycleStepKindV1.DispatchRequired)
@@ -736,6 +810,170 @@ namespace AIBT
         {
             _driving = false;
             if (_destroyRequested) DisposeHost();
+        }
+
+        /// <summary>
+        /// P10-004: why this host cannot run inside a JobsAgentFrame job, or
+        /// <see cref="AgentFrameFallbackReason.None"/> when it can.
+        /// </summary>
+        internal AgentFrameFallbackReason GetAgentFrameFallback()
+        {
+            if (_generatedDispatch == null) return AgentFrameFallbackReason.ManagedDispatch;
+            if (StepBudget.HasValue) return AgentFrameFallbackReason.StepBudgetConfigured;
+            return _generatedDispatch.GetAgentFrameFallback();
+        }
+
+        /// <summary>
+        /// P10-004: the begin half of <see cref="DriveOneUpdate"/> for a JobsAgentFrame group: the same
+        /// eligibility, clock and update-begin handling, then fills <paramref name="agent"/> for the
+        /// job instead of calling <c>RunSegment</c>. <paramref name="included"/> is false when this
+        /// update has nothing to run (exactly when <see cref="DriveOneUpdate"/> would return before
+        /// advancing). When included, the drive lock stays held until <see cref="FinishAgentFrame"/>.
+        /// </summary>
+        internal void BeginAgentFrame(out bool included, ref AgentFrameAgentV1 agent)
+        {
+            included = false;
+            if (!_ready || !isActiveAndEnabled || _disposed) return;
+            if (_driving)
+            {
+                Fail(InvalidLifetime(), "Reentrant execution is not supported.");
+                return;
+            }
+            _driving = true;
+            try
+            {
+                if (!_updateOpen)
+                {
+                    var now = _clock();
+                    if (!_ready || _destroyRequested) return;
+                    if (now < 0 || (_updateId != 0 && now < _timeMicroseconds))
+                    {
+                        Fail(InvalidLifetime(), "Clock must return nonnegative, nondecreasing microseconds.");
+                        return;
+                    }
+                    if (!BeginUpdate(now)) return;
+                }
+                else if (_suspended)
+                {
+                    _recorder.RecordExecutionResumed(_updateId);
+                    _suspended = false;
+                }
+                // RunSegment's own loop condition: nothing runs once the host stopped or is destroying.
+                if (!_ready || _destroyRequested) return;
+                if (!_agentFrameTrace.IsCreated)
+                {
+                    _agentFrameTrace = new UnsafeList<AgentFrameTraceEventV1>(64, Allocator.Persistent);
+                    _agentFrameEffects = new UnsafeList<ProductionTreeEffect>(_effectQueue != null ? 8 : 1, Allocator.Persistent);
+                    _agentFrameEmptyBytes = new NativeArray<byte>(0, Allocator.Persistent);
+                    _agentFrameEmptyParallel = new NativeArray<NativeParallelBranchStateV1>(0, Allocator.Persistent);
+                }
+                agent.Machine = _agents[0].Machine;
+                agent.Machine.TryAttachCreatedEmptyJobStorage(_agentFrameEmptyBytes, _agentFrameEmptyParallel);
+                agent.Slots = _generatedDispatch.GetAgentFrameSlots();
+                agent.TreeValues = _generatedDispatch.TreeValues;
+                agent.TreeVersions = _generatedDispatch.TreeVersions;
+                agent.TimeMicroseconds = _timeMicroseconds;
+                agent.StepsThisUpdate = _stepsThisUpdate;
+                agent.MaximumSteps = _maximumStepsPerUpdate;
+                agent.EffectFree = _effectQueue != null ? _effectQueue.Free : -1;
+                agent.TraceEnabled = _recorder.IsRecording ? (byte)1 : (byte)0;
+                agent.Trace = _agentFrameTrace;
+                agent.Effects = _agentFrameEffects;
+                agent.Outcome = AgentFrameOutcomeV1.None;
+                included = true;
+            }
+            catch (Exception exception)
+            {
+                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+            }
+            finally
+            {
+                if (!included)
+                {
+                    _driving = false;
+                    if (_destroyRequested) DisposeHost();
+                }
+            }
+        }
+
+        /// <summary>
+        /// P10-004: the rest of <see cref="DriveOneUpdate"/> after the agent-frame job ran this
+        /// host's update: replays its trace calls and effects in step order, then applies the same
+        /// terminal or failure bookkeeping <c>RunSegment</c> applies, and releases the drive lock.
+        /// </summary>
+        internal void FinishAgentFrame(ref AgentFrameAgentV1 agent)
+        {
+            try
+            {
+                // The job may have grown the logs; keep the current allocations.
+                _agentFrameTrace = agent.Trace;
+                _agentFrameEffects = agent.Effects;
+                _stepsThisUpdate = agent.StepsThisUpdate;
+                if (agent.Executed != 0) _hasExecuted = true;
+                for (var index = 0; index < _agentFrameTrace.Length; index++)
+                {
+                    var record = _agentFrameTrace[index];
+                    if (record.IsCompletion != 0) _recorder.RecordDispatchCompletion(_updateId, record.Step, record.Status);
+                    else _recorder.RecordStep(_updateId, record.Step);
+                }
+                if (_effectQueue != null)
+                {
+                    for (var index = 0; index < _agentFrameEffects.Length; index++)
+                        _effectQueue.TryEnqueue(in _agentFrameEffects.ElementAt(index));
+                }
+                switch (agent.Outcome)
+                {
+                    case AgentFrameOutcomeV1.Terminal:
+                        var step = agent.TerminalStep;
+                        _updateOpen = false;
+                        _recorder.RecordUpdateEnded(_updateId, step.HasRootStatus, step.RootStatus);
+                        if (step.Kind == NativeLifecycleStepKindV1.Completed)
+                        {
+                            if (step.HasRootStatus) LastRootResult = step.RootStatus;
+                            _ready = false;
+                        }
+                        break;
+                    case AgentFrameOutcomeV1.AdvanceFailed:
+                        Fail(agent.Failure, "Cannot advance execution.");
+                        break;
+                    case AgentFrameOutcomeV1.CallbackRejected:
+                        Fail(agent.Failure, "Callback rejected: " + agent.RejectedResult);
+                        break;
+                    case AgentFrameOutcomeV1.StepLimit:
+                        FailStepLimit();
+                        break;
+                    default:
+                        Fail(InvalidLifetime(), "The agent-frame job did not run this host's update.");
+                        break;
+                }
+            }
+            catch (Exception exception)
+            {
+                Fail(InvalidLifetime(), exception.GetType().Name + ": " + exception.Message);
+            }
+            finally
+            {
+                agent.Outcome = AgentFrameOutcomeV1.None;
+                _driving = false;
+                if (_destroyRequested) DisposeHost();
+            }
+        }
+
+        /// <summary>
+        /// P10-004: releases a begun agent frame whose job never ran (the scheduler was destroyed or
+        /// scheduling failed) with the given failure, never leaving the drive lock held.
+        /// </summary>
+        internal void AbandonAgentFrame(NativeRuntimeFailureV1 failure, string detail)
+        {
+            try
+            {
+                Fail(failure, detail);
+            }
+            finally
+            {
+                _driving = false;
+                if (_destroyRequested) DisposeHost();
+            }
         }
 
         /// <summary>
@@ -822,6 +1060,7 @@ namespace AIBT
             _updateId = nextId;
             _timeMicroseconds = timeMicroseconds;
             _updateOpen = true;
+            _stepsThisUpdate = 0;
             _recorder.RecordUpdateStarted(_updateId);
             return true;
         }
@@ -847,7 +1086,12 @@ namespace AIBT
                         return;
                     }
                 }
-                else advanced = _agents[0].Machine.TryAdvance(out step, out failure);
+                else
+                {
+                    // P10-004: Immediate (and teardown) is bounded per update; Budgeted yields.
+                    if (!TryCountStep()) return;
+                    advanced = _agents[0].Machine.TryAdvance(out step, out failure);
+                }
                 SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostAdvance);
                 if (!advanced)
                 {
@@ -987,6 +1231,12 @@ namespace AIBT
                 _generatedDispatch = null;
                 _effectQueue = null;
                 _clock = null;
+                if (_agentFrameTrace.IsCreated) _agentFrameTrace.Dispose();
+                if (_agentFrameEffects.IsCreated) _agentFrameEffects.Dispose();
+                if (_agentFrameEmptyBytes.IsCreated) _agentFrameEmptyBytes.Dispose();
+                if (_agentFrameEmptyParallel.IsCreated) _agentFrameEmptyParallel.Dispose();
+                _agentFrameTrace = default;
+                _agentFrameEffects = default;
             }
         }
     }
