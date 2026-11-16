@@ -144,6 +144,33 @@ namespace AIBT
             _isRegistered = host => _byHost.ContainsKey(host);
         }
 
+        /// <summary>
+        /// P10-007: the default <see cref="AgentFrameMinimumBatchSize"/>. Measured in P10-005: below
+        /// ≈20–30 consecutive agents one job schedule + complete costs more main-thread time than it
+        /// saves; 64 is about twice the largest measured crossover.
+        /// </summary>
+        public const int DefaultAgentFrameMinimumBatchSize = 64;
+
+        private int _agentFrameMinimumBatchSize = DefaultAgentFrameMinimumBatchSize;
+
+        /// <summary>
+        /// P10-007: the fewest consecutive job-eligible members a <see cref="SchedulingPolicy.JobsAgentFrame"/>
+        /// batch needs before a job is scheduled for it. A shorter batch runs on the main thread exactly
+        /// as <see cref="SchedulingPolicy.Immediate"/> does (its entries report
+        /// <see cref="SchedulerFrameEntry.AgentFrameRanInPlace"/>). At least 1; 1 schedules a job for
+        /// every batch, as before P10-007. Default <see cref="DefaultAgentFrameMinimumBatchSize"/>.
+        /// </summary>
+        public int AgentFrameMinimumBatchSize
+        {
+            get => _agentFrameMinimumBatchSize;
+            set
+            {
+                if (value < 1)
+                    throw new ArgumentOutOfRangeException(nameof(value), "AgentFrameMinimumBatchSize must be at least 1.");
+                _agentFrameMinimumBatchSize = value;
+            }
+        }
+
         /// <summary>Registered host count, for inspection/tests -- not itself a scheduling input.</summary>
         public int RegisteredCount => _byHost.Count;
 
@@ -783,6 +810,11 @@ namespace AIBT
         private void RunAgentFrameBatch(IGeneratedAgentFrameExecutorV1 executor, bool unbounded, ref double remaining)
         {
             if (_agentFrameBatch.Count == 0) return;
+            if (_agentFrameBatch.Count < _agentFrameMinimumBatchSize)
+            {
+                RunAgentFrameBatchInPlace(unbounded, ref remaining);
+                return;
+            }
             _agentFrameHosts.Clear();
             for (var index = 0; index < _agentFrameBatch.Count; index++) _agentFrameHosts.Add(_agentFrameBatch[index].Host);
             _stopwatch.Restart();
@@ -815,17 +847,29 @@ namespace AIBT
             _agentFrameBatch.Clear();
         }
 
-        private void DriveAgentFrameFallback(
-            Registration registration, AgentFrameFallbackReason fallback, bool unbounded, ref double remaining)
+        /// <summary>
+        /// P10-007: a batch shorter than <see cref="AgentFrameMinimumBatchSize"/> runs each member's
+        /// <see cref="ProductionTreeHost.DriveOneUpdate"/> in agent order, measured and accounted per
+        /// member exactly like the Immediate path; no job is scheduled. As the driver, a member that
+        /// left the scheduler from an earlier member's callback is not driven.
+        /// </summary>
+        private void RunAgentFrameBatchInPlace(bool unbounded, ref double remaining)
         {
-            if (!registration.Host.AgentFrameFallbackReported)
+            for (var index = 0; index < _agentFrameBatch.Count; index++)
             {
-                registration.Host.AgentFrameFallbackReported = true;
-                UnityEngine.Debug.LogWarning(
-                    "AIBT ProductionTreeScheduler: host " + registration.Host.InstanceId + " ('" + registration.Host.name
-                    + "') cannot run in a JobsAgentFrame job (" + fallback + ") and runs as Immediate.",
-                    registration.Host);
+                var member = _agentFrameBatch[index];
+                if (!_byHost.ContainsKey(member.Host)) continue;
+                SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.ImmediateHosts, 1);
+                var elapsedMicroseconds = DriveInPlace(member, unbounded, ref remaining);
+                AddAgentFrameEntry(member, SchedulingPolicy.JobsAgentFrame, AgentFrameFallbackReason.None,
+                    elapsedMicroseconds, member.Host.StepsThisUpdate, ranInPlace: true);
             }
+            _agentFrameBatch.Clear();
+        }
+
+        /// <summary>One main-thread update with the Immediate path's measurement and budget accounting.</summary>
+        private double DriveInPlace(Registration registration, bool unbounded, ref double remaining)
+        {
             _stopwatch.Restart();
             registration.Host.DriveOneUpdate();
             _stopwatch.Stop();
@@ -845,13 +889,28 @@ namespace AIBT
             registration.Urgent = false;
             registration.Eligible = false;
             registration.NextEligibleFrame = _frame + registration.Profile.UpdateCadence;
+            return elapsedMicroseconds;
+        }
+
+        private void DriveAgentFrameFallback(
+            Registration registration, AgentFrameFallbackReason fallback, bool unbounded, ref double remaining)
+        {
+            if (!registration.Host.AgentFrameFallbackReported)
+            {
+                registration.Host.AgentFrameFallbackReported = true;
+                UnityEngine.Debug.LogWarning(
+                    "AIBT ProductionTreeScheduler: host " + registration.Host.InstanceId + " ('" + registration.Host.name
+                    + "') cannot run in a JobsAgentFrame job (" + fallback + ") and runs as Immediate.",
+                    registration.Host);
+            }
+            var elapsedMicroseconds = DriveInPlace(registration, unbounded, ref remaining);
             var policy = registration.Host.StepBudget.HasValue ? SchedulingPolicy.Budgeted : SchedulingPolicy.Immediate;
             AddAgentFrameEntry(registration, policy, fallback, elapsedMicroseconds, 0);
         }
 
         private void AddAgentFrameEntry(
             Registration registration, SchedulingPolicy policy, AgentFrameFallbackReason fallback,
-            double consumedMicroseconds, ulong executedSteps)
+            double consumedMicroseconds, ulong executedSteps, bool ranInPlace = false)
         {
             _frameEntries.Add(CreateEntry(
                 registration, policy, SchedulerFrameSelectionSource.DirectHostPath,
@@ -860,7 +919,7 @@ namespace AIBT
                 false, registration.Profile.UpdateCadence,
                 registration.Host.LastFailure.Code == NativeRuntimeDiagnosticCodeV1.None
                     ? SchedulerFrameDisposition.Executed : SchedulerFrameDisposition.Failed,
-                consumedMicroseconds, executedSteps, 0, fallback));
+                consumedMicroseconds, executedSteps, 0, fallback, ranInPlace));
         }
 
         private static int CompareDue(Registration a, Registration b)
@@ -1135,7 +1194,8 @@ namespace AIBT
             bool pipelinedLatencyAllowed, uint updateCadence,
             SchedulerFrameDisposition disposition, double consumedMicroseconds,
             ulong executedSteps, ulong observedLatencyFrames,
-            AgentFrameFallbackReason agentFrameFallback = AgentFrameFallbackReason.None)
+            AgentFrameFallbackReason agentFrameFallback = AgentFrameFallbackReason.None,
+            bool agentFrameRanInPlace = false)
         {
             var hasDeadline = registration.Profile.MaximumResponseLatencyFrames.HasValue;
             var deadline = hasDeadline
@@ -1148,7 +1208,8 @@ namespace AIBT
                 hasConfiguredStepBudget, configuredStepBudget, exceedsConfiguredStepBudget,
                 pipelinedLatencyAllowed, updateCadence,
                 disposition, consumedMicroseconds, executedSteps, observedLatencyFrames,
-                registration.Host.LastRootResult, registration.Host.LastFailure, agentFrameFallback);
+                registration.Host.LastRootResult, registration.Host.LastFailure, agentFrameFallback,
+                agentFrameRanInPlace);
         }
 
         private void AddDeferredBudgetEntries(int startIndex)

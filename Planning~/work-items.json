@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P10-007", "phase": 10, "title": "Automatic selection of JobsAgentFrame from 64 consecutive eligible agents", "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-007-agent-frame-auto-selection.md",
+      "dependsOn": ["P10-005", "P10-006"],
+      "owns": ["Planning~/Evidence/P10-007/"]
+    },
+    {
       "id": "P10-006", "phase": 10, "title": "The package compiles and passes its tests on Unity 6000.6.9f1", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P10/P10-006-unity-6000-6-compat.md",
       "dependsOn": ["P10-005"],

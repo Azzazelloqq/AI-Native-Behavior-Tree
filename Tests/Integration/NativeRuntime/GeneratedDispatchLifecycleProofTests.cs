@@ -601,6 +601,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 Assert.That(catalog.Executor, Is.InstanceOf<AIBT.AgentFrame.IGeneratedAgentFrameExecutorV1>(),
                     "The generated catalog carries the agent-frame entry.");
                 var scheduler = schedulerObject.AddComponent<ProductionTreeScheduler>();
+                // P10-007: a two-member batch runs in place by default; this test covers the job driver.
+                scheduler.AgentFrameMinimumBatchSize = 1;
                 var driver = (ProductionAgentFrameDriverV1)typeof(ProductionTreeScheduler)
                     .GetField("_agentFrameDriver", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(scheduler);
 

@@ -55,7 +55,8 @@ namespace AIBT
             SchedulerFrameDisposition disposition, double consumedMicroseconds,
             ulong executedSteps, ulong observedLatencyFrames, NodeStatus? terminalOutcome,
             NativeRuntimeFailureV1 failure,
-            AgentFrameFallbackReason agentFrameFallback = AgentFrameFallbackReason.None)
+            AgentFrameFallbackReason agentFrameFallback = AgentFrameFallbackReason.None,
+            bool agentFrameRanInPlace = false)
         {
             HostInstanceId = hostInstanceId;
             ProfileId = profile.Id;
@@ -86,6 +87,7 @@ namespace AIBT
             TerminalOutcome = terminalOutcome;
             Failure = failure;
             AgentFrameFallback = agentFrameFallback;
+            AgentFrameRanInPlace = agentFrameRanInPlace;
         }
 
         public ulong HostInstanceId { get; }
@@ -121,5 +123,13 @@ namespace AIBT
         /// as Immediate this frame (<see cref="SelectedPolicy"/> is then Immediate); None otherwise.
         /// </summary>
         public AgentFrameFallbackReason AgentFrameFallback { get; }
+        /// <summary>
+        /// P10-007: true when <see cref="SelectedPolicy"/> is <see cref="SchedulingPolicy.JobsAgentFrame"/>
+        /// but this host's batch of consecutive job-eligible members was shorter than
+        /// <see cref="ProductionTreeScheduler.AgentFrameMinimumBatchSize"/>, so the host ran on the main
+        /// thread exactly as <see cref="SchedulingPolicy.Immediate"/> does and no job was scheduled.
+        /// False for every other entry.
+        /// </summary>
+        public bool AgentFrameRanInPlace { get; }
     }
 }

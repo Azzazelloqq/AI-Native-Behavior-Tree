@@ -205,6 +205,79 @@ namespace AIBT.Tests.Integration.NativeRuntime
             AssertSame(immediate, agentFrame, "JobsAgentFrame on a catalog without an agent-frame entry");
         }
 
+        [Test]
+        public void JobsAgentFrame_BatchShorterThanTheMinimum_RunsInPlace_AndMatchesImmediate()
+        {
+            // P10-007 step 1: with the default minimum (64) a 12-agent JobsAgentFrame batch schedules
+            // no job; every member runs on the main thread as Immediate does, its entry still reports
+            // JobsAgentFrame and says it ran in place, and every frame equals a forced Immediate run.
+            var trees = new[] { Prepare(SequenceTree), Prepare(ReactiveEffectTree), Prepare(LoopTree) };
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true);
+            var agentFrame = Run(trees, Mode.ForcedAgentFrame, withTreeValues: true,
+                agentFrameMinimumBatch: ProductionTreeScheduler.DefaultAgentFrameMinimumBatchSize);
+
+            Assert.That(ProductionTreeScheduler.DefaultAgentFrameMinimumBatchSize, Is.EqualTo(64));
+            Assert.That(agentFrame.JobBatches, Is.Zero, "No job was scheduled.");
+            Assert.That(agentFrame.AgentFrameEntries, Is.Zero);
+            Assert.That(agentFrame.InPlaceEntries, Is.GreaterThan(FrameCount * 6), "Entries say the batch ran in place.");
+            AssertSame(immediate, agentFrame, "JobsAgentFrame batches run in place");
+        }
+
+        [TestCase(63, false)]
+        [TestCase(64, true)]
+        public void JobsAgentFrame_MinimumBatchBoundary(int agents, bool expectJob)
+        {
+            // P10-007 step 1: 63 consecutive eligible members run in place, 64 run in one job per frame.
+            var trees = new[] { Prepare(LoopTree) };
+
+            var immediate = Run(trees, Mode.ForcedImmediate, agentCount: agents, restartMode: NativeTreeRestartMode.Never);
+            var agentFrame = Run(trees, Mode.ForcedAgentFrame, agentCount: agents, restartMode: NativeTreeRestartMode.Never,
+                agentFrameMinimumBatch: ProductionTreeScheduler.DefaultAgentFrameMinimumBatchSize);
+
+            Assert.That(agentFrame.LastFrameEntries.Count, Is.EqualTo(agents));
+            Assert.That(agentFrame.LastFrameEntries.All(e => e.SelectedPolicy == SchedulingPolicy.JobsAgentFrame), Is.True);
+            Assert.That(agentFrame.LastFrameEntries.All(e => e.AgentFrameRanInPlace == !expectJob), Is.True,
+                agents + " members: ran in place = " + !expectJob);
+            Assert.That(agentFrame.JobBatches, Is.EqualTo(expectJob ? FrameCount : 0));
+            AssertSame(immediate, agentFrame, agents + " members");
+        }
+
+        [TestCase(40, 40, false)]
+        [TestCase(64, 10, true)]
+        public void JobsAgentFrame_FallbackMemberSplitsTheBatch_ShortPiecesRunInPlace(int before, int after, bool firstInJob)
+        {
+            // P10-007 step 1: a step-budget member between two runs of eligible members closes the
+            // batch. A piece shorter than 64 runs in place; a piece of 64 runs in the job.
+            var trees = new[] { Prepare(LoopTree) };
+            void Budget(List<NativeTreeAgent> agents) => agents[before].Host.StepBudget = 1000000u;
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true, prepare: Budget,
+                agentCount: before + 1 + after, restartMode: NativeTreeRestartMode.Never);
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Warning,
+                new System.Text.RegularExpressions.Regex(@"cannot run in a JobsAgentFrame job \(StepBudgetConfigured\)"));
+            var agentFrame = Run(trees, Mode.ForcedAgentFrame, withTreeValues: true, prepare: Budget,
+                agentCount: before + 1 + after, restartMode: NativeTreeRestartMode.Never,
+                allowedFallback: AgentFrameFallbackReason.StepBudgetConfigured,
+                agentFrameMinimumBatch: ProductionTreeScheduler.DefaultAgentFrameMinimumBatchSize);
+
+            var entries = agentFrame.LastFrameEntries;
+            Assert.That(entries.Count, Is.EqualTo(before + 1 + after));
+            for (var index = 0; index < entries.Count; index++)
+            {
+                if (index == before)
+                {
+                    Assert.That(entries[index].AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.StepBudgetConfigured));
+                    Assert.That(entries[index].AgentFrameRanInPlace, Is.False);
+                    continue;
+                }
+                var inJob = index < before && firstInJob;
+                Assert.That(entries[index].AgentFrameRanInPlace, Is.EqualTo(!inJob), "entry " + index);
+            }
+            Assert.That(agentFrame.JobBatches, Is.EqualTo(firstInJob ? FrameCount : 0));
+            AssertSame(immediate, agentFrame, before + " + 1 + " + after);
+        }
+
         private sealed class LegacyExecutor : IGeneratedBurstCatalogExecutorV2
         {
             private readonly IGeneratedBurstCatalogExecutorV2 _inner;
@@ -262,6 +335,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     InvokePrivate(world, "Awake");
                     InvokePrivate(world, "OnEnable");
                     var profile = ProfileFor(mode, scheduler);
+                    // P10-007: two members would run in place by default; this test covers the job.
+                    scheduler.AgentFrameMinimumBatchSize = 1;
                     var expectedPolicy = mode == Mode.ForcedImmediate ? SchedulingPolicy.Immediate
                         : mode == Mode.ForcedBatchedJobs ? SchedulingPolicy.BatchedJobsSameFrame : SchedulingPolicy.JobsAgentFrame;
 
@@ -620,6 +695,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             var world = worldObject.AddComponent<ProductionTreeWorld>();
             InvokePrivate(world, "Awake");
             InvokePrivate(world, "OnEnable");
+            // P10-007: 32 members would run in place by default; this test covers the job.
+            scheduler.AgentFrameMinimumBatchSize = 1;
             var update = (Action)Delegate.CreateDelegate(typeof(Action), scheduler,
                 typeof(ProductionTreeScheduler).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic));
 
@@ -685,6 +762,11 @@ namespace AIBT.Tests.Integration.NativeRuntime
             internal int Restarts;
             internal int AgentFrameEntries;
             internal int FallbackEntries;
+            // P10-007: entries whose JobsAgentFrame batch ran on the main thread without a job,
+            // the job batches the run scheduled, and the last frame's entries.
+            internal int InPlaceEntries;
+            internal long JobBatches;
+            internal readonly List<SchedulerFrameEntry> LastFrameEntries = new List<SchedulerFrameEntry>();
         }
 
         private static void AssertSame(Outcome expected, Outcome actual, string what)
@@ -707,7 +789,9 @@ namespace AIBT.Tests.Integration.NativeRuntime
         }
 
         private Outcome Run(ProductionTreeAsset[] trees, Mode mode, bool withTreeValues = false,
-            Action<List<NativeTreeAgent>> prepare = null, AgentFrameFallbackReason allowedFallback = AgentFrameFallbackReason.None)
+            Action<List<NativeTreeAgent>> prepare = null, AgentFrameFallbackReason allowedFallback = AgentFrameFallbackReason.None,
+            int agentFrameMinimumBatch = 1, int agentCount = 0, NativeTreeRestartMode? restartMode = null,
+            Action<ProductionTreeScheduler> configure = null)
         {
             var outcome = new Outcome();
             var worldObject = Track(new GameObject("AIBT.Tests.P10002.World." + mode));
@@ -724,17 +808,25 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 scheduler.SetJobsCapabilities(capabilities);
                 profile = Forced(SchedulingPolicy.BatchedJobsSameFrame);
             }
-            if (mode == Mode.ForcedAgentFrame) profile = SchedulingProfile.JobsAgentFrame;
+            if (mode == Mode.ForcedAgentFrame)
+            {
+                profile = SchedulingProfile.JobsAgentFrame;
+                // P10-007: 12 members would run in place by default; most tests here cover the job.
+                scheduler.AgentFrameMinimumBatchSize = agentFrameMinimumBatch;
+            }
+            configure?.Invoke(scheduler);
 
             var agents = new List<NativeTreeAgent>();
             var frame = 0;
-            for (var index = 0; index < trees.Length * AgentsPerTree; index++)
+            var population = agentCount > 0 ? agentCount : trees.Length * AgentsPerTree;
+            for (var index = 0; index < population; index++)
             {
                 var gameObject = Track(new GameObject("AIBT.Tests.P10002.Agent" + index));
                 var agent = gameObject.AddComponent<NativeTreeAgent>();
                 agent.Tree = trees[index % trees.Length];
                 agent.World = world;
-                agent.RestartMode = index % trees.Length == 2 ? NativeTreeRestartMode.Never : NativeTreeRestartMode.Always;
+                agent.RestartMode = restartMode
+                    ?? (index % trees.Length == 2 ? NativeTreeRestartMode.Never : NativeTreeRestartMode.Always);
                 if (profile != null) agent.Profile = profile;
                 var label = index;
                 agent.OnEffect("hit", (int value) =>
@@ -747,6 +839,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
 
             prepare?.Invoke(agents);
+            var batchesBefore = AgentFrameDiagnosticsV1.Batches;
 
             try
             {
@@ -759,6 +852,18 @@ namespace AIBT.Tests.Integration.NativeRuntime
                         if (index % trees.Length == 1) agents[index].SetFact("armed", (frame / (3 + index % 4)) % 3 != 2);
                     }
                     InvokePrivate(scheduler, "Update");
+                    outcome.LastFrameEntries.Clear();
+                    for (var entryIndex = 0; entryIndex < scheduler.FrameEntryCount; entryIndex++)
+                    {
+                        Assert.That(scheduler.TryGetFrameEntry(entryIndex, out var entry), Is.True);
+                        outcome.LastFrameEntries.Add(entry);
+                        if (entry.AgentFrameRanInPlace)
+                        {
+                            Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.JobsAgentFrame), "frame " + frame + ": in-place policy");
+                            Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.None), "frame " + frame + ": in-place fallback");
+                            outcome.InPlaceEntries++;
+                        }
+                    }
                     if (mode == Mode.ForcedAgentFrame)
                     {
                         for (var entryIndex = 0; entryIndex < scheduler.FrameEntryCount; entryIndex++)
@@ -774,7 +879,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
                                 continue;
                             }
                             Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.JobsAgentFrame), "frame " + frame);
-                            outcome.AgentFrameEntries++;
+                            if (!entry.AgentFrameRanInPlace) outcome.AgentFrameEntries++;
                         }
                     }
                     for (var index = 0; index < agents.Count; index++)
@@ -791,6 +896,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     }
                 }
                 Assert.That(world.LastWorldFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None), mode.ToString());
+                outcome.JobBatches = AgentFrameDiagnosticsV1.Batches - batchesBefore;
             }
             finally
             {

@@ -3346,6 +3346,7 @@ Shared compiled definition and generated catalog. Dispose after its hosts are de
 
 One population-level production coordinator per independently scheduled AI world -- see <c>Documentation~/decisions/ADR-P7-033-global-scheduler-and-profiles.md</c> (AIBT-037). A <see cref="ProductionTreeHost"/> registers with exactly one scheduler; while registered, the coordinator drives it instead of the host's own per-frame <c>Update</c> message, in deterministic due order, admitted against one optional global time allowance. The host still owns its machine, trace channel, terminal result, failure and disposal -- registration never creates a second tree instance or transfers native ownership. Multiple independent worlds require separate explicit scheduler instances; there is no hidden global singleton.
 
+- `FIELD System.Int32 DefaultAgentFrameMinimumBatchSize`
 - `METHOD System.Boolean IsRegistered(AIBT.ProductionTreeHost)`
 - `METHOD System.Boolean RequestUrgentUpdate(AIBT.ProductionTreeHost)`
 - `METHOD System.Boolean TryGetFrameEntry(System.Int32,AIBT.SchedulerFrameEntry&)`
@@ -3363,6 +3364,7 @@ One population-level production coordinator per independently scheduled AI world
 - `PROPERTY System.Boolean LastFrameOverran`
 - `PROPERTY System.Double LastFrameAllocatedBudgetMicroseconds`
 - `PROPERTY System.Double LastFrameConsumedMicroseconds`
+- `PROPERTY System.Int32 AgentFrameMinimumBatchSize`
 - `PROPERTY System.Int32 FrameEntryCount`
 - `PROPERTY System.Int32 RegisteredCount`
 - `PROPERTY System.UInt32 LastFrameIndex`
@@ -3497,6 +3499,7 @@ One immutable agent entry from the scheduler's most recently completed frame. En
 - `PROPERTY AIBT.SchedulerFrameSelectionSource SelectionSource`
 - `PROPERTY AIBT.SchedulerSelectionReason SelectionReason`
 - `PROPERTY AIBT.SchedulingPolicy SelectedPolicy`
+- `PROPERTY System.Boolean AgentFrameRanInPlace`
 - `PROPERTY System.Boolean ExceedsConfiguredStepBudget`
 - `PROPERTY System.Boolean HasConfiguredStepBudget`
 - `PROPERTY System.Boolean HasDeadline`
