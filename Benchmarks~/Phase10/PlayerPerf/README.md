@@ -1,4 +1,4 @@
-# Player performance harness (P9 baseline, P10-001)
+# Player performance harness (P9 baseline, P10-001 … P10-005)
 
 Measures both runtime layers in a standalone Player: per-frame main-thread time, allocation per
 agent-tick, GC collections, creation cost and memory, for managed (`BehaviorTreeAgent`) and native
@@ -52,6 +52,45 @@ profile (`SchedulerFrameProfileV1`). Without the define its calls are compiled o
 - **Report.** `python profile.py <run folder>` writes `profile.json` and prints the median µs per
   frame for each stage, rounds per frame, lanes per round and dispatches per frame.
 - **Not for timing.** Use the profile build to see where time goes, not as the timing reference.
+
+## Stage J3 sets and CPU time (P10-005)
+
+`-Set <a,b,...>` (`-perfSet` in the Player) runs one or more named sets; `-JobWorkers <n>` sets
+`JobsUtility.JobWorkerCount` (`-perfJobWorkers`). Policies of one tree and N are adjacent in every
+set, so each run interleaves them.
+
+| Set | Cases |
+|---|---|
+| `j3-small` | N = 1, 10, 50, 100, 200, 500 × `io-wait1`, `shared-loop16`, `shared-reactive16`, `io-move1-fact-effect` × Immediate, `-jobs`, `-agentframe`; 200 warm-up and 1000 measured frames |
+| `j3-cross` | N = 10, 20, 30, 40, 50, 75 × the same trees × Immediate and `-agentframe`; 200 warm-up and 1500 measured frames (repeats around the crossover) |
+| `j3-scale` | N = 1 000, 5 000, 20 000 × the same trees and policies, plus `m-unity15-both` and `m-shared-shape15` (the N = 1 000 / 5 000 part has the quick-set configuration) |
+| `j3-scale20k` | the native part of `j3-scale` at N = 20 000 only (for `-JobWorkers 0`) |
+| `j3-workers` | Immediate and `-agentframe` at N = 1 000 and 5 000 (run with several `-JobWorkers`) |
+| `j3-mixed` | Immediate, `-agentframe`, `-agentframe-mixed` (every second host has `StepBudget = 1 000 000`, so it falls back with `StepBudgetConfigured`) and `-agentframe-mixed-grouped` (the second half of the hosts falls back) |
+| `j3-cadence` | `-cadence6` (profile with `UpdateCadence = 6`, Immediate or forced `JobsAgentFrame`) and `-cadence6-stagger` (agents enabled in 6 portions over 6 frames, so their phases spread) |
+| `full-immediate` | the full plan without the forced Jobs scenarios |
+| `full-immediate-5k` | the same without N > 5 000 |
+
+`runs.jsonl` also has `cpuWindowProcessUs`, `cpuWindowMainThreadUs` and `cpuWindowWallUs`: process and
+main-thread CPU time over the measured frames (`GetProcessTimes` / `GetThreadTimes`, Windows Player
+only, -1 elsewhere). Process CPU includes the render thread, job workers (also idle spinning) and
+the engine, so compare it only between policies of the same N.
+
+```text
+python j3.py <summary.json> <run folder> [<run folder> ...]   # per scenario, N and worker count
+python j3_tables.py <summary.json> [...] > tables.md          # the P10-005 tables
+```
+
+`j3_tables.py` also splits the main thread under JobsAgentFrame into the agent-frame driver
+(`scheduler_drive_us`), the job's schedule + complete (`agentFrameStats.jobMicroseconds`), the
+managed begin/finish (their difference) and the rest of the frame.
+
+**Unity version.** From P10-005 on the harness project runs on Unity 6000.6.9f1 (6000.7.0b1 was
+removed from the machine). The copy needs three built-in modules removed from its manifest
+(`localizationruntime`, `smartstrings`, `spritemask`), and the AIBT package at `659a8b1` needs
+`#if UNITY_6000_6_OR_NEWER` in `Editor/Graph/BehaviorTreeImporter.cs` to compile there
+(`Planning~/Evidence/P10-005/README.md`, section 0). Numbers before P10-005 come from 6000.7.0b1
+and are not directly comparable.
 
 ## What is measured
 

@@ -4,6 +4,21 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Performance measurement (P10-005)
+
+- Measured the native policies across 1–20 000 agents, job worker counts, mixed populations and
+  `UpdateCadence` (IL2CPP Player, Unity 6000.6.9f1): `JobsAgentFrame` is at least 10% faster than
+  `Immediate` on the main thread from 20–30 agents for simple trees and from 1 agent for a reactive
+  tree; below that it costs 3–17 µs more per frame. `Documentation~/performance.md` has a new
+  "Which policy when" table. No runtime behavior changed; defaults and the automatic selector are
+  unchanged (`Planning~/Evidence/P10-005/README.md` has the measurements and a proposal for
+  automatic selection).
+- Known issue: the package at this version does not compile on Unity 6000.6.9f1
+  (`Editor/Graph/BehaviorTreeImporter.cs` uses `AssetDatabase.GetAssetPath(int)`, an error there;
+  the `EntityId` overload is selected only from 6000.7). Not fixed yet.
+- Benchmark harness: scenario sets for small N, scale, worker count, mixed populations and cadence;
+  process and main-thread CPU time per scenario; `Invoke-Perf.ps1 -Set` and `-JobWorkers`.
+
 ### Performance (P10-004)
 
 - New opt-in policy `SchedulingPolicy.JobsAgentFrame`: one Burst job work item runs one native

@@ -11,6 +11,8 @@ param(
     [int]$MaxN = 0,
     [int]$MinN = 0,
     [switch]$Quick,
+    [string]$Set = '',
+    [int]$JobWorkers = -1,
     [switch]$Short,
     [string]$Baseline = '',
     [switch]$SaveBaseline,
@@ -63,6 +65,8 @@ if ($Step -in 'Run', 'All') {
     $arguments = @('-logFile', $log, '-screen-fullscreen', '0', '-screen-width', '640', '-screen-height', '360', '-perfOut', $out, '-perfRuns', "$Runs")
     if ($Only) { $arguments += @('-perfOnly', $Only) }
     if ($Quick) { $arguments += @('-perfSet', 'quick') }
+    if ($Set) { $arguments += @('-perfSet', $Set) }
+    if ($JobWorkers -ge 0) { $arguments += @('-perfJobWorkers', "$JobWorkers") }
     if ($Short) { $arguments += '-perfQuick' }
     if ($MaxN -gt 0) { $arguments += @('-perfMaxN', "$MaxN") }
     if ($MinN -gt 0) { $arguments += @('-perfMinN', "$MinN") }

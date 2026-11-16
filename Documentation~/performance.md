@@ -197,6 +197,38 @@ What it gains and where it does not:
 - Measured on a 24-thread desktop CPU. On a CPU with few cores the worker time is the frame time;
   measure on your target.
 
+### Which policy when (P10-005)
+
+Measured in an IL2CPP Player on Unity 6000.6.9f1 (the earlier tables in this page are from
+6000.7.0b1; compare policies within one table, not across), 24-thread desktop CPU, main-thread µs
+per frame for the whole population (`Planning~/Evidence/P10-005/README.md`):
+
+| Agents with the same tree | `Immediate` (default) | `JobsAgentFrame` | Use |
+|---|---|---|---|
+| 1–10 | 16–50 µs (simple trees), 70–550 µs (`shared-reactive16`) | +3…+17 µs slower for simple trees; 1.6–5× faster for the reactive tree | default |
+| 20–30 | simple trees 55–135 µs | ≥10% faster from 20 (looping, fact/effect trees) or 30 (one waiting leaf) | either |
+| 50–500 | | 1.4–9× faster | `JobsAgentFrame` |
+| 1 000–20 000 | | 1.7–3.5× faster (simple trees), 10–11× (reactive) | `JobsAgentFrame` |
+
+- `JobsAgentFrame` also uses less CPU for the agents' work itself (0.45–0.88× of Immediate on one
+  thread). With many idle job workers the process can use 0.3–1.2 ms more CPU per frame at 10–500
+  simple agents, because woken workers spin before they sleep.
+- **Few cores** (simulated by limiting the job workers on the same CPU): with 0, 1 or 3 workers it is
+  still faster than Immediate (0.49–0.80× with none, 0.27–0.68× with one).
+- **Keep fallback agents together.** An agent that cannot run in the job (no generated dispatch, a
+  `StepBudget`, an old catalog) closes the current job batch. If such agents are spread among
+  job-eligible agents of the same profile, every batch holds one agent and the population becomes
+  1.3–1.7× slower than plain `Immediate`. Give them a different profile, or keep them out of the
+  population that uses `JobsAgentFrame`.
+- **`UpdateCadence`** works with `JobsAgentFrame`. When many agents are enabled in the same frame
+  they stay in step; enabling them over several frames spreads their updates (p99 frame 2.7–4.5×
+  lower).
+- `BatchedJobsSameFrame` was not faster than `Immediate` by more than 2% in any measured case; prefer
+  `JobsAgentFrame`.
+- The managed layer (`BehaviorTreeAgent`) costs 1.15–1.5 µs per agent at 1 000–5 000 agents for a
+  15-node tree; native agents under `JobsAgentFrame` cost 0.9–1.6 µs for comparable trees there and
+  more at 20 000 (1.8–2.3 µs).
+
 ### Step limit
 
 Every native policy stops an update after `ProductionTreeHost.MaximumStepsPerUpdate` lifecycle
@@ -211,6 +243,6 @@ a tree sooner.
   on `StaggerIntervalTicks` when many are spawned together.
 - Keep reactive conditions few; each one is re-evaluated every tick.
 - In the native layer, prefer trees that loop over trees that finish and restart.
-- Keep the default native profile unless a measurement on your target shows a Jobs policy is faster.
-  `JobsAgentFrame` is the first Jobs policy that is faster on the main thread in every measured
-  case (`Planning~/Evidence/P10-004/README.md`).
+- For native populations of about 30 or more agents with the same profile, use
+  `SchedulingProfile.JobsAgentFrame`; below that keep the default (see "Which policy when"). It is
+  not chosen automatically; measure on your target, especially on mobile CPUs.

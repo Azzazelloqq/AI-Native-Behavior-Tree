@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.IO;
 using System.Text;
 using AIBT.Samples.SimpleAgent;
@@ -43,6 +44,13 @@ namespace AIBT.Perf
         public bool AgentFrame;
         public bool AgentFramePointer;
         public bool Stagger;
+        // P10-005: native UpdateCadence (frames) through a custom profile, agents enabled over
+        // Cadence consecutive frames (StaggerSpawn) so that their phases spread, and a mixed
+        // population where every second JobsAgentFrame host has a StepBudget (falls back).
+        public uint Cadence = 1;
+        public bool StaggerSpawn;
+        public bool MixedFallback;
+        public bool MixedGrouped;
         public int Warmup = 150;
         public int Measure = 400;
     }
@@ -145,8 +153,15 @@ namespace AIBT.Perf
                 _sources[entry.name] = source;
             }
 
-            if (set == "quick") BuildQuickPlan();
-            else BuildPlan(quick);
+            foreach (var part in set.Split(','))
+            {
+                if (part == "quick") BuildQuickPlan();
+                else if (part.StartsWith("j3-", StringComparison.Ordinal)) BuildJ3Plan(part);
+                else if (part == "full-immediate") { BuildPlan(quick); _plan.RemoveAll(x => x.Jobs || x.Pipelined || x.AgentFrame); }
+                // P10-005: the same without N > 5 000 (N = 20 000 of the J3 trees is in j3-scale).
+                else if (part == "full-immediate-5k") { BuildPlan(quick); _plan.RemoveAll(x => x.Jobs || x.Pipelined || x.AgentFrame || x.N > 5000); }
+                else BuildPlan(quick);
+            }
             var profileType = typeof(ProductionTreeScheduler).Assembly.GetType("AIBT.SchedulerFrameProfileV1");
             const System.Reflection.BindingFlags any = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
             _profileReset = profileType?.GetMethod("Reset", any);
@@ -284,6 +299,93 @@ namespace AIBT.Perf
             foreach (var s in _plan) { s.Warmup = 120; s.Measure = 250; }
         }
 
+        /// <summary>
+        /// P10-005 (stage J3) sets. Policies of one tree and N are adjacent in the plan, so each run
+        /// interleaves them. j3-small: N = 1..500 crossover; j3-cross: N = 10..75, Immediate and
+        /// JobsAgentFrame only, for repeats around the crossover; j3-scale: N = 1 000..20 000 plus the
+        /// managed controls; j3-scale20k: the native part at N = 20 000 only; j3-workers: Immediate
+        /// and JobsAgentFrame at N = 1 000 and 5 000 (run it with -perfJobWorkers); j3-mixed: half the
+        /// JobsAgentFrame hosts fall back (StepBudget); j3-cadence: UpdateCadence 6 with and without
+        /// staggered enabling, Immediate and JobsAgentFrame.
+        /// </summary>
+        private void BuildJ3Plan(string set)
+        {
+            var trees = new[] { "native-wait1", "shared-loop16", "shared-reactive16", "native-move1" };
+            string Label(string tree) => tree == "native-wait1" ? "n-io-wait1" : tree == "native-move1" ? "n-io-move1-fact-effect" : "n-" + tree;
+            Scenario Variant(string tree, int n, int variant)
+            {
+                var id = Label(tree) + (variant == 1 ? "-jobs" : variant == 2 ? "-agentframe" : variant == 3 ? "-agentframe-mixed" : variant == 4 ? "-agentframe-mixed-grouped" : string.Empty);
+                var s = Native(id, tree, n);
+                s.Jobs = variant == 1;
+                s.AgentFrame = variant >= 2;
+                s.MixedFallback = variant >= 3;
+                s.MixedGrouped = variant == 4;
+                if (tree == "native-move1") { s.Feeder = FeederMode.NativeFactDistance; s.EffectHandler = true; }
+                return s;
+            }
+            var start = _plan.Count;
+            switch (set)
+            {
+                case "j3-small":
+                    foreach (var n in new[] { 1, 10, 50, 100, 200, 500 })
+                        foreach (var tree in trees)
+                            foreach (var v in new[] { 0, 1, 2 }) Add(Variant(tree, n, v));
+                    break;
+                case "j3-cross":
+                    foreach (var n in new[] { 10, 20, 30, 40, 50, 75 })
+                        foreach (var tree in trees)
+                            foreach (var v in new[] { 0, 2 }) Add(Variant(tree, n, v));
+                    break;
+                case "j3-scale":
+                    foreach (var n in new[] { 1000, 5000, 20000 })
+                    {
+                        foreach (var tree in trees)
+                            foreach (var v in new[] { 0, 1, 2 }) Add(Variant(tree, n, v));
+                        Add(Managed("m-unity15-both", "unity-shape15-both", n));
+                        Add(Managed("m-shared-shape15", "shared-shape15", n));
+                    }
+                    break;
+                case "j3-scale20k":
+                    foreach (var tree in trees)
+                        foreach (var v in new[] { 0, 1, 2 }) Add(Variant(tree, 20000, v));
+                    break;
+                case "j3-workers":
+                    foreach (var n in new[] { 1000, 5000 })
+                        foreach (var tree in trees)
+                            foreach (var v in new[] { 0, 2 }) Add(Variant(tree, n, v));
+                    break;
+                case "j3-mixed":
+                    foreach (var n in new[] { 1000, 5000 })
+                        foreach (var tree in trees)
+                            foreach (var v in new[] { 0, 2, 3, 4 }) Add(Variant(tree, n, v));
+                    break;
+                case "j3-cadence":
+                    foreach (var n in new[] { 1000, 5000 })
+                        foreach (var tree in new[] { "native-wait1", "shared-loop16" })
+                            foreach (var v in new[] { 0, 2 })
+                                foreach (var stagger in new[] { false, true })
+                                {
+                                    var s = Variant(tree, n, v);
+                                    s.Id += stagger ? "-cadence6-stagger" : "-cadence6";
+                                    s.Cadence = 6u;
+                                    s.StaggerSpawn = stagger;
+                                    Add(s);
+                                }
+                    break;
+                default:
+                    throw new ArgumentException("Unknown -perfSet part " + set);
+            }
+            for (var i = start; i < _plan.Count; i++)
+            {
+                var s = _plan[i];
+                if (set == "j3-small") { s.Warmup = 200; s.Measure = 1000; }
+                else if (set == "j3-cross") { s.Warmup = 200; s.Measure = 1500; }
+                else if (set == "j3-cadence") { s.Warmup = 120; s.Measure = 600; }
+                else if (s.N >= 10000) { s.Warmup = 60; s.Measure = 150; }
+                else { s.Warmup = 120; s.Measure = 250; }
+            }
+        }
+
         private void Add(Scenario s) => _plan.Add(s);
 
         private static Scenario Managed(string id, string tree, int n) => new Scenario { Id = id, Kind = ScenarioKind.Managed, Tree = tree, N = n };
@@ -329,6 +431,15 @@ namespace AIBT.Perf
                     _frame = 0;
                     break;
                 case 1: // settle, then measure retained memory
+                    if (_pendingActivation.Count > 0)
+                    {
+                        // P10-005 StaggerSpawn: enable ceil(N / Cadence) agents per frame.
+                        var chunk = (s.N + (int)s.Cadence - 1) / (int)s.Cadence;
+                        var count = Math.Min(chunk, _pendingActivation.Count);
+                        for (var k = 0; k < count; k++) _pendingActivation[k].SetActive(true);
+                        _pendingActivation.RemoveRange(0, count);
+                        break;
+                    }
                     if (++_frame < 3) break;
                     FullCollect();
                     _heapAfter = GC.GetTotalMemory(true);
@@ -341,6 +452,7 @@ namespace AIBT.Perf
                     ++_frame;
                     if (_frame < s.Warmup && !(_frame >= 10 && PerfClock.Watch.ElapsedMilliseconds - _phaseStart > 5000)) break;
                     BeginMeasure(s);
+                    BeginCpuWindow();
                     _phase = 3;
                     _frame = 0;
                     _phaseStart = PerfClock.Watch.ElapsedMilliseconds;
@@ -349,6 +461,7 @@ namespace AIBT.Perf
                     Sample();
                     ++_frame;
                     if (_frame < s.Measure && !(_frame >= 30 && PerfClock.Watch.ElapsedMilliseconds - _phaseStart > 20000)) break;
+                    EndCpuWindow();
                     _measuredFrames = _frame;
                     _profile = _profileSnapshot != null ? (string)_profileSnapshot.Invoke(null, null) : null;
                     _measuredGc = GC.CollectionCount(0) - _gcStart;
@@ -430,6 +543,10 @@ namespace AIBT.Perf
                     break;
                 case ScenarioKind.Native:
                     var asset = FindNative(s.Tree);
+                    SchedulingProfile cadenceProfile = null;
+                    if (s.Cadence > 1u && !SchedulingProfile.TryCreate("aibt.perf.cadence" + s.Cadence + (s.AgentFrame ? ".agentframe" : string.Empty), 0, s.Cadence, null, null, false,
+                            s.AgentFrame ? SchedulingPolicy.JobsAgentFrame : (SchedulingPolicy?)null, out cadenceProfile, out var cadenceError))
+                        Debug.LogError("AIBT_PERF|cadence profile: " + cadenceError);
                     for (var i = 0; i < s.N; i++)
                     {
                         var go = new GameObject("n" + i);
@@ -438,9 +555,14 @@ namespace AIBT.Perf
                         agent.Tree = asset;
                         if (s.Jobs) agent.Profile = s.Pipelined ? _pipelinedProfile : _jobsProfile;
                         if (s.AgentFrame) agent.Profile = SchedulingProfile.JobsAgentFrame;
+                        if (cadenceProfile != null) agent.Profile = cadenceProfile;
                         if (s.EffectHandler) agent.OnEffect("move-speed", (Action<float>)CountEffect);
                         agent.Faulted += OnFault;
-                        go.SetActive(true);
+                        if (s.StaggerSpawn) _pendingActivation.Add(go);
+                        else go.SetActive(true);
+                        // P10-005: -agentframe-mixed alternates (every second host falls back, so each
+                        // fallback splits the job batch); -grouped puts all fallback hosts in the second half.
+                        if (s.MixedFallback && (s.MixedGrouped ? i >= s.N / 2 : (i & 1) == 1) && agent.Host != null) agent.Host.StepBudget = 1000000u;
                         if (s.AgentFramePointer && agent.Host != null && !PerfAgentFramePointer.TryInstall(agent.Host)) _fpInstallFailed = true;
                         _objects.Add(go);
                         _native.Add(agent);
@@ -644,7 +766,13 @@ namespace AIBT.Perf
                 .Append(",\"spotted\":").Append(PerfClock.SpottedCount - _spottedStart)
                 .Append(",\"running\":").Append(running)
                 .Append(",\"nativeCompletedRuns\":").Append(completed)
-                .Append(",\"faultsTotal\":").Append(_faults);
+                .Append(",\"faultsTotal\":").Append(_faults)
+                .Append(",\"cadence\":").Append(s.Cadence)
+                .Append(",\"staggerSpawn\":").Append(s.StaggerSpawn ? "true" : "false")
+                .Append(",\"mixedFallback\":").Append(s.MixedFallback ? (s.MixedGrouped ? "\"grouped\"" : "\"alternating\"") : "false")
+                .Append(",\"cpuWindowWallUs\":").Append(F(_cpuWallUs))
+                .Append(",\"cpuWindowProcessUs\":").Append(_cpuProcessUs)
+                .Append(",\"cpuWindowMainThreadUs\":").Append(_cpuMainUs);
             if (_profile != null) _meta.Append(",\"frameProfile\":").Append(_profile);
             if (s.AgentFrame && _agentFrameSnapshot != null) _meta.Append(",\"agentFrameStats\":").Append((string)_agentFrameSnapshot.Invoke(null, null));
             _meta.Append('}');
@@ -653,6 +781,46 @@ namespace AIBT.Perf
         }
 
         private bool _fpInstallFailed;
+        private readonly List<GameObject> _pendingActivation = new List<GameObject>();
+
+        // P10-005: CPU time of the whole process and of the main thread over the measured frames
+        // (GetProcessTimes / GetThreadTimes, 100 ns units, Windows Player only; -1 elsewhere). Process
+        // CPU includes the render thread, the job workers (also while they spin idle) and the engine.
+        private long _cpuProcessStart;
+        private long _cpuMainStart;
+        private long _cpuWallStart;
+        private long _cpuProcessUs = -1;
+        private long _cpuMainUs = -1;
+        private double _cpuWallUs;
+
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+        [DllImport("kernel32.dll")] private static extern IntPtr GetCurrentProcess();
+        [DllImport("kernel32.dll")] private static extern IntPtr GetCurrentThread();
+        [DllImport("kernel32.dll")] private static extern bool GetProcessTimes(IntPtr process, out long creation, out long exit, out long kernel, out long user);
+        [DllImport("kernel32.dll")] private static extern bool GetThreadTimes(IntPtr thread, out long creation, out long exit, out long kernel, out long user);
+
+        private static long ProcessCpu100ns() => GetProcessTimes(GetCurrentProcess(), out _, out _, out var k, out var u) ? k + u : -1;
+        private static long MainThreadCpu100ns() => GetThreadTimes(GetCurrentThread(), out _, out _, out var k, out var u) ? k + u : -1;
+#else
+        private static long ProcessCpu100ns() => -1;
+        private static long MainThreadCpu100ns() => -1;
+#endif
+
+        private void BeginCpuWindow()
+        {
+            _cpuProcessStart = ProcessCpu100ns();
+            _cpuMainStart = MainThreadCpu100ns();
+            _cpuWallStart = PerfClock.Watch.ElapsedTicks;
+        }
+
+        private void EndCpuWindow()
+        {
+            var process = ProcessCpu100ns();
+            var main = MainThreadCpu100ns();
+            _cpuWallUs = PerfClock.TicksToMicroseconds(PerfClock.Watch.ElapsedTicks - _cpuWallStart);
+            _cpuProcessUs = process >= 0 && _cpuProcessStart >= 0 ? (process - _cpuProcessStart) / 10 : -1;
+            _cpuMainUs = main >= 0 && _cpuMainStart >= 0 ? (main - _cpuMainStart) / 10 : -1;
+        }
 
         private void Teardown()
         {
@@ -660,6 +828,7 @@ namespace AIBT.Perf
             feeder.mode = FeederMode.None;
             feeder.Managed.Clear();
             feeder.Native.Clear();
+            _pendingActivation.Clear();
             foreach (var go in _objects) if (go != null) Destroy(go);
             _objects.Clear();
             _managed.Clear();
