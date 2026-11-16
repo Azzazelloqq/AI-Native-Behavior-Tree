@@ -4,6 +4,13 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Unity 6000.6 compatibility (P10-006)
+
+- The package compiles on Unity 6000.6.9f1: `Editor/Graph/BehaviorTreeImporter.cs` selects the
+  `EntityId` overload of its `OnOpenAsset` handler from 6000.6 instead of 6000.7 (conditional
+  compilation; 6000.7 and newer compile the same code as before). All AIBT test assemblies give the
+  same results on 6000.6.9f1 as the last 6000.7.0b1 baseline (`Planning~/Evidence/P10-006/README.md`).
+
 ### Performance measurement (P10-005)
 
 - Measured the native policies across 1–20 000 agents, job worker counts, mixed populations and
@@ -15,7 +22,7 @@ All notable changes to this project will be documented here. The project follows
   automatic selection).
 - Known issue: the package at this version does not compile on Unity 6000.6.9f1
   (`Editor/Graph/BehaviorTreeImporter.cs` uses `AssetDatabase.GetAssetPath(int)`, an error there;
-  the `EntityId` overload is selected only from 6000.7). Not fixed yet.
+  the `EntityId` overload is selected only from 6000.7). Fixed in P10-006.
 - Benchmark harness: scenario sets for small N, scale, worker count, mixed populations and cadence;
   process and main-thread CPU time per scenario; `Invoke-Perf.ps1 -Set` and `-JobWorkers`.
 

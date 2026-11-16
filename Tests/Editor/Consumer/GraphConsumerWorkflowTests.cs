@@ -20,7 +20,7 @@ namespace AIBT.Tests.Consumer
             var unrelated = ScriptableObject.CreateInstance<ProductionTreeAsset>();
             try
             {
-#if UNITY_6000_7_OR_NEWER
+#if UNITY_6000_6_OR_NEWER
                 object id = unrelated.GetEntityId();
 #else
                 object id = unrelated.GetInstanceID();

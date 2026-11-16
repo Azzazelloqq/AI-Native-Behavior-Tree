@@ -1,0 +1,19 @@
+﻿assembly AIBT.NativeTreeAgentBlackboard.Tests 33/33 (failed=0 skipped=0)  exit=0 seconds=2
+assembly AIBT.NativeSharedBlackboard.Tests 36/36 (failed=0 skipped=0)  exit=0 seconds=2
+assembly AIBT.NativeBurstDispatch.Tests 79/79 (failed=0 skipped=0)  exit=0 seconds=2
+assembly AIBT.BehaviorCases.Tests 65/65 (failed=0 skipped=0)  exit=0 seconds=2
+assembly AIBT.Integration.Tests 88/88 (failed=0 skipped=0)  exit=0 seconds=16
+assembly AIBT.Editor.Tests 635/636 (failed=1 skipped=0)
+  FAIL AIBT.Tests.Editor.Mcp.Discovery.McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog
+      With no custom nodes registered, the catalog must be exactly the built-in set -- honestly, not padded or trimmed. Extra: [aibt.samples.first-agent.move, aibt.samples.swarm.attack-with-cooldown, aibt.samples.swarm.steer, aibt.samples.swarm.within-radius, samples.simple.next-waypoint] Missing: []
+      Expected is <System.String[69]>, actual is <System.String[74]>
+      Values differ at index [15]
+      Expected string length 28 but was 29. Strings differ at index 6.
+      Expected: "aibt.stdlib.random-condition"
+      But was:  "aibt.samples.first-agent.move"
+    ... (1 more lines)
+    at AIBT.Tests.Editor.Mcp.Discovery.McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog () [0x0016d] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Editor\Mcp\Discovery\McpToolDispatcherTests.cs:82
+  exit=1 seconds=26
+assembly AIBT.Runtime.Tests 710/710 (failed=0 skipped=0)  exit=0 seconds=7
+done
+assembly AIBT.PlayMode.Tests (playmode, run_tests --async_tests + test_status) 1/1 (failed=0) NavMoveToPlayModeTests.NavMoveToRoutesAroundAWallArrivesAndRestoresTheAgentsSpeed Passed 2.42 s
