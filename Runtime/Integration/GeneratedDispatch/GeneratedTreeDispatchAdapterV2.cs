@@ -308,6 +308,16 @@ namespace AIBT
         {
             if (!(_catalog.Executor is AIBT.AgentFrame.IGeneratedAgentFrameExecutorV1))
                 return AgentFrameFallbackReason.CatalogWithoutAgentFrameEntry;
+            // P10-007: the scheduler asks every frame for every default-profile host; the binding
+            // and slot tables are fixed at construction, so their answer is computed once.
+            if (_agentFrameBindingFallback < 0) _agentFrameBindingFallback = (int)GetAgentFrameBindingFallback();
+            return (AgentFrameFallbackReason)_agentFrameBindingFallback;
+        }
+
+        private int _agentFrameBindingFallback = -1;
+
+        private AgentFrameFallbackReason GetAgentFrameBindingFallback()
+        {
             var binding = _definition.Binding;
             for (var index = 0; index < binding.Accesses.Count; index++)
             {

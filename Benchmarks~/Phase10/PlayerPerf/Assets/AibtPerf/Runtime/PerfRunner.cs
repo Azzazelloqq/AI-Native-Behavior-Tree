@@ -42,6 +42,7 @@ namespace AIBT.Perf
         public bool Jobs;
         public bool Pipelined;
         public bool AgentFrame;
+        public bool AgentFrameStats; // P10-007: write agentFrameStats for a default-profile scenario too
         public bool AgentFramePointer;
         public bool Stagger;
         // P10-005: native UpdateCadence (frames) through a custom profile, agents enabled over
@@ -157,6 +158,20 @@ namespace AIBT.Perf
             {
                 if (part == "quick") BuildQuickPlan();
                 else if (part.StartsWith("j3-", StringComparison.Ordinal)) BuildJ3Plan(part);
+                // P10-007: default profile only (automatic selection after the change), N around the
+                // threshold of 64; agentFrameStats tell whether the job ran.
+                else if (part == "p10007")
+                {
+                    foreach (var n in new[] { 16, 63, 64, 256, 2000 })
+                        foreach (var tree in new[] { "shared-loop16", "shared-reactive16" })
+                        {
+                            var scenario = Native("n-" + tree, tree, n);
+                            scenario.Warmup = n >= 2000 ? 120 : 200;
+                            scenario.Measure = n >= 2000 ? 250 : 1000;
+                            scenario.AgentFrameStats = true;
+                            Add(scenario);
+                        }
+                }
                 else if (part == "full-immediate") { BuildPlan(quick); _plan.RemoveAll(x => x.Jobs || x.Pipelined || x.AgentFrame); }
                 // P10-005: the same without N > 5 000 (N = 20 000 of the J3 trees is in j3-scale).
                 else if (part == "full-immediate-5k") { BuildPlan(quick); _plan.RemoveAll(x => x.Jobs || x.Pipelined || x.AgentFrame || x.N > 5000); }
@@ -774,7 +789,7 @@ namespace AIBT.Perf
                 .Append(",\"cpuWindowProcessUs\":").Append(_cpuProcessUs)
                 .Append(",\"cpuWindowMainThreadUs\":").Append(_cpuMainUs);
             if (_profile != null) _meta.Append(",\"frameProfile\":").Append(_profile);
-            if (s.AgentFrame && _agentFrameSnapshot != null) _meta.Append(",\"agentFrameStats\":").Append((string)_agentFrameSnapshot.Invoke(null, null));
+            if ((s.AgentFrame || s.AgentFrameStats) && _agentFrameSnapshot != null) _meta.Append(",\"agentFrameStats\":").Append((string)_agentFrameSnapshot.Invoke(null, null));
             _meta.Append('}');
             File.AppendAllText(Path.Combine(_out, "runs.jsonl"), _meta + "\n");
             Debug.Log("AIBT_PERF|RUN|" + _meta);

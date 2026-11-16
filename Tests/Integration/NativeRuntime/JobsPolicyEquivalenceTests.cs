@@ -278,6 +278,173 @@ namespace AIBT.Tests.Integration.NativeRuntime
             AssertSame(immediate, agentFrame, before + " + 1 + " + after);
         }
 
+        // ---- P10-007 step 2: automatic selection for profiles that force no policy ----
+
+        [Test]
+        public void AutomaticSelection_IsObservablyIdenticalToImmediate_FrameByFrame()
+        {
+            // 70 agents per tree, each tree's agents next to each other: the default profile selects
+            // JobsAgentFrame for the runs of 64+, and every frame equals a forced Immediate run.
+            var trees = new[] { Prepare(SequenceTree), Prepare(ReactiveEffectTree), Prepare(LoopTree) };
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true, agentCount: 210, groupedTrees: true);
+            var automatic = Run(trees, Mode.DefaultProfile, withTreeValues: true, agentCount: 210, groupedTrees: true);
+
+            Assert.That(immediate.Effects, Is.GreaterThan(20), "Effects are delivered.");
+            Assert.That(immediate.Restarts, Is.GreaterThan(20), "Trees complete and restart.");
+            Assert.That(immediate.Lines.Count(l => l.Contains(" NodeAbortStarted ")), Is.GreaterThan(5), "Reactive aborts happen.");
+            Assert.That(immediate.JobBatches, Is.Zero);
+            Assert.That(automatic.JobBatches, Is.GreaterThanOrEqualTo(FrameCount), "Runs were selected every frame.");
+            Assert.That(automatic.AutomaticEntries, Is.GreaterThan(FrameCount * 70), "Entries report the automatic choice.");
+            AssertSame(immediate, automatic, "automatic JobsAgentFrame");
+        }
+
+        [TestCase(63, false)]
+        [TestCase(64, true)]
+        public void AutomaticSelection_Boundary(int agents, bool expectSelected)
+        {
+            // 63 consecutive eligible members stay Immediate; 64 run as JobsAgentFrame in one job.
+            var trees = new[] { Prepare(LoopTree) };
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true, agentCount: agents, restartMode: NativeTreeRestartMode.Never);
+            var automatic = Run(trees, Mode.DefaultProfile, withTreeValues: true, agentCount: agents, restartMode: NativeTreeRestartMode.Never);
+
+            var entries = automatic.LastFrameEntries;
+            Assert.That(entries.Count, Is.EqualTo(agents));
+            foreach (var entry in entries)
+            {
+                Assert.That(entry.SelectedPolicy, Is.EqualTo(expectSelected ? SchedulingPolicy.JobsAgentFrame : SchedulingPolicy.Immediate));
+                Assert.That(entry.SelectionReason, Is.EqualTo(expectSelected ? SchedulerSelectionReason.AutomaticAgentFrameRun : SchedulerSelectionReason.None));
+                Assert.That(entry.SelectionSource, Is.EqualTo(SchedulerFrameSelectionSource.DirectHostPath));
+                Assert.That(entry.AgentFrameRanInPlace, Is.False);
+                Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.None));
+            }
+            Assert.That(automatic.JobBatches, Is.EqualTo(expectSelected ? FrameCount : 0));
+            AssertSame(immediate, automatic, agents + " default-profile agents");
+        }
+
+        [TestCase(40, 40, false)]
+        [TestCase(64, 10, true)]
+        public void AutomaticSelection_IneligibleMemberBreaksTheRun_Silently(int before, int after, bool firstSelected)
+        {
+            // A step-budget member is not eligible: it stays Budgeted, logs nothing, and splits the
+            // eligible members into two runs judged separately (40 + 1 + 40: none; 64 + 1 + 10: the first).
+            var trees = new[] { Prepare(LoopTree) };
+            void Budget(List<NativeTreeAgent> agents) => agents[before].Host.StepBudget = 1000000u;
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true, prepare: Budget,
+                agentCount: before + 1 + after, restartMode: NativeTreeRestartMode.Never);
+            var automatic = Run(trees, Mode.DefaultProfile, withTreeValues: true, prepare: Budget,
+                agentCount: before + 1 + after, restartMode: NativeTreeRestartMode.Never);
+            UnityEngine.TestTools.LogAssert.NoUnexpectedReceived();
+
+            var entries = automatic.LastFrameEntries;
+            Assert.That(entries.Count, Is.EqualTo(before + 1 + after));
+            for (var index = 0; index < entries.Count; index++)
+            {
+                var entry = entries[index];
+                Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.None), "entry " + index);
+                Assert.That(entry.AgentFrameRanInPlace, Is.False, "entry " + index);
+                var expected = index == before ? SchedulingPolicy.Budgeted
+                    : index < before && firstSelected ? SchedulingPolicy.JobsAgentFrame : SchedulingPolicy.Immediate;
+                Assert.That(entry.SelectedPolicy, Is.EqualTo(expected), "entry " + index);
+            }
+            Assert.That(automatic.JobBatches, Is.EqualTo(firstSelected ? FrameCount : 0));
+            AssertSame(immediate, automatic, before + " + 1 + " + after);
+        }
+
+        [Test]
+        public void AutomaticSelection_CatalogWithoutAgentFrameEntry_StaysImmediate_WithoutWarnings()
+        {
+            // A catalog generated before P10-004 is never selected and never warns (the forced
+            // profile warns once per host; the automatic choice must not, or old projects fill the log).
+            var trees = new[] { Prepare(LoopTree) };
+            var swapped = new List<(object Catalog, object Executor)>();
+            var executorProperty = typeof(GeneratedBurstCatalogV2).GetProperty("Executor", BindingFlags.Instance | BindingFlags.NonPublic);
+            void Swap(List<NativeTreeAgent> agents)
+            {
+                foreach (var agent in agents)
+                {
+                    var catalog = agent.Host.GeneratedDispatchAdapter.Catalog;
+                    var executor = (IGeneratedBurstCatalogExecutorV2)executorProperty.GetValue(catalog);
+                    if (executor is LegacyExecutor) continue;
+                    swapped.Add((catalog, executor));
+                    executorProperty.SetValue(catalog, new LegacyExecutor(executor));
+                }
+            }
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true, agentCount: 80, restartMode: NativeTreeRestartMode.Never);
+            Outcome automatic;
+            try
+            {
+                automatic = Run(trees, Mode.DefaultProfile, withTreeValues: true, prepare: Swap, agentCount: 80,
+                    restartMode: NativeTreeRestartMode.Never);
+            }
+            finally
+            {
+                foreach (var (catalog, executor) in swapped) executorProperty.SetValue(catalog, executor);
+            }
+            UnityEngine.TestTools.LogAssert.NoUnexpectedReceived();
+
+            Assert.That(swapped, Is.Not.Empty, "The catalog's executor was replaced.");
+            Assert.That(automatic.JobBatches, Is.Zero);
+            Assert.That(automatic.AutomaticEntries, Is.Zero);
+            Assert.That(automatic.LastFrameEntries.All(e => e.SelectedPolicy == SchedulingPolicy.Immediate
+                && e.AgentFrameFallback == AgentFrameFallbackReason.None), Is.True);
+            AssertSame(immediate, automatic, "automatic selection on a catalog without an agent-frame entry");
+        }
+
+        [Test]
+        public void AutomaticSelection_DoesNotApplyUnderABoundedBudget_ShareAdmissionUnchanged()
+        {
+            // Under a fixed budget every default-profile host keeps the Immediate path and its
+            // per-host admission: a tiny MaximumBudgetShare still defers all but the first host of
+            // the profile each frame, exactly as before P10-007.
+            var trees = new[] { Prepare(LoopTree) };
+            Assert.That(SchedulingProfile.TryCreate("tests.p10007.share", 0, 1u, null, 1e-9, false, null,
+                out var shareProfile, out var error), Is.True, error.ToString());
+
+            var automatic = Run(trees, Mode.DefaultProfile, agentCount: 80, restartMode: NativeTreeRestartMode.Never,
+                profileOverride: shareProfile, configure: scheduler => scheduler.SetFixedBudget(1000000.0));
+
+            Assert.That(automatic.JobBatches, Is.Zero);
+            Assert.That(automatic.AutomaticEntries, Is.Zero);
+            var entries = automatic.LastFrameEntries;
+            Assert.That(entries.Count, Is.EqualTo(80));
+            Assert.That(entries.All(e => e.SelectedPolicy == SchedulingPolicy.Immediate), Is.True);
+            Assert.That(entries.Count(e => e.Disposition == SchedulerFrameDisposition.Executed), Is.EqualTo(1),
+                "The share cap admits one host per frame.");
+            Assert.That(automatic.DeferredShareEntries, Is.EqualTo(FrameCount * 79));
+        }
+
+        [Test]
+        public void AutomaticSelection_Off_RestoresThePreviousBehaviour()
+        {
+            // AutomaticAgentFrameSelection = false: the population that is selected above stays on the
+            // direct Immediate path, with the entries it produced before P10-007.
+            var trees = new[] { Prepare(SequenceTree), Prepare(ReactiveEffectTree), Prepare(LoopTree) };
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true, agentCount: 210, groupedTrees: true);
+            var off = Run(trees, Mode.DefaultProfile, withTreeValues: true, agentCount: 210, groupedTrees: true,
+                configure: scheduler =>
+                {
+                    Assert.That(scheduler.AutomaticAgentFrameSelection, Is.True, "On by default.");
+                    scheduler.AutomaticAgentFrameSelection = false;
+                });
+
+            Assert.That(off.JobBatches, Is.Zero);
+            Assert.That(off.AutomaticEntries, Is.Zero);
+            Assert.That(off.InPlaceEntries, Is.Zero);
+            foreach (var entry in off.LastFrameEntries)
+            {
+                Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.Immediate));
+                Assert.That(entry.SelectionReason, Is.EqualTo(SchedulerSelectionReason.None));
+                Assert.That(entry.SelectionSource, Is.EqualTo(SchedulerFrameSelectionSource.DirectHostPath));
+                Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.None));
+            }
+            AssertSame(immediate, off, "automatic selection off");
+        }
+
         private sealed class LegacyExecutor : IGeneratedBurstCatalogExecutorV2
         {
             private readonly IGeneratedBurstCatalogExecutorV2 _inner;
@@ -744,6 +911,65 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        [Test]
+        public void WarmedUpAutomaticJobsAgentFrameFrames_DoNotAllocateManagedMemory()
+        {
+            // P10-007: 70 default-profile agents of one tree run as JobsAgentFrame automatically; the
+            // run search and the batch allocate nothing once warmed up. Zero tolerance.
+            var recorder = UnityEngine.Profiling.Recorder.Get("GC.Alloc");
+            recorder.FilterToCurrentThread();
+            object kept = null;
+            Assert.That(CountAllocations(recorder, () => kept = new byte[64], 10), Is.EqualTo(10), "The recorder must see allocations.");
+            Assert.That(kept, Is.Not.Null);
+
+            var tree = Prepare(ReactiveEffectTree);
+            var worldObject = Track(new GameObject("AIBT.Tests.P10007.AllocationWorld"));
+            var scheduler = worldObject.AddComponent<ProductionTreeScheduler>();
+            var world = worldObject.AddComponent<ProductionTreeWorld>();
+            InvokePrivate(world, "Awake");
+            InvokePrivate(world, "OnEnable");
+            var update = (Action)Delegate.CreateDelegate(typeof(Action), scheduler,
+                typeof(ProductionTreeScheduler).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic));
+
+            var agents = new List<NativeTreeAgent>();
+            var effects = 0;
+            try
+            {
+                for (var index = 0; index < 70; index++)
+                {
+                    var agent = Track(new GameObject("AIBT.Tests.P10007.AllocationAgent" + index)).AddComponent<NativeTreeAgent>();
+                    agent.Tree = tree;
+                    agent.World = world;
+                    agent.RestartMode = NativeTreeRestartMode.Never;
+                    agent.OnEffect("hit", (int value) => effects++);
+                    agent.Activate();
+                    agent.SetFact("live-target", 1f);
+                    agent.SetFact("armed", true);
+                    agents.Add(agent);
+                }
+                for (var frame = 0; frame < 60; frame++) update();
+                var effectsBefore = effects;
+
+                var allocations = CountAllocations(recorder, update, 200);
+
+                Assert.That(effects - effectsBefore, Is.EqualTo(200 * 70), "Every emitter delivers one effect per frame while measured.");
+                Assert.That(scheduler.FrameEntryCount, Is.EqualTo(agents.Count));
+                for (var index = 0; index < scheduler.FrameEntryCount; index++)
+                {
+                    Assert.That(scheduler.TryGetFrameEntry(index, out var entry), Is.True);
+                    Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.JobsAgentFrame));
+                    Assert.That(entry.SelectionReason, Is.EqualTo(SchedulerSelectionReason.AutomaticAgentFrameRun));
+                    Assert.That(entry.AgentFrameRanInPlace, Is.False);
+                }
+                Assert.That(allocations, Is.Zero,
+                    allocations + " managed allocation(s) in 200 warmed-up automatic JobsAgentFrame frames; the tolerance is zero.");
+            }
+            finally
+            {
+                foreach (var agent in agents) if (agent != null) agent.Deactivate();
+            }
+        }
+
         private static int CountAllocations(UnityEngine.Profiling.Recorder recorder, Action action, int calls)
         {
             recorder.enabled = false;
@@ -765,6 +991,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             // P10-007: entries whose JobsAgentFrame batch ran on the main thread without a job,
             // the job batches the run scheduled, and the last frame's entries.
             internal int InPlaceEntries;
+            internal int AutomaticEntries;
+            internal int DeferredShareEntries;
             internal long JobBatches;
             internal readonly List<SchedulerFrameEntry> LastFrameEntries = new List<SchedulerFrameEntry>();
         }
@@ -791,7 +1019,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
         private Outcome Run(ProductionTreeAsset[] trees, Mode mode, bool withTreeValues = false,
             Action<List<NativeTreeAgent>> prepare = null, AgentFrameFallbackReason allowedFallback = AgentFrameFallbackReason.None,
             int agentFrameMinimumBatch = 1, int agentCount = 0, NativeTreeRestartMode? restartMode = null,
-            Action<ProductionTreeScheduler> configure = null)
+            Action<ProductionTreeScheduler> configure = null, bool groupedTrees = false,
+            SchedulingProfile profileOverride = null)
         {
             var outcome = new Outcome();
             var worldObject = Track(new GameObject("AIBT.Tests.P10002.World." + mode));
@@ -814,19 +1043,23 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 // P10-007: 12 members would run in place by default; most tests here cover the job.
                 scheduler.AgentFrameMinimumBatchSize = agentFrameMinimumBatch;
             }
+            if (profileOverride != null) profile = profileOverride;
             configure?.Invoke(scheduler);
 
             var agents = new List<NativeTreeAgent>();
             var frame = 0;
             var population = agentCount > 0 ? agentCount : trees.Length * AgentsPerTree;
+            // P10-007: grouped puts each tree's agents next to each other in registration (and due)
+            // order, so automatic selection can find runs on one catalog; otherwise trees alternate.
+            int TreeOf(int index) => groupedTrees ? index * trees.Length / population : index % trees.Length;
             for (var index = 0; index < population; index++)
             {
                 var gameObject = Track(new GameObject("AIBT.Tests.P10002.Agent" + index));
                 var agent = gameObject.AddComponent<NativeTreeAgent>();
-                agent.Tree = trees[index % trees.Length];
+                agent.Tree = trees[TreeOf(index)];
                 agent.World = world;
                 agent.RestartMode = restartMode
-                    ?? (index % trees.Length == 2 ? NativeTreeRestartMode.Never : NativeTreeRestartMode.Always);
+                    ?? (TreeOf(index) == 2 ? NativeTreeRestartMode.Never : NativeTreeRestartMode.Always);
                 if (profile != null) agent.Profile = profile;
                 var label = index;
                 agent.OnEffect("hit", (int value) =>
@@ -849,7 +1082,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     {
                         // Facts change between frames, at a different phase per agent.
                         agents[index].SetFact("live-target", (frame + index) % 7 < 5 ? 1f : 0f);
-                        if (index % trees.Length == 1) agents[index].SetFact("armed", (frame / (3 + index % 4)) % 3 != 2);
+                        if (TreeOf(index) == 1) agents[index].SetFact("armed", (frame / (3 + index % 4)) % 3 != 2);
                     }
                     InvokePrivate(scheduler, "Update");
                     outcome.LastFrameEntries.Clear();
@@ -863,6 +1096,12 @@ namespace AIBT.Tests.Integration.NativeRuntime
                             Assert.That(entry.AgentFrameFallback, Is.EqualTo(AgentFrameFallbackReason.None), "frame " + frame + ": in-place fallback");
                             outcome.InPlaceEntries++;
                         }
+                        if (entry.SelectionReason == SchedulerSelectionReason.AutomaticAgentFrameRun)
+                        {
+                            Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.JobsAgentFrame), "frame " + frame + ": automatic policy");
+                            outcome.AutomaticEntries++;
+                        }
+                        if (entry.Disposition == SchedulerFrameDisposition.DeferredProfileShare) outcome.DeferredShareEntries++;
                     }
                     if (mode == Mode.ForcedAgentFrame)
                     {

@@ -26,6 +26,13 @@ namespace AIBT
         BatchedForSameFrameThroughput = 5,
         FallbackToOnlyAvailablePolicy = 6,
         PreferredOverBatchedByMeasuredCost = 7,
+        /// <summary>
+        /// P10-007: the profile forces no policy and the host was part of a contiguous run of at least
+        /// <see cref="ProductionTreeScheduler.AgentFrameMinimumBatchSize"/> job-eligible members, so the
+        /// scheduler ran it as <see cref="SchedulingPolicy.JobsAgentFrame"/>
+        /// (<see cref="ProductionTreeScheduler.AutomaticAgentFrameSelection"/>).
+        /// </summary>
+        AutomaticAgentFrameRun = 8,
     }
 
     public enum SchedulerEstimateConfidence : byte

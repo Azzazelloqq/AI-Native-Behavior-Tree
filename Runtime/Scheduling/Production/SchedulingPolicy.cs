@@ -15,13 +15,16 @@ namespace AIBT
         BatchedJobsSameFrame = 2,
         PipelinedJobs = 3,
         /// <summary>
-        /// P10-004, opt-in only (never chosen automatically): one Burst job work item runs one
-        /// agent's whole update, node bodies included; the main thread only begins updates,
-        /// schedules and completes one job per group, and drains traces and effects in agent order.
-        /// Results equal <see cref="Immediate"/> frame by frame. A host the job cannot run (no
+        /// P10-004: one Burst job work item runs one agent's whole update, node bodies included; the
+        /// main thread only begins updates, schedules and completes one job per group, and drains
+        /// traces and effects in agent order. Results equal <see cref="Immediate"/> frame by frame.
+        /// Forced by <see cref="SchedulingProfile.JobsAgentFrame"/>: a host the job cannot run (no
         /// generated catalog, a catalog generated before P10-004, a step budget, shared-scope writes
         /// or async/managed leaves) runs as <see cref="Immediate"/> and its frame entry reports an
-        /// <see cref="AgentFrameFallbackReason"/>. Not part of the internal Auto-selection set.
+        /// <see cref="AgentFrameFallbackReason"/>. P10-007: also chosen automatically for hosts whose
+        /// profile forces no policy, from <see cref="ProductionTreeScheduler.AgentFrameMinimumBatchSize"/>
+        /// consecutive eligible agents (<see cref="ProductionTreeScheduler.AutomaticAgentFrameSelection"/>);
+        /// a batch shorter than that runs in place. Not part of the internal NativeAutoSelection set.
         /// </summary>
         JobsAgentFrame = 4,
     }
@@ -29,6 +32,7 @@ namespace AIBT
     /// <summary>
     /// P10-004: why a host whose profile forces <see cref="SchedulingPolicy.JobsAgentFrame"/> ran as
     /// <see cref="SchedulingPolicy.Immediate"/> instead (<see cref="SchedulerFrameEntry.AgentFrameFallback"/>).
+    /// Under automatic selection (P10-007) an ineligible host keeps its policy and reports None.
     /// </summary>
     public enum AgentFrameFallbackReason : byte
     {

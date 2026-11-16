@@ -171,6 +171,18 @@ namespace AIBT
             }
         }
 
+        /// <summary>
+        /// P10-007: whether hosts whose profile forces no policy (<see cref="SchedulingProfile.ForcedPolicy"/>
+        /// unset, e.g. <see cref="SchedulingProfile.Normal"/>) run as <see cref="SchedulingPolicy.JobsAgentFrame"/>
+        /// when they form a contiguous run, in this frame's due order, of at least
+        /// <see cref="AgentFrameMinimumBatchSize"/> job-eligible members with the same profile and
+        /// catalog. Applies only while the budget is <see cref="SchedulerBudgetMode.Unbounded"/>.
+        /// A host the job cannot run (any <see cref="AgentFrameFallbackReason"/>) keeps its previous
+        /// policy silently. Default true; false restores the behaviour before P10-007 exactly.
+        /// Profiles that force a policy are never affected.
+        /// </summary>
+        public bool AutomaticAgentFrameSelection { get; set; } = true;
+
         /// <summary>Registered host count, for inspection/tests -- not itself a scheduling input.</summary>
         public int RegisteredCount => _byHost.Count;
 
@@ -418,6 +430,8 @@ namespace AIBT
             SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.DueCollect);
 
             var dueIndex = 0;
+            // P10-007: due entries before this index were already found outside any automatic run.
+            var automaticCheckedUntil = unbounded && AutomaticAgentFrameSelection ? 0 : int.MaxValue;
             while (dueIndex < _due.Count)
             {
                 var registration = _due[dueIndex];
@@ -428,8 +442,23 @@ namespace AIBT
 
                 if (registration.Profile.ForcedPolicy == SchedulingPolicy.JobsAgentFrame)
                 {
-                    dueIndex = DriveAgentFrameGroup(dueIndex, unbounded, frozenAllowance, ref remaining);
+                    dueIndex = DriveAgentFrameGroup(
+                        dueIndex, FindForcedAgentFrameGroupEnd(dueIndex), SchedulerSelectionReason.ForcedByCaller,
+                        unbounded, frozenAllowance, ref remaining);
                     continue;
+                }
+
+                if (!registration.Profile.ForcedPolicy.HasValue && dueIndex >= automaticCheckedUntil)
+                {
+                    var runEnd = FindAutomaticAgentFrameRunEnd(dueIndex);
+                    if (runEnd - dueIndex >= _agentFrameMinimumBatchSize)
+                    {
+                        dueIndex = DriveAgentFrameGroup(
+                            dueIndex, runEnd, SchedulerSelectionReason.AutomaticAgentFrameRun,
+                            unbounded, frozenAllowance, ref remaining);
+                        continue;
+                    }
+                    automaticCheckedUntil = Math.Max(runEnd, dueIndex + 1);
                 }
 
                 var forcedJobs = registration.Profile.ForcedPolicy == SchedulingPolicy.BatchedJobsSameFrame
@@ -734,19 +763,13 @@ namespace AIBT
         /// in its own due position and its entry reports the <see cref="AgentFrameFallbackReason"/>.
         /// Needs no <see cref="SchedulerJobsCapabilities"/>. Returns the index just past the run.
         /// </summary>
-        private int DriveAgentFrameGroup(int startIndex, bool unbounded, double frozenAllowance, ref double remaining)
+        private int DriveAgentFrameGroup(
+            int startIndex, int groupEnd, SchedulerSelectionReason reason,
+            bool unbounded, double frozenAllowance, ref double remaining)
         {
             var registration = _due[startIndex];
             var catalog = registration.Host.GeneratedDispatchAdapter?.Catalog;
-            var groupEnd = startIndex + 1;
-            while (groupEnd < _due.Count)
-            {
-                var candidate = _due[groupEnd];
-                if (!_byHost.ContainsKey(candidate.Host)) break;
-                if (candidate.Profile != registration.Profile) break;
-                if (!ReferenceEquals(candidate.Host.GeneratedDispatchAdapter?.Catalog, catalog)) break;
-                groupEnd++;
-            }
+            var automatic = reason == SchedulerSelectionReason.AutomaticAgentFrameRun;
             // The scheduler may be destroyed from a callback below, which clears _due: work from a copy.
             _agentFrameGroup.Clear();
             for (var member = startIndex; member < groupEnd; member++) _agentFrameGroup.Add(_due[member]);
@@ -792,11 +815,19 @@ namespace AIBT
                     _agentFrameBatch.Add(current);
                     continue;
                 }
-                RunAgentFrameBatch(executor, unbounded, ref remaining);
+                RunAgentFrameBatch(executor, reason, unbounded, ref remaining);
                 if (!_byHost.ContainsKey(current.Host)) continue;
+                if (automatic)
+                {
+                    // Became ineligible during this frame (e.g. a step budget set from a callback):
+                    // it keeps its previous policy, silently, as outside an automatic run.
+                    SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.ImmediateHosts, 1);
+                    AddDirectEntry(current, DriveInPlace(current, unbounded, ref remaining));
+                    continue;
+                }
                 DriveAgentFrameFallback(current, fallback, unbounded, ref remaining);
             }
-            RunAgentFrameBatch(executor, unbounded, ref remaining);
+            RunAgentFrameBatch(executor, reason, unbounded, ref remaining);
             _agentFrameGroup.Clear();
 
             if (deferFrom >= 0 && deferFrom < _due.Count)
@@ -807,12 +838,54 @@ namespace AIBT
             return groupEnd;
         }
 
-        private void RunAgentFrameBatch(IGeneratedAgentFrameExecutorV1 executor, bool unbounded, ref double remaining)
+        /// <summary>The end of the run of consecutive due entries sharing the forced profile and catalog of <paramref name="startIndex"/>.</summary>
+        private int FindForcedAgentFrameGroupEnd(int startIndex)
+        {
+            var registration = _due[startIndex];
+            var catalog = registration.Host.GeneratedDispatchAdapter?.Catalog;
+            var groupEnd = startIndex + 1;
+            while (groupEnd < _due.Count)
+            {
+                var candidate = _due[groupEnd];
+                if (!_byHost.ContainsKey(candidate.Host)) break;
+                if (candidate.Profile != registration.Profile) break;
+                if (!ReferenceEquals(candidate.Host.GeneratedDispatchAdapter?.Catalog, catalog)) break;
+                groupEnd++;
+            }
+            return groupEnd;
+        }
+
+        /// <summary>
+        /// P10-007: the end of the contiguous run of due entries, starting at <paramref name="startIndex"/>,
+        /// whose hosts the agent-frame job can run (<see cref="AgentFrameFallbackReason.None"/>) and that
+        /// share the profile and catalog of the first. Returns <paramref name="startIndex"/> when the
+        /// first host is not eligible.
+        /// </summary>
+        private int FindAutomaticAgentFrameRunEnd(int startIndex)
+        {
+            var registration = _due[startIndex];
+            var catalog = registration.Host.GeneratedDispatchAdapter?.Catalog;
+            if (!(catalog?.Executor is IGeneratedAgentFrameExecutorV1)) return startIndex;
+            var runEnd = startIndex;
+            while (runEnd < _due.Count)
+            {
+                var candidate = _due[runEnd];
+                if (!_byHost.ContainsKey(candidate.Host)) break;
+                if (candidate.Profile != registration.Profile) break;
+                if (!ReferenceEquals(candidate.Host.GeneratedDispatchAdapter?.Catalog, catalog)) break;
+                if (candidate.Host.GetAgentFrameFallback() != AgentFrameFallbackReason.None) break;
+                runEnd++;
+            }
+            return runEnd;
+        }
+
+        private void RunAgentFrameBatch(
+            IGeneratedAgentFrameExecutorV1 executor, SchedulerSelectionReason reason, bool unbounded, ref double remaining)
         {
             if (_agentFrameBatch.Count == 0) return;
             if (_agentFrameBatch.Count < _agentFrameMinimumBatchSize)
             {
-                RunAgentFrameBatchInPlace(unbounded, ref remaining);
+                RunAgentFrameBatchInPlace(reason, unbounded, ref remaining);
                 return;
             }
             _agentFrameHosts.Clear();
@@ -842,7 +915,7 @@ namespace AIBT
                 member.Eligible = false;
                 member.NextEligibleFrame = _frame + member.Profile.UpdateCadence;
                 AddAgentFrameEntry(member, SchedulingPolicy.JobsAgentFrame, AgentFrameFallbackReason.None, perMember,
-                    member.Host.StepsThisUpdate);
+                    member.Host.StepsThisUpdate, reason);
             }
             _agentFrameBatch.Clear();
         }
@@ -853,7 +926,7 @@ namespace AIBT
         /// member exactly like the Immediate path; no job is scheduled. As the driver, a member that
         /// left the scheduler from an earlier member's callback is not driven.
         /// </summary>
-        private void RunAgentFrameBatchInPlace(bool unbounded, ref double remaining)
+        private void RunAgentFrameBatchInPlace(SchedulerSelectionReason reason, bool unbounded, ref double remaining)
         {
             for (var index = 0; index < _agentFrameBatch.Count; index++)
             {
@@ -862,7 +935,7 @@ namespace AIBT
                 SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.ImmediateHosts, 1);
                 var elapsedMicroseconds = DriveInPlace(member, unbounded, ref remaining);
                 AddAgentFrameEntry(member, SchedulingPolicy.JobsAgentFrame, AgentFrameFallbackReason.None,
-                    elapsedMicroseconds, member.Host.StepsThisUpdate, ranInPlace: true);
+                    elapsedMicroseconds, member.Host.StepsThisUpdate, reason, ranInPlace: true);
             }
             _agentFrameBatch.Clear();
         }
@@ -905,16 +978,16 @@ namespace AIBT
             }
             var elapsedMicroseconds = DriveInPlace(registration, unbounded, ref remaining);
             var policy = registration.Host.StepBudget.HasValue ? SchedulingPolicy.Budgeted : SchedulingPolicy.Immediate;
-            AddAgentFrameEntry(registration, policy, fallback, elapsedMicroseconds, 0);
+            AddAgentFrameEntry(registration, policy, fallback, elapsedMicroseconds, 0, SchedulerSelectionReason.ForcedByCaller);
         }
 
         private void AddAgentFrameEntry(
             Registration registration, SchedulingPolicy policy, AgentFrameFallbackReason fallback,
-            double consumedMicroseconds, ulong executedSteps, bool ranInPlace = false)
+            double consumedMicroseconds, ulong executedSteps, SchedulerSelectionReason reason, bool ranInPlace = false)
         {
             _frameEntries.Add(CreateEntry(
                 registration, policy, SchedulerFrameSelectionSource.DirectHostPath,
-                SchedulerSelectionReason.ForcedByCaller, false, 0.0, 0.0, 0.0,
+                reason, false, 0.0, 0.0, 0.0,
                 SchedulerEstimateConfidence.None, 0, 0, 0.0, false, 0.0, false,
                 false, registration.Profile.UpdateCadence,
                 registration.Host.LastFailure.Code == NativeRuntimeDiagnosticCodeV1.None

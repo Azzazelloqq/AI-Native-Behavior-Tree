@@ -70,6 +70,7 @@ set, so each run interleaves them.
 | `j3-cadence` | `-cadence6` (profile with `UpdateCadence = 6`, Immediate or forced `JobsAgentFrame`) and `-cadence6-stagger` (agents enabled in 6 portions over 6 frames, so their phases spread) |
 | `full-immediate` | the full plan without the forced Jobs scenarios |
 | `full-immediate-5k` | the same without N > 5 000 |
+| `p10007` | P10-007: `shared-loop16` and `shared-reactive16` with the default profile (no forced policy) at N = 16, 63, 64, 256, 2 000, with `agentFrameStats` so the automatic choice is visible; for a before/after Player pair |
 
 `runs.jsonl` also has `cpuWindowProcessUs`, `cpuWindowMainThreadUs` and `cpuWindowWallUs`: process and
 main-thread CPU time over the measured frames (`GetProcessTimes` / `GetThreadTimes`, Windows Player

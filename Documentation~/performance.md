@@ -197,7 +197,46 @@ What it gains and where it does not:
 - Measured on a 24-thread desktop CPU. On a CPU with few cores the worker time is the frame time;
   measure on your target.
 
-### Which policy when (P10-005)
+### Which policy when (P10-005, automatic since P10-007)
+
+**Since P10-007 the scheduler chooses for you.** With the default profile (no `ForcedPolicy`), a
+contiguous run of at least 64 job-eligible agents with the same profile and catalog in the frame's
+due order runs as `JobsAgentFrame`; shorter runs stay `Immediate`. 64 is about twice the largest
+crossover in the table below, so a population that is selected is already well past break-even, and
+one that is not pays nothing. With `NativeTreeAgent` the catalog is per tree asset, and due order is
+mostly the order agents were enabled: **64 consecutive agents of one tree**. Agents of several trees
+enabled interleaved form short runs and are not selected; enable each tree's agents together, or
+force the profile.
+
+| You want | Do |
+|---|---|
+| Convenience (default) | nothing: runs of 64+ eligible agents use `JobsAgentFrame` automatically, everything else `Immediate` |
+| The previous behaviour, everything on the main thread | `scheduler.AutomaticAgentFrameSelection = false;` (`world.GetComponent<ProductionTreeScheduler>()` for a `ProductionTreeWorld`) |
+| `JobsAgentFrame` regardless of the count | `agent.Profile = SchedulingProfile.JobsAgentFrame;` (batches shorter than `scheduler.AgentFrameMinimumBatchSize`, default 64, still run in place; set it to 1 to schedule a job for every batch) |
+| `Immediate` for some agents only | a profile built with `SchedulingProfile.TryCreate(..., forcedPolicy: SchedulingPolicy.Immediate, ...)` |
+| A different threshold | `scheduler.AgentFrameMinimumBatchSize = n;` (applies to both the automatic and the forced path) |
+
+Notes on the automatic choice:
+
+- It applies only with the default unbounded scheduler budget. With `SetFixedBudget` or
+  `SetBudgetProvider` every default-profile agent keeps the per-agent `Immediate` admission
+  (`MaximumBudgetShare` included).
+- An agent the job cannot run (no generated dispatch, a catalog generated before P10-004, a
+  `StepBudget`) stays on its policy without a warning and ends the run it is in. The one warning per
+  host remains for the forced `SchedulingProfile.JobsAgentFrame`.
+- Frame entries show the choice: `SelectedPolicy = JobsAgentFrame` with
+  `SelectionReason = AutomaticAgentFrameRun`; a batch that ran on the main thread because it was
+  shorter than the minimum reports `AgentFrameRanInPlace`.
+- **Trees with many reactive re-evaluations gain below 64 too.** `shared-reactive16` is 5× faster
+  under `JobsAgentFrame` already at 10 agents (P10-005). The threshold leaves such small groups on
+  `Immediate`, and since P10-007 a forced `SchedulingProfile.JobsAgentFrame` group below 64 runs in
+  place as well. For a small group of expensive reactive agents, force the profile and set
+  `scheduler.AgentFrameMinimumBatchSize` lower (for example 1).
+- Results, traces, effects and their order are identical to `Immediate`. The differences are the
+  ones listed for `JobsAgentFrame` above: clock read order within a batch, work on job workers
+  (competing with the game's own jobs), and `LastMeasuredMicroseconds` being the batch average.
+
+The measurement behind the threshold:
 
 Measured in an IL2CPP Player on Unity 6000.6.9f1 (the earlier tables in this page are from
 6000.7.0b1; compare policies within one table, not across), 24-thread desktop CPU, main-thread µs
@@ -219,7 +258,9 @@ per frame for the whole population (`Planning~/Evidence/P10-005/README.md`):
   `StepBudget`, an old catalog) closes the current job batch. If such agents are spread among
   job-eligible agents of the same profile, every batch holds one agent and the population becomes
   1.3–1.7× slower than plain `Immediate`. Give them a different profile, or keep them out of the
-  population that uses `JobsAgentFrame`.
+  population that uses `JobsAgentFrame`. Since P10-007 a piece shorter than 64 agents runs in
+  place instead of in a one-agent job, so such a population runs at about `Immediate` speed (not
+  re-measured); it still gains nothing from the job.
 - **`UpdateCadence`** works with `JobsAgentFrame`. When many agents are enabled in the same frame
   they stay in step; enabling them over several frames spreads their updates (p99 frame 2.7–4.5×
   lower).
@@ -243,6 +284,9 @@ a tree sooner.
   on `StaggerIntervalTicks` when many are spawned together.
 - Keep reactive conditions few; each one is re-evaluated every tick.
 - In the native layer, prefer trees that loop over trees that finish and restart.
-- For native populations of about 30 or more agents with the same profile, use
-  `SchedulingProfile.JobsAgentFrame`; below that keep the default (see "Which policy when"). It is
-  not chosen automatically; measure on your target, especially on mobile CPUs.
+- For native populations, keep the default profile: from 64 consecutive agents of one tree the
+  scheduler uses `JobsAgentFrame` by itself (see "Which policy when"). Force
+  `SchedulingProfile.JobsAgentFrame` and lower `AgentFrameMinimumBatchSize` only if you want the
+  job for smaller groups too (expensive reactive trees), or turn
+  `AutomaticAgentFrameSelection` off for everything on the main thread; measure on your target,
+  especially on mobile CPUs.

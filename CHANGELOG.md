@@ -4,6 +4,31 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Automatic JobsAgentFrame selection (P10-007)
+
+- **Default behaviour change.** A `ProductionTreeScheduler` now runs hosts whose profile forces no
+  policy (`SchedulingProfile.Normal` and other custom profiles without `ForcedPolicy`, so every
+  `NativeTreeAgent` by default) as `JobsAgentFrame` when they form a contiguous run, in the frame's
+  due order, of at least 64 job-eligible hosts with the same profile and catalog (with
+  `NativeTreeAgent` the catalog is per tree asset, so: 64 consecutive agents of one tree). Shorter
+  runs stay `Immediate`. Results, traces, effects and their order are unchanged; frame entries of a
+  selected host report `SelectedPolicy = JobsAgentFrame` and
+  `SelectionReason = AutomaticAgentFrameRun`. A host the job cannot run (no generated dispatch, a
+  catalog generated before P10-004, a `StepBudget`) keeps its policy without a warning. Automatic
+  selection applies only with the default unbounded scheduler budget.
+- **Opt out:** `ProductionTreeScheduler.AutomaticAgentFrameSelection = false` restores the previous
+  behaviour exactly. Profiles that force a policy (including `SchedulingProfile.JobsAgentFrame`) are
+  unaffected by the selection.
+- **Short batches run in place.** Under `JobsAgentFrame` (forced or automatic), a batch of
+  consecutive job-eligible hosts shorter than `ProductionTreeScheduler.AgentFrameMinimumBatchSize`
+  (default `DefaultAgentFrameMinimumBatchSize` = 64) runs on the main thread exactly as `Immediate`
+  does and schedules no job; its entries report `SchedulerFrameEntry.AgentFrameRanInPlace`. Set the
+  minimum to 1 for the previous forced behaviour (a job for every batch).
+- New public API (additions only): `ProductionTreeScheduler.AutomaticAgentFrameSelection`,
+  `AgentFrameMinimumBatchSize`, `DefaultAgentFrameMinimumBatchSize`,
+  `SchedulerFrameEntry.AgentFrameRanInPlace`, `SchedulerSelectionReason.AutomaticAgentFrameRun`.
+  Measurements: `Planning~/Evidence/P10-007/README.md`.
+
 ### Unity 6000.6 compatibility (P10-006)
 
 - The package compiles on Unity 6000.6.9f1: `Editor/Graph/BehaviorTreeImporter.cs` selects the

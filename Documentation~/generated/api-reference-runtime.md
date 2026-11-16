@@ -42,7 +42,7 @@ P10-004 generated-code infrastructure, not an application API. Implemented by th
 
 ### `AIBT.AgentFrameFallbackReason`
 
-P10-004: why a host whose profile forces <see cref="SchedulingPolicy.JobsAgentFrame"/> ran as <see cref="SchedulingPolicy.Immediate"/> instead (<see cref="SchedulerFrameEntry.AgentFrameFallback"/>).
+P10-004: why a host whose profile forces <see cref="SchedulingPolicy.JobsAgentFrame"/> ran as <see cref="SchedulingPolicy.Immediate"/> instead (<see cref="SchedulerFrameEntry.AgentFrameFallback"/>). Under automatic selection (P10-007) an ineligible host keeps its policy and reports None.
 
 - `FIELD AIBT.AgentFrameFallbackReason AsyncOrManagedLeaf`
 - `FIELD AIBT.AgentFrameFallbackReason CatalogWithoutAgentFrameEntry`
@@ -3361,6 +3361,7 @@ One population-level production coordinator per independently scheduled AI world
 - `METHOD System.Void SetJobsCapabilities(AIBT.SchedulerJobsCapabilities)`
 - `METHOD System.Void SetUnboundedBudget()`
 - `PROPERTY AIBT.SchedulerBudgetMode BudgetMode`
+- `PROPERTY System.Boolean AutomaticAgentFrameSelection`
 - `PROPERTY System.Boolean LastFrameOverran`
 - `PROPERTY System.Double LastFrameAllocatedBudgetMicroseconds`
 - `PROPERTY System.Double LastFrameConsumedMicroseconds`
@@ -3569,6 +3570,7 @@ Why <see cref="ProductionTreeScheduler.TryRegister(ProductionTreeHost,Scheduling
 
 ### `AIBT.SchedulerSelectionReason`
 
+- `FIELD AIBT.SchedulerSelectionReason AutomaticAgentFrameRun`
 - `FIELD AIBT.SchedulerSelectionReason BatchedForSameFrameThroughput`
 - `FIELD AIBT.SchedulerSelectionReason BelowMinimumJobWorkload`
 - `FIELD AIBT.SchedulerSelectionReason BudgetConfigured`
