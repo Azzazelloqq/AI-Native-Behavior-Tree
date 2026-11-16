@@ -17,6 +17,10 @@ namespace AIBT
 
         public CompiledProgram Program => _definition.Binding.SemanticProgram;
 
+        /// <summary>P10-009: the definition and catalog the simulation container bootstraps its agents from.</summary>
+        internal GeneratedTreeRuntimeDefinitionV2 Definition => _definition;
+        internal GeneratedBurstCatalogV2 Catalog => _catalog;
+
         /// <summary>Bootstraps a host with bounded tracing, optionally enabling its committed-effect queue.</summary>
         public bool TryBootstrap(ProductionTreeHost host, out NativeRuntimeFailureV1 failure, int effectCapacity = 0,
             Func<long> clock = null, NativeTraceChannelCapacityV1? traceCapacity = null)

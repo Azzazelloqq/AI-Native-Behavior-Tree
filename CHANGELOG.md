@@ -4,6 +4,32 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Simulation container, stage G1 (P10-009, experimental)
+
+- **New, experimental until stage G5:** `AIBT.Simulation.TreeSimulation`, a GameObject-free world
+  the game advances with `Step(tick)`. It holds `TreeGroup`s of agents that run one
+  `ProductionTreeProgram` each: pooled slots with `TryReserve`, `TryAdd`/`TryRemove` with
+  generation `AgentHandle`s (stale handles are refused), deferred teardown, restart in place on
+  root completion (`RootCompletionPolicy.Restart`, default) or `Stop`, `ThinkSchedule`
+  (`Every(interval, phase)`, `Spread(interval)`), `TryWake`/`TryWakeMany`, and per-step read-only
+  `GetRootCompletions()`/`GetFaults()`. Time is `tick × TickMicroseconds`. A tick that does not
+  increase is refused and changes nothing, and calls made during a step return `Busy`. After
+  warm-up, `Step` allocates nothing and does not log. Due agents run as one agent-frame job per
+  group (`UseJobs`, from `MinimumJobBatch` = 64 due agents) or in place, with identical results
+  for any job worker count. Instance ids are container-local and random streams are seeded from
+  `RandomSeed` per `time-and-random-v1`. G1 runs trees whose generated nodes use blackboard keys
+  only; inputs, commands and actions come in G2/G3, and emitted effects are discarded. See
+  `Documentation~/simulation-container.md`.
+- Internal: `ProductionTreeHost` now delegates to a MonoBehaviour-free `ProductionTreeAgentCore`.
+  The host's behaviour is unchanged.
+- Known issue found (unchanged): hosts leave random streams zeroed, so a tree with
+  `aibt.stdlib.random-condition` (allowed only with nondeterministic nodes enabled) fails its first
+  update under `ProductionTreeHost`/`NativeTreeAgent` (`Planning~/Evidence/P10-009/README.md`,
+  section 3).
+- Measured (IL2CPP, 500 agents, `Spread(5)`): `Step` median 57 µs (`shared-loop16`) and 317 µs
+  (`shared-reactive16`) with 23 job workers, 0 bytes per tick; the frame costs 0.34× and 0.53× that
+  of `NativeTreeAgent` with `UpdateCadence` 5.
+
 ### Simulation container design (P10-008, documentation only)
 
 - Proposed `ADR-P10-008`: a GameObject-free `TreeSimulation` container stepped by the game with

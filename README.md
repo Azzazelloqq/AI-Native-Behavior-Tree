@@ -343,6 +343,8 @@ assets and read a running host's trace through the same Editor operations. See
 - [Burst node authoring](Documentation~/burst-node-authoring.md)
 - [Production tree host](Documentation~/production-host.md)
 - [Execution and scheduling](Documentation~/execution-and-scheduling.md)
+- [Simulation container](Documentation~/simulation-container.md) (experimental): trees stepped by
+  the game with `Step(tick)`, without GameObjects.
 - [Hot reload](Documentation~/hot-reload.md)
 - [Data formats](Documentation~/data-formats.md): `.aibt` / `.aibt.json` trees, `.aibt.layout.json`
   layouts, `.aibt/policy.json`, `.aibtcase.json` behavior cases.

@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P10-009", "phase": 10, "title": "Simulation container stage G1: TreeSimulation with groups, pooled slots, think schedule and Step(tick)", "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-009-simulation-container-g1.md",
+      "dependsOn": ["P10-008", "P10-007", "P10-006"],
+      "owns": ["Runtime/Simulation/", "Tests/Integration/Simulation/", "Documentation~/simulation-container.md", "Planning~/Evidence/P10-009/"]
+    },
+    {
       "id": "P10-008", "phase": 10, "title": "Design of a GameObject-free simulation container stepped by the game (stage G0)", "status": "review", "kind": "spike",
       "card": "Planning~/Tasks/P10/P10-008-simulation-container-design.md",
       "dependsOn": ["P10-004", "P10-005", "P10-007"],

@@ -1156,7 +1156,12 @@ namespace AIBT
                 Append(into, _publishedPayload);
                 Append(into, _state);
                 var transaction = _transaction[0];
+                // The ledger token is a process-wide owner id, and the integrity tag hashes it:
+                // compare both as if the token were 0 (a valid tag stays valid after re-sealing).
+                var tagValid = NativeBurstDispatchTransactionLedgerV2.IsValid(in transaction);
                 transaction.LedgerToken = 0;
+                NativeBurstDispatchTransactionLedgerV2.Seal(ref transaction);
+                if (!tagValid) transaction.IntegrityTag = ~transaction.IntegrityTag;
                 var copy = new NativeArray<NativeBurstDispatchTransactionControlV2>(1, Allocator.Temp);
                 copy[0] = transaction;
                 Append(into, copy);

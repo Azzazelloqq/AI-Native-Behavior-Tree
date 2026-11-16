@@ -10,10 +10,11 @@ using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Scripting;
+using AIBT.Simulation;
 
 namespace AIBT.Perf
 {
-    public enum ScenarioKind { Empty, AllocProbe, Managed, Native, Realistic, ApiOnly }
+    public enum ScenarioKind { Empty, AllocProbe, Managed, Native, Realistic, ApiOnly, Simulation }
 
     [Serializable]
     public sealed class NamedText
@@ -54,6 +55,46 @@ namespace AIBT.Perf
         public bool MixedGrouped;
         public int Warmup = 150;
         public int Measure = 400;
+        // P10-009: ScenarioKind.Simulation -- one TreeSimulation, one group of N agents with
+        // ThinkSchedule.Spread(SimSpread), stepped once per frame inside the bracket by
+        // PerfSimulationStepper. SimUseJobs false = TreeSimulationSettings.UseJobs off.
+        public bool SimUseJobs = true;
+        public uint SimSpread = 5;
+        // ABBA position label written to runs.jsonl ("A1", "B1", ...), empty outside ABBA sets.
+        public string Abba = string.Empty;
+    }
+
+    /// <summary>
+    /// P10-009: steps the benchmark's <see cref="TreeSimulation"/> once per frame, early in Update and
+    /// inside the frame bracket, and times the <see cref="TreeSimulation.Step"/> call alone.
+    /// </summary>
+    [DefaultExecutionOrder(-30000)]
+    public sealed class PerfSimulationStepper : MonoBehaviour
+    {
+        public static TreeSimulation Simulation;
+        public static TreeGroup Group;
+        public static uint Tick;
+        public static long StepTicks;
+        public static long StepAlloc;
+        public static long Faults;
+        public static long Completions;
+        public static long FailedSteps;
+
+        private void Update()
+        {
+            StepTicks = 0;
+            StepAlloc = 0;
+            var simulation = Simulation;
+            if (simulation == null) return;
+            var alloc = GC.GetAllocatedBytesForCurrentThread();
+            var start = PerfClock.Watch.ElapsedTicks;
+            var result = simulation.Step(++Tick);
+            StepTicks = PerfClock.Watch.ElapsedTicks - start;
+            StepAlloc = GC.GetAllocatedBytesForCurrentThread() - alloc;
+            if (result != SimulationResult.Success) FailedSteps++;
+            Faults += Group.GetFaults().Length;
+            Completions += Group.GetRootCompletions().Length;
+        }
     }
 
     /// <summary>
@@ -136,6 +177,7 @@ namespace AIBT.Perf
             var jobWorkers = Arg("-perfJobWorkers", string.Empty);
             if (jobWorkers.Length > 0) JobsUtility.JobWorkerCount = int.Parse(jobWorkers, CultureInfo.InvariantCulture);
             Directory.CreateDirectory(_out);
+            if (GetComponent<PerfSimulationStepper>() == null) gameObject.AddComponent<PerfSimulationStepper>();
 
             _systemMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory");
             _gcAllocInFrame = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame");
@@ -171,6 +213,37 @@ namespace AIBT.Perf
                             scenario.AgentFrameStats = true;
                             Add(scenario);
                         }
+                }
+                // P10-009: TreeSimulation vs NativeTreeAgent with UpdateCadence 5 (phases spread by
+                // StaggerSpawn), N = 500, ABBA order inside each run: A = NativeTreeAgent cadence 5,
+                // B = TreeSimulation Spread(5) with default settings (jobs from 64 due agents), plus
+                // the container with UseJobs off between the B's.
+                else if (part == "sim")
+                {
+                    foreach (var tree in new[] { "shared-loop16", "shared-reactive16" })
+                    {
+                        Scenario Cadence5(string label)
+                        {
+                            var s = Native("n-" + tree + "-cadence5-stagger-" + label, tree, 500);
+                            s.Cadence = 5u;
+                            s.StaggerSpawn = true;
+                            s.AgentFrameStats = true;
+                            s.Abba = label.ToUpperInvariant();
+                            return s;
+                        }
+                        Scenario Sim(string label, bool jobs)
+                        {
+                            var s = new Scenario { Id = "sim-" + tree + (jobs ? string.Empty : "-nojobs") + "-" + label, Kind = ScenarioKind.Simulation, Tree = tree, N = 500, SimUseJobs = jobs };
+                            s.Abba = label.ToUpperInvariant();
+                            return s;
+                        }
+                        Add(Cadence5("a1"));
+                        Add(Sim("b1", true));
+                        Add(Sim("c1", false));
+                        Add(Sim("b2", true));
+                        Add(Cadence5("a2"));
+                    }
+                    for (var i = 0; i < _plan.Count; i++) { _plan[i].Warmup = 200; _plan[i].Measure = 1000; }
                 }
                 else if (part == "full-immediate") { BuildPlan(quick); _plan.RemoveAll(x => x.Jobs || x.Pipelined || x.AgentFrame); }
                 // P10-005: the same without N > 5 000 (N = 20 000 of the J3 trees is in j3-scale).
@@ -592,6 +665,37 @@ namespace AIBT.Perf
                         else Debug.LogError("AIBT_PERF|jobs capabilities could not be set");
                     }
                     break;
+                case ScenarioKind.Simulation:
+                    if (!FindNative(s.Tree).TryCreateProgram(PerfCatalog.TryCreateRuntimeCatalog, out _simProgram, out var programFailure))
+                    {
+                        Debug.LogError("AIBT_PERF|FAULT|simulation program: " + programFailure);
+                        _faults++;
+                        break;
+                    }
+                    var settings = TreeSimulationSettings.Default(16667u);
+                    settings.UseJobs = s.SimUseJobs;
+                    settings.RandomSeed = 0x5eedUL;
+                    var simulation = new TreeSimulation(settings);
+                    if (simulation.TryAddGroup(_simProgram, TreeGroupSettings.Default(s.N), out var group) != SimulationResult.Success)
+                    {
+                        Debug.LogError("AIBT_PERF|FAULT|simulation group");
+                        _faults++;
+                    }
+                    else
+                    {
+                        for (var i = 0; i < s.N; i++)
+                        {
+                            group.TryAdd(ThinkSchedule.Spread(s.SimSpread), out _);
+                            if (i == 0) { firstEnd = PerfClock.Watch.ElapsedTicks; firstAllocEnd = GC.GetAllocatedBytesForCurrentThread(); }
+                        }
+                    }
+                    PerfSimulationStepper.Group = group;
+                    PerfSimulationStepper.Tick = 0;
+                    PerfSimulationStepper.Faults = 0;
+                    PerfSimulationStepper.Completions = 0;
+                    PerfSimulationStepper.FailedSteps = 0;
+                    PerfSimulationStepper.Simulation = simulation;
+                    break;
                 case ScenarioKind.Realistic:
                 case ScenarioKind.ApiOnly:
                     var groups = s.N / 3;
@@ -727,7 +831,8 @@ namespace AIBT.Perf
             _gcStart = GC.CollectionCount(0);
             var name = s.Id + "_n" + s.N + "_r" + (_run + 1);
             _csv = new StreamWriter(Path.Combine(_out, name + ".csv"), false, new UTF8Encoding(false));
-            _csv.WriteLine("frame,bracket_us,alloc_bytes,feeder_us,feeder_alloc_bytes,scheduler_drive_us,frame_dt_us,gc_alloc_in_frame,main_thread_ns,heap_delta_bytes,gc_in_bracket");
+            _csv.WriteLine("frame,bracket_us,alloc_bytes,feeder_us,feeder_alloc_bytes,scheduler_drive_us,frame_dt_us,gc_alloc_in_frame,main_thread_ns,heap_delta_bytes,gc_in_bracket,sim_step_us,sim_step_alloc_bytes");
+            _simStart = PerfSimulationStepper.Completions;
             _meta = new StringBuilder();
             _meta.Append("{\"scenario\":\"").Append(s.Id).Append("\",\"kind\":\"").Append(s.Kind)
                 .Append("\",\"tree\":\"").Append(s.Tree ?? string.Empty).Append("\",\"n\":").Append(s.N)
@@ -760,7 +865,9 @@ namespace AIBT.Perf
                 .Append(_gcAllocInFrame.Valid ? _gcAllocInFrame.LastValue : -1).Append(',')
                 .Append(_mainThread.Valid ? _mainThread.LastValue : -1).Append(',')
                 .Append(PerfClock.EndHeap - PerfClock.BeginHeap).Append(',')
-                .Append(PerfClock.EndGc - PerfClock.BeginGc);
+                .Append(PerfClock.EndGc - PerfClock.BeginGc).Append(',')
+                .Append(F(PerfClock.TicksToMicroseconds(PerfSimulationStepper.StepTicks))).Append(',')
+                .Append(PerfSimulationStepper.StepAlloc);
             _csv.WriteLine(line.ToString());
         }
 
@@ -787,7 +894,20 @@ namespace AIBT.Perf
                 .Append(",\"mixedFallback\":").Append(s.MixedFallback ? (s.MixedGrouped ? "\"grouped\"" : "\"alternating\"") : "false")
                 .Append(",\"cpuWindowWallUs\":").Append(F(_cpuWallUs))
                 .Append(",\"cpuWindowProcessUs\":").Append(_cpuProcessUs)
-                .Append(",\"cpuWindowMainThreadUs\":").Append(_cpuMainUs);
+                .Append(",\"cpuWindowMainThreadUs\":").Append(_cpuMainUs)
+                .Append(",\"abba\":\"").Append(s.Abba).Append('"');
+            if (s.Kind == ScenarioKind.Simulation)
+            {
+                _faults += (int)(PerfSimulationStepper.Faults + PerfSimulationStepper.FailedSteps);
+                _meta.Append(",\"sim\":{\"useJobs\":").Append(s.SimUseJobs ? "true" : "false")
+                    .Append(",\"spread\":").Append(s.SimSpread)
+                    .Append(",\"ticks\":").Append(PerfSimulationStepper.Tick)
+                    .Append(",\"completionsMeasured\":").Append(PerfSimulationStepper.Completions - _simStart)
+                    .Append(",\"faults\":").Append(PerfSimulationStepper.Faults)
+                    .Append(",\"failedSteps\":").Append(PerfSimulationStepper.FailedSteps)
+                    .Append(",\"alive\":").Append(PerfSimulationStepper.Group != null ? PerfSimulationStepper.Group.Count : 0)
+                    .Append('}');
+            }
             if (_profile != null) _meta.Append(",\"frameProfile\":").Append(_profile);
             if ((s.AgentFrame || s.AgentFrameStats) && _agentFrameSnapshot != null) _meta.Append(",\"agentFrameStats\":").Append((string)_agentFrameSnapshot.Invoke(null, null));
             _meta.Append('}');
@@ -796,6 +916,8 @@ namespace AIBT.Perf
         }
 
         private bool _fpInstallFailed;
+        private ProductionTreeProgram _simProgram;
+        private long _simStart;
         private readonly List<GameObject> _pendingActivation = new List<GameObject>();
 
         // P10-005: CPU time of the whole process and of the main thread over the measured frames
@@ -840,6 +962,17 @@ namespace AIBT.Perf
         private void Teardown()
         {
             PerfAgentFramePointer.Restore();
+            if (PerfSimulationStepper.Simulation != null)
+            {
+                PerfSimulationStepper.Simulation.Dispose();
+                PerfSimulationStepper.Simulation = null;
+                PerfSimulationStepper.Group = null;
+            }
+            if (_simProgram != null)
+            {
+                _simProgram.Dispose();
+                _simProgram = null;
+            }
             feeder.mode = FeederMode.None;
             feeder.Managed.Clear();
             feeder.Native.Clear();

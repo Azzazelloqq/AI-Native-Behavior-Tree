@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-294 public type(s).
+304 public type(s).
 
 ---
 
@@ -3637,6 +3637,143 @@ Why <see cref="SchedulingProfile.TryCreate(string,int,uint,uint?,double?,bool,Sc
 - `FIELD AIBT.SchedulingProfileValidationError None`
 - `FIELD AIBT.SchedulingProfileValidationError UpdateCadenceMustBeAtLeastOne`
 - `FIELD System.Byte value__`
+
+---
+
+### `AIBT.Simulation.AgentFault`
+
+One agent that stopped with a runtime failure in the last step. The agent stays alive but does not think until <see cref="TreeGroup.TryRestart"/> or <see cref="TreeGroup.TryRemove"/>. The failure's owner id is cleared: it comes from a process-wide counter and would make results depend on what ran earlier in the process. Experimental until G5.
+
+- `PROPERTY AIBT.NativeRuntimeFailureV1 Failure`
+- `PROPERTY AIBT.Simulation.AgentHandle Agent`
+
+---
+
+### `AIBT.Simulation.AgentHandle`
+
+Stable identity of one agent of a <see cref="TreeGroup"/>. <see cref="Index"/> is the agent's slot, stable for the agent's whole life. After removal the slot is reused with a newer <see cref="Generation"/>, so an old handle is refused (<see cref="SimulationResult.StaleHandle"/>) instead of addressing the new agent. Generation 0 is never issued: <c>default(AgentHandle)</c> is null. Experimental (ADR-P10-008) until G5.
+
+- `METHOD System.Boolean Equals(AIBT.Simulation.AgentHandle)`
+- `METHOD System.Boolean Equals(System.Object)`
+- `METHOD System.Int32 GetHashCode()`
+- `METHOD System.String ToString()`
+- `PROPERTY System.Boolean IsNull`
+- `PROPERTY System.Int32 Index`
+- `PROPERTY System.UInt16 Group`
+- `PROPERTY System.UInt32 Generation`
+
+---
+
+### `AIBT.Simulation.RootCompletion`
+
+One agent whose root finished in the last step. Experimental until G5.
+
+- `PROPERTY AIBT.NodeStatus Result`
+- `PROPERTY AIBT.Simulation.AgentHandle Agent`
+
+---
+
+### `AIBT.Simulation.RootCompletionPolicy`
+
+What a <see cref="TreeGroup"/> does when an agent's root finishes. Experimental until G5.
+
+- `FIELD AIBT.Simulation.RootCompletionPolicy Restart`
+- `FIELD AIBT.Simulation.RootCompletionPolicy Stop`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.Simulation.SimulationResult`
+
+Result of every <see cref="TreeSimulation"/> and <see cref="TreeGroup"/> call that can fail at runtime. No hot-path call throws. Experimental (ADR-P10-008) until stage G5: names and members may still change.
+
+- `FIELD AIBT.Simulation.SimulationResult Busy`
+- `FIELD AIBT.Simulation.SimulationResult CapacityExceeded`
+- `FIELD AIBT.Simulation.SimulationResult Disposed`
+- `FIELD AIBT.Simulation.SimulationResult InvalidArgument`
+- `FIELD AIBT.Simulation.SimulationResult StaleHandle`
+- `FIELD AIBT.Simulation.SimulationResult Success`
+- `FIELD AIBT.Simulation.SimulationResult TickNotIncreasing`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.Simulation.ThinkSchedule`
+
+When an agent thinks: on ticks <c>t</c> with <c>t % Interval == Phase</c>, plus once after each wake. Interval 1 is every tick. <see cref="Spread"/> lets the group choose the phase <c>(n % Interval)</c> where <c>n</c> counts the group's spread schedules so far, so N agents added with one interval are spread evenly. Experimental (ADR-P10-008) until G5.
+
+- `METHOD AIBT.Simulation.ThinkSchedule Every(System.UInt32,System.UInt32)`
+- `METHOD AIBT.Simulation.ThinkSchedule Spread(System.UInt32)`
+- `METHOD System.Void .ctor(System.UInt32,System.UInt32)`
+- `PROPERTY System.Boolean IsSpread`
+- `PROPERTY System.UInt32 Interval`
+- `PROPERTY System.UInt32 Phase`
+
+---
+
+### `AIBT.Simulation.TreeGroup`
+
+N agents of one <see cref="ProductionTreeProgram"/> inside one <see cref="TreeSimulation"/>. Agents live in pooled slots allocated up front (<see cref="Capacity"/>), so a steady population allocates nothing after warm-up; an agent is a slot index plus a generation (<see cref="AgentHandle"/>). Owned by its container; same threading rules (one thread, never during <see cref="TreeSimulation.Step"/>). Experimental (ADR-P10-008) until stage G5.
+
+- `METHOD AIBT.Simulation.SimulationResult TryAdd(AIBT.Simulation.AgentHandle&)`
+- `METHOD AIBT.Simulation.SimulationResult TryAdd(AIBT.Simulation.ThinkSchedule&,AIBT.Simulation.AgentHandle&)`
+- `METHOD AIBT.Simulation.SimulationResult TryRemove(AIBT.Simulation.AgentHandle)`
+- `METHOD AIBT.Simulation.SimulationResult TryReserve(System.Int32)`
+- `METHOD AIBT.Simulation.SimulationResult TryRestart(AIBT.Simulation.AgentHandle)`
+- `METHOD AIBT.Simulation.SimulationResult TrySetThinkSchedule(AIBT.Simulation.AgentHandle,AIBT.Simulation.ThinkSchedule&)`
+- `METHOD AIBT.Simulation.SimulationResult TryWake(AIBT.Simulation.AgentHandle)`
+- `METHOD AIBT.Simulation.SimulationResult TryWakeMany(Unity.Collections.NativeArray`1+ReadOnly<System.Int32>)`
+- `METHOD System.Boolean IsAlive(AIBT.Simulation.AgentHandle)`
+- `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.AgentFault> GetFaults()`
+- `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.RootCompletion> GetRootCompletions()`
+- `PROPERTY AIBT.ProductionTreeProgram Program`
+- `PROPERTY AIBT.Simulation.TreeGroupSettings Settings`
+- `PROPERTY System.Boolean IsValid`
+- `PROPERTY System.Int32 Capacity`
+- `PROPERTY System.Int32 Count`
+- `PROPERTY System.Int32 HighWaterIndex`
+- `PROPERTY System.UInt16 Id`
+
+---
+
+### `AIBT.Simulation.TreeGroupSettings`
+
+Settings of one <see cref="TreeGroup"/>. Experimental (ADR-P10-008) until G5.
+
+- `FIELD AIBT.Simulation.RootCompletionPolicy RootCompletion`
+- `FIELD System.Int32 Capacity`
+- `FIELD System.UInt32 DefaultThinkInterval`
+- `METHOD AIBT.Simulation.TreeGroupSettings Default(System.Int32)`
+
+---
+
+### `AIBT.Simulation.TreeSimulation`
+
+One simulation world owned by the game: groups of agents, each group running one <see cref="ProductionTreeProgram"/>, advanced only by <see cref="Step"/>. No GameObject, component or Unity <c>Update</c> is involved, so it runs the same in EditMode, Play Mode and a server. <para> Threading: call every member from one thread at a time and never while <see cref="Step"/> runs (such calls return <see cref="SimulationResult.Busy"/>). <see cref="Step"/> completes every job it schedules before returning; nothing of the trees runs between steps. Several containers may exist side by side; they share no state that affects results. </para> <para> Determinism: results depend only on the programs, the settings, the sequence of calls with their arguments and the ticks passed, not on wall-clock time, job worker count, <see cref="TreeSimulationSettings.UseJobs"/>, <see cref="TreeSimulationSettings.MinimumJobBatch"/>, other containers, or what ran before in the process. Tree instance ids come from a container counter in the order agents are added or restarted. </para> <para> Experimental (ADR-P10-008): stage G1 runs trees whose generated nodes use blackboard keys only; game inputs, commands and external actions arrive in later stages. Effects a node emits are discarded. Names and members may change until stage G5. </para>
+
+- `METHOD AIBT.Simulation.SimulationResult Step(System.UInt32)`
+- `METHOD AIBT.Simulation.SimulationResult TryAddGroup(AIBT.ProductionTreeProgram,AIBT.Simulation.TreeGroupSettings&,AIBT.Simulation.TreeGroup&)`
+- `METHOD AIBT.Simulation.SimulationResult TryRemoveGroup(AIBT.Simulation.TreeGroup)`
+- `METHOD System.Void .ctor(AIBT.Simulation.TreeSimulationSettings&)`
+- `METHOD System.Void Dispose()`
+- `PROPERTY AIBT.Simulation.TreeSimulationSettings Settings`
+- `PROPERTY System.Boolean IsDisposed`
+- `PROPERTY System.Boolean IsStepping`
+- `PROPERTY System.Int32 GroupCount`
+- `PROPERTY System.UInt32 LastTick`
+
+---
+
+### `AIBT.Simulation.TreeSimulationSettings`
+
+Settings of one <see cref="TreeSimulation"/>, fixed for its lifetime. Experimental (ADR-P10-008) until stage G5.
+
+- `FIELD System.Boolean UseJobs`
+- `FIELD System.Int32 MinimumJobBatch`
+- `FIELD System.UInt32 MaximumStepsPerThink`
+- `FIELD System.UInt32 TickMicroseconds`
+- `FIELD System.UInt64 RandomSeed`
+- `METHOD AIBT.Simulation.TreeSimulationSettings Default(System.UInt32)`
 
 ---
 
