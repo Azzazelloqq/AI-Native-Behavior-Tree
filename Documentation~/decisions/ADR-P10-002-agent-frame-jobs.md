@@ -1,8 +1,10 @@
 # ADR P10-002: Jobs stage J2 — one job advances an agent through its whole frame
 
-- Status: Proposed (draft, not implemented; needs an owner decision)
+- Status: Accepted by owner direction for P10-004 (changes 1, 2, 3(a), 4 and 5 below); implemented
+  in P10-004 as the opt-in policy `SchedulingPolicy.JobsAgentFrame` (2026-11-16)
 - Decision ID: not assigned
-- Evidence: `Planning~/Evidence/P10-002/README.md`, spike `Spikes~/P10-002-J2/`
+- Evidence: `Planning~/Evidence/P10-002/README.md`, spike `Spikes~/P10-002-J2/`,
+  implementation `Planning~/Evidence/P10-004/README.md`
 
 ## Context
 
@@ -130,6 +132,28 @@ stays Proposed.
   state is then lost and must rest on the one-agent-per-work-item invariant.
 - **Error isolation.** A Burst job cannot catch exceptions. A bug in a node body corrupts the agent
   silently instead of producing a managed diagnostic.
+
+## Outcome (P10-004)
+
+- **Body entry: emitted job.** Every catalog emits a private `[BurstCompile]` agent-frame job; its
+  executor implements `AIBT.AgentFrame.IGeneratedAgentFrameExecutorV1`. A function-pointer variant
+  (body reached through `BurstCompiler.CompileFunctionPointer`, result through a `ref` parameter)
+  compiled and ran in the IL2CPP Player and was within −4%…+3% per dispatch, so the simpler
+  emitted job was kept. `ExpectedPublicAbiV2.txt` is unchanged.
+- **Framing.** Every framing step has a native equivalent in the same order
+  (`AgentFrameCoreV1`); traces and effects go to per-agent buffers replayed in agent order.
+  Cross-request ledger floors (a corruption check) are not tracked in the job.
+- **Shared writes: option 3(a).** No semantic change. The generated adapter already refuses
+  Shared-scope bindings and async completions, so for generated hosts the fallback reasons
+  `SharedOrWorldScopeWrite` and `AsyncOrManagedLeaf` are defensive only. The reachable reasons are
+  `ManagedDispatch`, `StepBudgetConfigured` and `CatalogWithoutAgentFrameEntry`.
+- **Step limit.** `ProductionTreeHost.MaximumStepsPerUpdate`, default 1 000 000, for Immediate,
+  BatchedJobsSameFrame and JobsAgentFrame, failing with `NativeUpdateStepLimitExceeded`.
+- **Failure text (change 6).** The host maps job outcomes to the same messages as Immediate.
+- **Measured gain** (IL2CPP, 23 workers, interleaved): main-thread time 2.1–2.2× lower than
+  Immediate for `io-wait1`, 2.9–3.5× for `shared-loop16`, 2.2–2.3× for `io-move1-fact-effect`,
+  10.7× for `shared-reactive16`. The estimate above (0.5–0.8 ms for `io-wait1` at N = 1000) was
+  close: measured 0.92 ms. Per dispatch inside the job: 0.48–1.17 µs on one thread.
 
 ## Spike evidence
 

@@ -314,6 +314,10 @@ enabled.
   before the agent is enabled. See the [P9-006 evidence](Planning~/Evidence/P9-006/README.md).
 - MCP `search_nodes` returns 50 nodes per page by default; pass `count` or page with `offset`.
 - Condition interrupts (`ConditionInterrupt`) exist only in the managed layer.
+- `NativeTreeAgent.Profile = SchedulingProfile.JobsAgentFrame` runs each agent's whole update in a
+  Burst job (no capabilities needed); agents it cannot run fall back to Immediate with a reason on
+  their frame entry. Every native update stops after `ProductionTreeHost.MaximumStepsPerUpdate`
+  steps (default 1 000 000). See [Performance](Documentation~/performance.md).
 - A `NativeTreeAgent` profile that forces `BatchedJobsSameFrame` or `PipelinedJobs` needs
   `SchedulerJobsCapabilities` on its world's `ProductionTreeScheduler` (there is no default);
   without them the agent faults with a message that says so. See [Performance](Documentation~/performance.md).

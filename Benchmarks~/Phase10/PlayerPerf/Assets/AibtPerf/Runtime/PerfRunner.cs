@@ -40,6 +40,8 @@ namespace AIBT.Perf
         public bool EffectHandler;
         public bool Jobs;
         public bool Pipelined;
+        public bool AgentFrame;
+        public bool AgentFramePointer;
         public bool Stagger;
         public int Warmup = 150;
         public int Measure = 400;
@@ -105,6 +107,9 @@ namespace AIBT.Perf
         private System.Reflection.MethodInfo _profileReset;
         private System.Reflection.MethodInfo _profileSnapshot;
         private string _profile;
+        // P10-004: JobsAgentFrame counters (AIBT.AgentFrameDiagnosticsV1, internal; read through reflection).
+        private System.Reflection.MethodInfo _agentFrameReset;
+        private System.Reflection.MethodInfo _agentFrameSnapshot;
 
         private void Start()
         {
@@ -118,6 +123,9 @@ namespace AIBT.Perf
             var only = Arg("-perfOnly", string.Empty);
             var quick = Array.IndexOf(args, "-perfQuick") >= 0;
             var set = Arg("-perfSet", "full");
+            // P10-004: -perfJobWorkers 0 runs every job on the main thread (total CPU of a Jobs policy).
+            var jobWorkers = Arg("-perfJobWorkers", string.Empty);
+            if (jobWorkers.Length > 0) JobsUtility.JobWorkerCount = int.Parse(jobWorkers, CultureInfo.InvariantCulture);
             Directory.CreateDirectory(_out);
 
             _systemMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory");
@@ -143,6 +151,9 @@ namespace AIBT.Perf
             const System.Reflection.BindingFlags any = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
             _profileReset = profileType?.GetMethod("Reset", any);
             _profileSnapshot = profileType?.GetMethod("Snapshot", any);
+            var agentFrameType = typeof(ProductionTreeScheduler).Assembly.GetType("AIBT.AgentFrameDiagnosticsV1");
+            _agentFrameReset = agentFrameType?.GetMethod("Reset", any);
+            _agentFrameSnapshot = agentFrameType?.GetMethod("Snapshot", any);
             var maxN = int.Parse(Arg("-perfMaxN", "1000000"), CultureInfo.InvariantCulture);
             var minN = int.Parse(Arg("-perfMinN", "0"), CultureInfo.InvariantCulture);
             _plan.RemoveAll(s => s.N > maxN || s.N < minN);
@@ -257,10 +268,12 @@ namespace AIBT.Perf
                 {
                     var label = tree == "native-wait1" ? "n-io-wait1"
                         : tree == "native-move1" ? "n-io-move1-fact-effect" : "n-" + tree;
-                    foreach (var jobs in new[] { false, true })
+                    foreach (var variant in new[] { 0, 1, 2, 3 })
                     {
-                        var s = Native(jobs ? label + "-jobs" : label, tree, n);
-                        s.Jobs = jobs;
+                        var s = Native(variant == 1 ? label + "-jobs" : variant == 2 ? label + "-agentframe" : variant == 3 ? label + "-agentframe-fp" : label, tree, n);
+                        s.Jobs = variant == 1;
+                        s.AgentFrame = variant >= 2;
+                        s.AgentFramePointer = variant == 3;
                         if (tree == "native-move1") { s.Feeder = FeederMode.NativeFactDistance; s.EffectHandler = true; }
                         Add(s);
                     }
@@ -424,9 +437,11 @@ namespace AIBT.Perf
                         var agent = go.AddComponent<NativeTreeAgent>();
                         agent.Tree = asset;
                         if (s.Jobs) agent.Profile = s.Pipelined ? _pipelinedProfile : _jobsProfile;
+                        if (s.AgentFrame) agent.Profile = SchedulingProfile.JobsAgentFrame;
                         if (s.EffectHandler) agent.OnEffect("move-speed", (Action<float>)CountEffect);
                         agent.Faulted += OnFault;
                         go.SetActive(true);
+                        if (s.AgentFramePointer && agent.Host != null && !PerfAgentFramePointer.TryInstall(agent.Host)) _fpInstallFailed = true;
                         _objects.Add(go);
                         _native.Add(agent);
                         if (i == 0) { firstEnd = PerfClock.Watch.ElapsedTicks; firstAllocEnd = GC.GetAllocatedBytesForCurrentThread(); }
@@ -569,6 +584,7 @@ namespace AIBT.Perf
                 if (world != null) _scheduler = world.GetComponent<ProductionTreeScheduler>();
             }
             _profileReset?.Invoke(null, null);
+            _agentFrameReset?.Invoke(null, null);
             _effectStart = PerfClock.EffectCount;
             _spottedStart = PerfClock.SpottedCount;
             _gcStart = GC.CollectionCount(0);
@@ -583,6 +599,9 @@ namespace AIBT.Perf
                 .Append(",\"tickMode\":\"").Append(s.TickMode).Append("\",\"interval\":").Append(F(s.Interval))
                 .Append(",\"feeder\":\"").Append(s.Feeder).Append("\",\"effectHandler\":").Append(s.EffectHandler ? "true" : "false")
                 .Append(",\"jobs\":").Append(s.Jobs ? "true" : "false")
+                .Append(",\"agentFrame\":").Append(s.AgentFrame ? "true" : "false")
+                .Append(",\"agentFramePointer\":").Append(s.AgentFramePointer ? (_fpInstallFailed ? "\"failed\"" : "true") : "false")
+                .Append(",\"jobWorkers\":").Append(JobsUtility.JobWorkerCount)
                 .Append(",\"createUs\":").Append(F(_createMicros)).Append(",\"createAllocBytes\":").Append(_createAlloc)
                 .Append(",\"firstUs\":").Append(F(_firstMicros)).Append(",\"firstAllocBytes\":").Append(_firstAlloc)
                 .Append(",\"heapBefore\":").Append(_heapBefore).Append(",\"heapAfter\":").Append(_heapAfter)
@@ -627,13 +646,17 @@ namespace AIBT.Perf
                 .Append(",\"nativeCompletedRuns\":").Append(completed)
                 .Append(",\"faultsTotal\":").Append(_faults);
             if (_profile != null) _meta.Append(",\"frameProfile\":").Append(_profile);
+            if (s.AgentFrame && _agentFrameSnapshot != null) _meta.Append(",\"agentFrameStats\":").Append((string)_agentFrameSnapshot.Invoke(null, null));
             _meta.Append('}');
             File.AppendAllText(Path.Combine(_out, "runs.jsonl"), _meta + "\n");
             Debug.Log("AIBT_PERF|RUN|" + _meta);
         }
 
+        private bool _fpInstallFailed;
+
         private void Teardown()
         {
+            PerfAgentFramePointer.Restore();
             feeder.mode = FeederMode.None;
             feeder.Managed.Clear();
             feeder.Native.Clear();

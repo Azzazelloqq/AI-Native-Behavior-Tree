@@ -35,7 +35,7 @@ def load_quick(path):
 
 
 def single_threaded(scenario):
-    return not scenario.endswith('-jobs') and not scenario.endswith('-pipelined')
+    return not scenario.endswith('-jobs') and not scenario.endswith('-pipelined') and not scenario.endswith('-agentframe')
 
 
 def fmt(v, digits=0):

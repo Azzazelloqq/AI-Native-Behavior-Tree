@@ -31,16 +31,16 @@ one CSV per run with a row per measured frame.
 
 ## Quick mode and frame profile (P10-002)
 
-`-Step Run -Quick` runs a fixed set of 20 cases for a before/after check of a runtime change:
+`-Step Run -Quick` runs a fixed set of 36 cases for a before/after check of a runtime change:
 N = 1000 and 5000 of `n-io-wait1`, `n-shared-loop16`, `n-shared-reactive16` and
-`n-io-move1-fact-effect`, each with and without `-jobs`, plus `m-unity15-both` and
-`m-shared-shape15`. The cases run 2 times by default, with 120 warm-up and 250 measured frames,
-which takes about 10 minutes in an IL2CPP Player.
+`n-io-move1-fact-effect`, each plain (default Immediate), `-jobs`, `-agentframe` and
+`-agentframe-fp` (P10-004), plus `m-unity15-both` and `m-shared-shape15`. The cases run 2 times by
+default, with 120 warm-up and 250 measured frames, which takes about 15 minutes in an IL2CPP Player.
 
 - **Baseline.** `-SaveBaseline` writes the summary to `-Baseline` (default
   `<OutDir parent>/quick-baseline-<backend>.json`).
 - **Comparison.** Without `-SaveBaseline` the run is compared with that file: `quick.py compare`
-  prints a before/after table and exits with code 2 when a single-threaded case (not `-jobs`) is
+  prints a before/after table and exits with code 2 when a single-threaded case (not `-jobs` or `-agentframe*`) is
   more than 5% slower.
 - **Location.** Keep `-OutDir` outside a Unity project's `Temp/`: the Editor clears `Temp/` when it
   restarts.
@@ -60,9 +60,19 @@ profile (`SchedulerFrameProfileV1`). Without the define its calls are compiled o
 - **Allocation:** bytes allocated in a 60-frame window with the GC disabled, divided by agent-ticks.
 - **GC/1000 frames:** collections during the measured frames.
 - **Scheduler drive:** `ProductionTreeScheduler.LastFrameConsumedMicroseconds` for native scenarios.
-- Worker-thread time of Jobs policies is **not** measured; only main-thread time is.
+- **Frame wall time:** `frame_dt_us` in each CSV (`Time.unscaledDeltaTime`).
+- Worker-thread time of Jobs policies is **not** measured directly. For total CPU time run the
+  Player with `-ExtraPlayerArgs @('-perfJobWorkers','0')` (sets `JobsUtility.JobWorkerCount = 0`,
+  so every job runs on the main thread inside the bracket; call `Invoke-Perf.ps1` with `&`, not
+  `powershell -File`, so the array survives).
+- `-agentframe` scenarios add `agentFrameStats` to `runs.jsonl`: job batches, agents, agents that
+  ran on a worker thread, agents whose job ran without Burst, dispatches, and µs spent in schedule
+  plus complete (`AgentFrameDiagnosticsV1`, read through reflection).
 
 Scenario ids: `m-*` managed, `n-*` native, `-jobs` a forced `BatchedJobsSameFrame` profile,
+`-agentframe` `SchedulingProfile.JobsAgentFrame`, `-agentframe-fp` the same with the node body
+reached through a Burst function pointer instead of the catalog's emitted job (benchmark only:
+`PerfAgentFramePointer.cs` swaps the catalog's executor through reflection),
 `-pipelined` a forced `PipelinedJobs` profile (both with `SchedulerJobsCapabilities(1, 1, 1, 64,
 64, pipelined)` set on the shared world's scheduler), `-interval100ms(-stagger)` Interval ticking
 every 100 ms (with `StaggerIntervalTicks`), `-fact`/`-bbwrite`/`-effect` game code writing facts or

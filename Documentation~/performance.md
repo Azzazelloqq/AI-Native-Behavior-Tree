@@ -150,6 +150,61 @@ The managed controls on the same runs: `m-shared-shape15` 1.0 / 1.2 µs, `m-unit
 1.6 µs. For these small trees the managed layer is still faster per agent. Trees with facts and
 effects are no longer slower under `BatchedJobsSameFrame` (`Planning~/Evidence/P10-003/README.md`).
 
+### JobsAgentFrame (P10-004)
+
+`SchedulingProfile.JobsAgentFrame` runs each native agent's whole update inside one Burst job work
+item: the lifecycle steps, the generated node bodies and the dispatch framing around them. The main
+thread keeps clock reads, the agent table, one schedule and one complete per group, trace replay
+and effect delivery in agent order. It needs no `SchedulerJobsCapabilities`:
+
+```csharp
+agent.Profile = SchedulingProfile.JobsAgentFrame; // before the agent is enabled
+```
+
+Interleaved quick benchmark, IL2CPP, 23 job workers, main-thread µs per agent and frame:
+
+| Tree | profile | N=1 000 | N=5 000 | B per agent-tick |
+|---|---|---:|---:|---:|
+| `io-wait1` | default (`Immediate`) | 1.9 | 2.6 | 0 |
+| | `BatchedJobsSameFrame` | 2.0 | 2.6 | 0 |
+| | `JobsAgentFrame` | 0.9 | 1.2 | 0 |
+| `shared-loop16` | default (`Immediate`) | 3.6 | 4.5 | 0 |
+| | `BatchedJobsSameFrame` | 3.8 | 5.1 | 0 |
+| | `JobsAgentFrame` | 1.1 | 1.6 | 0 |
+| `io-move1-fact-effect` | default (`Immediate`) | 2.6 | 3.4 | 0 |
+| | `BatchedJobsSameFrame` | 2.7 | 3.5 | 0 |
+| | `JobsAgentFrame` | 1.1 | 1.5 | 0 |
+| `shared-reactive16` | default (`Immediate`) | 53 | 53 | 0 |
+| | `BatchedJobsSameFrame` | 62 | 76 | 0 |
+| | `JobsAgentFrame` | 5.0 | 4.9 | 0 |
+
+Total CPU time, measured by running the Player with `JobsUtility.JobWorkerCount = 0` (every job
+on the main thread), is also lower than Immediate: 0.63–0.74× for the small trees and 0.46× for
+`shared-reactive16`, because the node bodies and the framing run Burst-compiled in the job. So the
+policy saves work, not only main-thread time.
+
+What it gains and where it does not:
+
+- The gain grows with the number of dispatches per update. A tree that dispatches once per update
+  still pays a fixed managed cost per agent on the main thread (begin and finish around the job),
+  so it gains about 2×.
+- Agents the job cannot run fall back to Immediate in their own due position: hosts without
+  generated dispatch, hosts with a per-host `StepBudget`, and catalogs generated before P10-004
+  (rebuild to regenerate them). `SchedulerFrameEntry.AgentFrameFallback` names the reason and the
+  scheduler logs one warning per host.
+- Every member's clock is read before the job runs, not just before its own update; this only
+  matters for a custom clock that depends on other agents' updates in the same frame.
+- Measured on a 24-thread desktop CPU. On a CPU with few cores the worker time is the frame time;
+  measure on your target.
+
+### Step limit
+
+Every native policy stops an update after `ProductionTreeHost.MaximumStepsPerUpdate` lifecycle
+steps (default 1 000 000) and fails the host with `NativeUpdateStepLimitExceeded`. The trees in the
+benchmarks need between a few and a few hundred steps per update; only a tree that never yields
+(for example a repeater over an instant leaf) reaches the default. Lower it on a host to catch such
+a tree sooner.
+
 ## Advice
 
 - Start with the managed layer and `EveryFrame`; switch slow-changing agents to `Interval`, and turn
@@ -157,3 +212,5 @@ effects are no longer slower under `BatchedJobsSameFrame` (`Planning~/Evidence/P
 - Keep reactive conditions few; each one is re-evaluated every tick.
 - In the native layer, prefer trees that loop over trees that finish and restart.
 - Keep the default native profile unless a measurement on your target shows a Jobs policy is faster.
+  `JobsAgentFrame` is the first Jobs policy that is faster on the main thread in every measured
+  case (`Planning~/Evidence/P10-004/README.md`).
