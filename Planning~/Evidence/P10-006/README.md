@@ -48,6 +48,20 @@ five sample nodes in its catalog (`aibt.samples.first-agent.move`, three `aibt.s
 `samples.simple.next-waypoint`), so the "built-in only" catalog has 74 entries instead of 69. It is
 the same failure, with the same message, as on 6000.7.0b1.
 
+## 2.1 Editor tooling on 6000.6.9f1 (visual check)
+
+- `aibt-graph-guard-6000.6.9f1.png`: the AIBT Graph window opened `Samples/AIBT/Simple Agent/Trees/guard.aibt`
+  through its `OnOpenAsset` handler (the `EntityId` overload changed above), status `Valid`, tree,
+  blackboard and project tree list drawn (`Tools/Unity/Save-UnityWindow.ps1 -Window 'AIBT Graph' -OpenAsset …`).
+- `simpleagent-playmode-t06s.png`, `simpleagent-playmode-t18s.png`: two stills of a 30 s Play Mode
+  clip of `Assets/AibtSimpleAgentDemo/SimpleAgent.unity` (`Save-UnityClip.ps1 -Play -Seconds 30
+  -StillsEvery 3`; the mp4 stays in the host's `Temp/migration/`, not committed). The guard, scout and
+  wanderer move and the beacon changes state between the stills.
+- Console during the session: no compile error; besides the stale-artifact messages (section 5) the
+  Editor logged `Release of invalid GC handle. The handle is from a previous domain` six times from
+  `AssetPostprocessingInternal.PostprocessAllAssets` after the forced reimport. It comes from the
+  Editor's asset postprocessing, not from AIBT code, and was not investigated further.
+
 ## 3. Remaining warnings (not changed)
 
 Same eight AIBT warnings as in `Planning~/Evidence/P10-005/README.md` section 0.1, plus three in
@@ -95,6 +109,10 @@ Two host-tool fixes were needed outside the package: `Assets/DevTools/Editor/Cap
 (`VisualElement.CaptureToRenderTexture` exists only from 6000.7; the `ui` capture method now throws on
 older Editors, `screen`/`auto` work) and `Tools/Unity/Invoke-UnityRecompile.ps1` (Unity CLI 1.0.0
 returns `recompile_status` as a JSON string; the script now decodes it, unrelated to the Unity version).
+`Tools/Unity/Enter-UnityPlayMode.ps1` also needed a fix for the CLI, not for Unity: CLI 1.0.0 writes
+a hint line to stderr, which Windows PowerShell 5.1 turns into a terminating error under
+`$ErrorActionPreference = 'Stop'`. The `editor_play` call now runs under `Continue`.
+`Start-UnityEditor.ps1` has the same `unity open … *> $null` pattern and was not run, so it was not changed.
 
 ## 5. Not verified
 
