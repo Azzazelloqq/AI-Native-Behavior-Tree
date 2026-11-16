@@ -7,7 +7,7 @@ Card: `Planning~/Tasks/P10/P10-009-simulation-container-g1.md`. Design:
 Submodule `Assets/AIBT`, branch `feature/aibt-consumer-workflow`, local commits (not pushed):
 
 - `d436789` step 1: core extraction (`ProductionTreeAgentCore`), host delegates.
-- step 2 (this evidence): the container, tests, benchmark set, docs.
+- `d181cb0` step 2: the container, tests, benchmark set, docs, this evidence.
 
 Raw data outside the repository: `C:\UnityProjects\_aibt_acceptance\perf-data\P10-009\`
 (`raw/il2cpp-*`, `sim-table.md`, `logs/`, `api/`).
