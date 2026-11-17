@@ -609,6 +609,19 @@ namespace AIBT.Execution.Burst.Dispatch
             return true;
         }
 
+        /// <summary>
+        /// P10-011: the simulation container rebuilds a node's operation table from its agent's action
+        /// ledger before every request (ended actions leave it), so the table's operation count can go
+        /// down between requests. Lowers the operation-count floor to <paramref name="operationCount"/>
+        /// when it is above it; every other floor is kept. Refused unless idle. Hosts never call this.
+        /// </summary>
+        internal bool TryRebaseOperationCountFloor(uint operationCount)
+        {
+            if (_disposed || _hasDependency || _state != NativeBurstDispatchWorkspaceStateV2.Idle) return false;
+            if (operationCount < _operationCountFloor) _operationCountFloor = operationCount;
+            return true;
+        }
+
         internal bool TryDispose(out BurstContextResult failure)
         {
             if (_disposed)

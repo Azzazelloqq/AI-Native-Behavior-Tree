@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-309 public type(s).
+314 public type(s).
 
 ---
 
@@ -3656,6 +3656,67 @@ Why <see cref="SchedulingProfile.TryCreate(string,int,uint,uint?,double?,bool,Sc
 
 ---
 
+### `AIBT.Simulation.ActionCancelReason`
+
+P10-011: why an action was cancelled. Every started action that does not end by its node consuming the game's completion gets exactly one <see cref="ActionEventKind.Cancelled"/> event, with one of these reasons. Experimental until G5.
+
+- `FIELD AIBT.Simulation.ActionCancelReason AgentRemoved`
+- `FIELD AIBT.Simulation.ActionCancelReason AgentRestarted`
+- `FIELD AIBT.Simulation.ActionCancelReason Fault`
+- `FIELD AIBT.Simulation.ActionCancelReason GroupRemoved`
+- `FIELD AIBT.Simulation.ActionCancelReason NodeEnded`
+- `FIELD AIBT.Simulation.ActionCancelReason Preempted`
+- `FIELD AIBT.Simulation.ActionCancelReason Timeout`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.Simulation.ActionEvent`
+
+P10-011: one action event of the last step (<see cref="TreeGroup.GetActionEvents"/>). Read the start payload of a <see cref="ActionEventKind.Started"/> event with <see cref="TreeGroup.TryGetStartPayload{TStart}"/> and the cancel payload of a <see cref="ActionEventKind.Cancelled"/> event with <see cref="TreeGroup.TryGetCancelPayload{TCancel}"/>, before the next step. Experimental until G5.
+
+- `PROPERTY AIBT.Simulation.ActionCancelReason CancelReason`
+- `PROPERTY AIBT.Simulation.ActionEventKind Kind`
+- `PROPERTY AIBT.Simulation.ActionHandle Action`
+- `PROPERTY System.Boolean FaultCancel`
+
+---
+
+### `AIBT.Simulation.ActionEventKind`
+
+P10-011: what happened to an external action in the last step. Experimental until G5.
+
+- `FIELD AIBT.Simulation.ActionEventKind Cancelled`
+- `FIELD AIBT.Simulation.ActionEventKind Started`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.Simulation.ActionHandle`
+
+P10-011: one external action: the agent that started it, the operation id the dispatch assigned (tree instance, node, activation, sequence) and its channel (the async-operation binding id, as <see cref="CommandChannel{T}.Id"/> for a command). A handle stays valid until the action's <see cref="ActionEventKind.Cancelled"/> event or until its node consumes the completion; after that calls with it return <see cref="SimulationResult.StaleAction"/>. Experimental until G5.
+
+- `METHOD System.Boolean Equals(AIBT.Simulation.ActionHandle)`
+- `METHOD System.Boolean Equals(System.Object)`
+- `METHOD System.Int32 GetHashCode()`
+- `METHOD System.String ToString()`
+- `PROPERTY AIBT.OperationId Operation`
+- `PROPERTY AIBT.Simulation.AgentHandle Agent`
+- `PROPERTY System.Boolean IsNull`
+- `PROPERTY System.UInt64 Channel`
+
+---
+
+### `AIBT.Simulation.ActionOutcome`
+
+P10-011: how the game ends an external action (<see cref="TreeGroup.TryComplete(ActionHandle, ActionOutcome)"/>). Experimental until G5.
+
+- `FIELD AIBT.Simulation.ActionOutcome Failed`
+- `FIELD AIBT.Simulation.ActionOutcome Succeeded`
+- `FIELD System.Byte value__`
+
+---
+
 ### `AIBT.Simulation.AgentFault`
 
 One agent that stopped with a runtime failure in the last step. The agent stays alive but does not think until <see cref="TreeGroup.TryRestart"/> or <see cref="TreeGroup.TryRemove"/>. The failure's owner id is cleared: it comes from a process-wide counter and would make results depend on what ran earlier in the process. Experimental until G5.
@@ -3731,12 +3792,14 @@ What a <see cref="TreeGroup"/> does when an agent's root finishes. Experimental 
 
 Result of every <see cref="TreeSimulation"/> and <see cref="TreeGroup"/> call that can fail at runtime. No hot-path call throws. Experimental (ADR-P10-008) until stage G5: names and members may still change.
 
+- `FIELD AIBT.Simulation.SimulationResult AlreadyCompleted`
 - `FIELD AIBT.Simulation.SimulationResult Busy`
 - `FIELD AIBT.Simulation.SimulationResult CapacityExceeded`
 - `FIELD AIBT.Simulation.SimulationResult CatalogTooOld`
 - `FIELD AIBT.Simulation.SimulationResult Disposed`
 - `FIELD AIBT.Simulation.SimulationResult InputMissing`
 - `FIELD AIBT.Simulation.SimulationResult InvalidArgument`
+- `FIELD AIBT.Simulation.SimulationResult StaleAction`
 - `FIELD AIBT.Simulation.SimulationResult StaleHandle`
 - `FIELD AIBT.Simulation.SimulationResult Success`
 - `FIELD AIBT.Simulation.SimulationResult TickNotIncreasing`
@@ -3767,7 +3830,11 @@ N agents of one <see cref="ProductionTreeProgram"/> inside one <see cref="TreeSi
 - `METHOD AIBT.Simulation.SimulationResult TryAdd(AIBT.Simulation.AgentHandle&)`
 - `METHOD AIBT.Simulation.SimulationResult TryAdd(AIBT.Simulation.ThinkSchedule&,AIBT.Simulation.AgentHandle&)`
 - `METHOD AIBT.Simulation.SimulationResult TryBindInput(AIBT.Simulation.InputChannel`1<>,Unity.Collections.NativeArray`1<>)`
+- `METHOD AIBT.Simulation.SimulationResult TryComplete(AIBT.Simulation.ActionHandle,AIBT.Simulation.ActionOutcome)`
+- `METHOD AIBT.Simulation.SimulationResult TryComplete(AIBT.Simulation.ActionHandle,AIBT.Simulation.ActionOutcome,)`
+- `METHOD AIBT.Simulation.SimulationResult TryGetCancelPayload(AIBT.Simulation.ActionEvent&,)`
 - `METHOD AIBT.Simulation.SimulationResult TryGetCommands(AIBT.Simulation.CommandChannel`1<>,)`
+- `METHOD AIBT.Simulation.SimulationResult TryGetStartPayload(AIBT.Simulation.ActionEvent&,)`
 - `METHOD AIBT.Simulation.SimulationResult TryRemove(AIBT.Simulation.AgentHandle)`
 - `METHOD AIBT.Simulation.SimulationResult TryReserve(System.Int32)`
 - `METHOD AIBT.Simulation.SimulationResult TryRestart(AIBT.Simulation.AgentHandle)`
@@ -3777,12 +3844,14 @@ N agents of one <see cref="ProductionTreeProgram"/> inside one <see cref="TreeSi
 - `METHOD AIBT.Simulation.SimulationResult TryWake(AIBT.Simulation.AgentHandle)`
 - `METHOD AIBT.Simulation.SimulationResult TryWakeMany(Unity.Collections.NativeArray`1+ReadOnly<System.Int32>)`
 - `METHOD System.Boolean IsAlive(AIBT.Simulation.AgentHandle)`
+- `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.ActionEvent> GetActionEvents()`
 - `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.AgentFault> GetFaults()`
 - `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.Command`1<>> GetCommands(AIBT.Simulation.CommandChannel`1<>)`
 - `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.RootCompletion> GetRootCompletions()`
 - `PROPERTY AIBT.ProductionTreeProgram Program`
 - `PROPERTY AIBT.Simulation.TreeGroupSettings Settings`
 - `PROPERTY System.Boolean IsValid`
+- `PROPERTY System.Int32 ActionEventCapacity`
 - `PROPERTY System.Int32 Capacity`
 - `PROPERTY System.Int32 Count`
 - `PROPERTY System.Int32 HighWaterIndex`
@@ -3795,8 +3864,10 @@ N agents of one <see cref="ProductionTreeProgram"/> inside one <see cref="TreeSi
 Settings of one <see cref="TreeGroup"/>. Experimental (ADR-P10-008) until G5.
 
 - `FIELD AIBT.Simulation.RootCompletionPolicy RootCompletion`
+- `FIELD System.Int32 ActionCapacityPerAgent`
 - `FIELD System.Int32 Capacity`
 - `FIELD System.Int32 CommandQuotaPerAgent`
+- `FIELD System.Int32 DefaultActionCapacityPerAgent`
 - `FIELD System.Int32 DefaultCommandQuotaPerAgent`
 - `FIELD System.UInt32 DefaultThinkInterval`
 - `METHOD AIBT.Simulation.TreeGroupSettings Default(System.Int32)`

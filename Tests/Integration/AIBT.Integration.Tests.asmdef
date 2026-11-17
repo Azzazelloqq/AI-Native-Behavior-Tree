@@ -9,6 +9,7 @@
     "AIBT.CodeGen.GenerationTests",
     "AIBT.CodeGen.P7039ExternalTreeWrite.Tests",
     "AIBT.CodeGen.P10010SimulationIo.Tests",
+    "AIBT.CodeGen.P10011SimulationActions.Tests",
     "AIBT.StandardNodes",
     "Unity.Burst",
     "Unity.Collections"

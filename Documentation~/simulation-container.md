@@ -4,23 +4,23 @@
 `Update`. The game owns it, adds agents to it, and advances it with `Step(tick)` from its own loop:
 a fixed-step game loop, a server tick, an EditMode test or a tool.
 
-> **Experimental.** Stages G1 and G2 of `Documentation~/decisions/ADR-P10-008-simulation-container.md`.
+> **Experimental.** Stages G1–G3 of `Documentation~/decisions/ADR-P10-008-simulation-container.md`.
 > Names and members may change until stage G5. Generated nodes may use Tree/Agent-scope blackboard
-> keys, game inputs (`SnapshotReadHandle`) and commands (`CommandHandle`). External actions
-> (`AsyncOperationHandle`, `CompletionHandle`) arrive in G3; programs that use them are refused with
-> `Unsupported`.
+> keys, game inputs (`SnapshotReadHandle`), commands (`CommandHandle`) and (G3) external
+> long-running actions (`AsyncOperationHandle`, `CompletionHandle`).
 
 ## Model
 
 | Type | What it is |
 |---|---|
 | `TreeSimulation` | One world. `TreeSimulationSettings`: `TickMicroseconds` (time of one tick), `RandomSeed`, `UseJobs`, `MinimumJobBatch` (default 64), `MaximumStepsPerThink`. |
-| `TreeGroup` | Agents that run one `ProductionTreeProgram`. `TreeGroupSettings`: `Capacity` (slots allocated up front), `DefaultThinkInterval`, `RootCompletion` (`Restart`, the default, or `Stop`), `CommandQuotaPerAgent` (G2; 0 = default 4). |
+| `TreeGroup` | Agents that run one `ProductionTreeProgram`. `TreeGroupSettings`: `Capacity` (slots allocated up front), `DefaultThinkInterval`, `RootCompletion` (`Restart`, the default, or `Stop`), `CommandQuotaPerAgent` (G2; 0 = default 4), `ActionCapacityPerAgent` (G3; 0 = default 2). |
 | `InputChannel<T>` (G2) | A game input: the id nodes give in `[AibtInput("id")]` and the row type `T`. A game `NativeArray<T>` bound to a group gives row `i` to the agent in slot `i`. |
 | `CommandChannel<T>`, `Command<T>` (G2) | A command: the id nodes give in `[AibtCommand("id")]` and the payload type `T`; `Command<T>` is one emitted command (agent handle, value). |
+| `ActionHandle`, `ActionEvent` (G3) | An external action a node started (agent, operation id, channel) and one Started or Cancelled event of the last step. |
 | `AgentHandle` | Slot index + generation + group id. A handle stays valid until its agent is removed. After that, every call with it returns `StaleHandle`, also when the slot is reused. |
 | `ThinkSchedule` | `Every(interval, phase)`: thinks on ticks where `tick % interval == phase`. `Spread(interval)`: the group assigns phases 0, 1, 2, … round-robin. |
-| `SimulationResult` | Every mutating call returns one: `Success`, `Busy` (called during `Step`), `Disposed`, `StaleHandle`, `CapacityExceeded`, `TickNotIncreasing`, `InvalidArgument`; from G2 also `InputMissing`, `TypeMismatch`, `CatalogTooOld`, `Unsupported`, `UnknownChannel`. |
+| `SimulationResult` | Every mutating call returns one: `Success`, `Busy` (called during `Step`), `Disposed`, `StaleHandle`, `CapacityExceeded`, `TickNotIncreasing`, `InvalidArgument`; from G2 also `InputMissing`, `TypeMismatch`, `CatalogTooOld`, `Unsupported` (no longer returned since G3), `UnknownChannel`; from G3 `StaleAction`, `AlreadyCompleted`. |
 
 ## One step
 
@@ -36,13 +36,14 @@ a fixed-step game loop, a server tick, an EditMode test or a tool.
 3. In every group, in creation order, agents removed or restarted since the last step are torn
    down (abort with `TreeStopped`). Groups removed one step earlier are released.
 4. Due agents think. An agent is due when its schedule matches the tick, it was woken by
-   `TryWake`/`TryWakeMany`, or (G2, opt-in) its row of a wake-on-change input differs from the row
+   `TryWake`/`TryWakeMany` or (G3) by a completion the game gave, or (G2, opt-in) its row of a wake-on-change input differs from the row
    it read at its last think. Groups go in creation order, agents in ascending slot order. Each think
    is one update at time `tick × TickMicroseconds`. With `UseJobs` on and at least
    `MinimumJobBatch` due agents in a group, the group's think runs as one agent-frame job; the step
    completes it before it returns. Otherwise it runs on the calling thread. Results are identical
    either way.
-5. Root completions, faults and (G2) commands are recorded in slot order. They can be read with
+5. Root completions, faults, (G2) commands and (G3) action events are recorded in slot order;
+   action events of removed groups' teardowns are included. They can be read with
    `GetRootCompletions()` and `GetFaults()` until the next step. A completed agent restarts in
    place at its next think (`Restart`), or keeps its result and stops thinking (`Stop`, until
    `TryRestart`).
@@ -142,6 +143,104 @@ void FixedTick(uint tick)
 - **Hosts** (`ProductionTreeHost`, `ProductionTreeScheduler`) are unchanged: they still refuse
   programs with input (snapshot) bindings.
 
+## External actions (G3)
+
+A node starts a long-running action the game carries out (a move, an animation, a path request)
+through an `AsyncOperationHandle<TStart, TCancel>` field and `TryStart`, and reads how it ended
+through a `CompletionHandle<TResult>` field and `TryConsume`. The game sees each start and each
+cancellation as an event after `Step`, and completes actions between steps.
+
+```csharp
+// The node (generated catalog, Burst). The binding ids name the action and its completion.
+public partial struct MoveConfig
+{
+    [AibtConfigField("move", "GeneratedHandle", 1u)]
+    [AibtAsyncOperationBinding("move", "game.move-order", 1u, "game.move-stop", 1u)]
+    public AsyncOperationHandle<MoveOrder, MoveStop> Move;
+
+    [AibtConfigField("arrived", "GeneratedHandle", 1u)]
+    [AibtCompletionBinding("arrived", "game.move-result", 1u)]
+    public CompletionHandle<MoveResult> Arrived;
+}
+
+// Tick: start once, then poll. Abort: cancel (BurstCancellationMode.Command).
+if (!memory.Started)
+{
+    MyShard.BurstAccess.TryStart(ref context, config.Move, in order, in new MoveStop { Reason = -1 }, out memory.Operation);
+    memory.Started = true;
+    return NodeStatus.Running;
+}
+var consumed = MyShard.BurstAccess.TryConsume(ref context, config.Arrived, memory.Operation, out var outcome, out var result);
+if (consumed == BurstContextResult.StaleCompletion) return NodeStatus.Running; // not completed yet
+return outcome == BurstCompletionOutcome.Succeeded ? NodeStatus.Success : NodeStatus.Failure;
+```
+
+```csharp
+// The game, every fixed tick.
+void FixedTick(uint tick)
+{
+    simulation.Step(tick);
+    foreach (var e in guards.GetActionEvents())
+    {
+        if (e.Kind == ActionEventKind.Started)
+        {
+            guards.TryGetStartPayload(e, out MoveOrder order);
+            movement.Begin(e.Action, e.Action.Agent, order);      // keep the ActionHandle
+        }
+        else
+        {
+            guards.TryGetCancelPayload(e, out MoveStop stop);     // e.CancelReason says why
+            movement.Stop(e.Action);                              // never complete it now
+        }
+    }
+}
+
+// Whenever the game's move ends, between steps:
+void OnArrived(ActionHandle action, bool reached, float distance)
+    => guards.TryComplete(action, reached ? ActionOutcome.Succeeded : ActionOutcome.Failed,
+                          new MoveResult { Distance = distance });
+```
+
+- **Events.** `GetActionEvents()` lists the last step's events: agents in slot order, each agent's
+  events in the order they happened (a torn-down instance's events before its new instance's). It is
+  valid until the next step and allocates nothing. Read the values with `TryGetStartPayload<T>`
+  (Started) and `TryGetCancelPayload<T>` (Cancelled) before the next step.
+- **Exactly one end.** Every started action ends exactly once: either its node consumes the game's
+  completion (no event), or it gets one `Cancelled` event. Never two, never a `Cancelled` after the
+  completion was consumed. After either, calls with its handle return `StaleAction`.
+- **Cancel reasons.** `Preempted` (the node was aborted, for example by a reactive interrupt, and
+  cancelled in Abort), `Timeout` (aborted by a timeout), `NodeEnded` (the node ended with the action
+  live and did not cancel it), `Fault` (the agent faulted), `AgentRemoved`, `AgentRestarted`,
+  `GroupRemoved` (teardown). `ActionEvent.FaultCancel` is true when the cancel value is the
+  fault-cancel value the node gave at start (every reason except a node's own cancel in Abort).
+- **Completing.** `TryComplete(action, outcome)` or `TryComplete<TResult>(action, outcome, value)`
+  between steps. It records the completion at once and wakes the agent, so its node reads it in the
+  next step, whatever the schedule. If the node is aborted in that step before it reads it, preemption
+  wins: the action gets a `Cancelled` event and the completion is dropped. Without a value the node
+  reads zeros. Result codes, nothing changed: `AlreadyCompleted` (second call), `StaleAction` (the
+  action ended, or its agent was removed or restarted), `StaleHandle` (another group's handle),
+  `TypeMismatch` (not the node's completion type), `InvalidArgument` (an outcome outside
+  `ActionOutcome`, NaN, an infinity, a bool above 1), `Busy`, `Disposed`.
+- **Not under a reactive composite.** A reactive sequence or selector aborts its running child at
+  every update before it re-evaluates (`execution-semantics-v1.md`, "Reactive selector").
+  - An action node anywhere below one is cancelled (`Preempted`) and started again at every think.
+  - It never reads a completion: the completion's own wake-up think aborts it first.
+  - Put long actions under memory composites. Use a reactive composite only for a node whose action
+    is fire-and-forget, or whose restart at every think is intended.
+- **Polling.** A poll before the game completed the action (`TryConsume` returns `StaleCompletion`)
+  keeps the node `Running` and changes nothing else in that dispatch: anything the node did before
+  the poll in the same Tick is dropped. Decide time-outs and other early exits before polling.
+- **Capacity.** Each agent may hold `ActionCapacityPerAgent` live actions (default 2) and start at
+  most that many per think. A start over the limit faults the agent (`AgentFault.Cause` =
+  `CapacityExceeded`), and its live actions end with `Cancelled`, reason `Fault`. Events per agent per
+  step are at most 3 × the capacity, so `ActionEventCapacity` (slots × 3 × capacity) is never
+  exceeded. A program without actions has none.
+- **Paths.** In place and in agent-frame jobs, with any worker count, events, payloads and agent
+  states are identical.
+- **Catalogs generated before G2** cannot name action channels: a program with actions is refused
+  with `CatalogTooOld`.
+- **Hosts** (`ProductionTreeHost`, `ProductionTreeScheduler`) are unchanged: they still refuse
+  programs with external actions at bootstrap.
 ## Lifetime rules
 
 - Capacity is allocated by `TryAddGroup` and `TryReserve`, never during `Step`. Growing a group
@@ -153,9 +252,7 @@ void FixedTick(uint tick)
 - Call the container from one thread at a time. Calls made while `Step` runs (from a callback)
   return `Busy`.
 
-## Not yet (G3 and later)
+## Not yet (G4 and later)
 
-- External actions (`AsyncOperationHandle`, `CompletionHandle`): stage G3. `TryAddGroup` refuses
-  programs that use them with `Unsupported`.
 - Trace channels and the live debugger.
 - Shared- and World-scope blackboard keys.

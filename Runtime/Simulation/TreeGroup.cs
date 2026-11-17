@@ -1,6 +1,7 @@
 using System;
 using AIBT.AgentFrame;
 using AIBT.Burst;
+using AIBT.Execution.Burst.Dispatch;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs.LowLevel.Unsafe;
@@ -104,6 +105,30 @@ namespace AIBT.Simulation
         private bool _anyWake;
         private uint _stepStamp;
 
+        // ---- P10-011: external actions -----------------------------------------------------------
+        private sealed class PayloadLayout : IDisposable
+        {
+            internal Type Type;
+            internal NativeArray<SimulationLeafV1> Leaves;
+            internal NativeArray<byte> Raw;        // sizeof(T)
+            internal NativeArray<byte> Canonical;  // the value's canonical size
+
+            public void Dispose()
+            {
+                if (Leaves.IsCreated) Leaves.Dispose();
+                if (Raw.IsCreated) Raw.Dispose();
+                if (Canonical.IsCreated) Canonical.Dispose();
+            }
+        }
+
+        private readonly int _actionCapacity;
+        private readonly PayloadLayout[] _startLayouts;
+        private readonly PayloadLayout[] _cancelLayouts;
+        private readonly PayloadLayout[] _completionLayouts;
+        private NativeList<ActionEvent> _actionEvents;
+        // Agents whose action event log is not empty (cleared at the next step's start).
+        private NativeList<int> _actionEmitters;
+
         internal TreeGroup(
             TreeSimulation simulation, ushort id, ProductionTreeProgram program, in TreeGroupSettings settings,
             SimulationProgramMapV1 map)
@@ -142,6 +167,14 @@ namespace AIBT.Simulation
             _simAgents = new UnsafeList<SimulationAgentNativeV1>(Math.Max(1, settings.Capacity), Allocator.Persistent);
             _emitters = new NativeList<SimulationEmitterV1>(Math.Max(1, settings.Capacity), Allocator.Persistent);
             _wakeScratch = new NativeArray<byte>((int)largest, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+
+            _actionCapacity = map.Actions.Count == 0 ? 0
+                : settings.ActionCapacityPerAgent == 0 ? TreeGroupSettings.DefaultActionCapacityPerAgent : settings.ActionCapacityPerAgent;
+            _startLayouts = new PayloadLayout[map.Actions.Count];
+            _cancelLayouts = new PayloadLayout[map.Actions.Count];
+            _completionLayouts = new PayloadLayout[map.Completions.Count];
+            _actionEvents = new NativeList<ActionEvent>(Math.Max(1, settings.Capacity * 3 * _actionCapacity), Allocator.Persistent);
+            _actionEmitters = new NativeList<int>(Math.Max(1, settings.Capacity), Allocator.Persistent);
         }
 
         /// <summary>The container state of slot <paramref name="index"/> (its in-place dispatch reaches it through the bridge).</summary>
@@ -223,6 +256,8 @@ namespace AIBT.Simulation
             if (_rootCompletions.Capacity < capacity) _rootCompletions.Capacity = capacity;
             if (_faults.Capacity < capacity) _faults.Capacity = capacity;
             if (_emitters.Capacity < capacity) _emitters.Capacity = capacity;
+            if (_actionEmitters.Capacity < capacity) _actionEmitters.Capacity = capacity;
+            if (_actionEvents.Capacity < capacity * 3 * _actionCapacity) _actionEvents.Capacity = capacity * 3 * _actionCapacity;
             GrowSimulationStorage(capacity);
             return SimulationResult.Success;
         }
@@ -239,6 +274,14 @@ namespace AIBT.Simulation
             for (var channel = 0; channel < commandChannels; channel++)
                 payloadBytes += (int)_map.Commands[channel].CanonicalSize;
             if (_simAgents.Capacity < capacity) _simAgents.Capacity = capacity;
+            // P10-011: the action ledger (capacity records, payload stride start + cancel + completion)
+            // and a step's event log, 3 × capacity events: a step ends at most every action live at its
+            // start or started in it (2 × capacity) and starts at most capacity (starts happen in thinks
+            // only, at most capacity per think, and an agent thinks at most once per step).
+            var cancelOffset = (int)_map.MaxStartSize;
+            var completionOffset = cancelOffset + (int)_map.MaxCancelSize;
+            var stride = completionOffset + (int)_map.MaxCompletionSize;
+            var eventPayload = 3 * _actionCapacity * (int)Math.Max(_map.MaxStartSize, _map.MaxCancelSize);
             while (_simAgents.Length < capacity)
             {
                 var entry = new SimulationAgentNativeV1
@@ -249,8 +292,17 @@ namespace AIBT.Simulation
                     CommandFree = new UnsafeList<int>(Math.Max(1, commandChannels), Allocator.Persistent),
                     Commands = new UnsafeList<SimulationCommandRecordV1>(Math.Max(1, 2 * _quota * commandChannels), Allocator.Persistent),
                     Payload = new UnsafeList<byte>(Math.Max(1, 2 * _quota * payloadBytes), Allocator.Persistent),
+                    Actions = new UnsafeList<SimulationActionRecordV1>(Math.Max(1, _actionCapacity), Allocator.Persistent),
+                    ActionPayload = new UnsafeList<byte>(Math.Max(1, _actionCapacity * stride), Allocator.Persistent),
+                    ActionCapacity = _actionCapacity,
+                    ActionStride = stride,
+                    ActionCancelOffset = cancelOffset,
+                    ActionCompletionOffset = completionOffset,
+                    Events = new UnsafeList<SimulationActionEventRecordV1>(Math.Max(1, 3 * _actionCapacity), Allocator.Persistent),
+                    EventPayload = new UnsafeList<byte>(Math.Max(1, eventPayload), Allocator.Persistent),
                 };
                 entry.CommandFree.Resize(commandChannels, NativeArrayOptions.ClearMemory);
+                entry.ActionPayload.Resize(_actionCapacity * stride, NativeArrayOptions.ClearMemory);
                 _simAgents.Add(entry);
             }
             for (var channel = 0; channel < _inputStates.Length; channel++)
@@ -321,7 +373,7 @@ namespace AIBT.Simulation
                     slot.State = SlotState.Retired;
                     continue;
                 }
-                if (!TryResetToFreshInstance(ref slot)) return SimulationResult.InvalidArgument;
+                if (!TryResetToFreshInstance(index, ref slot)) return SimulationResult.InvalidArgument;
                 slot.Generation++;
                 slot.State = SlotState.Alive;
                 ApplySchedule(ref slot, schedule);
@@ -431,11 +483,13 @@ namespace AIBT.Simulation
             slot.Phase = schedule.IsSpread ? _spreadCounter++ % schedule.Interval : schedule.Phase % schedule.Interval;
         }
 
-        private bool TryResetToFreshInstance(ref Slot slot)
+        private bool TryResetToFreshInstance(int index, ref Slot slot)
         {
             var id = _simulation.NextTreeInstanceId();
             if (!slot.Core.TryResetInstance(id, out _)) return false;
             slot.Core.GeneratedDispatch.SeedRandomStreams(_simulation.Settings.RandomSeed, _semanticHash);
+            // P10-011: a fresh ledger (it is empty already unless a fault left actions; those were flushed).
+            SimulationActionRoutinesV1.Reset(ref _simAgents.ElementAt(index));
             return true;
         }
 
@@ -458,7 +512,8 @@ namespace AIBT.Simulation
                 if (slot.State == SlotState.PendingRemoval)
                 {
                     ResetCommandQuota(index);
-                    TearDown(slot.Core);
+                    TearDown(index, slot.Core,
+                        _removal == Removal.Pending ? ActionCancelReason.GroupRemoved : ActionCancelReason.AgentRemoved);
                     slot.State = SlotState.Free;
                     slot.Woken = false;
                     slot.ResetAtNextThink = false;
@@ -467,7 +522,7 @@ namespace AIBT.Simulation
                 else if (slot.State == SlotState.Alive && slot.RestartRequested)
                 {
                     ResetCommandQuota(index);
-                    TearDown(slot.Core);
+                    TearDown(index, slot.Core, ActionCancelReason.AgentRestarted);
                     slot.RestartRequested = false;
                     slot.ResetAtNextThink = true;
                 }
@@ -475,8 +530,14 @@ namespace AIBT.Simulation
             if (_removal == Removal.Pending) _removal = Removal.TornDown;
         }
 
-        private static void TearDown(ProductionTreeAgentCore core)
+        /// <summary>
+        /// Tears the agent down (abort with TreeStopped, then exits). P10-011: actions its nodes cancel or
+        /// leave in Exit get <paramref name="reason"/>; actions still live afterwards (the agent was not
+        /// running, or teardown faulted) are cancelled with it too, so every live action ends here.
+        /// </summary>
+        private void TearDown(int index, ProductionTreeAgentCore core, ActionCancelReason reason)
         {
+            _simAgents.ElementAt(index).TeardownReason = (byte)((byte)reason + 1);
             try
             {
                 core.RunTeardown();
@@ -485,6 +546,9 @@ namespace AIBT.Simulation
             {
                 core.Fail(ProductionTreeAgentCore.InvalidLifetime(), ProductionTreeAgentFailureDetail.Text);
             }
+            ref var entry = ref _simAgents.ElementAt(index);
+            SimulationActionRoutinesV1.Flush(ref entry, reason);
+            entry.TeardownReason = 0;
         }
 
         /// <summary>Step phase 2: every due agent of this group thinks once at <paramref name="time"/>.</summary>
@@ -504,7 +568,7 @@ namespace AIBT.Simulation
                 if (slot.ResetAtNextThink)
                 {
                     slot.ResetAtNextThink = false;
-                    if (!TryResetToFreshInstance(ref slot))
+                    if (!TryResetToFreshInstance(index, ref slot))
                     {
                         RecordFault(index, ref slot, ProductionTreeAgentCore.InvalidLifetime());
                         continue;
@@ -556,6 +620,8 @@ namespace AIBT.Simulation
                 failure.Code, failure.ResourceKind, failure.Requested, failure.Capacity, failure.Alignment,
                 0, failure.Generation, failure.LeaseId);
             _faults.Add(new AgentFault(new AgentHandle(index, slot.Generation, Id), reported, cause));
+            // P10-011: a stopped agent's live actions end now.
+            SimulationActionRoutinesV1.Flush(ref _simAgents.ElementAt(index), ActionCancelReason.Fault);
         }
 
         private void RunInPlace(int dueCount)
@@ -647,9 +713,18 @@ namespace AIBT.Simulation
                     if (entry.CommandFree.IsCreated) entry.CommandFree.Dispose();
                     if (entry.Commands.IsCreated) entry.Commands.Dispose();
                     if (entry.Payload.IsCreated) entry.Payload.Dispose();
+                    if (entry.Actions.IsCreated) entry.Actions.Dispose();
+                    if (entry.ActionPayload.IsCreated) entry.ActionPayload.Dispose();
+                    if (entry.Events.IsCreated) entry.Events.Dispose();
+                    if (entry.EventPayload.IsCreated) entry.EventPayload.Dispose();
                 }
                 _simAgents.Dispose();
             }
+            if (_actionEvents.IsCreated) _actionEvents.Dispose();
+            if (_actionEmitters.IsCreated) _actionEmitters.Dispose();
+            DisposeLayouts(_startLayouts);
+            DisposeLayouts(_cancelLayouts);
+            DisposeLayouts(_completionLayouts);
             for (var channel = 0; channel < _inputStates.Length; channel++)
             {
                 var state = _inputStates[channel];
@@ -798,6 +873,14 @@ namespace AIBT.Simulation
                 entry.Payload.Clear();
             }
             _emitters.Clear();
+            for (var position = 0; position < _actionEmitters.Length; position++)
+            {
+                ref var entry = ref _simAgents.ElementAt(_actionEmitters[position]);
+                entry.Events.Clear();
+                entry.EventPayload.Clear();
+            }
+            _actionEmitters.Clear();
+            _actionEvents.Clear();
             if (_removal != Removal.None) return;
             for (var channel = 0; channel < _inputStates.Length; channel++)
             {
@@ -811,6 +894,7 @@ namespace AIBT.Simulation
         {
             ref var entry = ref _simAgents.ElementAt(index);
             for (var channel = 0; channel < entry.CommandFree.Length; channel++) entry.CommandFree[channel] = _quota;
+            entry.StartsLeft = _actionCapacity;
         }
 
         private void ForgetSeenInputs(int index)
@@ -930,7 +1014,312 @@ namespace AIBT.Simulation
             cache.Decoded = true;
         }
 
+        // ---- P10-011: external actions -----------------------------------------------------------
+
+        /// <summary>
+        /// Most action events one step can produce in this group: 3 × <see cref="TreeGroupSettings.ActionCapacityPerAgent"/>
+        /// per agent slot (0 for a program without external actions). The event list is allocated at this
+        /// size, so it never grows; an agent whose events would exceed its share faults instead
+        /// (the capacity rule makes that unreachable).
+        /// </summary>
+        public int ActionEventCapacity => _slots.Length * 3 * _actionCapacity;
+
+        /// <summary>Step phase 4 (every group the step touched, removed ones included): the action events of this step, agents in slot order.</summary>
+        internal void CollectActionEvents()
+        {
+            if (_actionCapacity == 0) return;
+            for (var index = 0; index < _highWater; index++)
+            {
+                ref var entry = ref _simAgents.ElementAt(index);
+                if (entry.Events.Length == 0) continue;
+                _actionEmitters.Add(index);
+                var agent = new AgentHandle(index, _slots[index].Generation, Id);
+                for (var position = 0; position < entry.Events.Length; position++)
+                {
+                    var record = entry.Events[position];
+                    _actionEvents.Add(new ActionEvent(
+                        record.Kind, new ActionHandle(agent, record.Operation, _map.Actions[record.Channel].Id),
+                        record.Reason, record.FaultCancel != 0, record.Channel, record.PayloadOffset, record.PayloadSize, _stepStamp));
+                }
+            }
+        }
+
+        /// <summary>
+        /// The action events of the last step: agents in slot order, each agent's events in the order they
+        /// happened (a torn-down agent's teardown events before its new instance's think). Every action
+        /// that a node starts appears once as <see cref="ActionEventKind.Started"/>; every action that ends
+        /// other than by its node consuming the game's completion appears once more as
+        /// <see cref="ActionEventKind.Cancelled"/>, never twice, never after a consumed completion. Valid until
+        /// the next step, the group's release or the container's disposal (a removed group's teardown events
+        /// stay readable until the step that releases it). Allocates nothing. Empty when none.
+        /// </summary>
+        public NativeArray<ActionEvent>.ReadOnly GetActionEvents()
+            => _actionEvents.IsCreated ? _actionEvents.AsReadOnly() : default;
+
+        /// <summary>
+        /// The start value of a <see cref="ActionEventKind.Started"/> event of the last step. Returns
+        /// <see cref="SimulationResult.StaleAction"/> for an event of an earlier step or another group or a
+        /// Cancelled event, <see cref="SimulationResult.TypeMismatch"/> when <typeparamref name="TStart"/> is not
+        /// the action's start type. The first call per action channel and type builds its decoder
+        /// (allocates); later calls allocate nothing.
+        /// </summary>
+        public SimulationResult TryGetStartPayload<TStart>(in ActionEvent actionEvent, out TStart value) where TStart : unmanaged
+            => TryGetEventPayload(in actionEvent, ActionEventKind.Started, _startLayouts, out value);
+
+        /// <summary>
+        /// The cancel value of a <see cref="ActionEventKind.Cancelled"/> event of the last step: the value the
+        /// node wrote in Abort, or the start's fault-cancel value (<see cref="ActionEvent.FaultCancel"/>).
+        /// Same results as <see cref="TryGetStartPayload{TStart}"/>.
+        /// </summary>
+        public SimulationResult TryGetCancelPayload<TCancel>(in ActionEvent actionEvent, out TCancel value) where TCancel : unmanaged
+            => TryGetEventPayload(in actionEvent, ActionEventKind.Cancelled, _cancelLayouts, out value);
+
+        private SimulationResult TryGetEventPayload<T>(
+            in ActionEvent actionEvent, ActionEventKind kind, PayloadLayout[] layouts, out T value) where T : unmanaged
+        {
+            value = default;
+            if (_released || _simulation.IsDisposed) return SimulationResult.Disposed;
+            if (_simulation.IsStepping) return SimulationResult.Busy;
+            if (actionEvent.Kind != kind || actionEvent.Stamp != _stepStamp || actionEvent.Action.Agent.Group != Id
+                || (uint)actionEvent.ChannelIndex >= (uint)layouts.Length
+                || (uint)actionEvent.Action.Agent.Index >= (uint)_simAgents.Length)
+                return SimulationResult.StaleAction;
+            var channel = _map.Actions[actionEvent.ChannelIndex];
+            var secondary = kind == ActionEventKind.Cancelled;
+            var layout = layouts[actionEvent.ChannelIndex];
+            var built = TryLayout<T>(ref layout, channel.Binding, secondary, secondary ? channel.CancelSize : channel.StartSize);
+            layouts[actionEvent.ChannelIndex] = layout;
+            if (built != SimulationResult.Success) return built;
+            ref var entry = ref _simAgents.ElementAt(actionEvent.Action.Agent.Index);
+            if ((ulong)actionEvent.PayloadOffset + actionEvent.PayloadSize > (uint)entry.EventPayload.Length
+                || actionEvent.PayloadSize != (uint)layout.Canonical.Length)
+                return SimulationResult.StaleAction;
+            for (var octet = 0; octet < layout.Raw.Length; octet++) layout.Raw[octet] = 0;
+            for (var leafIndex = 0; leafIndex < layout.Leaves.Length; leafIndex++)
+            {
+                var leaf = layout.Leaves[leafIndex];
+                for (var octet = 0; octet < (int)leaf.Size; octet++)
+                    layout.Raw[(int)leaf.RawOffset + octet] = entry.EventPayload[(int)(actionEvent.PayloadOffset + leaf.CanonicalOffset) + octet];
+            }
+            value = layout.Raw.Reinterpret<T>(1)[0];
+            return SimulationResult.Success;
+        }
+
+        /// <summary>
+        /// Ends the action with <paramref name="outcome"/> and no value: the node reads zeros from its
+        /// completion. See <see cref="TryComplete{TResult}(ActionHandle, ActionOutcome, in TResult)"/>.
+        /// </summary>
+        public SimulationResult TryComplete(ActionHandle action, ActionOutcome outcome)
+            => Complete(action, outcome, null, default(NativeArray<byte>));
+
+        /// <summary>
+        /// Completes an external action between steps. The completion is recorded on the agent's action at
+        /// once and the agent is woken: it thinks in the next step even if not due (as with
+        /// <see cref="TryWake"/>), so a completion is never lost or delayed past one step. In that think the
+        /// node reads <paramref name="outcome"/> and <paramref name="result"/> through its completion binding
+        /// (every completion binding of the node whose value type is <typeparamref name="TResult"/>). If the
+        /// node is aborted in that step before it reads it (a reactive interrupt), preemption wins: the action
+        /// ends with a Cancelled event and the completion is dropped. Returns
+        /// <see cref="SimulationResult.StaleAction"/> when the action has ended or its agent was removed or
+        /// restarted, <see cref="SimulationResult.AlreadyCompleted"/> on a second call,
+        /// <see cref="SimulationResult.StaleHandle"/> for a handle of another group,
+        /// <see cref="SimulationResult.UnknownChannel"/> when the action's node declares no completion,
+        /// <see cref="SimulationResult.TypeMismatch"/> when no completion of the node has value type
+        /// <typeparamref name="TResult"/>, <see cref="SimulationResult.InvalidArgument"/> for an outcome outside
+        /// <see cref="ActionOutcome"/> or a value that is not canonical (NaN, infinity, a bool other than 0/1),
+        /// <see cref="SimulationResult.Busy"/> during a step. Nothing changes unless it returns Success. The
+        /// first call per completion channel and type builds its encoder (allocates); later calls allocate nothing.
+        /// </summary>
+        public SimulationResult TryComplete<TResult>(ActionHandle action, ActionOutcome outcome, in TResult result) where TResult : unmanaged
+        {
+            var usable = Usable();
+            if (usable != SimulationResult.Success) return usable;
+            if (!TryFindAction(action, outcome, out var index, out var record, out var channels, out var failure)) return failure;
+            PayloadLayout layout = null;
+            var completion = -1;
+            if (!ValueIdentity<TResult>.Known) return SimulationResult.TypeMismatch;
+            for (var position = 0; position < channels.Length; position++)
+            {
+                var candidate = channels[position];
+                // Cheap identity check first, so a node with several completion types never re-reflects.
+                if (_map.Completions[candidate].TypeId != ValueIdentity<TResult>.Id
+                    || _map.Completions[candidate].TypeVersion != ValueIdentity<TResult>.Version)
+                    continue;
+                var cached = _completionLayouts[candidate];
+                var built = TryLayout<TResult>(ref cached, _map.Completions[candidate].Binding, false, _map.Completions[candidate].CanonicalSize);
+                _completionLayouts[candidate] = cached;
+                if (built != SimulationResult.Success) continue;
+                layout = cached;
+                completion = candidate;
+                break;
+            }
+            if (layout == null) return SimulationResult.TypeMismatch;
+            var raw = layout.Raw.Reinterpret<TResult>(1);
+            raw[0] = result;
+            if (!TryEncode(layout)) return SimulationResult.InvalidArgument;
+            return Complete(action, outcome, _map.Completions[completion], layout.Canonical, index, record);
+        }
+
+        private SimulationResult Complete(ActionHandle action, ActionOutcome outcome, SimulationProgramMapV1.Channel? channel, NativeArray<byte> canonical)
+        {
+            var usable = Usable();
+            if (usable != SimulationResult.Success) return usable;
+            if (!TryFindAction(action, outcome, out var index, out var record, out _, out var failure)) return failure;
+            return Complete(action, outcome, channel, canonical, index, record);
+        }
+
+        private SimulationResult Complete(
+            ActionHandle action, ActionOutcome outcome, SimulationProgramMapV1.Channel? channel, NativeArray<byte> canonical, int index, int record)
+        {
+            ref var entry = ref _simAgents.ElementAt(index);
+            var updated = entry.Actions[record];
+            updated.Completed = 1;
+            updated.Outcome = outcome == ActionOutcome.Succeeded ? BurstCompletionOutcome.Succeeded : BurstCompletionOutcome.Failed;
+            var payloadBase = record * entry.ActionStride + entry.ActionCompletionOffset;
+            for (var octet = entry.ActionCompletionOffset; octet < entry.ActionStride; octet++)
+                entry.ActionPayload[record * entry.ActionStride + octet] = 0;
+            if (channel.HasValue)
+            {
+                updated.CompletionTypeId = channel.Value.TypeId;
+                updated.CompletionTypeVersion = channel.Value.TypeVersion;
+                updated.CompletionSize = channel.Value.CanonicalSize;
+                for (var octet = 0; octet < canonical.Length; octet++) entry.ActionPayload[payloadBase + octet] = canonical[octet];
+            }
+            entry.Actions[record] = updated;
+            _slots[index].Woken = true;
+            return SimulationResult.Success;
+        }
+
+        private bool TryFindAction(
+            ActionHandle action, ActionOutcome outcome, out int index, out int record, out int[] completionChannels, out SimulationResult failure)
+        {
+            index = action.Agent.Index;
+            record = -1;
+            completionChannels = null;
+            if (outcome != ActionOutcome.Succeeded && outcome != ActionOutcome.Failed)
+            {
+                failure = SimulationResult.InvalidArgument;
+                return false;
+            }
+            if (action.Agent.Group != Id)
+            {
+                failure = SimulationResult.StaleHandle;
+                return false;
+            }
+            if (!TryResolve(action.Agent, out index))
+            {
+                failure = SimulationResult.StaleAction;
+                return false;
+            }
+            ref var entry = ref _simAgents.ElementAt(index);
+            record = SimulationActionRoutinesV1.Find(ref entry, action.Operation);
+            if (record < 0 || _map.Actions[entry.Actions[record].Channel].Id != action.Channel)
+            {
+                failure = SimulationResult.StaleAction;
+                return false;
+            }
+            if (entry.Actions[record].Completed != 0)
+            {
+                failure = SimulationResult.AlreadyCompleted;
+                return false;
+            }
+            var node = action.Operation.NodeIndex.Value;
+            completionChannels = node < (uint)_map.CompletionChannelsByNode.Length ? _map.CompletionChannelsByNode[node] : null;
+            if (completionChannels == null)
+            {
+                failure = SimulationResult.UnknownChannel;
+                return false;
+            }
+            failure = SimulationResult.Success;
+            return true;
+        }
+
+        /// <summary>Builds (or reuses) the raw-to-canonical table of <typeparamref name="T"/> for one value of one binding.</summary>
+        private SimulationResult TryLayout<T>(ref PayloadLayout layout, uint binding, bool secondary, uint canonicalSize) where T : unmanaged
+        {
+            if (layout != null && layout.Type == typeof(T)) return SimulationResult.Success;
+            var built = SimulationValueLayoutV1.TryBuild<T>(_program.Catalog, binding, _leafScratch, secondary);
+            if (built != SimulationResult.Success) return built;
+            layout?.Dispose();
+            layout = new PayloadLayout
+            {
+                Type = typeof(T),
+                Leaves = new NativeArray<SimulationLeafV1>(_leafScratch.ToArray(), Allocator.Persistent),
+                Raw = new NativeArray<byte>(UnsafeUtility.SizeOf<T>(), Allocator.Persistent),
+                Canonical = new NativeArray<byte>((int)canonicalSize, Allocator.Persistent),
+            };
+            return SimulationResult.Success;
+        }
+
+        /// <summary>Raw to canonical (padding zero, -0.0 as +0.0); false for NaN, infinities or a bool above 1.</summary>
+        private static bool TryEncode(PayloadLayout layout)
+        {
+            for (var octet = 0; octet < layout.Canonical.Length; octet++) layout.Canonical[octet] = 0;
+            for (var leafIndex = 0; leafIndex < layout.Leaves.Length; leafIndex++)
+            {
+                var leaf = layout.Leaves[leafIndex];
+                var target = (int)leaf.CanonicalOffset;
+                for (var octet = 0; octet < (int)leaf.Size; octet++)
+                    layout.Canonical[target + octet] = layout.Raw[(int)leaf.RawOffset + octet];
+                if (leaf.Encoding == NativeBurstDispatchFieldEncodingV2.Boolean && layout.Canonical[target] > 1) return false;
+                if (leaf.Encoding == NativeBurstDispatchFieldEncodingV2.Float32 && leaf.Size == 4)
+                {
+                    if ((layout.Canonical[target + 3] & 0x7F) == 0x7F && (layout.Canonical[target + 2] & 0x80) == 0x80) return false;
+                    if (layout.Canonical[target] == 0 && layout.Canonical[target + 1] == 0 && layout.Canonical[target + 2] == 0
+                        && layout.Canonical[target + 3] == 0x80)
+                        layout.Canonical[target + 3] = 0;
+                }
+                else if (leaf.Encoding == NativeBurstDispatchFieldEncodingV2.Float64 && leaf.Size == 8)
+                {
+                    if ((layout.Canonical[target + 7] & 0x7F) == 0x7F && (layout.Canonical[target + 6] & 0xF0) == 0xF0) return false;
+                    var negativeZero = layout.Canonical[target + 7] == 0x80;
+                    for (var octet = 0; negativeZero && octet < 7; octet++) negativeZero = layout.Canonical[target + octet] == 0;
+                    if (negativeZero) layout.Canonical[target + 7] = 0;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>The value type id (FNV-1a 64) and version of <typeparamref name="T"/>, reflected once per type.</summary>
+        private static class ValueIdentity<T>
+        {
+            internal static readonly bool Known = SimulationValueLayoutV1.TryNumericIdentity(typeof(T), out Id, out Version);
+            internal static readonly ulong Id;
+            internal static readonly uint Version;
+        }
+
+        private static void DisposeLayouts(PayloadLayout[] layouts)
+        {
+            for (var index = 0; index < layouts.Length; index++)
+            {
+                layouts[index]?.Dispose();
+                layouts[index] = null;
+            }
+        }
+
         // ---- test access ------------------------------------------------------------------------
+
+        /// <summary>P10-011 test access: the agent's live actions, as (operation, completed) in ledger order.</summary>
+        internal int LiveActionCountForTests(int index) => _simAgents[index].Actions.Length;
+
+        /// <summary>P10-011 test access: every byte of slot <paramref name="index"/>'s action ledger (records, payloads, starts left, teardown reason).</summary>
+        internal void AppendActionStateForTests(int index, System.Collections.Generic.List<byte> into)
+        {
+            var entry = _simAgents[index];
+            into.Add((byte)entry.Actions.Length);
+            for (var record = 0; record < entry.Actions.Length; record++)
+            {
+                var value = entry.Actions[record];
+                var bytes = new NativeArray<SimulationActionRecordV1>(1, Allocator.Temp);
+                bytes[0] = value;
+                var raw = bytes.Reinterpret<byte>(UnsafeUtility.SizeOf<SimulationActionRecordV1>());
+                for (var octet = 0; octet < raw.Length; octet++) into.Add(raw[octet]);
+                bytes.Dispose();
+            }
+            for (var octet = 0; octet < entry.ActionPayload.Length; octet++) into.Add(entry.ActionPayload[octet]);
+            into.Add((byte)entry.StartsLeft);
+            into.Add(entry.TeardownReason);
+        }
 
         internal ProductionTreeAgentCore CoreForTests(int index) => _slots[index].Core;
         internal uint GenerationForTests(int index) => _slots[index].Generation;

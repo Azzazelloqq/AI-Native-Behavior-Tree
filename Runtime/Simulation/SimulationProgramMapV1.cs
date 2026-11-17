@@ -26,23 +26,56 @@ namespace AIBT.Simulation
             internal int LeafCount;
         }
 
-        private SimulationProgramMapV1(int bindingCount)
+        /// <summary>
+        /// P10-011: an external-action channel: one async-operation binding id, its start value
+        /// (primary) and its cancel value (secondary).
+        /// </summary>
+        internal struct ActionChannel
+        {
+            internal ulong Id;
+            internal uint Binding;
+            internal ulong StartTypeId;
+            internal uint StartTypeVersion;
+            internal uint StartSize;
+            internal ulong CancelTypeId;
+            internal uint CancelTypeVersion;
+            internal uint CancelSize;
+        }
+
+        private SimulationProgramMapV1(int bindingCount, int nodeCount)
         {
             InputChannelByBinding = new int[bindingCount];
             CommandChannelByBinding = new int[bindingCount];
+            ActionChannelByBinding = new int[bindingCount];
+            CompletionChannelByBinding = new int[bindingCount];
             for (var index = 0; index < bindingCount; index++)
             {
                 InputChannelByBinding[index] = -1;
                 CommandChannelByBinding[index] = -1;
+                ActionChannelByBinding[index] = -1;
+                CompletionChannelByBinding[index] = -1;
             }
+            CompletionChannelsByNode = new int[nodeCount][];
         }
 
         /// <summary>By global catalog binding ordinal: the input channel of a SnapshotRead binding, else -1.</summary>
         internal int[] InputChannelByBinding { get; }
         /// <summary>By global catalog binding ordinal: the command channel of an EffectCommand binding, else -1.</summary>
         internal int[] CommandChannelByBinding { get; }
+        /// <summary>P10-011: by global catalog binding ordinal: the action channel of an AsyncOperation binding, else -1.</summary>
+        internal int[] ActionChannelByBinding { get; }
+        /// <summary>P10-011: by global catalog binding ordinal: the completion channel of a Completion binding, else -1.</summary>
+        internal int[] CompletionChannelByBinding { get; }
+        /// <summary>P10-011: by node index, the completion channels the node declares (null for a node without completions).</summary>
+        internal int[][] CompletionChannelsByNode { get; }
         internal List<Channel> Inputs { get; } = new List<Channel>();
         internal List<Channel> Commands { get; } = new List<Channel>();
+        internal List<ActionChannel> Actions { get; } = new List<ActionChannel>();
+        internal List<Channel> Completions { get; } = new List<Channel>();
+        /// <summary>P10-011: the largest start, cancel and completion values of the program (an action record's payload stride).</summary>
+        internal uint MaxStartSize { get; private set; }
+        internal uint MaxCancelSize { get; private set; }
+        internal uint MaxCompletionSize { get; private set; }
         /// <summary>Snapshot bindings resolve to target ordinals from here on, apart from blackboard slot indices.</summary>
         internal uint InputTargetBase { get; private set; }
         /// <summary>The catalog has effect bindings but no binding ids (generated before P10-010): commands are discarded.</summary>
@@ -50,6 +83,13 @@ namespace AIBT.Simulation
 
         internal int FindInput(ulong id) => Find(Inputs, id);
         internal int FindCommand(ulong id) => Find(Commands, id);
+
+        internal int FindAction(ulong id)
+        {
+            for (var index = 0; index < Actions.Count; index++)
+                if (Actions[index].Id == id) return index;
+            return -1;
+        }
 
         private static int Find(List<Channel> channels, ulong id)
         {
@@ -59,9 +99,9 @@ namespace AIBT.Simulation
         }
 
         /// <summary>
-        /// Builds the map, or refuses: <see cref="SimulationResult.Unsupported"/> for async-operation or
-        /// completion bindings (stage G3), <see cref="SimulationResult.CatalogTooOld"/> when the program
-        /// has input or command bindings and the catalog has no binding ids,
+        /// Builds the map, or refuses: <see cref="SimulationResult.CatalogTooOld"/> when the program has
+        /// input, async-operation or completion bindings and the catalog has no binding ids (P10-011: a
+        /// program with external actions on such a catalog is refused, never run with its actions dropped),
         /// <see cref="SimulationResult.TypeMismatch"/> when two bindings of one channel id disagree on type.
         /// </summary>
         internal static SimulationResult TryBuild(ProductionTreeProgram program, out SimulationProgramMapV1 map)
@@ -69,15 +109,17 @@ namespace AIBT.Simulation
             map = null;
             var catalog = program.Catalog;
             var binding = program.Definition.Binding;
-            var created = new SimulationProgramMapV1(catalog.Bindings.Length) { InputTargetBase = (uint)binding.Slots.Count };
-            var identity = catalog.Executor as IGeneratedBindingIdentityV1;
             var nodes = binding.SemanticProgram.Nodes;
+            var created = new SimulationProgramMapV1(catalog.Bindings.Length, nodes.Count) { InputTargetBase = (uint)binding.Slots.Count };
+            var identity = catalog.Executor as IGeneratedBindingIdentityV1;
+            var nodeCompletions = new List<int>();
             for (var nodeIndex = 0; nodeIndex < nodes.Count; nodeIndex++)
             {
                 var node = nodes[nodeIndex];
                 if (NativeHotReloadInstance.ClassifyKind(node.NodeTypeId) != NativeLifecycleNodeKindV1.GeneratedLeaf) continue;
                 if (!catalog.TryFindCase(node.NodeTypeId, node.NodeTypeVersion, out var caseIndex)) continue;
                 var dispatchCase = catalog.Cases[(int)caseIndex];
+                nodeCompletions.Clear();
                 for (uint local = 0; local < dispatchCase.BindingCount; local++)
                 {
                     var global = dispatchCase.FirstBinding + local;
@@ -85,8 +127,62 @@ namespace AIBT.Simulation
                     switch (entry.Kind)
                     {
                         case NativeBurstDispatchBindingKindV2.AsyncOperation:
+                        {
+                            if (identity == null || identity.BindingIdCount != catalog.Bindings.Length) return SimulationResult.CatalogTooOld;
+                            if (!identity.TryGetBindingId(global, out var actionId)) return SimulationResult.CatalogTooOld;
+                            var action = created.FindAction(actionId);
+                            if (action < 0)
+                            {
+                                action = created.Actions.Count;
+                                created.Actions.Add(new ActionChannel
+                                {
+                                    Id = actionId, Binding = global,
+                                    StartTypeId = entry.PrimaryTypeNumericId, StartTypeVersion = entry.PrimaryTypeVersion, StartSize = entry.PrimaryValueSize,
+                                    CancelTypeId = entry.SecondaryTypeNumericId, CancelTypeVersion = entry.SecondaryTypeVersion, CancelSize = entry.SecondaryValueSize,
+                                });
+                            }
+                            else
+                            {
+                                var known = created.Actions[action];
+                                if (known.StartTypeId != entry.PrimaryTypeNumericId || known.StartTypeVersion != entry.PrimaryTypeVersion
+                                    || known.StartSize != entry.PrimaryValueSize || known.CancelTypeId != entry.SecondaryTypeNumericId
+                                    || known.CancelTypeVersion != entry.SecondaryTypeVersion || known.CancelSize != entry.SecondaryValueSize)
+                                    return SimulationResult.TypeMismatch;
+                            }
+                            created.ActionChannelByBinding[global] = action;
+                            if (entry.PrimaryValueSize > created.MaxStartSize) created.MaxStartSize = entry.PrimaryValueSize;
+                            if (entry.SecondaryValueSize > created.MaxCancelSize) created.MaxCancelSize = entry.SecondaryValueSize;
+                            break;
+                        }
                         case NativeBurstDispatchBindingKindV2.Completion:
-                            return SimulationResult.Unsupported;
+                        {
+                            if (identity == null || identity.BindingIdCount != catalog.Bindings.Length) return SimulationResult.CatalogTooOld;
+                            if (!identity.TryGetBindingId(global, out var completionId)) return SimulationResult.CatalogTooOld;
+                            var completion = Find(created.Completions, completionId);
+                            var completionLeaves = 0;
+                            for (uint field = 0; field < entry.PrimaryValueFieldCount; field++)
+                                completionLeaves += (int)catalog.ValueFields[(int)(entry.FirstPrimaryValueField + field)].ElementCount;
+                            if (completion < 0)
+                            {
+                                completion = created.Completions.Count;
+                                created.Completions.Add(new Channel
+                                {
+                                    Id = completionId, Binding = global, TypeId = entry.PrimaryTypeNumericId, TypeVersion = entry.PrimaryTypeVersion,
+                                    CanonicalSize = entry.PrimaryValueSize, LeafCount = completionLeaves,
+                                });
+                            }
+                            else
+                            {
+                                var known = created.Completions[completion];
+                                if (known.TypeId != entry.PrimaryTypeNumericId || known.TypeVersion != entry.PrimaryTypeVersion
+                                    || known.CanonicalSize != entry.PrimaryValueSize || known.LeafCount != completionLeaves)
+                                    return SimulationResult.TypeMismatch;
+                            }
+                            created.CompletionChannelByBinding[global] = completion;
+                            if (!nodeCompletions.Contains(completion)) nodeCompletions.Add(completion);
+                            if (entry.PrimaryValueSize > created.MaxCompletionSize) created.MaxCompletionSize = entry.PrimaryValueSize;
+                            break;
+                        }
                         case NativeBurstDispatchBindingKindV2.SnapshotRead:
                         case NativeBurstDispatchBindingKindV2.EffectCommand:
                             if (identity == null && entry.Kind == NativeBurstDispatchBindingKindV2.EffectCommand)
@@ -124,6 +220,7 @@ namespace AIBT.Simulation
                             break;
                     }
                 }
+                if (nodeCompletions.Count != 0) created.CompletionChannelsByNode[nodeIndex] = nodeCompletions.ToArray();
             }
             map = created;
             return SimulationResult.Success;
@@ -143,14 +240,24 @@ namespace AIBT.Simulation
             internal uint Size;
         }
 
-        internal static SimulationResult TryBuild<T>(GeneratedBurstCatalogV2 catalog, uint globalBinding, List<SimulationLeafV1> leaves)
+        /// <summary>
+        /// The layout of the binding's primary value, or with <paramref name="secondary"/> its secondary
+        /// value (P10-011: the cancel value of an async-operation binding).
+        /// </summary>
+        internal static SimulationResult TryBuild<T>(
+            GeneratedBurstCatalogV2 catalog, uint globalBinding, List<SimulationLeafV1> leaves, bool secondary = false)
             where T : unmanaged
         {
             leaves.Clear();
             var binding = catalog.Bindings[(int)globalBinding];
+            var expectedTypeId = secondary ? binding.SecondaryTypeNumericId : binding.PrimaryTypeNumericId;
+            var expectedVersion = secondary ? binding.SecondaryTypeVersion : binding.PrimaryTypeVersion;
+            var firstField = secondary ? binding.FirstSecondaryValueField : binding.FirstPrimaryValueField;
+            var fieldCount = secondary ? binding.SecondaryValueFieldCount : binding.PrimaryValueFieldCount;
+            var valueSize = secondary ? binding.SecondaryValueSize : binding.PrimaryValueSize;
             var type = typeof(T);
             if (!TryIdentity(type, out var typeId, out var typeVersion)
-                || StableHash.Fnv1A64(typeId) != binding.PrimaryTypeNumericId || typeVersion != binding.PrimaryTypeVersion)
+                || StableHash.Fnv1A64(typeId) != expectedTypeId || typeVersion != expectedVersion)
                 return SimulationResult.TypeMismatch;
             var rawFields = new List<List<RawLeaf>>();
             if (IsRegistered(type))
@@ -171,9 +278,9 @@ namespace AIBT.Simulation
 
             var used = 0;
             var rawSize = (uint)UnsafeUtility.SizeOf<T>();
-            for (uint index = 0; index < binding.PrimaryValueFieldCount; index++)
+            for (uint index = 0; index < fieldCount; index++)
             {
-                var field = catalog.ValueFields[(int)(binding.FirstPrimaryValueField + index)];
+                var field = catalog.ValueFields[(int)(firstField + index)];
                 if (field.CanonicalRuleKind != NativeBurstDispatchCanonicalRuleKindV2.None
                     || field.Encoding == NativeBurstDispatchFieldEncodingV2.GeneratedHandle
                     || field.FieldOrdinal >= (uint)rawFields.Count)
@@ -186,7 +293,7 @@ namespace AIBT.Simulation
                     var raw = fieldLeaves[(int)leafIndex];
                     var canonical = field.ByteOffset + element * field.ElementSize;
                     if (raw.Size != field.ElementSize || raw.Offset + raw.Size > rawSize
-                        || canonical + field.ElementSize > binding.PrimaryValueSize)
+                        || canonical + field.ElementSize > valueSize)
                         return SimulationResult.TypeMismatch;
                     leaves.Add(new SimulationLeafV1 { RawOffset = raw.Offset, CanonicalOffset = canonical, Size = raw.Size, Encoding = field.Encoding });
                     used++;
@@ -199,6 +306,15 @@ namespace AIBT.Simulation
         }
 
         private static bool IsRegistered(Type type) => FindAttribute(type.GetCustomAttributesData(), "AIBT.Burst.AibtBurstValueAttribute") != null;
+
+        /// <summary>P10-011: the value type id hash and version a binding of <paramref name="type"/> declares (registered or built-in), else false.</summary>
+        internal static bool TryNumericIdentity(Type type, out ulong id, out uint version)
+        {
+            id = 0;
+            if (!TryIdentity(type, out var text, out version)) return false;
+            id = StableHash.Fnv1A64(text);
+            return true;
+        }
 
         private static bool TryIdentity(Type type, out string id, out uint version)
         {

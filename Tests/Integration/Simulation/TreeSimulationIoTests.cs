@@ -657,16 +657,39 @@ namespace AIBT.Tests.Integration.Simulation
             }
         }
 
-        [Test]
-        public void ExternalActions_AreRefusedWithUnsupported()
+        /// <summary>
+        /// Until P10-011 the container refused external actions with Unsupported; since stage G3 it runs
+        /// them (the action tests are in <see cref="TreeSimulationActionTests"/>). Hosts are unchanged: a
+        /// program with an async-operation binding is still refused at bootstrap (the adapter refuses the
+        /// binding with PhaseViolation, reported as NativeCapacityPlanInvalid).
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ExternalActions_RunInTheContainer_SinceG3_HostsStillRefuseThem(bool useJobs)
         {
             var program = Program(ExternalTree);
-            using (var simulation = new TreeSimulation(Settings(false, 1)))
+            using (var simulation = new TreeSimulation(Settings(useJobs, 1)))
             {
-                Assert.That(simulation.TryAddGroup(program, TreeGroupSettings.Default(2), out var group), Is.EqualTo(SimulationResult.Unsupported));
-                Assert.That(group, Is.Null);
-                Assert.That(simulation.GroupCount, Is.Zero);
+                Assert.That(simulation.TryAddGroup(program, TreeGroupSettings.Default(2), out var group), Is.EqualTo(SimulationResult.Success));
+                group.TryAdd(out var agent);
+                Assert.That(simulation.Step(1), Is.EqualTo(SimulationResult.Success));
+                var events = group.GetActionEvents();
+                Assert.That(events.Length, Is.EqualTo(1));
+                Assert.That(events[0].Kind, Is.EqualTo(ActionEventKind.Started));
+                Assert.That(group.TryGetStartPayload(events[0], out int start), Is.EqualTo(SimulationResult.Success));
+                Assert.That(start, Is.EqualTo(1));
+                Assert.That(group.TryComplete(events[0].Action, ActionOutcome.Succeeded, 5), Is.EqualTo(SimulationResult.Success));
+                Assert.That(simulation.Step(2), Is.EqualTo(SimulationResult.Success));
+                Assert.That(group.GetActionEvents().Length, Is.Zero);
+                Assert.That(group.GetRootCompletions().Length, Is.EqualTo(1));
+                Assert.That(group.GetRootCompletions()[0].Agent, Is.EqualTo(agent));
+                Assert.That(group.GetRootCompletions()[0].Result, Is.EqualTo(NodeStatus.Success));
+                Assert.That(group.GetFaults().Length, Is.Zero);
             }
+
+            var host = NewHost(out _);
+            Assert.That(program.TryBootstrap(host, out var failure), Is.False);
+            Assert.That(failure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid));
         }
 
         /// <summary>

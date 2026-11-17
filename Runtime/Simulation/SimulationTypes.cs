@@ -39,10 +39,17 @@ namespace AIBT.Simulation
         /// Regenerate the catalog.
         /// </summary>
         CatalogTooOld = 9,
-        /// <summary>P10-010: the program uses something the container does not run yet: external actions (async operations, completions) arrive in stage G3.</summary>
+        /// <summary>P10-010: the program uses something the container does not run. Since stage G3 (P10-011) no program is refused with it; kept for later stages.</summary>
         Unsupported = 10,
-        /// <summary>P10-010: no node of the group's program declares this input or command channel id.</summary>
+        /// <summary>P10-010: no node of the group's program declares this input or command channel id (P10-011: or the action's node declares no completion).</summary>
         UnknownChannel = 11,
+        /// <summary>
+        /// P10-011: the action has ended (completed and consumed, cancelled, or its node ended), its agent
+        /// was removed or restarted, or the handle is from an earlier step's event of a reused slot. Nothing changed.
+        /// </summary>
+        StaleAction = 12,
+        /// <summary>P10-011: <see cref="TreeGroup.TryComplete(ActionHandle, ActionOutcome)"/> was already called for this action. Nothing changed.</summary>
+        AlreadyCompleted = 13,
     }
 
     /// <summary>
@@ -130,9 +137,27 @@ namespace AIBT.Simulation
         /// <summary>The command quota used when <see cref="CommandQuotaPerAgent"/> is 0.</summary>
         public const int DefaultCommandQuotaPerAgent = 4;
 
-        /// <summary>Capacity <paramref name="capacity"/>, interval 1, <see cref="RootCompletionPolicy.Restart"/>, command quota <see cref="DefaultCommandQuotaPerAgent"/>.</summary>
+        /// <summary>
+        /// P10-011: external actions one agent may hold at once (started and not yet ended), and actions it
+        /// may start in one think (and, separately, in one teardown). A start that would go over it faults the
+        /// agent with cause <see cref="BurstContextResult.CapacityExceeded"/> (its live actions are then
+        /// cancelled with <see cref="ActionCancelReason.Fault"/>). The group allocates this many action records
+        /// and <c>3 ×</c> this many event records per agent up front, which bounds every step's events (see
+        /// <see cref="TreeGroup.ActionEventCapacity"/>). 0 selects <see cref="DefaultActionCapacityPerAgent"/>;
+        /// negative values are refused.
+        /// </summary>
+        public int ActionCapacityPerAgent;
+
+        /// <summary>The action capacity used when <see cref="ActionCapacityPerAgent"/> is 0.</summary>
+        public const int DefaultActionCapacityPerAgent = 2;
+
+        /// <summary>Capacity <paramref name="capacity"/>, interval 1, <see cref="RootCompletionPolicy.Restart"/>, command quota <see cref="DefaultCommandQuotaPerAgent"/>, action capacity <see cref="DefaultActionCapacityPerAgent"/>.</summary>
         public static TreeGroupSettings Default(int capacity)
-            => new TreeGroupSettings { Capacity = capacity, DefaultThinkInterval = 1u, RootCompletion = RootCompletionPolicy.Restart, CommandQuotaPerAgent = DefaultCommandQuotaPerAgent };
+            => new TreeGroupSettings
+            {
+                Capacity = capacity, DefaultThinkInterval = 1u, RootCompletion = RootCompletionPolicy.Restart,
+                CommandQuotaPerAgent = DefaultCommandQuotaPerAgent, ActionCapacityPerAgent = DefaultActionCapacityPerAgent,
+            };
     }
 
     /// <summary>

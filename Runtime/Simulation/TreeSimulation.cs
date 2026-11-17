@@ -80,7 +80,7 @@ namespace AIBT.Simulation
             if (settings.Capacity < 1 || settings.DefaultThinkInterval == 0
                 || (settings.RootCompletion != RootCompletionPolicy.Restart && settings.RootCompletion != RootCompletionPolicy.Stop))
                 return SimulationResult.InvalidArgument;
-            if (settings.CommandQuotaPerAgent < 0) return SimulationResult.InvalidArgument;
+            if (settings.CommandQuotaPerAgent < 0 || settings.ActionCapacityPerAgent < 0) return SimulationResult.InvalidArgument;
             if (_nextGroupId == ushort.MaxValue) return SimulationResult.CapacityExceeded;
             var mapped = SimulationProgramMapV1.TryBuild(program, out var map);
             if (mapped != SimulationResult.Success) return mapped;
@@ -121,7 +121,11 @@ namespace AIBT.Simulation
         /// 2. per group in creation order, the due agents (schedule due on this tick, or woken) think in
         ///    ascending slot index, each one update at time <c>tick × TickMicroseconds</c>, in a job or
         ///    on this thread;
-        /// 3. root completions and faults are recorded in slot order and stay readable until the next step.
+        /// 3. root completions and faults are recorded in slot order and stay readable until the next step;
+        /// 4. (P10-011) every group's action events of this step are collected in slot order (teardown
+        ///    events of removed groups included) and stay readable until the next step.
+        /// Completions the game gave with <see cref="TreeGroup.TryComplete(ActionHandle, ActionOutcome)"/>
+        /// since the last step were applied when called; each woke its agent for this step.
         /// Returns <see cref="SimulationResult.TickNotIncreasing"/> (tick not greater than the last one),
         /// <see cref="SimulationResult.InvalidArgument"/> (time overflows a signed 64-bit microsecond
         /// count), <see cref="SimulationResult.Busy"/> or <see cref="SimulationResult.Disposed"/> without
@@ -167,6 +171,8 @@ namespace AIBT.Simulation
                     group.Think(tick, (long)time);
                     group.CollectCommands();
                 }
+                // P10-011: action events of every group this step touched, removed groups' teardowns included.
+                for (var index = 0; index < _groups.Count; index++) _groups[index].CollectActionEvents();
                 _lastTick = tick;
                 _hasStepped = true;
                 return SimulationResult.Success;

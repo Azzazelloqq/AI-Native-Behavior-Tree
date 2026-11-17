@@ -4,6 +4,29 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Simulation container, stage G3 (P10-011, experimental)
+
+- **New, experimental until stage G5:** external long-running actions in `AIBT.Simulation`. Burst
+  nodes start actions through `AsyncOperationHandle<TStart, TCancel>` and read the game's completion
+  through `CompletionHandle<T>`, in place and in agent-frame jobs alike. After each `Step`,
+  `TreeGroup.GetActionEvents()` lists the step's `Started` and `Cancelled` events (`ActionEvent`:
+  kind, `ActionHandle`, `ActionCancelReason`, `FaultCancel`) in slot order, then the order they
+  happened; read their values with `TryGetStartPayload<T>`/`TryGetCancelPayload<T>`. Between steps
+  the game ends an action with `TryComplete(handle, ActionOutcome)` or
+  `TryComplete<T>(handle, outcome, value)`, which wakes the agent for the next step. Every started
+  action ends exactly once: its completion is consumed, or it gets one `Cancelled` event (preempted,
+  timeout, node ended, fault, agent removed or restarted, group removed). A completion that meets a
+  preemption in the same step loses. Under a reactive composite (which aborts its running child at
+  every update) an action is cancelled and restarted at every think and is never consumed; put long
+  actions under memory composites. `TreeGroupSettings.ActionCapacityPerAgent` (default 2) bounds
+  live actions and starts per think; overflow faults the agent with `CapacityExceeded`, never throws.
+  New results `StaleAction` and `AlreadyCompleted`; `Unsupported` is no longer returned. Catalogs
+  generated before G2 are refused for programs with actions (`CatalogTooOld`). See
+  `Documentation~/simulation-container.md`.
+- Hosts (`ProductionTreeHost`, `NativeTreeAgent`, `ProductionTreeScheduler`) are unchanged: they
+  still refuse programs with external actions at bootstrap (pinned by a test). ABI v2, the compiled
+  format and the generator are unchanged.
+
 ### Simulation container, stage G2 (P10-010, experimental)
 
 - **New, experimental until stage G5:** game inputs and commands for `AIBT.Simulation`.

@@ -376,6 +376,9 @@ namespace AIBT
             {
                 if (_slots[nodeIndex] == null) continue;
                 var dispatchCase = _catalog.Cases[(int)_slots[nodeIndex].CaseIndex];
+                // P10-011: the simulation container runs external actions in the job too (its action
+                // routines); hosts refuse them at creation, so for them this stays a defensive check.
+                if (_simulation != null) continue;
                 for (uint local = 0; local < dispatchCase.BindingCount; local++)
                 {
                     var kind = _catalog.Bindings[(int)(dispatchCase.FirstBinding + local)].Kind;
@@ -411,7 +414,7 @@ namespace AIBT
                 ref var slot = ref _agentFrameSlots.ElementAt(index);
                 if (slot.Resolutions.IsCreated) slot.Resolutions.Dispose();
                 if (slot.EffectDescriptors.IsCreated) slot.EffectDescriptors.Dispose();
-                // CommandChannels belongs to the DispatchSlot.
+                // CommandChannels, ActionBindings, CompletionStore (and Completions, a view of it) belong to the DispatchSlot.
             }
             _agentFrameSlots.Dispose();
             _agentFrameSlots = default;
@@ -723,6 +726,13 @@ namespace AIBT
             // P10-010 (container only): by local binding ordinal, the command channel of an effect
             // binding or -1 (also -1 for a catalog without binding ids: its commands are discarded).
             private NativeArray<int> _commandChannels;
+            // P10-011 (container only, nodes with async-operation or completion bindings): the action
+            // routines' view of those bindings by local ordinal, the completion view's length for the
+            // current dispatch, and that dispatch's phase and abort reason.
+            private NativeArray<AIBT.Simulation.SimulationActionBindingV1> _actionBindings;
+            private int _completionCount;
+            private BurstCallbackPhase _lastPhase;
+            private BurstNodeAbortReason _lastAbortReason;
             private bool _disposed;
 
             internal NativeArray<int> CommandChannels => _commandChannels;
@@ -731,6 +741,10 @@ namespace AIBT
             {
                 if (_disposed) return BurstContextResult.InvalidHandle;
                 var state = _state[0];
+                var actions = AIBT.Simulation.SimulationActionRoutinesV1.TryCapture(
+                    ref agent, _actionBindings, _publishedCommands, _publishedPayload, in state,
+                    _completions, _completionCount, _nodeIndex, _lastPhase, _lastAbortReason);
+                if (actions != BurstContextResult.Success) return actions;
                 var result = AIBT.Simulation.SimulationAgentRoutinesV1.TryCapture(
                     ref agent, _commandChannels, _publishedCommands, _publishedPayload, ref state);
                 _state[0] = state;
@@ -783,6 +797,9 @@ namespace AIBT
                 var dispatchCase = catalog.Cases[(int)caseIndex];
                 var resolutions = new BindingResolution[dispatchCase.BindingCount];
                 var commandChannels = simulationMap != null ? new int[dispatchCase.BindingCount] : null;
+                AIBT.Simulation.SimulationActionBindingV1[] actionBindings = null;
+                var completionBindingCount = 0u;
+                var completionBytes = 0u;
                 var liveBytes = 0u;
                 var effectBindingCount = 0u;
                 for (uint local = 0; local < dispatchCase.BindingCount; local++)
@@ -835,6 +852,41 @@ namespace AIBT
                         effectBindingCount++;
                         if (commandChannels != null) commandChannels[local] = simulationMap.CommandChannelByBinding[(int)globalOrdinal];
                     }
+                    else if (simulationMap != null
+                        && (catalogBinding.Kind == NativeBurstDispatchBindingKindV2.AsyncOperation
+                            || catalogBinding.Kind == NativeBurstDispatchBindingKindV2.Completion))
+                    {
+                        // P10-011 (container only): an external action or its completion. Hosts keep
+                        // refusing both below.
+                        var asyncOperation = catalogBinding.Kind == NativeBurstDispatchBindingKindV2.AsyncOperation;
+                        var actionChannel = asyncOperation
+                            ? simulationMap.ActionChannelByBinding[(int)globalOrdinal]
+                            : simulationMap.CompletionChannelByBinding[(int)globalOrdinal];
+                        if (actionChannel < 0)
+                        {
+                            failure = BurstContextResult.PhaseViolation;
+                            return false;
+                        }
+                        resolution = resolution.WithTarget(catalogBinding.BindingOrdinal);
+                        actionBindings ??= new AIBT.Simulation.SimulationActionBindingV1[dispatchCase.BindingCount];
+                        actionBindings[local] = new AIBT.Simulation.SimulationActionBindingV1
+                        {
+                            Kind = asyncOperation ? AIBT.Simulation.SimulationActionBindingV1.AsyncOperation : AIBT.Simulation.SimulationActionBindingV1.Completion,
+                            Target = catalogBinding.BindingOrdinal,
+                            Channel = actionChannel,
+                            PrimaryTypeId = catalogBinding.PrimaryTypeNumericId,
+                            PrimaryTypeVersion = catalogBinding.PrimaryTypeVersion,
+                            PrimarySize = catalogBinding.PrimaryValueSize,
+                            SecondaryTypeId = catalogBinding.SecondaryTypeNumericId,
+                            SecondaryTypeVersion = catalogBinding.SecondaryTypeVersion,
+                            SecondarySize = catalogBinding.SecondaryValueSize,
+                        };
+                        if (!asyncOperation)
+                        {
+                            completionBindingCount++;
+                            completionBytes = checked(completionBytes + catalogBinding.PrimaryValueSize);
+                        }
+                    }
                     else
                     {
                         failure = BurstContextResult.PhaseViolation;
@@ -855,8 +907,15 @@ namespace AIBT
                     created._randomIncrements = new NativeArray<ulong>(dispatchCase.HasRandomStream != 0 ? 1 : 0, Allocator.Persistent);
                     created._resolvedBindings = new NativeArray<NativeBurstDispatchResolvedBindingV2>((int)dispatchCase.BindingCount, Allocator.Persistent);
                     created._bindingValues = new NativeArray<byte>((int)liveBytes, Allocator.Persistent, NativeArrayOptions.ClearMemory);
-                    created._completions = new NativeArray<NativeBurstDispatchCompletionV2>(0, Allocator.Persistent);
-                    created._completionPayload = new NativeArray<byte>(0, Allocator.Persistent);
+                    // P10-011: a container node with completion bindings gets room for one completion per
+                    // live operation and completion binding (the dispatch sees a prefix view of it).
+                    var operationLimit = capacity.BindingCapacity.MaxOperations;
+                    created._completions = new NativeArray<NativeBurstDispatchCompletionV2>(
+                        checked((int)(operationLimit * completionBindingCount)), Allocator.Persistent);
+                    created._completionPayload = new NativeArray<byte>(
+                        checked((int)(operationLimit * completionBytes)), Allocator.Persistent, NativeArrayOptions.ClearMemory);
+                    if (actionBindings != null)
+                        created._actionBindings = new NativeArray<AIBT.Simulation.SimulationActionBindingV1>(actionBindings, Allocator.Persistent);
                     created._commands = new NativeArray<NativeBurstDispatchCommandV2>((int)capacity.BindingCapacity.MaxCommands, Allocator.Persistent);
                     created._commandPayload = new NativeArray<byte>((int)capacity.BindingCapacity.MaxCommandPayloadBytes, Allocator.Persistent);
                     created._operations = new NativeArray<NativeBurstDispatchOperationV2>((int)capacity.BindingCapacity.MaxOperations, Allocator.Persistent);
@@ -932,6 +991,20 @@ namespace AIBT
                 if (!StageInputs(simulation)) return BurstContextResult.InvalidHandle;
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Snapshot);
 
+                var completions = _completions;
+                if (simulation != null && _actionBindings.IsCreated)
+                {
+                    // P10-011: this node's live actions and the game's completions, from the agent's ledger.
+                    _lastPhase = hostRequest.Phase;
+                    _lastAbortReason = hostRequest.AbortReason;
+                    var prepared = AIBT.Simulation.SimulationActionRoutinesV1.TryPrepare(
+                        ref simulation.Agent, _actionBindings, _nodeIndex, _transaction[0].TreeInstanceId, _activationGeneration,
+                        _operations, _transaction, _completions, _completionPayload, out _completionCount);
+                    if (prepared != BurstContextResult.Success) return prepared;
+                    if (!_workspace.TryRebaseOperationCountFloor(_transaction[0].OperationCount)) return BurstContextResult.PhaseViolation;
+                    completions = _completions.GetSubArray(0, _completionCount);
+                }
+
                 var dispatchCase = catalog.Cases[(int)_caseIndex];
                 var request = new NativeBurstDispatchRequestV2(
                     0u, _nodeIndex, node.NodeTypeId, node.NodeTypeVersion, _caseIndex,
@@ -940,7 +1013,7 @@ namespace AIBT
                     dispatchCase.BindingCount, hostRequest.AbortReason, hostRequest.ExitReason);
                 var views = new NativeBurstDispatchWorkspaceRequestViewsV2(
                     request, _configuration, _memory, _randomStates, _randomIncrements,
-                    _resolvedBindings, _bindingValues, _completions, _completionPayload,
+                    _resolvedBindings, _bindingValues, completions, _completionPayload,
                     _commands, _commandPayload, _operations, _transaction);
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.RequestBuild);
                 if (!_workspace.TryBeginRequest(in views, out var lease, out var failure)
@@ -972,6 +1045,14 @@ namespace AIBT
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Commit);
                 if (callback == BurstContextResult.Success) PublishCommands(result.Transaction);
                 status = result.Status;
+                if (simulation != null && callback == BurstContextResult.StaleCompletion && hostRequest.Phase == BurstCallbackPhase.Tick)
+                {
+                    // P10-011, the container's host policy for a stale-completion failure: a Tick that
+                    // polled an action the game has not completed yet keeps running. The frame published
+                    // nothing (the bridge latched and discarded it), so this changes no state.
+                    callback = BurstContextResult.Success;
+                    status = NodeStatus.Running;
+                }
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Publish);
                 if (!_workspace.TryAcknowledgePublishedCommands(in lease, out failure)) return failure;
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Acknowledge);
@@ -1197,6 +1278,8 @@ namespace AIBT
                     PublishedCommands = _publishedCommands,
                     PublishedPayload = _publishedPayload,
                     CommandChannels = _commandChannels,
+                    ActionBindings = _actionBindings,
+                    CompletionStore = _completions,
                     Workspace = _workspace.GetAgentFrameArrays(),
                 };
             }
@@ -1218,6 +1301,9 @@ namespace AIBT
                 Clear(_publishedCommands);
                 Clear(_publishedPayload);
                 _state[0] = default;
+                _completionCount = 0;
+                _lastPhase = default;
+                _lastAbortReason = default;
                 var transaction = new NativeBurstDispatchTransactionControlV2
                 {
                     LedgerToken = ledgerToken,
@@ -1254,6 +1340,8 @@ namespace AIBT
                 Append(into, _randomStates);
                 Append(into, _randomIncrements);
                 Append(into, _bindingValues);
+                Append(into, _completions);
+                Append(into, _completionPayload);
                 Append(into, _commands);
                 Append(into, _commandPayload);
                 Append(into, _operations);
@@ -1310,6 +1398,7 @@ namespace AIBT
                 _workspace?.TryDispose(out _);
                 _workspace = null;
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _state);
+                GeneratedTreeDispatchAdapterV2.Dispose(ref _actionBindings);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _commandChannels);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _publishedPayload);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _publishedCommands);

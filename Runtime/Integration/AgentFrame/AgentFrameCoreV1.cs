@@ -73,6 +73,10 @@ namespace AIBT
         internal NativeArray<byte> PublishedPayload;
         // P10-010 (container only): by local binding ordinal, the command channel or -1.
         internal NativeArray<int> CommandChannels;
+        // P10-011 (container only, nodes with external actions): the action view of the node's bindings
+        // and the full completion buffer; Completions is set to its prefix for each dispatch.
+        internal NativeArray<AIBT.Simulation.SimulationActionBindingV1> ActionBindings;
+        internal NativeArray<NativeBurstDispatchCompletionV2> CompletionStore;
         internal NativeBurstDispatchWorkspaceArraysV1 Workspace;
     }
 
@@ -212,8 +216,14 @@ namespace AIBT
                             if (result == BurstContextResult.Success && agent.SimulationMode != 0)
                             {
                                 var state = slot.State[0];
-                                result = AIBT.Simulation.SimulationAgentRoutinesV1.TryCapture(
-                                    ref agent.Simulation, slot.CommandChannels, slot.PublishedCommands, slot.PublishedPayload, ref state);
+                                // P10-011: actions first (same order as the adapter's CaptureSimulationCommands).
+                                result = AIBT.Simulation.SimulationActionRoutinesV1.TryCapture(
+                                    ref agent.Simulation, slot.ActionBindings, slot.PublishedCommands, slot.PublishedPayload, in state,
+                                    slot.Completions, slot.ActionBindings.IsCreated ? slot.Completions.Length : 0,
+                                    slot.NodeIndex, step.Phase, step.AbortReason);
+                                if (result == BurstContextResult.Success)
+                                    result = AIBT.Simulation.SimulationAgentRoutinesV1.TryCapture(
+                                        ref agent.Simulation, slot.CommandChannels, slot.PublishedCommands, slot.PublishedPayload, ref state);
                                 slot.State[0] = state;
                                 if (result != BurstContextResult.Success) status = NodeStatus.Failure;
                             }
@@ -295,6 +305,17 @@ namespace AIBT
                         ref agent.Simulation, resolution.InputChannel, slot.BindingValues, resolution.LiveOffset, resolution.Size))
                     return BurstContextResult.InvalidHandle;
             }
+            // P10-011: this node's live actions and the game's completions, from the agent's ledger
+            // (the adapter's Execute does the same; ledger floors are not tracked here).
+            if (agent.SimulationMode != 0 && slot.ActionBindings.IsCreated)
+            {
+                var prepared = AIBT.Simulation.SimulationActionRoutinesV1.TryPrepare(
+                    ref agent.Simulation, slot.ActionBindings, slot.NodeIndex, slot.Transaction[0].TreeInstanceId,
+                    state.ActivationGeneration, slot.Operations, slot.Transaction, slot.CompletionStore, slot.CompletionPayload,
+                    out var completionCount);
+                if (prepared != BurstContextResult.Success) return prepared;
+                slot.Completions = slot.CompletionStore.GetSubArray(0, completionCount);
+            }
 
             var request = new NativeBurstDispatchRequestV2(
                 0u, slot.NodeIndex, slot.NodeTypeId, slot.NodeTypeVersion, slot.CaseIndex,
@@ -343,6 +364,12 @@ namespace AIBT
                     slot.PublishedPayload[(int)index] = slot.CommandPayload[(int)index];
             }
             status = resultStatus;
+            if (agent.SimulationMode != 0 && callback == BurstContextResult.StaleCompletion && step.Phase == BurstCallbackPhase.Tick)
+            {
+                // P10-011: the container's stale-completion policy (see the adapter's Execute).
+                callback = BurstContextResult.Success;
+                status = NodeStatus.Running;
+            }
 
             // TryAcknowledgePublishedCommands.
             transaction = slot.Transaction[0];
