@@ -50,6 +50,8 @@ namespace AIBT.Simulation
         StaleAction = 12,
         /// <summary>P10-011: <see cref="TreeGroup.TryComplete(ActionHandle, ActionOutcome)"/> was already called for this action. Nothing changed.</summary>
         AlreadyCompleted = 13,
+        /// <summary>P10-012: the agent is alive but not traced (<see cref="TreeGroup.TrySetTraced"/>). Nothing changed.</summary>
+        NotTraced = 14,
     }
 
     /// <summary>

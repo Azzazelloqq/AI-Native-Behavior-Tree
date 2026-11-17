@@ -241,6 +241,75 @@ void OnArrived(ActionHandle action, bool reached, float distance)
   with `CatalogTooOld`.
 - **Hosts** (`ProductionTreeHost`, `ProductionTreeScheduler`) are unchanged: they still refuse
   programs with external actions at bootstrap.
+
+## Debugging (G4)
+
+Three tools answer "why is agent N doing X": a trace of a few selected agents, a query of any
+agent's active path between steps, and an opt-in registry through which the AIBT MCP/CLI tools find
+the game's containers. None of them changes what agents do: digests are identical with and without
+tracing, in place and in jobs, with any worker count.
+
+```csharp
+// Select agents to trace (between steps). Allocates the trace's memory once, never in Step.
+guards.TryConfigureTracing(new AgentTraceSettings { MaximumTracedAgents = 4, RecordsPerAgent = 2048, RecordsPerThink = 256 });
+guards.TrySetTraced(suspect, true);
+
+// After some steps: the trace, oldest first. No allocation when the list is large enough.
+using var records = new NativeList<AgentTraceRecord>(2048, Allocator.Persistent);
+guards.TryCopyTrace(suspect, records, out var info);   // info.Count, info.Recorded, info.Dropped
+
+// Any agent, traced or not: its active path and state.
+using var path = new NativeList<ActivePathNode>(16, Allocator.Persistent);
+guards.TryGetActivePath(suspect, path, out var state);  // path[0] is the root, the last the running leaf
+Debug.Log(guards.DescribeAgent(suspect));                // readable text; allocates, for logs and tools
+
+// Let the MCP/CLI tools see this container (Editor and development builds only).
+TreeSimulationDebug.Register(simulation, "guards");
+```
+
+- **What a trace holds.** Per think and per teardown of the traced agent, in order:
+  - a `Think` record with the reasons (`ThinkReasons`: `Scheduled`, `WokenByGame`, `InputChanged`,
+    `ActionCompleted`, `FreshInstance`), or a `Teardown` record with the reason (`AgentRemoved`,
+    `AgentRestarted`, `GroupRemoved`);
+  - one `Input` record per bound input channel: the agent's row as the think reads it (canonical
+    bytes, up to 16 kept in the record, `ValueHex()`);
+  - the `Lifecycle` records of the package's native trace recorder, the same ones a
+    `ProductionTreeHost` records (update started and completed with the root result; node entered,
+    ticked, exited and aborted, with status and reasons);
+  - the agent's `Command` records, `ActionStarted` and `ActionCancelled` records with their values,
+    `CompletionConsumed` for a completion its node read, and a `Fault` record with the diagnostic.
+  
+  Every record carries the step's tick and a native `NativeTraceRecordV1` (container facts use the
+  nearest existing event kind), numbered from 1 per agent without gaps.
+- **Bounded.** `AgentTraceSettings`: `MaximumTracedAgents` (default 8 per group), `RecordsPerAgent`
+  (default 1 024, a ring: the oldest records are dropped and counted) and `RecordsPerThink` (default
+  256 lifecycle records per think or teardown; more are dropped and counted). Past four times
+  `RecordsPerThink` in one think the count stops and `AgentTraceInfo.DroppedIsLowerBound` is set.
+  Configure while no agent is traced.
+- **Cost.** An untraced agent pays one test per think. On the agent-frame job a traced agent's
+  steps are logged inside the job and replayed into its trace on the main thread, so traces are the
+  same on every path. `Step` allocates nothing managed while tracing.
+- **Removed agents.** A removed agent's trace, ending with its teardown, stays readable by its stale
+  handle until it is untraced or its slot is reused.
+- **Active path and state.** `TryGetActivePath` (into a `NativeList` or a `Span`) gives each node's
+  index, stable id (FNV-1a 64 of the authoring id), type id and status, plus an `AgentDebugState`:
+  `NotStarted`, `Running`, `Finished` (with the root result) or `Faulted` (with the fault and its
+  cause), when and why it last thought, when it thinks next, pending wake or restart, live action
+  count and whether it is traced. `TryCopyLiveActions` lists its live actions and whether the game
+  completed them. A finished or faulted agent has an empty path or the path at the fault.
+- **DescribeAgent** puts all of it in a few lines, with node names from the program's debug map and,
+  for a traced agent, each node's last result seen in its trace. Pass a `Func<ulong, string>` to name
+  custom node types.
+- **Between steps only.** During `Step` every debug call returns `Busy` (`DescribeAgent` says so).
+- **Registry.** `TreeSimulationDebug.Register(simulation, name)` lists a container for tools; it
+  holds it weakly, a disposed container leaves the list at once, and nothing is listed unless the
+  game registers it. Outside the Editor and development builds `Register` returns false and keeps
+  nothing (`IsAvailable`).
+- **Tools.** MCP `runtime_simulations` lists registered containers, their groups and traced agents;
+  `describe_agent` returns an agent's state, active path, live actions and text; `read_agent_trace`
+  pages through a traced agent's trace (`afterSequence`, `limit`). All three are read-only. The CLI
+  has `runtime simulations` and `agent describe|trace <simulation> <group> <slot>`.
+
 ## Lifetime rules
 
 - Capacity is allocated by `TryAddGroup` and `TryReserve`, never during `Step`. Growing a group
@@ -252,7 +321,8 @@ void OnArrived(ActionHandle action, bool reached, float distance)
 - Call the container from one thread at a time. Calls made while `Step` runs (from a callback)
   return `Busy`.
 
-## Not yet (G4 and later)
+## Not yet (G5 and later)
 
-- Trace channels and the live debugger.
+- The AIBT Graph window's live highlighting and trace timeline for a container agent (G4 gives the
+  data and the MCP/CLI tools; the window still binds to hosts only).
 - Shared- and World-scope blackboard keys.

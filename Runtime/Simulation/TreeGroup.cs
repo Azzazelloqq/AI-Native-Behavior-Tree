@@ -15,7 +15,7 @@ namespace AIBT.Simulation
     /// (<see cref="AgentHandle"/>). Owned by its container; same threading rules (one thread, never
     /// during <see cref="TreeSimulation.Step"/>). Experimental (ADR-P10-008) until stage G5.
     /// </summary>
-    public sealed class TreeGroup
+    public sealed partial class TreeGroup
     {
         internal enum Removal : byte { None = 0, Pending = 1, TornDown = 2 }
 
@@ -35,6 +35,13 @@ namespace AIBT.Simulation
             internal bool RestartRequested;
             // The persistent agent-frame table entry holds this slot's storage handles.
             internal bool TableReady;
+            // P10-012: why the agent will think in the next step besides its schedule (wake, completion),
+            // when and why it last thought, and its trace (pool index + 1; 0 = not traced).
+            internal ThinkReasons PendingReasons;
+            internal ThinkReasons LastReasons;
+            internal uint LastThinkTick;
+            internal bool HasThought;
+            internal int Trace;
         }
 
         private readonly TreeSimulation _simulation;
@@ -175,6 +182,7 @@ namespace AIBT.Simulation
             _completionLayouts = new PayloadLayout[map.Completions.Count];
             _actionEvents = new NativeList<ActionEvent>(Math.Max(1, settings.Capacity * 3 * _actionCapacity), Allocator.Persistent);
             _actionEmitters = new NativeList<int>(Math.Max(1, settings.Capacity), Allocator.Persistent);
+            BuildNodeTables();
         }
 
         /// <summary>The container state of slot <paramref name="index"/> (its in-place dispatch reaches it through the bridge).</summary>
@@ -373,11 +381,17 @@ namespace AIBT.Simulation
                     slot.State = SlotState.Retired;
                     continue;
                 }
+                // P10-012: a removed agent's trace stays readable until its slot is reused.
+                if (slot.Trace != 0) ReleaseTrace(slot.Trace - 1);
                 if (!TryResetToFreshInstance(index, ref slot)) return SimulationResult.InvalidArgument;
                 slot.Generation++;
                 slot.State = SlotState.Alive;
                 ApplySchedule(ref slot, schedule);
                 slot.Woken = false;
+                slot.PendingReasons = ThinkReasons.None;
+                slot.LastReasons = ThinkReasons.None;
+                slot.LastThinkTick = 0;
+                slot.HasThought = false;
                 slot.ResetAtNextThink = false;
                 slot.RestartRequested = false;
                 ForgetSeenInputs(index);
@@ -437,6 +451,7 @@ namespace AIBT.Simulation
             if (usable != SimulationResult.Success) return usable;
             if (!TryResolve(agent, out var index)) return SimulationResult.StaleHandle;
             _slots[index].Woken = true;
+            _slots[index].PendingReasons |= ThinkReasons.WokenByGame;
             return SimulationResult.Success;
         }
 
@@ -452,7 +467,10 @@ namespace AIBT.Simulation
             {
                 var index = indices[position];
                 if ((uint)index < (uint)_slots.Length && _slots[index].State == SlotState.Alive)
+                {
                     _slots[index].Woken = true;
+                    _slots[index].PendingReasons |= ThinkReasons.WokenByGame;
+                }
             }
             return SimulationResult.Success;
         }
@@ -512,17 +530,22 @@ namespace AIBT.Simulation
                 if (slot.State == SlotState.PendingRemoval)
                 {
                     ResetCommandQuota(index);
-                    TearDown(index, slot.Core,
-                        _removal == Removal.Pending ? ActionCancelReason.GroupRemoved : ActionCancelReason.AgentRemoved);
+                    var reason = _removal == Removal.Pending ? ActionCancelReason.GroupRemoved : ActionCancelReason.AgentRemoved;
+                    if (slot.Trace != 0) TraceTeardownStarted(slot.Trace - 1, index, reason);
+                    TearDown(index, slot.Core, reason);
+                    if (slot.Trace != 0) TraceTeardownEnded(slot.Trace - 1, index);
                     slot.State = SlotState.Free;
                     slot.Woken = false;
+                    slot.PendingReasons = ThinkReasons.None;
                     slot.ResetAtNextThink = false;
                     slot.RestartRequested = false;
                 }
                 else if (slot.State == SlotState.Alive && slot.RestartRequested)
                 {
                     ResetCommandQuota(index);
+                    if (slot.Trace != 0) TraceTeardownStarted(slot.Trace - 1, index, ActionCancelReason.AgentRestarted);
                     TearDown(index, slot.Core, ActionCancelReason.AgentRestarted);
+                    if (slot.Trace != 0) TraceTeardownEnded(slot.Trace - 1, index);
                     slot.RestartRequested = false;
                     slot.ResetAtNextThink = true;
                 }
@@ -559,12 +582,16 @@ namespace AIBT.Simulation
             {
                 ref var slot = ref _slots[index];
                 if (slot.State != SlotState.Alive) continue;
-                if (!slot.Woken && tick % slot.Interval != slot.Phase)
+                var reasons = slot.PendingReasons;
+                if (tick % slot.Interval == slot.Phase) reasons |= ThinkReasons.Scheduled;
+                else if (!slot.Woken)
                 {
                     if (!_anyWake || !InputChanged(index)) continue;
                     WokenByInputForTests++;
+                    reasons |= ThinkReasons.InputChanged;
                 }
                 slot.Woken = false;
+                slot.PendingReasons = ThinkReasons.None;
                 if (slot.ResetAtNextThink)
                 {
                     slot.ResetAtNextThink = false;
@@ -576,6 +603,12 @@ namespace AIBT.Simulation
                 }
                 var core = slot.Core;
                 if (!core.Ready) continue; // stopped: faulted, or finished under RootCompletionPolicy.Stop
+                if (core.TotalUpdates == 0) reasons |= ThinkReasons.FreshInstance;
+                slot.HasThought = true;
+                slot.LastThinkTick = tick;
+                slot.LastReasons = reasons;
+                // P10-012: the think block of a traced agent starts before its update does.
+                if (slot.Trace != 0) TraceThinkStarted(slot.Trace - 1, index, reasons);
                 if (!core.UpdateOpen && !core.TryBeginUpdateAt(time))
                 {
                     RecordFault(index, ref slot, core.LastFailure);
@@ -585,7 +618,11 @@ namespace AIBT.Simulation
                 if (_anyWake) RecordSeenInputs(index);
                 _due[dueCount++] = index;
             }
-            if (dueCount == 0) return;
+            if (dueCount == 0)
+            {
+                if (_tracedCount != 0) TraceThinksEnded();
+                return;
+            }
 
             var settings = _simulation.Settings;
             if (settings.UseJobs && _jobPathAvailable && dueCount >= settings.MinimumJobBatch)
@@ -610,6 +647,7 @@ namespace AIBT.Simulation
                     if (_settings.RootCompletion == RootCompletionPolicy.Restart) slot.ResetAtNextThink = true;
                 }
             }
+            if (_tracedCount != 0) TraceThinksEnded();
         }
 
         private void RecordFault(
@@ -622,6 +660,7 @@ namespace AIBT.Simulation
             _faults.Add(new AgentFault(new AgentHandle(index, slot.Generation, Id), reported, cause));
             // P10-011: a stopped agent's live actions end now.
             SimulationActionRoutinesV1.Flush(ref _simAgents.ElementAt(index), ActionCancelReason.Fault);
+            if (slot.Trace != 0) TraceFault(slot.Trace - 1, reported);
         }
 
         private void RunInPlace(int dueCount)
@@ -698,6 +737,8 @@ namespace AIBT.Simulation
         {
             if (_released) return;
             _released = true;
+            // P10-012: traces first (cores must not dispose the pool's channels).
+            ReleaseTraces();
             for (var index = 0; index < _slots.Length; index++) ReleaseCore(_slots[index].Core);
             _slots = Array.Empty<Slot>();
             _count = 0;
@@ -863,8 +904,9 @@ namespace AIBT.Simulation
         /// Step phase 1 start: forgets last step's commands and copies every bound input's rows into the
         /// group's own buffer (the only copy a step makes; see <see cref="TryBindInput{T}"/>).
         /// </summary>
-        internal void BeginStep()
+        internal void BeginStep(uint tick)
         {
+            _stepTick = tick;
             unchecked { _stepStamp++; }
             for (var position = 0; position < _emitters.Length; position++)
             {
@@ -1187,6 +1229,7 @@ namespace AIBT.Simulation
             }
             entry.Actions[record] = updated;
             _slots[index].Woken = true;
+            _slots[index].PendingReasons |= ThinkReasons.ActionCompleted;
             return SimulationResult.Success;
         }
 

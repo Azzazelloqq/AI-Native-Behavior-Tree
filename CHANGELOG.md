@@ -4,6 +4,29 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Simulation container, stage G4 (P10-012, experimental)
+
+- **New, experimental until stage G5:** debugging for `AIBT.Simulation`.
+  - **Traces.** `TreeGroup.TrySetTraced(agent, bool)` traces selected agents: why each think
+    happened (`ThinkReasons`), the input rows it read, the package's native lifecycle records, commands,
+    action starts, cancels and consumed completions, faults and teardowns, read with `TryCopyTrace`
+    into a `NativeList<AgentTraceRecord>`. Bounded by `AgentTraceSettings` (`TryConfigureTracing`:
+    agents per group, a ring of records per agent that drops the oldest and counts, records per
+    think). New result `NotTraced`.
+  - **Active path.** `TryGetActivePath` (`NativeList` or `Span` of `ActivePathNode`) and
+    `AgentDebugState` for any agent between steps, `TryCopyLiveActions`, `TryGetAgentAt`, and
+    `DescribeAgent` for readable text.
+  - **Registry.** `TreeSimulationDebug.Register/Unregister/CopyRegistered`: an opt-in, weak list of
+    containers for tools, Editor and development builds only. `TreeSimulation.CopyGroups` lists a
+    container's groups.
+  - **Tools.** Read-only MCP tools `runtime_simulations`, `describe_agent`, `read_agent_trace` and
+    CLI `runtime simulations`, `agent describe|trace`.
+- Tracing changes no result on any path or worker count, and `Step` still allocates nothing while
+  tracing. Untraced agents pay one test per think.
+- Hosts: the generated dispatch adapter and the agent-frame core skip input staging for a slot with no
+  snapshot bindings (a flag computed once). Behaviour is unchanged. ABI v2, the compiled format and the
+  generator are unchanged.
+
 ### Simulation container, stage G3 (P10-011, experimental)
 
 - **New, experimental until stage G5:** external long-running actions in `AIBT.Simulation`. Burst

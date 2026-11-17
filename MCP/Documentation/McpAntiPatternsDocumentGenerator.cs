@@ -23,7 +23,7 @@ namespace AIBT.Mcp.Documentation
             Entry(
                 builder,
                 "Don't confuse reference simulation with live native trace.",
-                "Use runtime_hosts and read_trace for a specific native instance/program. Trace reads never complete jobs; available=false means retry later, complete=false means dropped/faulted history. Reference simulation is a separate backend. No compare-trace operation is exposed.");
+                "Use runtime_hosts and read_trace for a specific native instance/program. Trace reads never complete jobs; available=false means retry later, complete=false means dropped/faulted history. Reference simulation is a separate backend. No compare-trace operation is exposed. For simulation-container agents use runtime_simulations, describe_agent and read_agent_trace; they see only containers the game registered and agents it traces.");
 
             Entry(
                 builder,

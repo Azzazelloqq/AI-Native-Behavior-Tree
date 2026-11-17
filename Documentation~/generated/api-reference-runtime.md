@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-314 public type(s).
+325 public type(s).
 
 ---
 
@@ -3717,6 +3717,45 @@ P10-011: how the game ends an external action (<see cref="TreeGroup.TryComplete(
 
 ---
 
+### `AIBT.Simulation.ActivePathNode`
+
+P10-012: one node of an agent's active path, root first (<see cref="TreeGroup.TryGetActivePath"/>). Experimental until G5.
+
+- `PROPERTY AIBT.NodeStatus Status`
+- `PROPERTY System.UInt32 NodeIndex`
+- `PROPERTY System.UInt64 NodeTypeId`
+- `PROPERTY System.UInt64 StableNodeId`
+
+---
+
+### `AIBT.Simulation.AgentDebugState`
+
+P10-012: "why is agent N doing X" without the path: its life state, last root result, fault, think times, actions and trace status (<see cref="TreeGroup.TryGetActivePath"/>). Experimental until G5.
+
+- `PROPERTY AIBT.Burst.BurstContextResult FaultCause`
+- `PROPERTY AIBT.NativeRuntimeFailureV1 Fault`
+- `PROPERTY AIBT.NodeStatus RootResult`
+- `PROPERTY AIBT.Simulation.AgentHandle Agent`
+- `PROPERTY AIBT.Simulation.AgentRunState State`
+- `PROPERTY AIBT.Simulation.ThinkReasons LastThinkReasons`
+- `PROPERTY System.Boolean FreshInstancePending`
+- `PROPERTY System.Boolean HasNextThink`
+- `PROPERTY System.Boolean HasRootResult`
+- `PROPERTY System.Boolean HasThought`
+- `PROPERTY System.Boolean IsTraced`
+- `PROPERTY System.Boolean RestartPending`
+- `PROPERTY System.Boolean WakePending`
+- `PROPERTY System.Int32 LiveActionCount`
+- `PROPERTY System.Int32 PathDepth`
+- `PROPERTY System.UInt32 LastThinkTick`
+- `PROPERTY System.UInt32 NextThinkTick`
+- `PROPERTY System.UInt32 ThinkInterval`
+- `PROPERTY System.UInt32 ThinkPhase`
+- `PROPERTY System.UInt64 TreeInstanceId`
+- `PROPERTY System.UInt64 Updates`
+
+---
+
 ### `AIBT.Simulation.AgentFault`
 
 One agent that stopped with a runtime failure in the last step. The agent stays alive but does not think until <see cref="TreeGroup.TryRestart"/> or <see cref="TreeGroup.TryRemove"/>. The failure's owner id is cleared: it comes from a process-wide counter and would make results depend on what ran earlier in the process. Experimental until G5.
@@ -3739,6 +3778,80 @@ Stable identity of one agent of a <see cref="TreeGroup"/>. <see cref="Index"/> i
 - `PROPERTY System.Int32 Index`
 - `PROPERTY System.UInt16 Group`
 - `PROPERTY System.UInt32 Generation`
+
+---
+
+### `AIBT.Simulation.AgentRunState`
+
+P10-012: where an agent is in its life (<see cref="AgentDebugState.State"/>). Experimental until G5.
+
+- `FIELD AIBT.Simulation.AgentRunState Faulted`
+- `FIELD AIBT.Simulation.AgentRunState Finished`
+- `FIELD AIBT.Simulation.AgentRunState NotStarted`
+- `FIELD AIBT.Simulation.AgentRunState Running`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.Simulation.AgentTraceFact`
+
+P10-012: what one <see cref="AgentTraceRecord"/> says. <see cref="Lifecycle"/> records are written by the package's native trace recorder, exactly as a <see cref="ProductionTreeHost"/> records them (update started/completed with the root result, node entered/ticked/exited/aborted with status and reasons); every other fact is the container's own and carries a native record of the nearest existing <see cref="NativeTraceEventKindV1"/> so the Editor's trace tools can show it. Experimental until G5.
+
+- `FIELD AIBT.Simulation.AgentTraceFact ActionCancelled`
+- `FIELD AIBT.Simulation.AgentTraceFact ActionStarted`
+- `FIELD AIBT.Simulation.AgentTraceFact Command`
+- `FIELD AIBT.Simulation.AgentTraceFact CompletionConsumed`
+- `FIELD AIBT.Simulation.AgentTraceFact Fault`
+- `FIELD AIBT.Simulation.AgentTraceFact Input`
+- `FIELD AIBT.Simulation.AgentTraceFact Lifecycle`
+- `FIELD AIBT.Simulation.AgentTraceFact Teardown`
+- `FIELD AIBT.Simulation.AgentTraceFact Think`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.Simulation.AgentTraceInfo`
+
+P10-012: counters of one agent trace (<see cref="TreeGroup.TryCopyTrace"/>). Experimental until G5.
+
+- `PROPERTY System.Boolean DroppedIsLowerBound`
+- `PROPERTY System.Int32 Count`
+- `PROPERTY System.UInt64 Dropped`
+- `PROPERTY System.UInt64 Recorded`
+
+---
+
+### `AIBT.Simulation.AgentTraceRecord`
+
+P10-012: one entry of a traced agent's trace (<see cref="TreeGroup.TryCopyTrace"/>). The order inside one step is fixed: a teardown block (Teardown, its lifecycle, commands, action events), then a think block (Think, Input per channel, lifecycle, commands, action events, consumed completions, fault). Values are kept up to 16 bytes (<see cref="ValueSize"/> is the full size). Experimental until G5.
+
+- `METHOD System.Byte GetValueByte(System.Int32)`
+- `METHOD System.String ValueHex()`
+- `PROPERTY AIBT.NativeRuntimeFailureV1 Failure`
+- `PROPERTY AIBT.NativeTraceRecordV1 Record`
+- `PROPERTY AIBT.OperationId Operation`
+- `PROPERTY AIBT.Simulation.ActionCancelReason CancelReason`
+- `PROPERTY AIBT.Simulation.AgentTraceFact Fact`
+- `PROPERTY AIBT.Simulation.ThinkReasons Reasons`
+- `PROPERTY System.UInt32 Tick`
+- `PROPERTY System.UInt32 ValueSize`
+- `PROPERTY System.UInt64 Channel`
+- `PROPERTY System.UInt64 ValueHigh`
+- `PROPERTY System.UInt64 ValueLow`
+
+---
+
+### `AIBT.Simulation.AgentTraceSettings`
+
+P10-012: capacities of a group's agent traces, fixed until the next <see cref="TreeGroup.TryConfigureTracing"/>. All memory is allocated when an agent is first traced (or when configured), never in a step. Experimental until G5.
+
+- `FIELD System.Int32 DefaultMaximumTracedAgents`
+- `FIELD System.Int32 DefaultRecordsPerAgent`
+- `FIELD System.Int32 DefaultRecordsPerThink`
+- `FIELD System.Int32 MaximumTracedAgents`
+- `FIELD System.Int32 RecordsPerAgent`
+- `FIELD System.Int32 RecordsPerThink`
+- `PROPERTY AIBT.Simulation.AgentTraceSettings Default`
 
 ---
 
@@ -3766,6 +3879,25 @@ Stable identity of one agent of a <see cref="TreeGroup"/>. <see cref="Index"/> i
 - `PROPERTY System.Boolean IsValid`
 - `PROPERTY System.String Name`
 - `PROPERTY System.UInt64 Id`
+
+---
+
+### `AIBT.Simulation.LiveAction`
+
+P10-012: one live external action of an agent (<see cref="TreeGroup.TryCopyLiveActions"/>). Experimental until G5.
+
+- `PROPERTY AIBT.Simulation.ActionHandle Action`
+- `PROPERTY AIBT.Simulation.ActionOutcome Outcome`
+- `PROPERTY System.Boolean Completed`
+
+---
+
+### `AIBT.Simulation.RegisteredSimulation`
+
+P10-012: a container the game registered for debugging tools (<see cref="TreeSimulationDebug.CopyRegistered"/>). Experimental until G5.
+
+- `PROPERTY AIBT.Simulation.TreeSimulation Simulation`
+- `PROPERTY System.String Name`
 
 ---
 
@@ -3799,6 +3931,7 @@ Result of every <see cref="TreeSimulation"/> and <see cref="TreeGroup"/> call th
 - `FIELD AIBT.Simulation.SimulationResult Disposed`
 - `FIELD AIBT.Simulation.SimulationResult InputMissing`
 - `FIELD AIBT.Simulation.SimulationResult InvalidArgument`
+- `FIELD AIBT.Simulation.SimulationResult NotTraced`
 - `FIELD AIBT.Simulation.SimulationResult StaleAction`
 - `FIELD AIBT.Simulation.SimulationResult StaleHandle`
 - `FIELD AIBT.Simulation.SimulationResult Success`
@@ -3806,6 +3939,20 @@ Result of every <see cref="TreeSimulation"/> and <see cref="TreeGroup"/> call th
 - `FIELD AIBT.Simulation.SimulationResult TypeMismatch`
 - `FIELD AIBT.Simulation.SimulationResult UnknownChannel`
 - `FIELD AIBT.Simulation.SimulationResult Unsupported`
+- `FIELD System.Byte value__`
+
+---
+
+### `AIBT.Simulation.ThinkReasons`
+
+P10-012: why an agent thought in a step (<see cref="AgentTraceFact.Think"/>, <see cref="AgentDebugState.LastThinkReasons"/>). Several can hold at once. Experimental until G5.
+
+- `FIELD AIBT.Simulation.ThinkReasons ActionCompleted`
+- `FIELD AIBT.Simulation.ThinkReasons FreshInstance`
+- `FIELD AIBT.Simulation.ThinkReasons InputChanged`
+- `FIELD AIBT.Simulation.ThinkReasons None`
+- `FIELD AIBT.Simulation.ThinkReasons Scheduled`
+- `FIELD AIBT.Simulation.ThinkReasons WokenByGame`
 - `FIELD System.Byte value__`
 
 ---
@@ -3825,13 +3972,19 @@ When an agent thinks: on ticks <c>t</c> with <c>t % Interval == Phase</c>, plus 
 
 ### `AIBT.Simulation.TreeGroup`
 
-N agents of one <see cref="ProductionTreeProgram"/> inside one <see cref="TreeSimulation"/>. Agents live in pooled slots allocated up front (<see cref="Capacity"/>), so a steady population allocates nothing after warm-up; an agent is a slot index plus a generation (<see cref="AgentHandle"/>). Owned by its container; same threading rules (one thread, never during <see cref="TreeSimulation.Step"/>). Experimental (ADR-P10-008) until stage G5.
+P10-012 (ADR-P10-008 stage G4): tracing a few selected agents, and the "why is agent N doing X" query for any agent. Nothing here changes what agents do: traces only observe (the package's native trace recorder plus the container's own facts), queries only read, and untraced agents pay one test of their slot's trace index per think.
 
 - `METHOD AIBT.Simulation.SimulationResult TryAdd(AIBT.Simulation.AgentHandle&)`
 - `METHOD AIBT.Simulation.SimulationResult TryAdd(AIBT.Simulation.ThinkSchedule&,AIBT.Simulation.AgentHandle&)`
 - `METHOD AIBT.Simulation.SimulationResult TryBindInput(AIBT.Simulation.InputChannel`1<>,Unity.Collections.NativeArray`1<>)`
+- `METHOD AIBT.Simulation.SimulationResult TryClearTrace(AIBT.Simulation.AgentHandle)`
 - `METHOD AIBT.Simulation.SimulationResult TryComplete(AIBT.Simulation.ActionHandle,AIBT.Simulation.ActionOutcome)`
 - `METHOD AIBT.Simulation.SimulationResult TryComplete(AIBT.Simulation.ActionHandle,AIBT.Simulation.ActionOutcome,)`
+- `METHOD AIBT.Simulation.SimulationResult TryConfigureTracing(AIBT.Simulation.AgentTraceSettings&)`
+- `METHOD AIBT.Simulation.SimulationResult TryCopyLiveActions(AIBT.Simulation.AgentHandle,Unity.Collections.NativeList`1<AIBT.Simulation.LiveAction>)`
+- `METHOD AIBT.Simulation.SimulationResult TryCopyTrace(AIBT.Simulation.AgentHandle,Unity.Collections.NativeList`1<AIBT.Simulation.AgentTraceRecord>,AIBT.Simulation.AgentTraceInfo&)`
+- `METHOD AIBT.Simulation.SimulationResult TryGetActivePath(AIBT.Simulation.AgentHandle,System.Span`1<AIBT.Simulation.ActivePathNode>,System.Int32&,AIBT.Simulation.AgentDebugState&)`
+- `METHOD AIBT.Simulation.SimulationResult TryGetActivePath(AIBT.Simulation.AgentHandle,Unity.Collections.NativeList`1<AIBT.Simulation.ActivePathNode>,AIBT.Simulation.AgentDebugState&)`
 - `METHOD AIBT.Simulation.SimulationResult TryGetCancelPayload(AIBT.Simulation.ActionEvent&,)`
 - `METHOD AIBT.Simulation.SimulationResult TryGetCommands(AIBT.Simulation.CommandChannel`1<>,)`
 - `METHOD AIBT.Simulation.SimulationResult TryGetStartPayload(AIBT.Simulation.ActionEvent&,)`
@@ -3839,22 +3992,29 @@ N agents of one <see cref="ProductionTreeProgram"/> inside one <see cref="TreeSi
 - `METHOD AIBT.Simulation.SimulationResult TryReserve(System.Int32)`
 - `METHOD AIBT.Simulation.SimulationResult TryRestart(AIBT.Simulation.AgentHandle)`
 - `METHOD AIBT.Simulation.SimulationResult TrySetThinkSchedule(AIBT.Simulation.AgentHandle,AIBT.Simulation.ThinkSchedule&)`
+- `METHOD AIBT.Simulation.SimulationResult TrySetTraced(AIBT.Simulation.AgentHandle,System.Boolean)`
 - `METHOD AIBT.Simulation.SimulationResult TrySetWakeOnChange(AIBT.Simulation.InputChannel`1<>,System.Boolean)`
 - `METHOD AIBT.Simulation.SimulationResult TryUnbindInput(AIBT.Simulation.InputChannel`1<>)`
 - `METHOD AIBT.Simulation.SimulationResult TryWake(AIBT.Simulation.AgentHandle)`
 - `METHOD AIBT.Simulation.SimulationResult TryWakeMany(Unity.Collections.NativeArray`1+ReadOnly<System.Int32>)`
 - `METHOD System.Boolean IsAlive(AIBT.Simulation.AgentHandle)`
+- `METHOD System.Boolean IsTraced(AIBT.Simulation.AgentHandle)`
+- `METHOD System.Boolean TryGetAgentAt(System.Int32,AIBT.Simulation.AgentHandle&)`
+- `METHOD System.String DescribeAgent(AIBT.Simulation.AgentHandle)`
+- `METHOD System.String DescribeAgent(AIBT.Simulation.AgentHandle,System.Func`2<System.UInt64,System.String>)`
 - `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.ActionEvent> GetActionEvents()`
 - `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.AgentFault> GetFaults()`
 - `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.Command`1<>> GetCommands(AIBT.Simulation.CommandChannel`1<>)`
 - `METHOD Unity.Collections.NativeArray`1+ReadOnly<AIBT.Simulation.RootCompletion> GetRootCompletions()`
 - `PROPERTY AIBT.ProductionTreeProgram Program`
+- `PROPERTY AIBT.Simulation.AgentTraceSettings TraceSettings`
 - `PROPERTY AIBT.Simulation.TreeGroupSettings Settings`
 - `PROPERTY System.Boolean IsValid`
 - `PROPERTY System.Int32 ActionEventCapacity`
 - `PROPERTY System.Int32 Capacity`
 - `PROPERTY System.Int32 Count`
 - `PROPERTY System.Int32 HighWaterIndex`
+- `PROPERTY System.Int32 TracedCount`
 - `PROPERTY System.UInt16 Id`
 
 ---
@@ -3881,6 +4041,7 @@ One simulation world owned by the game: groups of agents, each group running one
 - `METHOD AIBT.Simulation.SimulationResult Step(System.UInt32)`
 - `METHOD AIBT.Simulation.SimulationResult TryAddGroup(AIBT.ProductionTreeProgram,AIBT.Simulation.TreeGroupSettings&,AIBT.Simulation.TreeGroup&)`
 - `METHOD AIBT.Simulation.SimulationResult TryRemoveGroup(AIBT.Simulation.TreeGroup)`
+- `METHOD System.Int32 CopyGroups(System.Collections.Generic.List`1<AIBT.Simulation.TreeGroup>)`
 - `METHOD System.Void .ctor(AIBT.Simulation.TreeSimulationSettings&)`
 - `METHOD System.Void Dispose()`
 - `PROPERTY AIBT.Simulation.TreeSimulationSettings Settings`
@@ -3888,6 +4049,17 @@ One simulation world owned by the game: groups of agents, each group running one
 - `PROPERTY System.Boolean IsStepping`
 - `PROPERTY System.Int32 GroupCount`
 - `PROPERTY System.UInt32 LastTick`
+
+---
+
+### `AIBT.Simulation.TreeSimulationDebug`
+
+P10-012 (ADR-P10-008 stage G4): the opt-in list through which Editor tools (the AIBT MCP/CLI tools, the graph window) find the game's simulation containers. Nothing is registered unless the game calls <see cref="Register"/>; containers are held weakly, a disposed container leaves the list at once, and a container that is only referenced from here can be collected. The list is never read inside <see cref="TreeSimulation.Step"/> and nothing in it affects results. It exists in the Editor and in development builds only: in other builds <see cref="Register"/> returns false and keeps nothing. Main thread only (as the containers). Experimental until G5.
+
+- `METHOD System.Boolean Register(AIBT.Simulation.TreeSimulation,System.String)`
+- `METHOD System.Boolean Unregister(AIBT.Simulation.TreeSimulation)`
+- `METHOD System.Int32 CopyRegistered(System.Collections.Generic.List`1<AIBT.Simulation.RegisteredSimulation>)`
+- `PROPERTY System.Boolean IsAvailable`
 
 ---
 

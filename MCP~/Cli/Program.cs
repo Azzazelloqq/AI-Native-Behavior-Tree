@@ -49,6 +49,9 @@ try
             runtime catalogs             List native generated catalogs
             runtime hosts                List live hosts and their program identities
             trace read <instanceId>      Read native trace (Read)
+            runtime simulations          List registered simulation containers (TreeSimulationDebug)
+            agent describe <sim> <group> <slot>  Explain a container agent (Read)
+            agent trace <sim> <group> <slot>     Read a traced container agent's trace (Read)
             call <operation>             Invoke any existing bridge operation
 
             --project <UnityProject>     Explicit project root (or AIBT_PROJECT_PATH)
@@ -103,7 +106,14 @@ try
         string operation;
         if (arguments.SequenceEqual(new[] { "operations" })) operation = "list_operations";
         else if (arguments.Count == 2 && arguments[0] == "describe") { operation = "get_operation_schema"; payload["operation"] = arguments[1]; }
-        else if (arguments.Count == 2 && arguments[0] == "runtime" && arguments[1] is "catalogs" or "hosts") operation = "runtime_" + arguments[1];
+        else if (arguments.Count == 2 && arguments[0] == "runtime" && arguments[1] is "catalogs" or "hosts" or "simulations") operation = "runtime_" + arguments[1];
+        else if (arguments.Count == 5 && arguments[0] == "agent" && arguments[1] is "describe" or "trace")
+        {
+            operation = arguments[1] == "describe" ? "describe_agent" : "read_agent_trace";
+            payload["simulation"] = arguments[2];
+            payload["group"] = int.Parse(arguments[3], System.Globalization.CultureInfo.InvariantCulture);
+            payload["agent"] = int.Parse(arguments[4], System.Globalization.CultureInfo.InvariantCulture);
+        }
         else if (arguments.Count == 3 && arguments[0] == "trace" && arguments[1] == "read")
         { operation = "read_trace"; payload["instanceId"] = ulong.Parse(arguments[2], System.Globalization.CultureInfo.InvariantCulture); }
         else if (arguments.Count is 2 or 3 && arguments[0] == "nodes" && arguments[1] == "search")

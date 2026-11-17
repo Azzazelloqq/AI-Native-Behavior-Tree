@@ -55,6 +55,13 @@ namespace AIBT.Mcp
                     return WithPermission(granted, McpPermissionCategory.Read, () => McpEditorThread.Invoke(McpRuntimeTools.Hosts));
                 case "read_trace":
                     return WithPermission(granted, McpPermissionCategory.Read, () => McpEditorThread.Invoke(() => McpRuntimeTools.Trace(args)));
+                // P10-012: simulation containers the game registered (TreeSimulationDebug); read-only.
+                case "runtime_simulations":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpEditorThread.Invoke(McpSimulationTools.Simulations));
+                case "describe_agent":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpEditorThread.Invoke(() => McpSimulationTools.DescribeAgent(args)));
+                case "read_agent_trace":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpEditorThread.Invoke(() => McpSimulationTools.ReadAgentTrace(args)));
                 case "get_project_manifest":
                     return WithPermission(granted, McpPermissionCategory.Read, () => GetProjectManifest(projectRoot));
                 case "search_nodes":

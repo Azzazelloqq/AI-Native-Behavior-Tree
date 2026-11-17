@@ -41,4 +41,26 @@ public static class RuntimeTools
     [Description("Read bounded native trace for an exact runtime host instance. Never completes jobs. Busy returns available=false; complete=false discloses dropped/faulted history. Limit 1..512, default 128.")]
     public static string ReadTrace(ulong instanceId, ulong afterSequence = 0, int limit = 128)
         => BridgeClient.SendRequest("read_trace", new JsonObject { ["instanceId"] = instanceId, ["afterSequence"] = afterSequence, ["limit"] = limit });
+
+    [McpServerTool(Name = "aibt_runtime_simulations")]
+    [Description("List simulation containers (AIBT.Simulation.TreeSimulation) the game registered with TreeSimulationDebug.Register: groups, agent counts, traced agents. Read-only; empty with a hint when none is registered.")]
+    public static string RuntimeSimulations() => BridgeClient.SendRequest("runtime_simulations", new JsonObject());
+
+    [McpServerTool(Name = "aibt_describe_agent")]
+    [Description("Explain one container agent: state, active path (root first, node names), root result, fault, last think tick and reasons, next think, live actions, and readable text. Read-only; busy=true during a step.")]
+    public static string DescribeAgent(string simulation, int group, int agent, long generation = 0)
+    {
+        var payload = new JsonObject { ["simulation"] = simulation, ["group"] = group, ["agent"] = agent };
+        if (generation > 0) payload["generation"] = generation;
+        return BridgeClient.SendRequest("describe_agent", payload);
+    }
+
+    [McpServerTool(Name = "aibt_read_agent_trace")]
+    [Description("Read a traced container agent's trace (the game selects agents with TreeGroup.TrySetTraced): native lifecycle records plus think reasons, inputs, commands, action events and faults, each with its tick. Limit 1..512, default 128; complete=false when records were dropped.")]
+    public static string ReadAgentTrace(string simulation, int group, int agent, long generation = 0, ulong afterSequence = 0, int limit = 128)
+    {
+        var payload = new JsonObject { ["simulation"] = simulation, ["group"] = group, ["agent"] = agent, ["afterSequence"] = afterSequence, ["limit"] = limit };
+        if (generation > 0) payload["generation"] = generation;
+        return BridgeClient.SendRequest("read_agent_trace", payload);
+    }
 }

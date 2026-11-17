@@ -324,6 +324,16 @@ namespace AIBT
                 into.Add(_frames[index].NodeIndex);
         }
 
+        /// <summary>
+        /// P10-012: the depth of the activation stack (0 when not created), for an allocation-free
+        /// read of the same path as <see cref="CopyActivePath"/> with <see cref="ActiveNodeAt"/>.
+        /// Diagnostic only, same rules as <see cref="CopyActivePath"/>.
+        /// </summary>
+        internal int ActiveDepth => IsCreated ? (int)Math.Min(_control[0].Depth, (uint)_frames.Length) : 0;
+
+        /// <summary>P10-012: the node index of activation frame <paramref name="depth"/> (0 = root), below <see cref="ActiveDepth"/>.</summary>
+        internal uint ActiveNodeAt(int depth) => _frames[depth].NodeIndex;
+
         internal bool TryBeginUpdate(ulong updateId, out NativeRuntimeFailureV1 failure)
             => TryBeginUpdate(updateId, 0, out failure);
 

@@ -23,6 +23,7 @@ namespace AIBT.Mcp
             "analyze_and_compile_node", "test_node", "apply_node",
             "list_custom_tools", "call_custom_tool",
             "list_operations", "get_operation_schema", "inspect_tree", "runtime_catalogs", "prepare_runtime", "runtime_hosts", "read_trace", "migrate_document",
+            "runtime_simulations", "describe_agent", "read_agent_trace",
         };
     }
 }

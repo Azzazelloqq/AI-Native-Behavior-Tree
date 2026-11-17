@@ -327,6 +327,45 @@ namespace AIBT.Tests.Integration.Simulation
             internal int Never;
             internal int Done;
             internal long JobBatches;
+            // P10-012: per traced agent (TracedSlots order, crew then shift, the removed one left out) the digest
+            // of its trace at the last tick, the records written, and the records the removed agents' traces kept.
+            internal readonly List<ulong> TraceDigests = new List<ulong>();
+            internal ulong TraceRecords;
+            internal int TraceFacts;
+        }
+
+        /// <summary>P10-012: the slots traced in each group by the traced population runs (0 and 131 plain, 5 restarted at ticks 100 and 220, 60 removed at tick 60, 259 last).</summary>
+        internal static readonly int[] TracedSlots = { 0, 5, 60, 131, 259 };
+
+        /// <summary>P10-012: every field of a trace record that depends on what the agent did.</summary>
+        internal static void AddTraceRecord(ref Fnv digest, in AgentTraceRecord item)
+        {
+            digest.Add(item.Tick);
+            digest.Add((ulong)item.Fact);
+            digest.Add((ulong)item.Reasons);
+            digest.Add(item.Channel);
+            digest.Add(item.Operation.TreeInstanceId.Value);
+            digest.Add(item.Operation.NodeIndex.Value);
+            digest.Add(item.Operation.ActivationGeneration);
+            digest.Add(item.Operation.Sequence);
+            digest.Add((ulong)item.CancelReason);
+            digest.Add((ulong)item.Failure.Code);
+            digest.Add(item.ValueSize);
+            digest.Add(item.ValueLow);
+            digest.Add(item.ValueHigh);
+            var record = item.Record;
+            digest.Add(record.Sequence);
+            digest.Add((ulong)record.Kind);
+            digest.Add((ulong)record.Phase);
+            digest.Add(record.UpdateId);
+            digest.Add(record.TreeInstanceId);
+            digest.Add((ulong)record.OptionalFields);
+            digest.Add(record.RuntimeNodeIndex);
+            digest.Add((ulong)record.Status);
+            digest.Add((ulong)record.ExitReason);
+            digest.Add((ulong)record.AbortReason);
+            digest.Add(record.DiagnosticCodeNumber);
+            digest.Add(record.OperationOrDecisionId);
         }
 
         /// <summary>
@@ -337,7 +376,7 @@ namespace AIBT.Tests.Integration.Simulation
         /// never (one in eight). Each tick's digest covers every agent's state, root completions, faults,
         /// action events with payloads and JobDone commands.
         /// </summary>
-        private Outcome RunPopulation(ProductionTreeProgram crew, ProductionTreeProgram shift, in TreeSimulationSettings settings)
+        private Outcome RunPopulation(ProductionTreeProgram crew, ProductionTreeProgram shift, in TreeSimulationSettings settings, bool traced = false)
         {
             var outcome = new Outcome { Ledger = new Ledger() };
             var ledger = outcome.Ledger;
@@ -360,8 +399,39 @@ namespace AIBT.Tests.Integration.Simulation
                     Assert.That(crews.TryAdd(ThinkSchedule.Spread(5), out handles[0][index]), Is.EqualTo(SimulationResult.Success));
                     Assert.That(shifts.TryAdd(ThinkSchedule.Spread(3), out handles[1][index]), Is.EqualTo(SimulationResult.Success));
                 }
+                // P10-012: a handful of traced agents per group (the ring large enough to keep every record).
+                var traceSettings = AgentTraceSettings.Default;
+                traceSettings.RecordsPerAgent = 16384;
+                var tracedHandles = new AgentHandle[2 * TracedSlots.Length];
+                if (traced)
+                    for (var g = 0; g < 2; g++)
+                    {
+                        Assert.That(groups[g].TryConfigureTracing(traceSettings), Is.EqualTo(SimulationResult.Success));
+                        for (var n = 0; n < TracedSlots.Length; n++)
+                        {
+                            tracedHandles[g * TracedSlots.Length + n] = handles[g][TracedSlots[n]];
+                            Assert.That(groups[g].TrySetTraced(handles[g][TracedSlots[n]], true), Is.EqualTo(SimulationResult.Success));
+                        }
+                    }
+                var traceRecords = new NativeList<AgentTraceRecord>(16384, Allocator.Persistent);
+                try
+                {
                 for (uint tick = 1; tick <= Ticks + 2; tick++)
                 {
+                    // P10-012: a traced agent removed at tick 60 keeps its trace until its slot is reused at 61.
+                    if (traced && tick == 61)
+                        for (var g = 0; g < 2; g++)
+                        {
+                            var removed = tracedHandles[g * TracedSlots.Length + 2];
+                            Assert.That(groups[g].IsTraced(removed), Is.False, "A removed agent is not alive.");
+                            Assert.That(groups[g].TryCopyTrace(removed, traceRecords, out var kept), Is.EqualTo(SimulationResult.Success));
+                            var teardown = false;
+                            for (var r = 0; r < traceRecords.Length; r++)
+                                teardown |= traceRecords[r].Fact == AgentTraceFact.Teardown && traceRecords[r].CancelReason == ActionCancelReason.AgentRemoved && traceRecords[r].Tick == 60;
+                            Assert.That(teardown, Is.True, "The removal is in the trace.");
+                            outcome.TraceFacts += kept.Count;
+                        }
+
                     // The game: completions due now, in the order the actions started (before this tick's
                     // removals and restarts, which then cancel some completed actions).
                     if (tick <= Ticks)
@@ -452,6 +522,35 @@ namespace AIBT.Tests.Integration.Simulation
                         }
                     }
                     outcome.Digests.Add(digest.Value);
+
+                    if (traced && tick == Ticks)
+                        for (var g = 0; g < 2; g++)
+                            for (var n = 0; n < TracedSlots.Length; n++)
+                            {
+                                var agent = tracedHandles[g * TracedSlots.Length + n];
+                                var result = groups[g].TryCopyTrace(agent, traceRecords, out var info);
+                                if (n == 2)
+                                {
+                                    Assert.That(result, Is.EqualTo(SimulationResult.StaleHandle), "The reused slot dropped the removed agent's trace.");
+                                    continue;
+                                }
+                                Assert.That(result, Is.EqualTo(SimulationResult.Success));
+                                Assert.That(info.Dropped, Is.Zero);
+                                Assert.That(info.Recorded, Is.EqualTo((ulong)info.Count));
+                                var trace = Fnv.Create();
+                                for (var r = 0; r < traceRecords.Length; r++)
+                                {
+                                    Assert.That(traceRecords[r].Record.Sequence, Is.EqualTo((ulong)r + 1), "Sequences count from 1 without gaps.");
+                                    AddTraceRecord(ref trace, traceRecords[r]);
+                                }
+                                outcome.TraceDigests.Add(trace.Value);
+                                outcome.TraceRecords += info.Recorded;
+                            }
+                }
+                }
+                finally
+                {
+                    traceRecords.Dispose();
                 }
                 Assert.That(simulation.GroupCount, Is.Zero, "Both removed groups are released.");
                 Assert.That(crews.JobPathAvailable && shifts.JobPathAvailable, Is.True, "The generated catalog has the agent-frame entry.");
@@ -522,6 +621,53 @@ namespace AIBT.Tests.Integration.Simulation
             AssertSame(inPlaceA, defaults, "default settings (MinimumJobBatch=64)");
             AssertSame(inPlaceA, noWorkers, "0 job workers");
             AssertSame(inPlaceA, oneWorker, "1 job worker");
+        }
+
+        /// <summary>
+        /// P10-012: tracing five agents per group (one restarted twice, one removed and its slot reused) does
+        /// not change any digest of the untraced run, on every path and worker count, and the traces are the
+        /// same on every path (the agent-frame job replays the same lifecycle records).
+        /// </summary>
+        [Test]
+        public void Population_Tracing_ChangesNoDigest_AndTracesAreIdentical_AcrossPathsAndWorkerCounts()
+        {
+            var crew = Program(CrewTree);
+            var shift = Program(ShiftTree);
+
+            var plain = RunPopulation(crew, shift, Settings(false, 1));
+            var inPlace = RunPopulation(crew, shift, Settings(false, 1), true);
+            var jobs = RunPopulation(crew, shift, Settings(true, 1), true);
+            var defaults = RunPopulation(crew, shift, Settings(true, 64), true);
+            var workers = JobsUtility.JobWorkerCount;
+            Outcome noWorkers, oneWorker;
+            try
+            {
+                JobsUtility.JobWorkerCount = 0;
+                noWorkers = RunPopulation(crew, shift, Settings(true, 1), true);
+                JobsUtility.JobWorkerCount = 1;
+                oneWorker = RunPopulation(crew, shift, Settings(true, 1), true);
+            }
+            finally
+            {
+                JobsUtility.JobWorkerCount = workers;
+            }
+
+            TestContext.WriteLine("traced records " + inPlace.TraceRecords + " in " + inPlace.TraceDigests.Count + " traces, removed traces kept "
+                + inPlace.TraceFacts + " records, started " + plain.Ledger.Started);
+            Assert.That(inPlace.TraceDigests.Count, Is.EqualTo(8));
+            Assert.That(inPlace.TraceRecords, Is.GreaterThan(2000ul), "The traced agents record their thinks.");
+            Assert.That(inPlace.TraceFacts, Is.GreaterThan(50), "The removed agents' traces were kept until the slot was reused.");
+            Assert.That(plain.Ledger.Started, Is.GreaterThan(5000));
+            var runs = new[] { (inPlace, "traced in place"), (jobs, "traced, jobs"), (defaults, "traced, default settings"),
+                (noWorkers, "traced, 0 workers"), (oneWorker, "traced, 1 worker") };
+            foreach (var (run, what) in runs)
+            {
+                AssertSame(plain, run, what);
+                Assert.That(run.TraceDigests, Is.EqualTo(inPlace.TraceDigests), what + ": the traces");
+                Assert.That(run.TraceRecords, Is.EqualTo(inPlace.TraceRecords), what);
+                Assert.That(run.TraceFacts, Is.EqualTo(inPlace.TraceFacts), what);
+            }
+            Assert.That(jobs.JobBatches, Is.GreaterThanOrEqualTo(Ticks), "The traced runs still use the job path.");
         }
 
         // ---- life cycle ----------------------------------------------------------------------------
@@ -1194,9 +1340,11 @@ namespace AIBT.Tests.Integration.Simulation
 
         // ---- zero GC -----------------------------------------------------------------------------------
 
-        [TestCase(false)]
-        [TestCase(true)]
-        public void Step_WithActionsCompletionsAndEvents_AllocatesNothing_AfterWarmUp(bool useJobs)
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void Step_WithActionsCompletionsAndEvents_AllocatesNothing_AfterWarmUp(bool useJobs, bool traced)
         {
             var crew = Program(CrewTree);
             var shift = Program(ShiftTree);
@@ -1211,9 +1359,23 @@ namespace AIBT.Tests.Integration.Simulation
                 crews.TrySetWakeOnChange(Sense, true);
                 for (var index = 0; index < Agents; index++)
                 {
-                    crews.TryAdd(ThinkSchedule.Spread(5), out _);
-                    shifts.TryAdd(ThinkSchedule.Spread(3), out _);
+                    crews.TryAdd(ThinkSchedule.Spread(5), out var crewAgent);
+                    shifts.TryAdd(ThinkSchedule.Spread(3), out var shiftAgent);
+                    // P10-012: eight traced agents per group, with small rings that overflow during the measured ticks.
+                    if (traced && index % 33 == 0)
+                    {
+                        if (index == 0)
+                        {
+                            var traceSettings = AgentTraceSettings.Default;
+                            traceSettings.RecordsPerAgent = 64;
+                            Assert.That(crews.TryConfigureTracing(traceSettings), Is.EqualTo(SimulationResult.Success));
+                            Assert.That(shifts.TryConfigureTracing(traceSettings), Is.EqualTo(SimulationResult.Success));
+                        }
+                        Assert.That(crews.TrySetTraced(crewAgent, true), Is.EqualTo(SimulationResult.Success));
+                        Assert.That(shifts.TrySetTraced(shiftAgent, true), Is.EqualTo(SimulationResult.Success));
+                    }
                 }
+                if (traced) Assert.That(crews.TracedCount + shifts.TracedCount, Is.EqualTo(16));
                 var groups = new[] { crews, shifts };
                 var pending = new ActionHandle[8192];
                 var due = new uint[8192];

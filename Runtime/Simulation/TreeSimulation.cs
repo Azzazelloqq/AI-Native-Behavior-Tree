@@ -59,6 +59,22 @@ namespace AIBT.Simulation
         /// <summary>Groups not yet released (a removed group counts until the step after its teardown).</summary>
         public int GroupCount => _groups.Count;
         public bool IsDisposed => _disposed;
+        /// <summary>P10-012: true once a <see cref="Step"/> succeeded (<see cref="LastTick"/> is then meaningful).</summary>
+        internal bool HasStepped => _hasStepped;
+
+        /// <summary>
+        /// P10-012: copies the container's groups, in creation order, into <paramref name="into"/> (cleared
+        /// first) and returns their count. A removed group stays listed until the step that releases it
+        /// (its <see cref="TreeGroup.IsValid"/> is false). For tools; allocates only if the list grows.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="into"/> is null.</exception>
+        public int CopyGroups(List<TreeGroup> into)
+        {
+            if (into == null) throw new ArgumentNullException(nameof(into));
+            into.Clear();
+            into.AddRange(_groups);
+            return into.Count;
+        }
 
         /// <summary>
         /// Adds a group of agents that all run <paramref name="program"/> and allocates its
@@ -150,7 +166,7 @@ namespace AIBT.Simulation
             try
             {
                 for (var index = 0; index < _groups.Count; index++)
-                    if (_groups[index].RemovalState != TreeGroup.Removal.TornDown) _groups[index].BeginStep();
+                    if (_groups[index].RemovalState != TreeGroup.Removal.TornDown) _groups[index].BeginStep(tick);
                 for (var index = 0; index < _groups.Count; index++)
                 {
                     var group = _groups[index];
@@ -213,6 +229,8 @@ namespace AIBT.Simulation
             _disposed = true;
             for (var index = 0; index < _groups.Count; index++) _groups[index].Release();
             _groups.Clear();
+            // P10-012: a disposed container leaves the opt-in debug registry at once.
+            TreeSimulationDebug.Forget(this);
         }
     }
 }

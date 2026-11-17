@@ -212,6 +212,33 @@ namespace AIBT
         }
 
         /// <summary>
+        /// P10-012 (simulation container only): starts recording this agent's lifecycle into
+        /// <paramref name="owner"/> through <paramref name="recorder"/>, both owned by the caller (a group's
+        /// trace pool), from the next update on. Refused while a dispatch is pending or a channel
+        /// created at bootstrap is attached (hosts); the container calls it only between steps, when no
+        /// update runs. Nothing else changes: the recorder only observes.
+        /// </summary>
+        internal bool TryAttachTrace(NativeTraceChannelOwnerV1 owner, NativeTraceRecorderV1 recorder)
+        {
+            if (owner == null || recorder == null || !_bootstrapped || _disposed || _hasPendingStep
+                || _recorder != null || TraceChannelOwner != null)
+                return false;
+            TraceChannelOwner = owner;
+            _recorder = recorder;
+            return true;
+        }
+
+        /// <summary>P10-012: stops recording (the caller keeps the channel). Refused while a dispatch is pending.</summary>
+        internal bool TryDetachTrace()
+        {
+            if (_hasPendingStep) return false;
+            _recorder?.ReleaseWriter();
+            _recorder = null;
+            TraceChannelOwner = null;
+            return true;
+        }
+
+        /// <summary>
         /// Counts one step against <see cref="MaximumStepsPerUpdate"/> before it is taken. Returns
         /// false, after failing this agent, when the update has already used its whole allowance.
         /// </summary>
@@ -712,12 +739,14 @@ namespace AIBT
         /// created, blackboard defaults, every generated leaf's memory, ledger and activation state
         /// as created, update bookkeeping as after bootstrap. Random streams are left zeroed, as a
         /// fresh adapter leaves them; the caller seeds them. Refused while an update or dispatch is
-        /// open; the caller tears active work down first (<see cref="RunTeardown"/>).
+        /// open; the caller tears active work down first (<see cref="RunTeardown"/>). P10-012: an attached
+        /// trace (<see cref="TryAttachTrace"/>) stays attached; the container patches instance ids when it
+        /// copies records. Only the simulation container calls this (hosts never reset an instance).
         /// </summary>
         internal bool TryResetInstance(TreeInstanceId treeInstanceId, out NativeRuntimeFailureV1 failure)
         {
             if (!_bootstrapped || _disposed || _generatedDispatch == null || _agents == null || !treeInstanceId.IsValid
-                || _hasPendingStep || _recorder != null)
+                || _hasPendingStep)
             {
                 failure = InvalidLifetime();
                 return false;
@@ -735,6 +764,7 @@ namespace AIBT
             _hasExecuted = false;
             _stepsThisUpdate = 0;
             _pendingStep = default;
+            _recorder?.ReleaseWriter();
             LastRootResult = null;
             LastFailure = default;
             LastRejectedResult = BurstContextResult.Success;

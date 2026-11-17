@@ -65,6 +65,9 @@ namespace AIBT.Mcp.Documentation
             builder.Append(Tool("inspect_tree")).Append(" returns the source and current contentHash; ").Append(Tool("runtime_catalogs")).Append(" lists generated catalogs. ");
             builder.Append(Tool("prepare_runtime")).Append(" prepares a native asset under Assets with source-hash, dry-run and explicit overwrite preconditions. ");
             builder.Append("After starting the game's own integration, ").Append(Tool("runtime_hosts")).Append(" identifies hosts and ").Append(Tool("read_trace")).Append(" reads bounded native history without completing jobs. ");
+            builder.Append("For a simulation container the game registered (TreeSimulationDebug.Register), ").Append(Tool("runtime_simulations")).Append(" lists containers, groups and traced agents, ")
+                .Append(Tool("describe_agent")).Append(" explains one agent (active path, last/next think and why, result, fault, live actions) and ")
+                .Append(Tool("read_agent_trace")).Append(" reads a traced agent's trace with ticks; all three are read-only and answer busy during a step. ");
             builder.Append("Reference compile/simulate are separate from native preparation/execution. ").Append(Tool("migrate_document")).Append(" persists registered document migrations. ");
             builder.Append("Project documentation is generated under Assets/AIBT-Documentation; runtime resources resolve the installed package root.\n");
 
