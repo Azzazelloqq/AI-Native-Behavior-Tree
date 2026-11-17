@@ -111,6 +111,39 @@ Set `sim-io` measures `TreeSimulation` (stage G2) with game inputs and commands.
 python sim_io.py <run folder> [<run folder> ...] > sim-io-table.md   # per scenario and ABBA D/B
 ```
 
+## Simulation container external actions (P10-011)
+
+Set `sim-actions` measures `TreeSimulation` (stage G3) with external actions against the G2 trees.
+- **Agents and timing.** 500 agents, `Spread(5)`, jobs on, 200 warm-up and 1000 measured ticks.
+- **Pairs.** ABBA in each run: `sim-io-loop16` (B) vs `sim-act-loop16` (E), and
+  `sim-io-reactive16` vs `sim-act-reactive16`. Both sides bind the `sense` input and read `order`
+  commands.
+- **The `act-*` trees** (`Tools/gen_trees.py`, `act_trees`) replace the order step of their `io-*`
+  twin with `aibt.perf.job` (`PerfIoShard`). The job starts an action from the sensed row, polls until
+  the game completes it, then gives one order.
+  - **`act-loop16`** (memory composites): the job is the patrol's third step, so this tree measures
+    the consume path: start, poll, completion, order.
+  - **`act-reactive16`**: the job runs in a repeater under the root reactive sequence. A reactive
+    composite aborts its running child at every update (normative), so the job is cancelled
+    (`Preempted`) and started again at every think. Its completions are never consumed and it gives
+    no orders.
+  - What `act-reactive16` measures is therefore a start, a cancel and a completion with its wake-up
+    think per cycle (evidence P10-011, finding F2).
+- **The game** (`PerfSimulationStepper`). After `Step` it reads the action events and queues every
+  started action; it completes each one `ActionDelay` = 3 ticks later (`TryComplete`, Succeeded,
+  with a `PerfJobResult`) before that tick's `Step`. The completion wakes the agent. Completions and
+  event reads are timed separately (`sim_complete_us`, `sim_events_us` in the CSV), outside Step.
+- **`runs.jsonl`.** `sim.actions`, `sim.startedMeasured`, `sim.cancelledMeasured`,
+  `sim.completedMeasured`, `sim.completeFailures` (counted as faults).
+
+```text
+python sim_actions.py <run folder> [<run folder> ...] > sim-actions-table.md   # per scenario and ABBA E/B
+```
+
+Set `host-check` runs `NativeTreeAgent` (default profile, agent-frame job from 64 agents) on
+`shared-loop16` and `shared-reactive16` at N = 500 and 2000, to compare hosts across package
+versions.
+
 `PerfFrameBegin`, `PerfFrameEnd` and `PerfFeeder` live in files named after their class (P10-010).
 When they shared `PerfClock.cs`, Unity 6000.6 embedded their MonoScripts in the scene. With a
 catalog containing an `[AibtInput]` node, one of them then resolved as missing in the build, and

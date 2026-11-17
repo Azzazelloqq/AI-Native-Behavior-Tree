@@ -1,0 +1,131 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "aibt.perf.act-loop16",
+  "name": "act-loop16",
+  "root": "loop",
+  "blackboard": {},
+  "nodes": {
+    "priority": {
+      "type": "aibt.core.memory-selector",
+      "typeVersion": 1,
+      "children": [
+        "chase",
+        "patrol"
+      ]
+    },
+    "chase": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "c-gate",
+        "c-wait"
+      ]
+    },
+    "c-gate": {
+      "type": "aibt.core.failer",
+      "typeVersion": 1,
+      "children": [
+        "c-g"
+      ]
+    },
+    "c-g": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c-wait": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 5
+      }
+    },
+    "patrol": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "p-ok1",
+        "p-wait1",
+        "p-ok2",
+        "p-succ",
+        "p-wait2",
+        "p-ok3",
+        "p-ok4"
+      ]
+    },
+    "p-ok1": {
+      "type": "aibt.perf.sense-at-least",
+      "typeVersion": 1,
+      "parameters": {
+        "threshold": 0.0
+      }
+    },
+    "p-wait1": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 10
+      }
+    },
+    "p-ok2": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "p-succ": {
+      "type": "aibt.core.succeeder",
+      "typeVersion": 1,
+      "children": [
+        "p-no"
+      ]
+    },
+    "p-no": {
+      "type": "aibt.core.failer",
+      "typeVersion": 1,
+      "children": [
+        "p-x"
+      ]
+    },
+    "p-x": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "p-wait2": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 10
+      }
+    },
+    "p-ok3": {
+      "type": "aibt.perf.job",
+      "typeVersion": 1
+    },
+    "p-ok4": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "loop": {
+      "type": "aibt.core.repeater",
+      "typeVersion": 1,
+      "children": [
+        "priority"
+      ],
+      "parameters": {
+        "count": 4000000000,
+        "stopOnFailure": false
+      }
+    }
+  }
+}

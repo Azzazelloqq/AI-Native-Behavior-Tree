@@ -150,6 +150,7 @@ def native_trees():
     }, io_bb)
     out["native-wait1"] = tree("native-wait1", "hold", {"hold": wait(BIG)})
     out.update(io_trees())
+    out.update(act_trees())
     return out
 
 
@@ -172,6 +173,28 @@ def io_trees():
     loop["p-ok3"] = n("aibt.perf.order-once")
     loop["loop"] = n("aibt.core.repeater", ["priority"], {"count": BIG, "stopOnFailure": False})
     out["io-loop16"] = tree("io-loop16", "loop", loop)
+    return out
+
+
+def act_trees():
+    # P10-011 (simulation container stage G3): the io-* twins with an external action.
+    # act-reactive16 = io-reactive16 with the held leaf replaced by a repeater around aibt.perf.job.
+    # The root reactive sequence aborts its running child at every update, so the job is cancelled
+    # and restarted at every think and never consumes a completion (P10-011 finding F2).
+    # act-loop16 = io-loop16 with its order step replaced by the job: start, poll, complete, order.
+    out = {}
+    nodes = {"root": n("aibt.core.reactive-sequence", ["sense"] + ["c%d" % i for i in range(13)] + ["jobs"])}
+    nodes["sense"] = n("aibt.perf.sense-at-least", parameters={"threshold": 0.0})
+    for i in range(13):
+        nodes["c%d" % i] = ok()
+    nodes["jobs"] = n("aibt.core.repeater", ["job"], {"count": BIG, "stopOnFailure": False})
+    nodes["job"] = n("aibt.perf.job")
+    out["act-reactive16"] = tree("act-reactive16", "root", nodes)
+    loop = shape15_nodes()
+    loop["p-ok1"] = n("aibt.perf.sense-at-least", parameters={"threshold": 0.0})
+    loop["p-ok3"] = n("aibt.perf.job")
+    loop["loop"] = n("aibt.core.repeater", ["priority"], {"count": BIG, "stopOnFailure": False})
+    out["act-loop16"] = tree("act-loop16", "loop", loop)
     return out
 
 

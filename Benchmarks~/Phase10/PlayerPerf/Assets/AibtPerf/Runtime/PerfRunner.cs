@@ -63,6 +63,9 @@ namespace AIBT.Perf
         // P10-010: the group's "sense" input is bound to a NativeArray written every tick and the
         // "order" commands are read after every step (trees io-*).
         public bool SimIo;
+        // P10-011: the act-* trees start external actions; the stepper's game completes each one
+        // SimActionDelay ticks after its Started event (before the Step, outside the timed call).
+        public bool SimActions;
         // ABBA position label written to runs.jsonl ("A1", "B1", ...), empty outside ABBA sets.
         public string Abba = string.Empty;
     }
@@ -90,15 +93,50 @@ namespace AIBT.Perf
         public static long Commands;
         public static long CommandChecksum;
         public static long InputTicks;
+        // P10-011: the game's side of external actions. Started actions wait in Pending until their
+        // due tick, then TryComplete (Succeeded with a value) runs before Step; CompleteTicks times it.
+        public static bool Actions;
+        public const uint ActionDelay = 3;
+        public static readonly ActionHandle[] Pending = new ActionHandle[16384];
+        public static readonly uint[] Due = new uint[16384];
+        public static int PendingCount;
+        public static long Started;
+        public static long Cancelled;
+        public static long Completed;
+        public static long CompleteFailures;
+        public static long CompleteTicks;
+        public static long EventTicks;
 
         private void Update()
         {
             StepTicks = 0;
             StepAlloc = 0;
             InputTicks = 0;
+            CompleteTicks = 0;
+            EventTicks = 0;
             var simulation = Simulation;
             if (simulation == null) return;
             var tick = Tick + 1;
+            if (Actions)
+            {
+                var completeStart = PerfClock.Watch.ElapsedTicks;
+                var kept = 0;
+                for (var index = 0; index < PendingCount; index++)
+                {
+                    if (Due[index] != tick)
+                    {
+                        Pending[kept] = Pending[index];
+                        Due[kept] = Due[index];
+                        kept++;
+                        continue;
+                    }
+                    var completed = Group.TryComplete(Pending[index], ActionOutcome.Succeeded, new IoNodes.PerfJobResult { Score = 1f + (tick & 3) });
+                    if (completed == SimulationResult.Success) Completed++;
+                    else CompleteFailures++;
+                }
+                PendingCount = kept;
+                CompleteTicks = PerfClock.Watch.ElapsedTicks - completeStart;
+            }
             if (Sense.IsCreated)
             {
                 var inputStart = PerfClock.Watch.ElapsedTicks;
@@ -118,6 +156,36 @@ namespace AIBT.Perf
             {
                 Commands += orders.Length;
                 for (var i = 0; i < orders.Length; i++) CommandChecksum += orders[i].Value.Target;
+            }
+            if (Actions)
+            {
+                var eventStart = PerfClock.Watch.ElapsedTicks;
+                var events = Group.GetActionEvents();
+                for (var index = 0; index < events.Length; index++)
+                {
+                    var item = events[index];
+                    if (item.Kind == ActionEventKind.Started)
+                    {
+                        Started++;
+                        if (PendingCount < Pending.Length)
+                        {
+                            Pending[PendingCount] = item.Action;
+                            Due[PendingCount] = Tick + ActionDelay;
+                            PendingCount++;
+                        }
+                        continue;
+                    }
+                    Cancelled++;
+                    for (var p = 0; p < PendingCount; p++)
+                        if (Pending[p] == item.Action)
+                        {
+                            PendingCount--;
+                            Pending[p] = Pending[PendingCount];
+                            Due[p] = Due[PendingCount];
+                            break;
+                        }
+                }
+                EventTicks = PerfClock.Watch.ElapsedTicks - eventStart;
             }
         }
     }
@@ -291,6 +359,42 @@ namespace AIBT.Perf
                         Add(Sim(pair[1], "d2", true));
                         Add(Sim(pair[0], "b2", false));
                     }
+                }
+                // P10-011: G3 external actions against their G2 twins, N = 500, Spread(5), default
+                // container settings, ABBA inside each run: B = the io-* tree (input + commands),
+                // E = its act-* twin, whose job node starts an action the game completes 3 ticks
+                // after its Started event (the completion wakes the agent) and then gives an order.
+                else if (part == "sim-actions")
+                {
+                    foreach (var pair in new[] { new[] { "io-loop16", "act-loop16" }, new[] { "io-reactive16", "act-reactive16" } })
+                    {
+                        Scenario Sim(string tree, string label, bool actions)
+                        {
+                            var s = new Scenario { Id = "sim-" + tree + "-" + label, Kind = ScenarioKind.Simulation, Tree = tree, N = 500, SimUseJobs = true, SimIo = true, SimActions = actions };
+                            s.Abba = label.ToUpperInvariant();
+                            s.Warmup = 200;
+                            s.Measure = 1000;
+                            return s;
+                        }
+                        Add(Sim(pair[0], "b1", false));
+                        Add(Sim(pair[1], "e1", true));
+                        Add(Sim(pair[1], "e2", true));
+                        Add(Sim(pair[0], "b2", false));
+                    }
+                }
+                // P10-011: host check, NativeTreeAgent with the default profile (agent-frame job from
+                // 64 agents) at N = 500 and 2000; run against this package and an older one.
+                else if (part == "host-check")
+                {
+                    foreach (var n in new[] { 500, 2000 })
+                        foreach (var tree in new[] { "shared-loop16", "shared-reactive16" })
+                        {
+                            var scenario = Native("n-" + tree, tree, n);
+                            scenario.Warmup = n >= 2000 ? 120 : 200;
+                            scenario.Measure = n >= 2000 ? 250 : 1000;
+                            scenario.AgentFrameStats = true;
+                            Add(scenario);
+                        }
                 }
                 else if (part == "full-immediate") { BuildPlan(quick); _plan.RemoveAll(x => x.Jobs || x.Pipelined || x.AgentFrame); }
                 // P10-005: the same without N > 5 000 (N = 20 000 of the J3 trees is in j3-scale).
@@ -753,6 +857,12 @@ namespace AIBT.Perf
                     PerfSimulationStepper.Faults = 0;
                     PerfSimulationStepper.Completions = 0;
                     PerfSimulationStepper.FailedSteps = 0;
+                    PerfSimulationStepper.Actions = s.SimActions;
+                    PerfSimulationStepper.PendingCount = 0;
+                    PerfSimulationStepper.Started = 0;
+                    PerfSimulationStepper.Cancelled = 0;
+                    PerfSimulationStepper.Completed = 0;
+                    PerfSimulationStepper.CompleteFailures = 0;
                     PerfSimulationStepper.Simulation = simulation;
                     break;
                 case ScenarioKind.Realistic:
@@ -890,10 +1000,13 @@ namespace AIBT.Perf
             _gcStart = GC.CollectionCount(0);
             var name = s.Id + "_n" + s.N + "_r" + (_run + 1);
             _csv = new StreamWriter(Path.Combine(_out, name + ".csv"), false, new UTF8Encoding(false));
-            _csv.WriteLine("frame,bracket_us,alloc_bytes,feeder_us,feeder_alloc_bytes,scheduler_drive_us,frame_dt_us,gc_alloc_in_frame,main_thread_ns,heap_delta_bytes,gc_in_bracket,sim_step_us,sim_step_alloc_bytes");
+            _csv.WriteLine("frame,bracket_us,alloc_bytes,feeder_us,feeder_alloc_bytes,scheduler_drive_us,frame_dt_us,gc_alloc_in_frame,main_thread_ns,heap_delta_bytes,gc_in_bracket,sim_step_us,sim_step_alloc_bytes,sim_complete_us,sim_events_us");
             _simStart = PerfSimulationStepper.Completions;
             _simCommandsStart = PerfSimulationStepper.Commands;
             _simTickStart = PerfSimulationStepper.Tick;
+            _simStartedStart = PerfSimulationStepper.Started;
+            _simCancelledStart = PerfSimulationStepper.Cancelled;
+            _simCompletedStart = PerfSimulationStepper.Completed;
             _meta = new StringBuilder();
             _meta.Append("{\"scenario\":\"").Append(s.Id).Append("\",\"kind\":\"").Append(s.Kind)
                 .Append("\",\"tree\":\"").Append(s.Tree ?? string.Empty).Append("\",\"n\":").Append(s.N)
@@ -928,7 +1041,9 @@ namespace AIBT.Perf
                 .Append(PerfClock.EndHeap - PerfClock.BeginHeap).Append(',')
                 .Append(PerfClock.EndGc - PerfClock.BeginGc).Append(',')
                 .Append(F(PerfClock.TicksToMicroseconds(PerfSimulationStepper.StepTicks))).Append(',')
-                .Append(PerfSimulationStepper.StepAlloc);
+                .Append(PerfSimulationStepper.StepAlloc).Append(',')
+                .Append(F(PerfClock.TicksToMicroseconds(PerfSimulationStepper.CompleteTicks))).Append(',')
+                .Append(F(PerfClock.TicksToMicroseconds(PerfSimulationStepper.EventTicks)));
             _csv.WriteLine(line.ToString());
         }
 
@@ -959,7 +1074,7 @@ namespace AIBT.Perf
                 .Append(",\"abba\":\"").Append(s.Abba).Append('"');
             if (s.Kind == ScenarioKind.Simulation)
             {
-                _faults += (int)(PerfSimulationStepper.Faults + PerfSimulationStepper.FailedSteps);
+                _faults += (int)(PerfSimulationStepper.Faults + PerfSimulationStepper.FailedSteps + PerfSimulationStepper.CompleteFailures);
                 _meta.Append(",\"sim\":{\"useJobs\":").Append(s.SimUseJobs ? "true" : "false")
                     .Append(",\"spread\":").Append(s.SimSpread)
                     .Append(",\"ticks\":").Append(PerfSimulationStepper.Tick)
@@ -971,6 +1086,11 @@ namespace AIBT.Perf
                     .Append(",\"commandsMeasured\":").Append(PerfSimulationStepper.Commands - _simCommandsStart)
                     .Append(",\"ticksMeasured\":").Append(PerfSimulationStepper.Tick - _simTickStart)
                     .Append(",\"commandChecksum\":").Append(PerfSimulationStepper.CommandChecksum)
+                    .Append(",\"actions\":").Append(s.SimActions ? "true" : "false")
+                    .Append(",\"startedMeasured\":").Append(PerfSimulationStepper.Started - _simStartedStart)
+                    .Append(",\"cancelledMeasured\":").Append(PerfSimulationStepper.Cancelled - _simCancelledStart)
+                    .Append(",\"completedMeasured\":").Append(PerfSimulationStepper.Completed - _simCompletedStart)
+                    .Append(",\"completeFailures\":").Append(PerfSimulationStepper.CompleteFailures)
                     .Append('}');
             }
             if (_profile != null) _meta.Append(",\"frameProfile\":").Append(_profile);
@@ -984,6 +1104,9 @@ namespace AIBT.Perf
         private ProductionTreeProgram _simProgram;
         private long _simStart;
         private long _simCommandsStart;
+        private long _simStartedStart;
+        private long _simCancelledStart;
+        private long _simCompletedStart;
         private uint _simTickStart;
         private readonly List<GameObject> _pendingActivation = new List<GameObject>();
 
@@ -1034,6 +1157,8 @@ namespace AIBT.Perf
                 PerfSimulationStepper.Simulation.Dispose();
                 PerfSimulationStepper.Simulation = null;
                 PerfSimulationStepper.Group = null;
+                PerfSimulationStepper.Actions = false;
+                PerfSimulationStepper.PendingCount = 0;
             }
             if (PerfSimulationStepper.Sense.IsCreated) PerfSimulationStepper.Sense.Dispose();
             if (_simProgram != null)

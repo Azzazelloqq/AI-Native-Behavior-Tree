@@ -25,6 +25,8 @@ namespace AIBT.Perf.Editor
             "native-shape15", "native-move1", "native-wait1",
             // P10-010: native only (benchmark input and command nodes, PerfIoShard).
             "io-reactive16", "io-loop16",
+            // P10-011: native only (benchmark external-action node, PerfIoShard).
+            "act-reactive16", "act-loop16",
         };
 
         private static readonly string[] ManagedTrees =

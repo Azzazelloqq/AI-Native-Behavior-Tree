@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P10-011", "phase": 10, "title": "Simulation container stage G3: external long-running actions with per-step events and game completions", "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-011-simulation-container-g3.md",
+      "dependsOn": ["P10-010"],
+      "owns": ["Tests/Integration/Simulation/TreeSimulationActionTests.cs", "Tests/Editor/CodeGen/GenerationP10011/", "Planning~/Evidence/P10-011/"]
+    },
+    {
       "id": "P10-010", "phase": 10, "title": "Simulation container stage G2: bulk game inputs, struct commands and opt-in wake on changed input", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P10/P10-010-simulation-container-g2.md",
       "dependsOn": ["P10-009"],
