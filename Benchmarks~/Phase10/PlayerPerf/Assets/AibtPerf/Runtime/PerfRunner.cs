@@ -66,6 +66,9 @@ namespace AIBT.Perf
         // P10-011: the act-* trees start external actions; the stepper's game completes each one
         // SimActionDelay ticks after its Started event (before the Step, outside the timed call).
         public bool SimActions;
+        // P10-012: agents traced in the group (TreeGroup.TrySetTraced), spread evenly over the slots,
+        // with the default trace settings (1024 records per agent, 256 per think).
+        public int SimTraced;
         // ABBA position label written to runs.jsonl ("A1", "B1", ...), empty outside ABBA sets.
         public string Abba = string.Empty;
     }
@@ -380,6 +383,29 @@ namespace AIBT.Perf
                         Add(Sim(pair[1], "e1", true));
                         Add(Sim(pair[1], "e2", true));
                         Add(Sim(pair[0], "b2", false));
+                    }
+                }
+                // P10-012: tracing cost, N = 500, Spread(5), default container settings, on io-loop16,
+                // io-reactive16 and act-loop16 with 0, 1 and 8 traced agents, ABCCBA inside each run
+                // (T0 = no agent traced, T1 = one, T8 = eight).
+                else if (part == "sim-trace")
+                {
+                    foreach (var tree in new[] { "io-loop16", "io-reactive16", "act-loop16" })
+                    {
+                        Scenario Sim(int traced, string label)
+                        {
+                            var s = new Scenario { Id = "sim-" + tree + "-t" + traced + "-" + label, Kind = ScenarioKind.Simulation, Tree = tree, N = 500, SimUseJobs = true, SimIo = true, SimActions = tree.StartsWith("act-", StringComparison.Ordinal), SimTraced = traced };
+                            s.Abba = label.ToUpperInvariant();
+                            s.Warmup = 200;
+                            s.Measure = 1000;
+                            return s;
+                        }
+                        Add(Sim(0, "a1"));
+                        Add(Sim(1, "b1"));
+                        Add(Sim(8, "c1"));
+                        Add(Sim(8, "c2"));
+                        Add(Sim(1, "b2"));
+                        Add(Sim(0, "a2"));
                     }
                 }
                 // P10-011: host check, NativeTreeAgent with the default profile (agent-frame job from
@@ -839,6 +865,16 @@ namespace AIBT.Perf
                             group.TryAdd(ThinkSchedule.Spread(s.SimSpread), out _);
                             if (i == 0) { firstEnd = PerfClock.Watch.ElapsedTicks; firstAllocEnd = GC.GetAllocatedBytesForCurrentThread(); }
                         }
+                        // P10-012: the traced agents (outside the measurement, before the first step).
+                        for (var t = 0; t < s.SimTraced; t++)
+                        {
+                            var traced = group.TryGetAgentAt(t * s.N / s.SimTraced, out var agent) ? group.TrySetTraced(agent, true) : SimulationResult.StaleHandle;
+                            if (traced != SimulationResult.Success)
+                            {
+                                Debug.LogError("AIBT_PERF|FAULT|simulation trace: " + traced);
+                                _faults++;
+                            }
+                        }
                         if (s.SimIo)
                         {
                             PerfSimulationStepper.Sense = new Unity.Collections.NativeArray<IoNodes.PerfSense>(group.Capacity, Unity.Collections.Allocator.Persistent);
@@ -1091,6 +1127,9 @@ namespace AIBT.Perf
                     .Append(",\"cancelledMeasured\":").Append(PerfSimulationStepper.Cancelled - _simCancelledStart)
                     .Append(",\"completedMeasured\":").Append(PerfSimulationStepper.Completed - _simCompletedStart)
                     .Append(",\"completeFailures\":").Append(PerfSimulationStepper.CompleteFailures)
+                    .Append(",\"traced\":").Append(s.SimTraced)
+                    .Append(",\"traceRecorded\":").Append(TraceTotals(out var dropped))
+                    .Append(",\"traceDropped\":").Append(dropped)
                     .Append('}');
             }
             if (_profile != null) _meta.Append(",\"frameProfile\":").Append(_profile);
@@ -1105,6 +1144,24 @@ namespace AIBT.Perf
         private long _simStart;
         private long _simCommandsStart;
         private long _simStartedStart;
+
+        /// <summary>P10-012: records written and dropped over the group's traced agents (after the run).</summary>
+        private static ulong TraceTotals(out ulong dropped)
+        {
+            dropped = 0;
+            var group = PerfSimulationStepper.Group;
+            if (group == null || group.TracedCount == 0) return 0;
+            ulong recorded = 0;
+            using (var records = new Unity.Collections.NativeList<AgentTraceRecord>(group.TraceSettings.RecordsPerAgent, Unity.Collections.Allocator.Temp))
+                for (var index = 0; index < group.HighWaterIndex; index++)
+                {
+                    if (!group.TryGetAgentAt(index, out var agent) || !group.IsTraced(agent)) continue;
+                    if (group.TryCopyTrace(agent, records, out var info) != SimulationResult.Success) continue;
+                    recorded += info.Recorded;
+                    dropped += info.Dropped;
+                }
+            return recorded;
+        }
         private long _simCancelledStart;
         private long _simCompletedStart;
         private uint _simTickStart;

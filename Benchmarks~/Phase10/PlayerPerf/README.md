@@ -140,6 +140,22 @@ Set `sim-actions` measures `TreeSimulation` (stage G3) with external actions aga
 python sim_actions.py <run folder> [<run folder> ...] > sim-actions-table.md   # per scenario and ABBA E/B
 ```
 
+## Simulation container tracing (P10-012)
+
+Set `sim-trace` measures what tracing selected agents (`TreeGroup.TrySetTraced`, stage G4) costs.
+- **Agents and timing.** 500 agents, `Spread(5)`, jobs on, 200 warm-up and 1000 measured ticks, the
+  `sense` input written every tick and `order` commands read; `act-loop16` also runs the game's
+  completions (as in `sim-actions`).
+- **Cases.** `io-loop16`, `io-reactive16` and `act-loop16`, each with 0, 1 and 8 traced agents
+  (spread evenly over the slots, default `AgentTraceSettings`), ABCCBA inside each run: T0, T1, T8,
+  T8, T1, T0.
+- **`runs.jsonl`.** `sim.traced`, `sim.traceRecorded` (records the traced agents wrote since they
+  were traced, warm-up included) and `sim.traceDropped`.
+
+```text
+python sim_trace.py <run folder> [<run folder> ...] > sim-trace-table.md   # per tree and traced count, ratios to T0
+```
+
 Set `host-check` runs `NativeTreeAgent` (default profile, agent-frame job from 64 agents) on
 `shared-loop16` and `shared-reactive16` at N = 500 and 2000, to compare hosts across package
 versions.

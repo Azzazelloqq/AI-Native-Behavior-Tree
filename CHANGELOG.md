@@ -23,9 +23,10 @@ All notable changes to this project will be documented here. The project follows
     CLI `runtime simulations`, `agent describe|trace`.
 - Tracing changes no result on any path or worker count, and `Step` still allocates nothing while
   tracing. Untraced agents pay one test per think.
-- Hosts: the generated dispatch adapter and the agent-frame core skip input staging for a slot with no
-  snapshot bindings (a flag computed once). Behaviour is unchanged. ABI v2, the compiled format and the
-  generator are unchanged.
+- Hosts: unchanged. A per-slot "has snapshot bindings" flag that skipped input staging was measured
+  (IL2CPP host-check, ABBA against G3: 0.99–1.02) and recovered nothing measurable, so it was reverted.
+  The cost of hosts relative to G1 comes from elsewhere. ABI v2, the compiled format and the generator
+  are unchanged.
 
 ### Simulation container, stage G3 (P10-011, experimental)
 

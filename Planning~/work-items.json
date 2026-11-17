@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P10-012", "phase": 10, "title": "Simulation container stage G4: traces of selected agents, active-path query, opt-in registry and read-only MCP/CLI tools", "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-012-simulation-container-g4.md",
+      "dependsOn": ["P10-011"],
+      "owns": ["Tests/Integration/Simulation/TreeSimulationDebugTests.cs", "Tests/Editor/Mcp/McpSimulationToolsTests.cs", "Planning~/Evidence/P10-012/"]
+    },
+    {
       "id": "P10-011", "phase": 10, "title": "Simulation container stage G3: external long-running actions with per-step events and game completions", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P10/P10-011-simulation-container-g3.md",
       "dependsOn": ["P10-010"],

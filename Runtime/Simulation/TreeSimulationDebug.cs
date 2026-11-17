@@ -122,5 +122,30 @@ namespace AIBT.Simulation
 
         /// <summary>Test access: entries held, collected or not.</summary>
         internal static int EntryCountForTests => Entries.Count;
+
+        /// <summary>Test access: entries held under <paramref name="name"/>, collected or not (nothing is pruned).</summary>
+        internal static int EntriesNamedForTests(string name)
+        {
+            var count = 0;
+            for (var index = 0; index < Entries.Count; index++)
+                if (Entries[index].Name == name) count++;
+            return count;
+        }
+
+        /// <summary>
+        /// Test access: makes the entry of <paramref name="simulation"/> behave as if the container had been
+        /// collected (its weak target is cleared), so the prune path can be tested without depending on the GC.
+        /// Returns false when it is not listed.
+        /// </summary>
+        internal static bool ClearTargetForTests(TreeSimulation simulation)
+        {
+            for (var index = 0; index < Entries.Count; index++)
+            {
+                if (!Entries[index].Simulation.TryGetTarget(out var existing) || !ReferenceEquals(existing, simulation)) continue;
+                Entries[index].Simulation.SetTarget(null);
+                return true;
+            }
+            return false;
+        }
     }
 }

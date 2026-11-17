@@ -702,8 +702,6 @@ namespace AIBT
             private readonly uint _nodeIndex;
             private readonly uint _caseIndex;
             private readonly BindingResolution[] _resolutions;
-            // P10-012: any snapshot (container input) binding; hosts have none and skip StageInputs.
-            private readonly bool _hasSnapshots;
             private NativeBurstDispatchWorkspaceOwnerV2 _workspace;
             private NativeArray<byte> _configuration;
             private NativeArray<byte> _memory;
@@ -777,7 +775,6 @@ namespace AIBT
                 _caseIndex = caseIndex;
                 _resolutions = resolutions;
                 _maximumEffectCommandCount = maximumEffectCommandCount;
-                for (var index = 0; index < resolutions.Length; index++) _hasSnapshots |= resolutions[index].IsSnapshot;
             }
 
             internal uint LastPublishedCommandCount => _publishedCommandCount;
@@ -991,7 +988,7 @@ namespace AIBT
                 if (_activationGeneration == 0) _activationGeneration = 1;
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Activation);
                 if (!SnapshotTreeValues(programBinding, treeValues, agentBaseOffset)) return BurstContextResult.InvalidHandle;
-                if (_hasSnapshots && !StageInputs(simulation)) return BurstContextResult.InvalidHandle;
+                if (!StageInputs(simulation)) return BurstContextResult.InvalidHandle;
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Snapshot);
 
                 var completions = _completions;
@@ -1217,7 +1214,6 @@ namespace AIBT
                 var resolutions = new NativeArray<AgentFrameResolutionV1>(_resolutions.Length, Allocator.Persistent);
                 var descriptors = new NativeArray<AgentFrameEffectDescriptorV1>((int)_maximumEffectCommandCount, Allocator.Persistent);
                 var descriptorIndex = 0;
-                byte hasSnapshots = 0;
                 for (var index = 0; index < _resolutions.Length; index++)
                 {
                     var resolution = _resolutions[index];
@@ -1231,7 +1227,6 @@ namespace AIBT
                     };
                     if (resolution.IsSnapshot)
                     {
-                        hasSnapshots = 1;
                         native.IsSnapshot = 1;
                         native.InputChannel = resolution.InputChannel;
                         native.Size = resolution.Size;
@@ -1265,7 +1260,6 @@ namespace AIBT
                     NodeTypeVersion = node.NodeTypeVersion,
                     BindingCount = dispatchCase.BindingCount,
                     MaximumEffectCommandCount = _maximumEffectCommandCount,
-                    HasSnapshots = hasSnapshots,
                     State = _state,
                     Resolutions = resolutions,
                     EffectDescriptors = descriptors,

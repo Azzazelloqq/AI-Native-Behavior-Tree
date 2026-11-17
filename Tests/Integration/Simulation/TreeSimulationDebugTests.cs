@@ -614,25 +614,61 @@ namespace AIBT.Tests.Integration.Simulation
         }
 
         [Test]
+        public void Registry_PrunesACollectedContainer()
+        {
+            // Deterministic: the entry's weak target is cleared through a test seam, exactly what the GC does
+            // to a container only the registry holds; the next read prunes it and lists the live one.
+            var name = "collected-" + Guid.NewGuid().ToString("N");
+            var live = new TreeSimulation(Settings(false));
+            var gone = new TreeSimulation(Settings(false));
+            try
+            {
+                Assert.That(TreeSimulationDebug.Register(live, name + "-live"), Is.True);
+                Assert.That(TreeSimulationDebug.Register(gone, name), Is.True);
+                Assert.That(TreeSimulationDebug.EntriesNamedForTests(name), Is.EqualTo(1));
+                Assert.That(TreeSimulationDebug.ClearTargetForTests(gone), Is.True);
+                Assert.That(TreeSimulationDebug.EntriesNamedForTests(name), Is.EqualTo(1), "Nothing is pruned before a read.");
+
+                var list = Registered();
+                Assert.That(list.Any(item => item.Name == name), Is.False, "A collected container is not listed.");
+                Assert.That(TreeSimulationDebug.EntriesNamedForTests(name), Is.EqualTo(0), "A collected container's entry is pruned.");
+                Assert.That(list.Single(item => item.Name == name + "-live").Simulation, Is.SameAs(live));
+                Assert.That(TreeSimulationDebug.ClearTargetForTests(gone), Is.False, "Its entry is gone.");
+            }
+            finally
+            {
+                TreeSimulationDebug.Unregister(live);
+                live.Dispose();
+                gone.Dispose();
+            }
+        }
+
+        [Test]
         public void Registry_HoldsContainersWeakly()
         {
-            var before = TreeSimulationDebug.EntryCountForTests;
-            RegisterAndDrop();
+            // The registry must not keep a container alive. Whether GC.Collect actually collects it depends on
+            // the runtime (Mono/Boehm scans the stack conservatively), so a container that survives makes the
+            // test inconclusive, not failed; the prune path itself is pinned by Registry_PrunesACollectedContainer.
+            var name = "dropped-" + Guid.NewGuid().ToString("N");
+            var probe = RegisterAndDrop(name);
             for (var attempt = 0; attempt < 3; attempt++)
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
             }
-            Registered();
-            Assert.That(TreeSimulationDebug.EntryCountForTests, Is.EqualTo(before), "A container only the registry holds is collected and pruned.");
+            if (probe.TryGetTarget(out _))
+                Assert.Inconclusive("The GC did not collect the dropped container in this run; weak holding is not observable here.");
+            Assert.That(Registered().Any(item => item.Name == name), Is.False);
+            Assert.That(TreeSimulationDebug.EntriesNamedForTests(name), Is.EqualTo(0), "A container only the registry holds is collected and pruned.");
         }
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-        private static void RegisterAndDrop()
+        private static WeakReference<TreeSimulation> RegisterAndDrop(string name)
         {
             // No groups: the container holds no native memory, so leaving it undisposed leaks nothing.
             var simulation = new TreeSimulation(Settings(false));
-            Assert.That(TreeSimulationDebug.Register(simulation, "dropped"), Is.True);
+            Assert.That(TreeSimulationDebug.Register(simulation, name), Is.True);
+            return new WeakReference<TreeSimulation>(simulation);
         }
 
         // ---- busy -------------------------------------------------------------------------------------------

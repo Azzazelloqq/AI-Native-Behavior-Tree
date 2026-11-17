@@ -54,8 +54,6 @@ namespace AIBT
         internal uint NodeTypeVersion;
         internal uint BindingCount;
         internal uint MaximumEffectCommandCount;
-        // P10-012: 1 when a resolution is a container snapshot binding; hosts have none and skip StageInputs.
-        internal byte HasSnapshots;
         internal NativeArray<AgentFrameSlotStateV1> State;
         internal NativeArray<AgentFrameResolutionV1> Resolutions;
         internal NativeArray<AgentFrameEffectDescriptorV1> EffectDescriptors;
@@ -297,18 +295,15 @@ namespace AIBT
                 for (uint offset = 0; offset < resolution.Size; offset++)
                     slot.BindingValues[(int)(resolution.LiveOffset + offset)] = agent.TreeValues[(int)(resolution.StorageOffset + offset)];
             }
-            // P10-010: StageInputs (P10-012: skipped for slots without snapshot bindings, every host slot).
-            if (slot.HasSnapshots != 0)
+            // P10-010: StageInputs.
+            for (var index = 0; index < slot.Resolutions.Length; index++)
             {
-                for (var index = 0; index < slot.Resolutions.Length; index++)
-                {
-                    var resolution = slot.Resolutions[index];
-                    if (resolution.IsSnapshot == 0) continue;
-                    if (agent.SimulationMode == 0
-                        || !AIBT.Simulation.SimulationAgentRoutinesV1.TryStage(
-                            ref agent.Simulation, resolution.InputChannel, slot.BindingValues, resolution.LiveOffset, resolution.Size))
-                        return BurstContextResult.InvalidHandle;
-                }
+                var resolution = slot.Resolutions[index];
+                if (resolution.IsSnapshot == 0) continue;
+                if (agent.SimulationMode == 0
+                    || !AIBT.Simulation.SimulationAgentRoutinesV1.TryStage(
+                        ref agent.Simulation, resolution.InputChannel, slot.BindingValues, resolution.LiveOffset, resolution.Size))
+                    return BurstContextResult.InvalidHandle;
             }
             // P10-011: this node's live actions and the game's completions, from the agent's ledger
             // (the adapter's Execute does the same; ledger floors are not tracked here).
