@@ -94,8 +94,10 @@ namespace AIBT.Simulation
         public uint MaximumStepsPerThink;
 
         /// <summary>
-        /// Jobs on, minimum job batch 64, step limit <see cref="ProductionTreeHost.DefaultMaximumStepsPerUpdate"/>,
-        /// random seed 0.
+        /// Jobs on, minimum job batch 64, step limit 10 000, random seed 0. The step limit is far below the
+        /// host's <see cref="ProductionTreeHost.DefaultMaximumStepsPerUpdate"/> on purpose: a runaway tree
+        /// must fault its agent quickly instead of holding <c>Step</c> (P10-011 finding F1). Raise
+        /// <see cref="MaximumStepsPerThink"/> for trees that really need more steps in one think.
         /// </summary>
         public static TreeSimulationSettings Default(uint tickMicroseconds)
             => new TreeSimulationSettings
@@ -104,7 +106,7 @@ namespace AIBT.Simulation
                 RandomSeed = 0,
                 UseJobs = true,
                 MinimumJobBatch = 64,
-                MaximumStepsPerThink = ProductionTreeHost.DefaultMaximumStepsPerUpdate,
+                MaximumStepsPerThink = 10_000,
             };
     }
 

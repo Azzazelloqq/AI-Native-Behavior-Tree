@@ -4,6 +4,13 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Simulation container: default step limit (P10-011 finding F1)
+
+- **Changed (experimental API):** `TreeSimulationSettings.Default` now sets `MaximumStepsPerThink` to
+  10 000 instead of the host's 1 000 000, so a runaway tree faults its agent
+  (`NativeUpdateStepLimitExceeded`) quickly instead of holding `Step`. Set the field explicitly for
+  trees that need more steps in one think. Hosts are unchanged.
+
 ### Simulation container, stage G4 (P10-012, experimental)
 
 - **New, experimental until stage G5:** debugging for `AIBT.Simulation`.

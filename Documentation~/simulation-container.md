@@ -13,7 +13,7 @@ a fixed-step game loop, a server tick, an EditMode test or a tool.
 
 | Type | What it is |
 |---|---|
-| `TreeSimulation` | One world. `TreeSimulationSettings`: `TickMicroseconds` (time of one tick), `RandomSeed`, `UseJobs`, `MinimumJobBatch` (default 64), `MaximumStepsPerThink`. |
+| `TreeSimulation` | One world. `TreeSimulationSettings`: `TickMicroseconds` (time of one tick), `RandomSeed`, `UseJobs`, `MinimumJobBatch` (default 64), `MaximumStepsPerThink` (default 10 000; an agent that needs more steps in one think faults with `NativeUpdateStepLimitExceeded`, so a runaway tree cannot hold `Step`). |
 | `TreeGroup` | Agents that run one `ProductionTreeProgram`. `TreeGroupSettings`: `Capacity` (slots allocated up front), `DefaultThinkInterval`, `RootCompletion` (`Restart`, the default, or `Stop`), `CommandQuotaPerAgent` (G2; 0 = default 4), `ActionCapacityPerAgent` (G3; 0 = default 2). |
 | `InputChannel<T>` (G2) | A game input: the id nodes give in `[AibtInput("id")]` and the row type `T`. A game `NativeArray<T>` bound to a group gives row `i` to the agent in slot `i`. |
 | `CommandChannel<T>`, `Command<T>` (G2) | A command: the id nodes give in `[AibtCommand("id")]` and the payload type `T`; `Command<T>` is one emitted command (agent handle, value). |

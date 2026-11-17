@@ -848,10 +848,17 @@ namespace AIBT.Tests.Integration.Simulation
             }
         }
 
-        /// <summary>The container's default step limit is the host's (G1, ADR-P10-008); see the P10-011 evidence, finding F1.</summary>
+        /// <summary>
+        /// The container's default step limit is 10 000, far below the host's, so a runaway tree faults its agent
+        /// quickly instead of holding Step (owner decision 2026-11-17 on the P10-011 finding F1).
+        /// </summary>
         [Test]
-        public void DefaultStepLimit_IsTheHostDefault()
-            => Assert.That(TreeSimulationSettings.Default(TickMicroseconds).MaximumStepsPerThink, Is.EqualTo(ProductionTreeHost.DefaultMaximumStepsPerUpdate));
+        public void DefaultStepLimit_IsTenThousand_BelowTheHostDefault()
+        {
+            var limit = TreeSimulationSettings.Default(TickMicroseconds).MaximumStepsPerThink;
+            Assert.That(limit, Is.EqualTo(10_000u));
+            Assert.That(limit, Is.LessThan(ProductionTreeHost.DefaultMaximumStepsPerUpdate));
+        }
 
         private static ActionEvent SingleEvent(TreeGroup group, ActionEventKind kind)
         {

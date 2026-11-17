@@ -166,7 +166,7 @@ namespace AIBT.Simulation
         public bool UseJobs;
         public int MinimumJobBatch;          // default 64, the P10-007 threshold
         /// <summary>Per agent and think; exceeded → that agent faults with NativeUpdateStepLimitExceeded.</summary>
-        public uint MaximumStepsPerThink;    // default ProductionTreeHost.DefaultMaximumStepsPerUpdate
+        public uint MaximumStepsPerThink;    // default 10 000 (was the host default until 2026-11-17, finding F1 of P10-011)
         public static TreeSimulationSettings Default(uint tickMicroseconds);
     }
 
