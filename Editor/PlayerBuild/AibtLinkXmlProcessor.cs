@@ -19,7 +19,8 @@ namespace AIBT.Editor.PlayerBuild
     /// and assigns their fields by reflection, and <see cref="NativeTreeAgent"/> resolves the catalog
     /// recorded in a runtime asset by type name; nothing references those types statically, so
     /// UnityLinker removes them. This writes an additional link.xml for every <c>[BtNode]</c> class
-    /// and every <c>[AibtCatalogSet]</c> catalog in the Player's assemblies.
+    /// and every <c>[AibtCatalogSet]</c> catalog in the Player's assemblies, and (P10-010) for every
+    /// <c>[AibtBurstValue]</c> value type with the attribute types the simulation container reads.
     /// </summary>
     internal sealed class AibtLinkXmlProcessor : IUnityLinkerProcessor
     {
@@ -37,9 +38,15 @@ namespace AIBT.Editor.PlayerBuild
         /// <summary>The link.xml text for the given Player assembly names.</summary>
         internal static string Generate(ICollection<string> playerAssemblies)
         {
+            // P10-010: the simulation container matches a game payload type to its catalog value by
+            // reading [AibtBurstValue] and [AibtValueField] through reflection (TreeGroup.TryBindInput,
+            // TryGetCommands). Stripping removed both attributes, so the registered value types and the
+            // two attribute types are kept as well.
             var types = TypeCache.GetTypesWithAttribute<BtNodeAttribute>()
                 .Where(type => !type.IsAbstract && typeof(BtNode).IsAssignableFrom(type))
                 .Concat(TypeCache.GetTypesWithAttribute<AibtCatalogSetAttribute>())
+                .Concat(TypeCache.GetTypesWithAttribute<AibtBurstValueAttribute>())
+                .Concat(new[] { typeof(AibtBurstValueAttribute), typeof(AibtValueFieldAttribute) })
                 .Where(type => playerAssemblies.Contains(type.Assembly.GetName().Name))
                 .Distinct()
                 .GroupBy(type => type.Assembly.GetName().Name)

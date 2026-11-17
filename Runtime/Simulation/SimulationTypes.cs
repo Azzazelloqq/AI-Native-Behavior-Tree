@@ -26,6 +26,23 @@ namespace AIBT.Simulation
         /// time overflows, or a program the container cannot run (see <see cref="TreeSimulation.TryAddGroup"/>).
         /// </summary>
         InvalidArgument = 6,
+        /// <summary>
+        /// P10-010: <see cref="TreeSimulation.Step"/> found an input channel of an active group that is not
+        /// bound, or whose bound array was disposed (detected with collection safety checks on). Nothing ran.
+        /// </summary>
+        InputMissing = 7,
+        /// <summary>P10-010: the C# type of a channel does not match the value the program's nodes declare for it (type id, version or layout).</summary>
+        TypeMismatch = 8,
+        /// <summary>
+        /// P10-010: the program's catalog was generated before input and command channels existed (it has no
+        /// binding ids): a program with inputs is refused, and its commands are discarded as in stage G1.
+        /// Regenerate the catalog.
+        /// </summary>
+        CatalogTooOld = 9,
+        /// <summary>P10-010: the program uses something the container does not run yet: external actions (async operations, completions) arrive in stage G3.</summary>
+        Unsupported = 10,
+        /// <summary>P10-010: no node of the group's program declares this input or command channel id.</summary>
+        UnknownChannel = 11,
     }
 
     /// <summary>
@@ -102,9 +119,20 @@ namespace AIBT.Simulation
 
         public RootCompletionPolicy RootCompletion;
 
-        /// <summary>Capacity <paramref name="capacity"/>, interval 1, <see cref="RootCompletionPolicy.Restart"/>.</summary>
+        /// <summary>
+        /// P10-010: commands one agent may emit per command channel in one think (and, separately, in one
+        /// teardown). A node that would go over it does not run: the agent faults with cause
+        /// <see cref="BurstContextResult.CapacityExceeded"/>. The group allocates this many records per agent up
+        /// front. 0 selects the default, <see cref="DefaultCommandQuotaPerAgent"/>; negative values are refused.
+        /// </summary>
+        public int CommandQuotaPerAgent;
+
+        /// <summary>The command quota used when <see cref="CommandQuotaPerAgent"/> is 0.</summary>
+        public const int DefaultCommandQuotaPerAgent = 4;
+
+        /// <summary>Capacity <paramref name="capacity"/>, interval 1, <see cref="RootCompletionPolicy.Restart"/>, command quota <see cref="DefaultCommandQuotaPerAgent"/>.</summary>
         public static TreeGroupSettings Default(int capacity)
-            => new TreeGroupSettings { Capacity = capacity, DefaultThinkInterval = 1u, RootCompletion = RootCompletionPolicy.Restart };
+            => new TreeGroupSettings { Capacity = capacity, DefaultThinkInterval = 1u, RootCompletion = RootCompletionPolicy.Restart, CommandQuotaPerAgent = DefaultCommandQuotaPerAgent };
     }
 
     /// <summary>
@@ -192,12 +220,25 @@ namespace AIBT.Simulation
     public readonly struct AgentFault
     {
         internal AgentFault(AgentHandle agent, NativeRuntimeFailureV1 failure)
+            : this(agent, failure, BurstContextResult.Success)
+        {
+        }
+
+        internal AgentFault(AgentHandle agent, NativeRuntimeFailureV1 failure, BurstContextResult cause)
         {
             Agent = agent;
             Failure = failure;
+            Cause = cause;
         }
 
         public AgentHandle Agent { get; }
         public NativeRuntimeFailureV1 Failure { get; }
+        /// <summary>
+        /// P10-010: the node result that stopped the agent when a dispatch was refused
+        /// (<see cref="BurstContextResult.CapacityExceeded"/> for a command quota overflow,
+        /// <see cref="BurstContextResult.InvalidEncoding"/> for an input value that is not canonical, such as NaN),
+        /// else <see cref="BurstContextResult.Success"/>.
+        /// </summary>
+        public BurstContextResult Cause { get; }
     }
 }

@@ -4,6 +4,38 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Simulation container, stage G2 (P10-010, experimental)
+
+- **New, experimental until stage G5:** game inputs and commands for `AIBT.Simulation`.
+  `TreeGroup.TryBindInput(InputChannel<T>, NativeArray<T>)` binds a game array indexed by agent
+  slot; Burst nodes read their agent's row through `SnapshotReadHandle<T>` (new short form
+  `[AibtInput("id")]`). `Step` checks every bound array (unbound, disposed or shorter than the
+  group's capacity → `InputMissing`/`InvalidArgument`, nothing runs) and copies the rows it needs
+  once per step, so the game may write its arrays again as soon as `Step` returns. Nodes emit
+  through `CommandHandle<T>`; `TryGetCommands(CommandChannel<T>, out …)` / `GetCommands` return
+  them in slot order, then emission order, until the next step. `TreeGroupSettings.CommandQuotaPerAgent`
+  (default 4 per channel per think) bounds them; overflow faults the agent with
+  `AgentFault.Cause = CapacityExceeded`, never throws. `TrySetWakeOnChange(channel, true)` (off by
+  default) wakes an agent whose input row changed (byte compare of the canonical row). New results
+  `InputMissing`, `TypeMismatch`, `CatalogTooOld`, `Unsupported`, `UnknownChannel`. Programs with
+  external actions (`AsyncOperationHandle`, `CompletionHandle`) are refused with `Unsupported`
+  (stage G3). See `Documentation~/simulation-container.md`.
+- Generator (additive): catalogs now also emit a binding-id table
+  (`IGeneratedBindingIdentityV1`). An older catalog still runs in the container in place with its
+  commands discarded; binding inputs to it returns `CatalogTooOld`. ABI v2 is unchanged.
+- Hosts (`ProductionTreeHost`, `NativeTreeAgent`, `ProductionTreeScheduler`) are unchanged: they
+  still refuse snapshot bindings and registered command payloads as before (pinned by a test).
+- Player builds: the link.xml AIBT adds to a stripped Player now also keeps every
+  `[AibtBurstValue]` type and the `AibtBurstValue`/`AibtValueField` attributes. Without them an
+  IL2CPP Player with High stripping could not bind a registered input or command type
+  (`TypeMismatch`).
+- Measured (IL2CPP Player, 500 agents, `Spread(5)`, all input rows written every tick, ABBA against
+  the G1 trees, 23 job workers):
+  - `TreeSimulation.Step` median goes from 52.1 to 53.0 µs for `loop16` (5.5 commands per tick).
+  - It goes from 195.8 to 205.2 µs for `reactive16` (100 input reads and 100 commands per tick).
+  - Step allocates 0 bytes per tick.
+  - Details are in `Planning~/Evidence/P10-010/README.md`.
+
 ### Simulation container, stage G1 (P10-009, experimental)
 
 - **New, experimental until stage G5:** `AIBT.Simulation.TreeSimulation`, a GameObject-free world

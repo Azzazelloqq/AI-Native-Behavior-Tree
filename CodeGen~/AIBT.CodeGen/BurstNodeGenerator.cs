@@ -1424,13 +1424,14 @@ namespace AIBT.CodeGen
             builder.AppendLine("        var handshake = new global::AIBT.Burst.BurstCatalogHandshake(2u, Fingerprint, NodeRegistryFingerprint, 1u, 1u, ConfigurationLayoutFingerprint, MemoryLayoutFingerprint, AccessLayoutFingerprint);");
             builder.Append("        return global::AIBT.GeneratedBurstCatalogV2.TryCreate(Executor, in handshake, global::System.Convert.FromBase64String(\"").Append(runtimeLayout).AppendLine("\"), allocator, out catalog, out failure);");
             builder.AppendLine("    }");
-            builder.AppendLine("    private sealed class GeneratedExecutor : global::AIBT.Burst.IGeneratedBurstCatalogExecutorV2, global::AIBT.AgentFrame.IGeneratedAgentFrameExecutorV1");
+            builder.AppendLine("    private sealed class GeneratedExecutor : global::AIBT.Burst.IGeneratedBurstCatalogExecutorV2, global::AIBT.AgentFrame.IGeneratedAgentFrameExecutorV1, global::AIBT.AgentFrame.IGeneratedBindingIdentityV1");
             builder.AppendLine("    {");
             builder.AppendLine("        public global::AIBT.Burst.BurstExecutionResult ExecuteImmediate(ref global::AIBT.Burst.BurstExecutionBatch batch) { return " + catalogSet.Name + ".ExecuteImmediate(ref batch); }");
             builder.AppendLine("        public global::Unity.Jobs.JobHandle Schedule(ref global::AIBT.Burst.BurstExecutionBatch batch, global::Unity.Jobs.JobHandle dependency) { return " + catalogSet.Name + ".Schedule(ref batch, dependency); }");
             // P10-004: JobsAgentFrame entry -- one Burst work item runs one agent's whole update.
             builder.AppendLine("        public global::Unity.Jobs.JobHandle ScheduleAgentFrame(global::AIBT.AgentFrame.AgentFrameJobDataV1 data, int agentCount, int innerBatchCount, global::Unity.Jobs.JobHandle dependency) { return global::Unity.Jobs.IJobForExtensions.ScheduleParallel(new AibtAgentFrameJob { Data = data }, agentCount, innerBatchCount, dependency); }");
             EmitEffectDescriptorLookup(builder, nodes);
+            EmitBindingIdentity(builder, nodes);
             builder.AppendLine("    }");
             builder.AppendLine("    public static global::AIBT.Burst.BurstCatalogValidationResult Validate(in global::AIBT.Burst.BurstCatalogHandshake handshake)");
             builder.AppendLine("    {");
@@ -1489,6 +1490,32 @@ namespace AIBT.CodeGen
             source = source.Replace("return global::AIBT.Burst.BurstContextResult.PhaseViolation;", "return global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryFailDispatch(ref batch, in frame, global::AIBT.Burst.BurstContextResult.PhaseViolation);");
             source = source.Replace("return global::AIBT.Burst.BurstContextResult.InvalidHandle;", "return global::AIBT.Burst.BurstGeneratedRuntimeBridge.TryFailDispatch(ref batch, in frame, global::AIBT.Burst.BurstContextResult.InvalidHandle);");
             return source;
+        }
+
+        /// <summary>
+        /// P10-010: the binding id (FNV-1a 64 of the attribute's binding id string) of every catalog
+        /// binding, in the global binding order of RuntimeLayoutBlob (nodes in catalog order, each
+        /// node's bindings by binding id), so the simulation container can match input and command
+        /// channels by name. The runtime layout blob itself is unchanged.
+        /// </summary>
+        private static void EmitBindingIdentity(StringBuilder builder, IReadOnlyList<Node> nodes)
+        {
+            var ids = new List<ulong>();
+            for (var nodeIndex = 0; nodeIndex < nodes.Count; nodeIndex++)
+            {
+                var config = DescribeLayout(nodes[nodeIndex].Config!);
+                ids.AddRange(config.Fields
+                    .Select(field => BindingRecord.TryCreate(field.Field))
+                    .Where(binding => binding != null)
+                    .OrderBy(binding => binding!.Id, Utf8StringComparer.Instance)
+                    .Select(binding => NumericId(binding!.Id)));
+            }
+            builder.Append("        private static readonly ulong[] s_bindingIds = new ulong[] {");
+            for (var index = 0; index < ids.Count; index++)
+                builder.Append(index == 0 ? " " : ", ").Append("0x").Append(ids[index].ToString("x16", CultureInfo.InvariantCulture)).Append("UL");
+            builder.AppendLine(" };");
+            builder.AppendLine("        public int BindingIdCount { get { return s_bindingIds.Length; } }");
+            builder.AppendLine("        public bool TryGetBindingId(uint globalBindingOrdinal, out ulong bindingId) { if (globalBindingOrdinal >= (uint)s_bindingIds.Length) { bindingId = 0UL; return false; } bindingId = s_bindingIds[globalBindingOrdinal]; return true; }");
         }
 
         private static void EmitEffectDescriptorLookup(StringBuilder builder, IReadOnlyList<Node> nodes)

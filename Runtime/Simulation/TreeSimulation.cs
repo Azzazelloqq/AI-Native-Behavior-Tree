@@ -80,8 +80,11 @@ namespace AIBT.Simulation
             if (settings.Capacity < 1 || settings.DefaultThinkInterval == 0
                 || (settings.RootCompletion != RootCompletionPolicy.Restart && settings.RootCompletion != RootCompletionPolicy.Stop))
                 return SimulationResult.InvalidArgument;
+            if (settings.CommandQuotaPerAgent < 0) return SimulationResult.InvalidArgument;
             if (_nextGroupId == ushort.MaxValue) return SimulationResult.CapacityExceeded;
-            var created = new TreeGroup(this, (ushort)(_nextGroupId + 1), program, settings);
+            var mapped = SimulationProgramMapV1.TryBuild(program, out var map);
+            if (mapped != SimulationResult.Success) return mapped;
+            var created = new TreeGroup(this, (ushort)(_nextGroupId + 1), program, settings, map);
             var result = created.TryReserveCore(settings.Capacity);
             if (result != SimulationResult.Success)
             {
@@ -132,9 +135,18 @@ namespace AIBT.Simulation
             if (_hasStepped && tick <= _lastTick) return SimulationResult.TickNotIncreasing;
             var time = (ulong)tick * _settings.TickMicroseconds;
             if (time > long.MaxValue) return SimulationResult.InvalidArgument;
+            for (var index = 0; index < _groups.Count; index++)
+            {
+                var group = _groups[index];
+                if (group.RemovalState != TreeGroup.Removal.None) continue;
+                var inputs = group.ValidateInputs();
+                if (inputs != SimulationResult.Success) return inputs;
+            }
             _stepping = true;
             try
             {
+                for (var index = 0; index < _groups.Count; index++)
+                    if (_groups[index].RemovalState != TreeGroup.Removal.TornDown) _groups[index].BeginStep();
                 for (var index = 0; index < _groups.Count; index++)
                 {
                     var group = _groups[index];
@@ -153,6 +165,7 @@ namespace AIBT.Simulation
                     var group = _groups[index];
                     if (group.RemovalState != TreeGroup.Removal.None) continue;
                     group.Think(tick, (long)time);
+                    group.CollectCommands();
                 }
                 _lastTick = tick;
                 _hasStepped = true;

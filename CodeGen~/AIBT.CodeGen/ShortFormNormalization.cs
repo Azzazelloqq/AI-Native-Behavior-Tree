@@ -56,6 +56,7 @@ namespace AIBT.CodeGen
         private const string Memory = ShortNamespace + ".AibtMemoryAttribute";
         private const string Key = ShortNamespace + ".AibtKeyAttribute";
         private const string Command = ShortNamespace + ".AibtCommandAttribute";
+        private const string Input = ShortNamespace + ".AibtInputAttribute";
 
         private sealed class Holder { internal ImmutableArray<Attr> Value; }
         private static readonly ConditionalWeakTable<ISymbol, Holder> Cache = new ConditionalWeakTable<ISymbol, Holder>();
@@ -102,6 +103,17 @@ namespace AIBT.CodeGen
                             Infer(TypeArgument(commandField.Type), out var payloadId, out var payloadVersion);
                             result.Add(new Attr(assembly.GetTypeByMetadataName("AIBT.Burst.AibtCommandBindingAttribute"),
                                 ImmutableArray.Create(Arg.Of(id, TypedConstantKind.Primitive), Arg.Of(payloadId, TypedConstantKind.Primitive), Arg.Of(payloadVersion, TypedConstantKind.Primitive)), syntax, true));
+                        }
+                        continue;
+                    case Input:
+                        // P10-010: a simulation input row read through SnapshotReadHandle<T>.
+                        if (symbol is IFieldSymbol inputField && assembly != null)
+                        {
+                            var id = FirstString(attribute);
+                            result.Add(Field(assembly, "AIBT.Burst.AibtConfigFieldAttribute", id, inputField.Type, syntax));
+                            Infer(TypeArgument(inputField.Type), out var valueId, out var valueVersion);
+                            result.Add(new Attr(assembly.GetTypeByMetadataName("AIBT.Burst.AibtSnapshotBindingAttribute"),
+                                ImmutableArray.Create(Arg.Of(id, TypedConstantKind.Primitive), Arg.Of(valueId, TypedConstantKind.Primitive), Arg.Of(valueVersion, TypedConstantKind.Primitive)), syntax, true));
                         }
                         continue;
                     default:

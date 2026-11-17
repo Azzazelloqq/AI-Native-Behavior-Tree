@@ -30,6 +30,9 @@ namespace AIBT
         internal uint LiveOffset;
         internal uint StorageOffset;
         internal uint Size;
+        // P10-010: a container snapshot binding (input channel row staged into LiveOffset, Size bytes).
+        internal byte IsSnapshot;
+        internal int InputChannel;
     }
 
     /// <summary>A catalog effect descriptor for one effect binding, precomputed on the main thread.</summary>
@@ -68,6 +71,8 @@ namespace AIBT
         internal NativeArray<NativeBurstDispatchTransactionControlV2> Transaction;
         internal NativeArray<NativeBurstDispatchCommandV2> PublishedCommands;
         internal NativeArray<byte> PublishedPayload;
+        // P10-010 (container only): by local binding ordinal, the command channel or -1.
+        internal NativeArray<int> CommandChannels;
         internal NativeBurstDispatchWorkspaceArraysV1 Workspace;
     }
 
@@ -101,6 +106,9 @@ namespace AIBT
         internal uint MaximumSteps;
         internal int EffectFree;
         internal byte TraceEnabled;
+        // P10-010: a simulation-container agent: inputs staged and commands captured through Simulation.
+        internal byte SimulationMode;
+        internal AIBT.Simulation.SimulationAgentNativeV1 Simulation;
 
         // Outputs (job).
         internal AgentFrameOutcomeV1 Outcome;
@@ -187,6 +195,13 @@ namespace AIBT
                             result = BurstContextResult.CapacityExceeded;
                             status = NodeStatus.Failure;
                         }
+                        else if (agent.SimulationMode != 0
+                            && (result = AIBT.Simulation.SimulationAgentRoutinesV1.TryReserve(ref agent.Simulation, slot.CommandChannels))
+                                != BurstContextResult.Success)
+                        {
+                            // The container's command quota (the effect-capacity rule): same as its in-place reservation.
+                            status = NodeStatus.Failure;
+                        }
                         else
                         {
                             agent.Dispatches++;
@@ -194,6 +209,14 @@ namespace AIBT
                             if (result == BurstContextResult.Success && agent.EffectFree >= 0
                                 && !TryCaptureEffects(ref agent, ref slot, out result))
                                 status = NodeStatus.Failure;
+                            if (result == BurstContextResult.Success && agent.SimulationMode != 0)
+                            {
+                                var state = slot.State[0];
+                                result = AIBT.Simulation.SimulationAgentRoutinesV1.TryCapture(
+                                    ref agent.Simulation, slot.CommandChannels, slot.PublishedCommands, slot.PublishedPayload, ref state);
+                                slot.State[0] = state;
+                                if (result != BurstContextResult.Success) status = NodeStatus.Failure;
+                            }
                         }
                     }
                     if (!agent.Machine.TryCompleteDispatch(step.DispatchToken, result, status, out failure))
@@ -261,6 +284,16 @@ namespace AIBT
                     return BurstContextResult.InvalidHandle;
                 for (uint offset = 0; offset < resolution.Size; offset++)
                     slot.BindingValues[(int)(resolution.LiveOffset + offset)] = agent.TreeValues[(int)(resolution.StorageOffset + offset)];
+            }
+            // P10-010: StageInputs.
+            for (var index = 0; index < slot.Resolutions.Length; index++)
+            {
+                var resolution = slot.Resolutions[index];
+                if (resolution.IsSnapshot == 0) continue;
+                if (agent.SimulationMode == 0
+                    || !AIBT.Simulation.SimulationAgentRoutinesV1.TryStage(
+                        ref agent.Simulation, resolution.InputChannel, slot.BindingValues, resolution.LiveOffset, resolution.Size))
+                    return BurstContextResult.InvalidHandle;
             }
 
             var request = new NativeBurstDispatchRequestV2(

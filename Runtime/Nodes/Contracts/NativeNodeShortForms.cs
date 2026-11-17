@@ -95,4 +95,17 @@ namespace AIBT.Native
         public AibtCommandAttribute(string commandId) { CommandId = commandId; }
         public string CommandId { get; }
     }
+
+    /// <summary>
+    /// A simulation input on a <c>SnapshotReadHandle&lt;T&gt;</c> field: the current agent's row of the
+    /// game array bound to the input channel <paramref name="inputId"/> of an <c>AIBT.Simulation.TreeGroup</c>.
+    /// Short for <c>[AibtConfigField(id, "GeneratedHandle", 1u), AibtSnapshotBinding(id, valueType, version)]</c>
+    /// with the value type taken from T. Read it with <c>TryReadSnapshot</c>. Experimental (ADR-P10-008) until stage G5.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    public sealed class AibtInputAttribute : Attribute
+    {
+        public AibtInputAttribute(string inputId) { InputId = inputId; }
+        public string InputId { get; }
+    }
 }

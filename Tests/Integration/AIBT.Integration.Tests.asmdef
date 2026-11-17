@@ -8,6 +8,7 @@
     "AIBT.BehaviorCases.Tests",
     "AIBT.CodeGen.GenerationTests",
     "AIBT.CodeGen.P7039ExternalTreeWrite.Tests",
+    "AIBT.CodeGen.P10010SimulationIo.Tests",
     "AIBT.StandardNodes",
     "Unity.Burst",
     "Unity.Collections"

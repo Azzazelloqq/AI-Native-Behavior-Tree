@@ -56,19 +56,96 @@ namespace AIBT.Simulation
         private Removal _removal;
         private bool _released;
 
-        internal TreeGroup(TreeSimulation simulation, ushort id, ProductionTreeProgram program, in TreeGroupSettings settings)
+        // ---- P10-010: inputs and commands ---------------------------------------------------------
+        private sealed class InputState
+        {
+            internal NativeArray<byte> Game;       // the bound game array as bytes (not owned)
+            internal Type RowType;
+            internal int Stride;
+            internal bool Bound;
+            internal NativeArray<byte> Staging;    // owned copy of the game rows, made once per step
+            internal bool Wake;
+            internal NativeArray<byte> LastSeen;   // owned: canonical row each agent saw at its last think
+            internal NativeArray<byte> Seen;       // owned: 1 once the agent thought with wake on
+        }
+
+        private abstract class CommandCacheBase : IDisposable
+        {
+            internal bool Decoded;
+            internal uint Stamp;
+            public abstract void Dispose();
+        }
+
+        private sealed class CommandCache<T> : CommandCacheBase where T : unmanaged
+        {
+            internal NativeList<Command<T>> List;
+            internal NativeArray<SimulationLeafV1> Leaves;
+            internal NativeArray<byte> Scratch;
+
+            public override void Dispose()
+            {
+                if (List.IsCreated) List.Dispose();
+                if (Leaves.IsCreated) Leaves.Dispose();
+                if (Scratch.IsCreated) Scratch.Dispose();
+            }
+        }
+
+        private readonly SimulationProgramMapV1 _map;
+        private readonly int _quota;
+        private readonly InputState[] _inputStates;
+        private readonly CommandCacheBase[] _commandCaches;
+        private readonly System.Collections.Generic.List<SimulationLeafV1> _leafScratch = new System.Collections.Generic.List<SimulationLeafV1>();
+        // Fixed for the group's life: one entry per input channel, and every channel's leaf table.
+        private UnsafeList<SimulationInputChannelV1> _inputs;
+        private UnsafeList<SimulationLeafV1> _leaves;
+        private UnsafeList<SimulationAgentNativeV1> _simAgents;
+        private NativeList<SimulationEmitterV1> _emitters;
+        private NativeArray<byte> _wakeScratch;
+        private bool _anyWake;
+        private uint _stepStamp;
+
+        internal TreeGroup(
+            TreeSimulation simulation, ushort id, ProductionTreeProgram program, in TreeGroupSettings settings,
+            SimulationProgramMapV1 map)
         {
             _simulation = simulation;
             Id = id;
             _program = program;
             _settings = settings;
+            _map = map;
+            _quota = settings.CommandQuotaPerAgent == 0 ? TreeGroupSettings.DefaultCommandQuotaPerAgent : settings.CommandQuotaPerAgent;
             _semanticHash = new NativeHash256V1(program.Program.Header.CanonicalSemanticHash);
             _agentFrameExecutor = program.Catalog.Executor as IGeneratedAgentFrameExecutorV1;
             _rootCompletions = new NativeList<RootCompletion>(Math.Max(1, settings.Capacity), Allocator.Persistent);
             _faults = new NativeList<AgentFault>(Math.Max(1, settings.Capacity), Allocator.Persistent);
             _table = new UnsafeList<AgentFrameAgentV1>(Math.Max(1, settings.Capacity), Allocator.Persistent);
             _jobAgents = new UnsafeList<AgentFrameAgentV1>(Math.Max(1, settings.Capacity), Allocator.Persistent);
+
+            _inputStates = new InputState[map.Inputs.Count];
+            _commandCaches = new CommandCacheBase[map.Commands.Count];
+            _inputs = new UnsafeList<SimulationInputChannelV1>(Math.Max(1, map.Inputs.Count), Allocator.Persistent);
+            var leafCount = 0;
+            var largest = 1u;
+            for (var channel = 0; channel < map.Inputs.Count; channel++)
+            {
+                var input = map.Inputs[channel];
+                _inputStates[channel] = new InputState();
+                _inputs.Add(new SimulationInputChannelV1
+                {
+                    LeafStart = leafCount, LeafCount = input.LeafCount, CanonicalSize = input.CanonicalSize,
+                });
+                leafCount += input.LeafCount;
+                if (input.CanonicalSize > largest) largest = input.CanonicalSize;
+            }
+            _leaves = new UnsafeList<SimulationLeafV1>(Math.Max(1, leafCount), Allocator.Persistent);
+            _leaves.Resize(leafCount, NativeArrayOptions.ClearMemory);
+            _simAgents = new UnsafeList<SimulationAgentNativeV1>(Math.Max(1, settings.Capacity), Allocator.Persistent);
+            _emitters = new NativeList<SimulationEmitterV1>(Math.Max(1, settings.Capacity), Allocator.Persistent);
+            _wakeScratch = new NativeArray<byte>((int)largest, Allocator.Persistent, NativeArrayOptions.ClearMemory);
         }
+
+        /// <summary>The container state of slot <paramref name="index"/> (its in-place dispatch reaches it through the bridge).</summary>
+        internal ref SimulationAgentNativeV1 SimulationAgent(int index) => ref _simAgents.ElementAt(index);
 
         internal TreeSimulation Simulation => _simulation;
         internal Removal RemovalState => _removal;
@@ -122,7 +199,8 @@ namespace AIBT.Simulation
                     // fresh instance with a container-local id.
                     if (!core.TryBootstrapGenerated(
                             _program.Definition, _program.Catalog, null,
-                            new TreeInstanceId(ulong.MaxValue - (ulong)created), false, out _))
+                            new TreeInstanceId(ulong.MaxValue - (ulong)created), false,
+                            _map, new SimulationAgentBridgeV1(this, created), out _))
                         return SimulationResult.InvalidArgument;
                     slots[created].Core = core;
                 }
@@ -144,7 +222,78 @@ namespace AIBT.Simulation
             if (_jobAgents.Capacity < capacity) _jobAgents.Capacity = capacity;
             if (_rootCompletions.Capacity < capacity) _rootCompletions.Capacity = capacity;
             if (_faults.Capacity < capacity) _faults.Capacity = capacity;
+            if (_emitters.Capacity < capacity) _emitters.Capacity = capacity;
+            GrowSimulationStorage(capacity);
             return SimulationResult.Success;
+        }
+
+        /// <summary>
+        /// P10-010: per-slot container entries (command quota counters and a command log sized for the
+        /// quota of one think plus one teardown, so a step never grows them) and per-channel row
+        /// buffers for the new capacity.
+        /// </summary>
+        private void GrowSimulationStorage(int capacity)
+        {
+            var commandChannels = _map.Commands.Count;
+            var payloadBytes = 0;
+            for (var channel = 0; channel < commandChannels; channel++)
+                payloadBytes += (int)_map.Commands[channel].CanonicalSize;
+            if (_simAgents.Capacity < capacity) _simAgents.Capacity = capacity;
+            while (_simAgents.Length < capacity)
+            {
+                var entry = new SimulationAgentNativeV1
+                {
+                    Inputs = _inputs,
+                    Leaves = _leaves,
+                    Row = _simAgents.Length,
+                    CommandFree = new UnsafeList<int>(Math.Max(1, commandChannels), Allocator.Persistent),
+                    Commands = new UnsafeList<SimulationCommandRecordV1>(Math.Max(1, 2 * _quota * commandChannels), Allocator.Persistent),
+                    Payload = new UnsafeList<byte>(Math.Max(1, 2 * _quota * payloadBytes), Allocator.Persistent),
+                };
+                entry.CommandFree.Resize(commandChannels, NativeArrayOptions.ClearMemory);
+                _simAgents.Add(entry);
+            }
+            for (var channel = 0; channel < _inputStates.Length; channel++)
+            {
+                var state = _inputStates[channel];
+                if (state.Bound) EnsureStaging(channel, state.Stride);
+                if (state.Wake) EnsureWakeStorage(channel);
+            }
+        }
+
+        private void EnsureStaging(int channel, int stride)
+        {
+            var state = _inputStates[channel];
+            var bytes = checked(_slots.Length * stride);
+            if (!state.Staging.IsCreated || state.Staging.Length != bytes)
+            {
+                var staging = new NativeArray<byte>(bytes, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+                if (state.Staging.IsCreated) state.Staging.Dispose();
+                state.Staging = staging;
+            }
+            ref var input = ref _inputs.ElementAt(channel);
+            input.Rows = state.Staging;
+            input.RowStride = stride;
+            input.RowCount = _slots.Length;
+        }
+
+        private void EnsureWakeStorage(int channel)
+        {
+            var state = _inputStates[channel];
+            var size = (int)_map.Inputs[channel].CanonicalSize;
+            var rows = _slots.Length;
+            if (state.Seen.IsCreated && state.Seen.Length == rows) return;
+            var lastSeen = new NativeArray<byte>(rows * size, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            var seen = new NativeArray<byte>(rows, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            if (state.Seen.IsCreated)
+            {
+                NativeArray<byte>.Copy(state.LastSeen, lastSeen, Math.Min(state.LastSeen.Length, lastSeen.Length));
+                NativeArray<byte>.Copy(state.Seen, seen, Math.Min(state.Seen.Length, seen.Length));
+                state.LastSeen.Dispose();
+                state.Seen.Dispose();
+            }
+            state.LastSeen = lastSeen;
+            state.Seen = seen;
         }
 
         /// <summary>Adds an agent with <see cref="TreeGroupSettings.DefaultThinkInterval"/> and phase 0.</summary>
@@ -179,6 +328,7 @@ namespace AIBT.Simulation
                 slot.Woken = false;
                 slot.ResetAtNextThink = false;
                 slot.RestartRequested = false;
+                ForgetSeenInputs(index);
                 _count++;
                 if (index + 1 > _highWater) _highWater = index + 1;
                 agent = new AgentHandle(index, slot.Generation, Id);
@@ -307,6 +457,7 @@ namespace AIBT.Simulation
                 ref var slot = ref _slots[index];
                 if (slot.State == SlotState.PendingRemoval)
                 {
+                    ResetCommandQuota(index);
                     TearDown(slot.Core);
                     slot.State = SlotState.Free;
                     slot.Woken = false;
@@ -315,6 +466,7 @@ namespace AIBT.Simulation
                 }
                 else if (slot.State == SlotState.Alive && slot.RestartRequested)
                 {
+                    ResetCommandQuota(index);
                     TearDown(slot.Core);
                     slot.RestartRequested = false;
                     slot.ResetAtNextThink = true;
@@ -343,7 +495,11 @@ namespace AIBT.Simulation
             {
                 ref var slot = ref _slots[index];
                 if (slot.State != SlotState.Alive) continue;
-                if (!slot.Woken && tick % slot.Interval != slot.Phase) continue;
+                if (!slot.Woken && tick % slot.Interval != slot.Phase)
+                {
+                    if (!_anyWake || !InputChanged(index)) continue;
+                    WokenByInputForTests++;
+                }
                 slot.Woken = false;
                 if (slot.ResetAtNextThink)
                 {
@@ -361,6 +517,8 @@ namespace AIBT.Simulation
                     RecordFault(index, ref slot, core.LastFailure);
                     continue;
                 }
+                ResetCommandQuota(index);
+                if (_anyWake) RecordSeenInputs(index);
                 _due[dueCount++] = index;
             }
             if (dueCount == 0) return;
@@ -379,7 +537,7 @@ namespace AIBT.Simulation
                 if (core.Ready) continue; // Waiting: thinks again on its schedule.
                 if (core.LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None)
                 {
-                    RecordFault(index, ref slot, core.LastFailure);
+                    RecordFault(index, ref slot, core.LastFailure, core.LastRejectedResult);
                     continue;
                 }
                 if (core.LastRootResult.HasValue)
@@ -390,13 +548,14 @@ namespace AIBT.Simulation
             }
         }
 
-        private void RecordFault(int index, ref Slot slot, NativeRuntimeFailureV1 failure)
+        private void RecordFault(
+            int index, ref Slot slot, NativeRuntimeFailureV1 failure, BurstContextResult cause = BurstContextResult.Success)
         {
             // The owner id is a process-wide counter value; it must not reach an output.
             var reported = new NativeRuntimeFailureV1(
                 failure.Code, failure.ResourceKind, failure.Requested, failure.Capacity, failure.Alignment,
                 0, failure.Generation, failure.LeaseId);
-            _faults.Add(new AgentFault(new AgentHandle(index, slot.Generation, Id), reported));
+            _faults.Add(new AgentFault(new AgentHandle(index, slot.Generation, Id), reported, cause));
         }
 
         private void RunInPlace(int dueCount)
@@ -429,6 +588,7 @@ namespace AIBT.Simulation
                     slot.TableReady = true;
                 }
                 else slot.Core.PrepareAgentFrame(ref entry);
+                entry.Simulation = _simAgents[index];
                 _jobAgents.Add(entry);
             }
             try
@@ -450,6 +610,8 @@ namespace AIBT.Simulation
             {
                 var index = _due[position];
                 ref var agent = ref _jobAgents.ElementAt(position);
+                // The job appended to copies of the agent's command lists: keep their lengths.
+                _simAgents.ElementAt(index) = agent.Simulation;
                 var core = _slots[index].Core;
                 try
                 {
@@ -477,12 +639,295 @@ namespace AIBT.Simulation
             if (_jobAgents.IsCreated) _jobAgents.Dispose();
             if (_rootCompletions.IsCreated) _rootCompletions.Dispose();
             if (_faults.IsCreated) _faults.Dispose();
+            if (_simAgents.IsCreated)
+            {
+                for (var index = 0; index < _simAgents.Length; index++)
+                {
+                    ref var entry = ref _simAgents.ElementAt(index);
+                    if (entry.CommandFree.IsCreated) entry.CommandFree.Dispose();
+                    if (entry.Commands.IsCreated) entry.Commands.Dispose();
+                    if (entry.Payload.IsCreated) entry.Payload.Dispose();
+                }
+                _simAgents.Dispose();
+            }
+            for (var channel = 0; channel < _inputStates.Length; channel++)
+            {
+                var state = _inputStates[channel];
+                if (state.Staging.IsCreated) state.Staging.Dispose();
+                if (state.LastSeen.IsCreated) state.LastSeen.Dispose();
+                if (state.Seen.IsCreated) state.Seen.Dispose();
+                state.Game = default;
+                state.Bound = false;
+            }
+            for (var channel = 0; channel < _commandCaches.Length; channel++)
+            {
+                _commandCaches[channel]?.Dispose();
+                _commandCaches[channel] = null;
+            }
+            if (_inputs.IsCreated) _inputs.Dispose();
+            if (_leaves.IsCreated) _leaves.Dispose();
+            if (_emitters.IsCreated) _emitters.Dispose();
+            if (_wakeScratch.IsCreated) _wakeScratch.Dispose();
         }
 
         private static void ReleaseCore(ProductionTreeAgentCore core)
         {
             if (core == null || !core.BeginDispose()) return;
             core.ReleaseStorage();
+        }
+
+        // ---- P10-010: inputs ----------------------------------------------------------------------
+
+        /// <summary>
+        /// Binds the game array <paramref name="rows"/> to the input channel: row <c>i</c> is what the
+        /// agent in slot <c>i</c> (<see cref="AgentHandle.Index"/>) reads through its
+        /// <c>SnapshotReadHandle&lt;T&gt;</c>. The group keeps the array (it does not copy or own it): write
+        /// it between steps; every <see cref="TreeSimulation.Step"/> copies its first
+        /// <see cref="HighWaterIndex"/> rows once, before any agent runs, so every agent of a step sees the
+        /// same values and the game may write the array again as soon as Step returns. Keep it alive and
+        /// at least <see cref="Capacity"/> rows long while bound; rebind after growing the group.
+        /// Binding again replaces the array. Returns <see cref="SimulationResult.UnknownChannel"/> when no
+        /// node of the program reads the channel, <see cref="SimulationResult.TypeMismatch"/> when
+        /// <typeparamref name="T"/> is not the value type its nodes declare (type id, version and every
+        /// field), <see cref="SimulationResult.InvalidArgument"/> for an array that is not created or
+        /// shorter than <see cref="Capacity"/>.
+        /// </summary>
+        public SimulationResult TryBindInput<T>(InputChannel<T> channel, NativeArray<T> rows) where T : unmanaged
+        {
+            var usable = Usable();
+            if (usable != SimulationResult.Success) return usable;
+            if (!channel.IsValid) return SimulationResult.InvalidArgument;
+            var index = _map.FindInput(channel.Id);
+            if (index < 0) return SimulationResult.UnknownChannel;
+            if (!rows.IsCreated || rows.Length < _slots.Length) return SimulationResult.InvalidArgument;
+            var state = _inputStates[index];
+            var stride = UnsafeUtility.SizeOf<T>();
+            if (state.RowType != typeof(T))
+            {
+                var layout = SimulationValueLayoutV1.TryBuild<T>(_program.Catalog, _map.Inputs[index].Binding, _leafScratch);
+                if (layout != SimulationResult.Success) return layout;
+                var input = _inputs[index];
+                if (_leafScratch.Count != input.LeafCount) return SimulationResult.TypeMismatch;
+                for (var leaf = 0; leaf < _leafScratch.Count; leaf++) _leaves[input.LeafStart + leaf] = _leafScratch[leaf];
+                state.RowType = typeof(T);
+            }
+            state.Stride = stride;
+            state.Game = rows.Reinterpret<byte>(stride);
+            state.Bound = true;
+            EnsureStaging(index, stride);
+            _inputs.ElementAt(index).Bound = 1;
+            return SimulationResult.Success;
+        }
+
+        /// <summary>Forgets the bound array. Steps return <see cref="SimulationResult.InputMissing"/> until the channel is bound again.</summary>
+        public SimulationResult TryUnbindInput<T>(InputChannel<T> channel) where T : unmanaged
+        {
+            var usable = Usable();
+            if (usable != SimulationResult.Success) return usable;
+            if (!channel.IsValid) return SimulationResult.InvalidArgument;
+            var index = _map.FindInput(channel.Id);
+            if (index < 0) return SimulationResult.UnknownChannel;
+            var state = _inputStates[index];
+            state.Game = default;
+            state.Bound = false;
+            _inputs.ElementAt(index).Bound = 0;
+            return SimulationResult.Success;
+        }
+
+        /// <summary>
+        /// Off by default. When on, an agent that is not due in a step thinks anyway when its row of this
+        /// channel differs from the row it read at its last think (byte compare of the canonical value:
+        /// -0.0 equals +0.0, padding ignored). Agents that have not thought since this was turned on, or
+        /// since they were added, are not woken. Allocates the per-agent last-seen rows now.
+        /// </summary>
+        public SimulationResult TrySetWakeOnChange<T>(InputChannel<T> channel, bool enabled) where T : unmanaged
+        {
+            var usable = Usable();
+            if (usable != SimulationResult.Success) return usable;
+            if (!channel.IsValid) return SimulationResult.InvalidArgument;
+            var index = _map.FindInput(channel.Id);
+            if (index < 0) return SimulationResult.UnknownChannel;
+            var state = _inputStates[index];
+            if (enabled && !state.Wake)
+            {
+                EnsureWakeStorage(index);
+                for (var slot = 0; slot < state.Seen.Length; slot++) state.Seen[slot] = 0;
+            }
+            state.Wake = enabled;
+            _anyWake = false;
+            for (var other = 0; other < _inputStates.Length; other++) _anyWake |= _inputStates[other].Wake;
+            return SimulationResult.Success;
+        }
+
+        /// <summary>
+        /// Step phase 0 (before anything runs, for every active group): every input channel bound to a
+        /// readable array of at least <see cref="Capacity"/> rows.
+        /// </summary>
+        internal SimulationResult ValidateInputs()
+        {
+            for (var channel = 0; channel < _inputStates.Length; channel++)
+            {
+                var state = _inputStates[channel];
+                if (!state.Bound) return SimulationResult.InputMissing;
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                try
+                {
+                    AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(state.Game));
+                }
+                catch (Exception)
+                {
+                    return SimulationResult.InputMissing;
+                }
+#endif
+                if (state.Game.Length < _slots.Length * state.Stride) return SimulationResult.InvalidArgument;
+            }
+            return SimulationResult.Success;
+        }
+
+        /// <summary>
+        /// Step phase 1 start: forgets last step's commands and copies every bound input's rows into the
+        /// group's own buffer (the only copy a step makes; see <see cref="TryBindInput{T}"/>).
+        /// </summary>
+        internal void BeginStep()
+        {
+            unchecked { _stepStamp++; }
+            for (var position = 0; position < _emitters.Length; position++)
+            {
+                ref var entry = ref _simAgents.ElementAt(_emitters[position].Index);
+                entry.Commands.Clear();
+                entry.Payload.Clear();
+            }
+            _emitters.Clear();
+            if (_removal != Removal.None) return;
+            for (var channel = 0; channel < _inputStates.Length; channel++)
+            {
+                var state = _inputStates[channel];
+                if (!state.Bound || _highWater == 0) continue;
+                NativeArray<byte>.Copy(state.Game, 0, state.Staging, 0, _highWater * state.Stride);
+            }
+        }
+
+        private void ResetCommandQuota(int index)
+        {
+            ref var entry = ref _simAgents.ElementAt(index);
+            for (var channel = 0; channel < entry.CommandFree.Length; channel++) entry.CommandFree[channel] = _quota;
+        }
+
+        private void ForgetSeenInputs(int index)
+        {
+            for (var channel = 0; channel < _inputStates.Length; channel++)
+            {
+                var state = _inputStates[channel];
+                if (state.Seen.IsCreated && index < state.Seen.Length) state.Seen[index] = 0;
+            }
+        }
+
+        private void RecordSeenInputs(int index)
+        {
+            ref var entry = ref _simAgents.ElementAt(index);
+            for (var channel = 0; channel < _inputStates.Length; channel++)
+            {
+                var state = _inputStates[channel];
+                if (!state.Wake) continue;
+                var size = _inputs[channel].CanonicalSize;
+                SimulationAgentRoutinesV1.TryStage(ref entry, channel, state.LastSeen, (uint)index * size, size);
+                state.Seen[index] = 1;
+            }
+        }
+
+        private bool InputChanged(int index)
+        {
+            ref var entry = ref _simAgents.ElementAt(index);
+            for (var channel = 0; channel < _inputStates.Length; channel++)
+            {
+                var state = _inputStates[channel];
+                if (!state.Wake || state.Seen[index] == 0) continue;
+                var size = _inputs[channel].CanonicalSize;
+                SimulationAgentRoutinesV1.TryStage(ref entry, channel, _wakeScratch, 0u, size);
+                var start = (int)((uint)index * size);
+                for (var octet = 0; octet < (int)size; octet++)
+                    if (_wakeScratch[octet] != state.LastSeen[start + octet]) return true;
+            }
+            return false;
+        }
+
+        // ---- P10-010: commands --------------------------------------------------------------------
+
+        /// <summary>Step phase 3: the agents that emitted commands in this step, in slot order.</summary>
+        internal void CollectCommands()
+        {
+            for (var index = 0; index < _highWater; index++)
+                if (_simAgents[index].Commands.Length != 0)
+                    _emitters.Add(new SimulationEmitterV1 { Index = index, Generation = _slots[index].Generation });
+        }
+
+        /// <summary>
+        /// The commands of <paramref name="channel"/> agents emitted in the last step: agents in slot order,
+        /// each agent's commands in emission order (a torn-down agent's teardown commands before a
+        /// restarted agent's think). Valid until the next step, the group's release or the container's
+        /// disposal. Returns <see cref="SimulationResult.UnknownChannel"/> when no node emits the channel,
+        /// <see cref="SimulationResult.TypeMismatch"/> when <typeparamref name="T"/> is not its payload type,
+        /// <see cref="SimulationResult.CatalogTooOld"/> when the catalog has no binding ids (commands are
+        /// discarded). The first call per channel builds its decoder (allocates); later calls allocate nothing.
+        /// </summary>
+        public SimulationResult TryGetCommands<T>(CommandChannel<T> channel, out NativeArray<Command<T>>.ReadOnly commands)
+            where T : unmanaged
+        {
+            commands = default;
+            var usable = Usable();
+            if (usable != SimulationResult.Success) return usable;
+            if (!channel.IsValid) return SimulationResult.InvalidArgument;
+            var index = _map.FindCommand(channel.Id);
+            if (index < 0) return _map.CommandsWithoutIds ? SimulationResult.CatalogTooOld : SimulationResult.UnknownChannel;
+            var cache = _commandCaches[index] as CommandCache<T>;
+            if (cache == null)
+            {
+                var layout = SimulationValueLayoutV1.TryBuild<T>(_program.Catalog, _map.Commands[index].Binding, _leafScratch);
+                if (layout != SimulationResult.Success) return layout;
+                if (_leafScratch.Count != _map.Commands[index].LeafCount) return SimulationResult.TypeMismatch;
+                cache = new CommandCache<T>
+                {
+                    List = new NativeList<Command<T>>(Math.Max(1, _slots.Length), Allocator.Persistent),
+                    Leaves = new NativeArray<SimulationLeafV1>(_leafScratch.ToArray(), Allocator.Persistent),
+                    Scratch = new NativeArray<byte>(UnsafeUtility.SizeOf<T>(), Allocator.Persistent),
+                };
+                _commandCaches[index]?.Dispose();
+                _commandCaches[index] = cache;
+            }
+            if (!cache.Decoded || cache.Stamp != _stepStamp) Decode(index, cache);
+            commands = cache.List.AsReadOnly();
+            return SimulationResult.Success;
+        }
+
+        /// <summary>Same as <see cref="TryGetCommands{T}"/>; empty when that call does not succeed.</summary>
+        public NativeArray<Command<T>>.ReadOnly GetCommands<T>(CommandChannel<T> channel) where T : unmanaged
+            => TryGetCommands(channel, out var commands) == SimulationResult.Success ? commands : default;
+
+        private void Decode<T>(int channel, CommandCache<T> cache) where T : unmanaged
+        {
+            cache.List.Clear();
+            var expected = _map.Commands[channel].CanonicalSize;
+            for (var position = 0; position < _emitters.Length; position++)
+            {
+                var emitter = _emitters[position];
+                ref var entry = ref _simAgents.ElementAt(emitter.Index);
+                var handle = new AgentHandle(emitter.Index, emitter.Generation, Id);
+                for (var record = 0; record < entry.Commands.Length; record++)
+                {
+                    var command = entry.Commands[record];
+                    if (command.Channel != channel || command.PayloadSize != expected) continue;
+                    for (var octet = 0; octet < cache.Scratch.Length; octet++) cache.Scratch[octet] = 0;
+                    for (var leafIndex = 0; leafIndex < cache.Leaves.Length; leafIndex++)
+                    {
+                        var leaf = cache.Leaves[leafIndex];
+                        for (var octet = 0; octet < (int)leaf.Size; octet++)
+                            cache.Scratch[(int)leaf.RawOffset + octet] = entry.Payload[(int)(command.PayloadOffset + leaf.CanonicalOffset) + octet];
+                    }
+                    cache.List.Add(new Command<T>(handle, cache.Scratch.Reinterpret<T>(1)[0]));
+                }
+            }
+            cache.Stamp = _stepStamp;
+            cache.Decoded = true;
         }
 
         // ---- test access ------------------------------------------------------------------------
@@ -493,5 +938,7 @@ namespace AIBT.Simulation
         internal bool JobPathAvailable => _jobPathAvailable;
         /// <summary>Test diagnostics: agent-frame jobs this group completed.</summary>
         internal long JobBatchesForTests;
+        /// <summary>Test diagnostics: thinks caused by wake on changed input.</summary>
+        internal long WokenByInputForTests;
     }
 }

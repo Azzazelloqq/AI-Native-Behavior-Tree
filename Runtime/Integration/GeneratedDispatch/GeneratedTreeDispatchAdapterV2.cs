@@ -22,6 +22,8 @@ namespace AIBT
         private NativeArray<byte> _treeValues;
         private NativeArray<ulong> _treeVersions;
         private UnsafeList<AgentFrameSlotV1> _agentFrameSlots;
+        // P10-010: set only for simulation-container agents; hosts never have one.
+        private readonly AIBT.Simulation.SimulationAgentBridgeV1 _simulation;
         private bool _disposed;
 
         private GeneratedTreeDispatchAdapterV2(
@@ -31,8 +33,10 @@ namespace AIBT
             DispatchSlot[] slots,
             NativeArray<byte> treeValues,
             NativeArray<ulong> treeVersions,
-            uint agentBaseOffset)
+            uint agentBaseOffset,
+            AIBT.Simulation.SimulationAgentBridgeV1 simulation)
         {
+            _simulation = simulation;
             _definition = definition;
             _catalog = catalog;
             _treeInstanceId = treeInstanceId;
@@ -48,8 +52,29 @@ namespace AIBT
             TreeInstanceId treeInstanceId,
             out GeneratedTreeDispatchAdapterV2 adapter,
             out BurstContextResult failure)
+            => TryCreate(definition, catalog, treeInstanceId, null, null, out adapter, out failure);
+
+        /// <summary>
+        /// P10-010: with a <paramref name="simulationMap"/> and <paramref name="simulation"/> bridge
+        /// (simulation container only), SnapshotRead bindings resolve to the agent's row of an input
+        /// channel and EffectCommand bindings to command channels. Without them (every host) both stay
+        /// exactly as before: snapshot bindings are refused with PhaseViolation.
+        /// </summary>
+        internal static bool TryCreate(
+            GeneratedTreeRuntimeDefinitionV2 definition,
+            GeneratedBurstCatalogV2 catalog,
+            TreeInstanceId treeInstanceId,
+            AIBT.Simulation.SimulationProgramMapV1 simulationMap,
+            AIBT.Simulation.SimulationAgentBridgeV1 simulation,
+            out GeneratedTreeDispatchAdapterV2 adapter,
+            out BurstContextResult failure)
         {
             adapter = null;
+            if ((simulationMap == null) != (simulation == null))
+            {
+                failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
             if (definition == null || catalog == null || !treeInstanceId.IsValid
                 || !definition.Matches(catalog) || !catalog.TryRetain())
             {
@@ -83,7 +108,7 @@ namespace AIBT
                         return false;
                     }
                     if (!DispatchSlot.TryCreate(
-                            definition, catalog, (uint)nodeIndex, caseIndex, treeInstanceId,
+                            definition, catalog, (uint)nodeIndex, caseIndex, treeInstanceId, simulationMap,
                             out slots[nodeIndex], out failure))
                     {
                         DisposeSlots(slots);
@@ -94,7 +119,7 @@ namespace AIBT
                     }
                 }
                 adapter = new GeneratedTreeDispatchAdapterV2(
-                    definition, catalog, treeInstanceId, slots, values, versions, agentBaseOffset);
+                    definition, catalog, treeInstanceId, slots, values, versions, agentBaseOffset, simulation);
                 failure = BurstContextResult.Success;
                 return true;
             }
@@ -169,6 +194,28 @@ namespace AIBT
             failure = BurstContextResult.Success;
             return true;
         }
+
+        /// <summary>
+        /// P10-010: the container's command quota check before node <paramref name="nodeIndex"/> runs
+        /// (same routine as the agent-frame job). A node without a slot passes, so Dispatch reports it
+        /// as it does for hosts.
+        /// </summary>
+        internal BurstContextResult TryReserveSimulationCommands(uint nodeIndex)
+        {
+            if (_disposed || _simulation == null) return BurstContextResult.InvalidHandle;
+            if (nodeIndex >= _slots.Length || _slots[nodeIndex] == null) return BurstContextResult.Success;
+            return AIBT.Simulation.SimulationAgentRoutinesV1.TryReserve(ref _simulation.Agent, _slots[nodeIndex].CommandChannels);
+        }
+
+        /// <summary>P10-010: moves the commands node <paramref name="nodeIndex"/> just published into the agent's step log.</summary>
+        internal BurstContextResult TryCaptureSimulationCommands(uint nodeIndex)
+        {
+            if (_disposed || _simulation == null || nodeIndex >= _slots.Length || _slots[nodeIndex] == null)
+                return BurstContextResult.InvalidHandle;
+            return _slots[nodeIndex].CaptureSimulationCommands(ref _simulation.Agent);
+        }
+
+        internal bool HasSimulation => _simulation != null;
 
         internal bool TryPublishGroupCommand(
             uint nodeIndex,
@@ -364,6 +411,7 @@ namespace AIBT
                 ref var slot = ref _agentFrameSlots.ElementAt(index);
                 if (slot.Resolutions.IsCreated) slot.Resolutions.Dispose();
                 if (slot.EffectDescriptors.IsCreated) slot.EffectDescriptors.Dispose();
+                // CommandChannels belongs to the DispatchSlot.
             }
             _agentFrameSlots.Dispose();
             _agentFrameSlots = default;
@@ -456,7 +504,7 @@ namespace AIBT
             if (slot == null) return BurstContextResult.TypeMismatch;
             return slot.Execute(
                 _definition.Binding, _catalog, _treeValues, _treeVersions, _agentBaseOffset,
-                in request, scheduled, out status);
+                in request, scheduled, _simulation, out status);
         }
 
         private bool TryReadPublishedEffect(
@@ -672,7 +720,22 @@ namespace AIBT
             // P10-004: activation generation and published-command counts live in native memory so
             // the JobsAgentFrame framing (AgentFrameCoreV1) continues exactly where this slot left off.
             private NativeArray<AgentFrameSlotStateV1> _state;
+            // P10-010 (container only): by local binding ordinal, the command channel of an effect
+            // binding or -1 (also -1 for a catalog without binding ids: its commands are discarded).
+            private NativeArray<int> _commandChannels;
             private bool _disposed;
+
+            internal NativeArray<int> CommandChannels => _commandChannels;
+
+            internal BurstContextResult CaptureSimulationCommands(ref AIBT.Simulation.SimulationAgentNativeV1 agent)
+            {
+                if (_disposed) return BurstContextResult.InvalidHandle;
+                var state = _state[0];
+                var result = AIBT.Simulation.SimulationAgentRoutinesV1.TryCapture(
+                    ref agent, _commandChannels, _publishedCommands, _publishedPayload, ref state);
+                _state[0] = state;
+                return result;
+            }
 
             private uint _activationGeneration
             {
@@ -710,6 +773,7 @@ namespace AIBT
                 uint nodeIndex,
                 uint caseIndex,
                 TreeInstanceId treeInstanceId,
+                AIBT.Simulation.SimulationProgramMapV1 simulationMap,
                 out DispatchSlot slot,
                 out BurstContextResult failure)
             {
@@ -718,11 +782,39 @@ namespace AIBT
                 var node = binding.SemanticProgram.Nodes[(int)nodeIndex];
                 var dispatchCase = catalog.Cases[(int)caseIndex];
                 var resolutions = new BindingResolution[dispatchCase.BindingCount];
+                var commandChannels = simulationMap != null ? new int[dispatchCase.BindingCount] : null;
                 var liveBytes = 0u;
                 var effectBindingCount = 0u;
                 for (uint local = 0; local < dispatchCase.BindingCount; local++)
                 {
-                    var catalogBinding = catalog.Bindings[(int)(dispatchCase.FirstBinding + local)];
+                    var globalOrdinal = dispatchCase.FirstBinding + local;
+                    var catalogBinding = catalog.Bindings[(int)globalOrdinal];
+                    if (commandChannels != null) commandChannels[local] = -1;
+                    if (catalogBinding.Kind == NativeBurstDispatchBindingKindV2.SnapshotRead && simulationMap != null)
+                    {
+                        // P10-010: the agent's row of an input channel, staged into this live region
+                        // before each dispatch. Two bindings of one channel in one node share the region
+                        // (the request check requires live bindings with one target to share an offset).
+                        var channel = simulationMap.InputChannelByBinding[(int)globalOrdinal];
+                        if (channel < 0)
+                        {
+                            failure = BurstContextResult.PhaseViolation;
+                            return false;
+                        }
+                        var snapshotOffset = liveBytes;
+                        var shared = false;
+                        for (uint previous = 0; previous < local; previous++)
+                        {
+                            if (!resolutions[previous].IsSnapshot || resolutions[previous].InputChannel != channel) continue;
+                            snapshotOffset = resolutions[previous].LiveOffset;
+                            shared = true;
+                            break;
+                        }
+                        resolutions[local] = BindingResolution.Snapshot(
+                            simulationMap.InputTargetBase + (uint)channel, snapshotOffset, channel, catalogBinding.PrimaryValueSize);
+                        if (!shared) liveBytes = checked(liveBytes + catalogBinding.PrimaryValueSize);
+                        continue;
+                    }
                     var resolution = new BindingResolution(catalogBinding, liveBytes);
                     if (catalogBinding.Kind == NativeBurstDispatchBindingKindV2.BlackboardRead
                         || catalogBinding.Kind == NativeBurstDispatchBindingKindV2.BlackboardWrite
@@ -741,6 +833,7 @@ namespace AIBT
                     {
                         resolution = resolution.WithTarget(catalogBinding.BindingOrdinal);
                         effectBindingCount++;
+                        if (commandChannels != null) commandChannels[local] = simulationMap.CommandChannelByBinding[(int)globalOrdinal];
                     }
                     else
                     {
@@ -771,6 +864,8 @@ namespace AIBT
                     created._publishedCommands = new NativeArray<NativeBurstDispatchCommandV2>((int)capacity.BindingCapacity.MaxCommands, Allocator.Persistent);
                     created._publishedPayload = new NativeArray<byte>((int)capacity.BindingCapacity.MaxCommandPayloadBytes, Allocator.Persistent);
                     created._state = new NativeArray<AgentFrameSlotStateV1>(1, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+                    if (commandChannels != null)
+                        created._commandChannels = new NativeArray<int>(commandChannels, Allocator.Persistent);
                     for (uint offset = 0; offset < dispatchCase.ConfigurationSize; offset++)
                         created._configuration[(int)offset] = binding.SemanticProgram.ConfigBlob[(int)(node.ConfigOffset + offset)];
                     for (var index = 0; index < resolutions.Length; index++)
@@ -817,6 +912,7 @@ namespace AIBT
                 uint agentBaseOffset,
                 in ProductionTreeHost.DispatchRequest hostRequest,
                 bool scheduled,
+                AIBT.Simulation.SimulationAgentBridgeV1 simulation,
                 out NodeStatus status)
             {
                 status = NodeStatus.Running;
@@ -833,6 +929,7 @@ namespace AIBT
                 if (_activationGeneration == 0) _activationGeneration = 1;
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Activation);
                 if (!SnapshotTreeValues(programBinding, treeValues, agentBaseOffset)) return BurstContextResult.InvalidHandle;
+                if (!StageInputs(simulation)) return BurstContextResult.InvalidHandle;
                 SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Snapshot);
 
                 var dispatchCase = catalog.Cases[(int)_caseIndex];
@@ -1045,8 +1142,15 @@ namespace AIBT
                         Writes = resolution.WritesBlackboard ? (byte)1 : (byte)0,
                         TargetOrdinal = resolution.TargetOrdinal,
                         LiveOffset = resolution.LiveOffset,
+                        InputChannel = -1,
                     };
-                    if (resolution.IsBlackboard)
+                    if (resolution.IsSnapshot)
+                    {
+                        native.IsSnapshot = 1;
+                        native.InputChannel = resolution.InputChannel;
+                        native.Size = resolution.Size;
+                    }
+                    else if (resolution.IsBlackboard)
                     {
                         var slot = programBinding.Slots[(int)resolution.TargetOrdinal];
                         var baseOffset = slot.Scope == BlackboardScope.Agent ? agentBaseOffset : 0u;
@@ -1092,6 +1196,7 @@ namespace AIBT
                     Transaction = _transaction,
                     PublishedCommands = _publishedCommands,
                     PublishedPayload = _publishedPayload,
+                    CommandChannels = _commandChannels,
                     Workspace = _workspace.GetAgentFrameArrays(),
                 };
             }
@@ -1205,6 +1310,7 @@ namespace AIBT
                 _workspace?.TryDispose(out _);
                 _workspace = null;
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _state);
+                GeneratedTreeDispatchAdapterV2.Dispose(ref _commandChannels);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _publishedPayload);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _publishedCommands);
                 GeneratedTreeDispatchAdapterV2.Dispose(ref _transaction);
@@ -1235,6 +1341,21 @@ namespace AIBT
                         return false;
                     for (uint offset = 0; offset < slot.Size; offset++)
                         _bindingValues[(int)(resolution.LiveOffset + offset)] = values[(int)(baseOffset + slot.Offset + offset)];
+                }
+                return true;
+            }
+
+            /// <summary>P10-010: writes the agent's input rows into the snapshot bindings' live regions (same routine as the job).</summary>
+            private bool StageInputs(AIBT.Simulation.SimulationAgentBridgeV1 simulation)
+            {
+                for (var index = 0; index < _resolutions.Length; index++)
+                {
+                    var resolution = _resolutions[index];
+                    if (!resolution.IsSnapshot) continue;
+                    if (simulation == null
+                        || !AIBT.Simulation.SimulationAgentRoutinesV1.TryStage(
+                            ref simulation.Agent, resolution.InputChannel, _bindingValues, resolution.LiveOffset, resolution.Size))
+                        return false;
                 }
                 return true;
             }
@@ -1347,10 +1468,21 @@ namespace AIBT
                 LiveOffset = IsBlackboardKind(binding.Kind)
                     ? liveOffset
                     : NativeBurstDispatchBindingV2.NoOffset;
+                InputChannel = -1;
+                Size = 0;
             }
             internal NativeBurstDispatchBindingKindV2 Kind { get; }
             internal uint TargetOrdinal { get; }
             internal uint LiveOffset { get; }
+            /// <summary>P10-010: the input channel of a container snapshot binding, else -1.</summary>
+            internal int InputChannel { get; }
+            /// <summary>P10-010: the canonical value size of a container snapshot binding, else 0.</summary>
+            internal uint Size { get; }
+            internal bool IsSnapshot => InputChannel >= 0;
+            internal static BindingResolution Snapshot(uint target, uint liveOffset, int channel, uint size)
+                => new BindingResolution(NativeBurstDispatchBindingKindV2.SnapshotRead, target, liveOffset, channel, size);
+            private BindingResolution(NativeBurstDispatchBindingKindV2 kind, uint target, uint liveOffset, int channel, uint size)
+            { Kind = kind; TargetOrdinal = target; LiveOffset = liveOffset; InputChannel = channel; Size = size; }
             internal bool IsBlackboard => Kind == NativeBurstDispatchBindingKindV2.BlackboardRead
                 || Kind == NativeBurstDispatchBindingKindV2.BlackboardWrite
                 || Kind == NativeBurstDispatchBindingKindV2.BlackboardReadWrite;
@@ -1363,7 +1495,7 @@ namespace AIBT
             internal BindingResolution WithTarget(uint target)
                 => new BindingResolution(Kind, target, LiveOffset);
             private BindingResolution(NativeBurstDispatchBindingKindV2 kind, uint target, uint liveOffset)
-            { Kind = kind; TargetOrdinal = target; LiveOffset = liveOffset; }
+            { Kind = kind; TargetOrdinal = target; LiveOffset = liveOffset; InputChannel = -1; Size = 0; }
         }
     }
 }

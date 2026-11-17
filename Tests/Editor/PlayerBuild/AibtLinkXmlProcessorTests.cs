@@ -23,6 +23,20 @@ namespace AIBT.Tests.Editor.PlayerBuild
         }
 
         [Test]
+        public void PreservesRegisteredValueTypesAndTheAttributesTheSimulationContainerReads()
+        {
+            // P10-010: TreeGroup.TryBindInput/TryGetCommands identify a payload type by its
+            // [AibtBurstValue] and [AibtValueField] attributes, which High stripping removed.
+            var xml = AibtLinkXmlProcessor.Generate(new[] { "AIBT.Runtime", "AIBT.CodeGen.P10010SimulationIo.Tests" });
+
+            Assert.That(xml, Does.Contain("<assembly fullname=\"AIBT.Runtime\">"));
+            Assert.That(xml, Does.Contain("<type fullname=\"AIBT.Burst.AibtBurstValueAttribute\" preserve=\"all\"/>"));
+            Assert.That(xml, Does.Contain("<type fullname=\"AIBT.Burst.AibtValueFieldAttribute\" preserve=\"all\"/>"));
+            Assert.That(xml, Does.Contain("<type fullname=\"AIBT.Tests.CodeGen.GenerationP10010.SenseInput\" preserve=\"all\"/>"));
+            Assert.That(xml, Does.Contain("<type fullname=\"AIBT.Tests.CodeGen.GenerationP10010.OrderCommand\" preserve=\"all\"/>"));
+        }
+
+        [Test]
         public void SkipsAssembliesThatAreNotPartOfThePlayer()
         {
             var xml = AibtLinkXmlProcessor.Generate(new[] { "AIBT.Agents" });

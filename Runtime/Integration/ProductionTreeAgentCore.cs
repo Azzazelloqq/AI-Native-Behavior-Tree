@@ -55,6 +55,8 @@ namespace AIBT
         private bool _hasPendingStep;
         private int _configuredEffectQueueCapacity;
         private ProductionTreeEffectQueue _effectQueue;
+        // P10-010: simulation-container agents only.
+        private AIBT.Simulation.SimulationAgentBridgeV1 _simulation;
         private ulong _stepsThisUpdate;
         private uint _maximumStepsPerUpdate = ProductionTreeHost.DefaultMaximumStepsPerUpdate;
         // P10-004: JobsAgentFrame per-agent logs and job-transport storage, created on first use.
@@ -84,6 +86,8 @@ namespace AIBT
         internal CompiledProgram Program { get; private set; }
         internal NodeStatus? LastRootResult { get; private set; }
         internal NativeRuntimeFailureV1 LastFailure { get; private set; }
+        /// <summary>P10-010: the callback result that faulted the agent (CallbackRejected), else Success.</summary>
+        internal BurstContextResult LastRejectedResult { get; private set; }
         internal ulong TotalUpdates => _updateId;
         internal ulong InstanceId { get; private set; }
         internal uint? StepBudget { get; set; }
@@ -119,6 +123,18 @@ namespace AIBT
             TreeInstanceId treeInstanceId,
             bool driving,
             out NativeRuntimeFailureV1 failure)
+            => TryBootstrapGenerated(definition, catalog, traceCapacity, treeInstanceId, driving, null, null, out failure);
+
+        /// <summary>P10-010: the simulation container's bootstrap: inputs and commands through <paramref name="simulation"/>.</summary>
+        internal bool TryBootstrapGenerated(
+            GeneratedTreeRuntimeDefinitionV2 definition,
+            GeneratedBurstCatalogV2 catalog,
+            NativeTraceChannelCapacityV1? traceCapacity,
+            TreeInstanceId treeInstanceId,
+            bool driving,
+            AIBT.Simulation.SimulationProgramMapV1 simulationMap,
+            AIBT.Simulation.SimulationAgentBridgeV1 simulation,
+            out NativeRuntimeFailureV1 failure)
         {
             if (_bootstrapped || _disposed || driving)
             {
@@ -129,7 +145,7 @@ namespace AIBT
             if (_configuredEffectQueueCapacity != 0)
                 effectQueue = new ProductionTreeEffectQueue(_configuredEffectQueueCapacity);
             if (!GeneratedTreeDispatchAdapterV2.TryCreate(
-                    definition, catalog, treeInstanceId, out var adapter, out var contextFailure))
+                    definition, catalog, treeInstanceId, simulationMap, simulation, out var adapter, out var contextFailure))
             {
                 failure = new NativeRuntimeFailureV1(
                     contextFailure == BurstContextResult.CapacityExceeded
@@ -146,6 +162,7 @@ namespace AIBT
             }
             _generatedDispatch = adapter;
             _effectQueue = effectQueue;
+            _simulation = simulation;
             return true;
         }
 
@@ -385,6 +402,7 @@ namespace AIBT
             agent.StepsThisUpdate = _stepsThisUpdate;
             agent.MaximumSteps = _maximumStepsPerUpdate;
             agent.EffectFree = _effectQueue != null ? _effectQueue.Free : -1;
+            agent.SimulationMode = _simulation != null ? (byte)1 : (byte)0;
             agent.TraceEnabled = _recorder != null && _recorder.IsRecording ? (byte)1 : (byte)0;
             agent.Outcome = AgentFrameOutcomeV1.None;
         }
@@ -447,6 +465,11 @@ namespace AIBT
 
         internal bool TryReserveGeneratedEffectCapacity(uint nodeIndex, out BurstContextResult failure)
         {
+            if (_simulation != null)
+            {
+                failure = _generatedDispatch != null ? _generatedDispatch.TryReserveSimulationCommands(nodeIndex) : BurstContextResult.InvalidHandle;
+                return failure == BurstContextResult.Success;
+            }
             if (_effectQueue == null)
             {
                 failure = BurstContextResult.Success;
@@ -568,6 +591,11 @@ namespace AIBT
 
         private bool TryCaptureGeneratedEffects(uint nodeIndex, out BurstContextResult failure)
         {
+            if (_simulation != null)
+            {
+                failure = _generatedDispatch != null ? _generatedDispatch.TryCaptureSimulationCommands(nodeIndex) : BurstContextResult.InvalidHandle;
+                return failure == BurstContextResult.Success;
+            }
             if (_effectQueue == null)
             {
                 failure = BurstContextResult.Success;
@@ -595,6 +623,7 @@ namespace AIBT
         {
             if (LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None) return;
             LastFailure = failure;
+            LastRejectedResult = detail == ProductionTreeAgentFailureDetail.CallbackRejected ? rejected : BurstContextResult.Success;
             _ready = false;
             _recorder?.ReleaseWriter();
             if (_logs)
@@ -708,6 +737,7 @@ namespace AIBT
             _pendingStep = default;
             LastRootResult = null;
             LastFailure = default;
+            LastRejectedResult = BurstContextResult.Success;
             InstanceId = treeInstanceId.Value;
             _destroyRequested = false;
             _ready = true;
