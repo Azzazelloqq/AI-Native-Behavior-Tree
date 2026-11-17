@@ -4,6 +4,13 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P10-013", "phase": 10, "title": "Reactive composites that keep their running child (finding F2): ADR proposed, awaiting the owner", "status": "blocked", "kind": "spike",
+      "card": "Planning~/Tasks/P10/P10-013-non-restarting-reactive-composites.md",
+      "dependsOn": ["P10-011", "P10-012"],
+      "owns": ["Documentation~/decisions/ADR-P10-013-non-restarting-reactive-composites.md", "Planning~/Evidence/P10-013/"],
+      "blockedBy": ["Owner decision on ADR-P10-013 (versioning option and open questions); implementation not yet approved"]
+    },
+    {
       "id": "P10-012", "phase": 10, "title": "Simulation container stage G4: traces of selected agents, active-path query, opt-in registry and read-only MCP/CLI tools", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P10/P10-012-simulation-container-g4.md",
       "dependsOn": ["P10-011"],
