@@ -23,6 +23,8 @@ namespace AIBT.Tests.Editor.NodeRegistry
                 Authoring.BuiltInNodeManifests.RepeaterTypeId,
                 Authoring.BuiltInNodeManifests.TimeoutTypeId,
                 Authoring.BuiltInNodeManifests.CooldownTypeId,
+                Authoring.BuiltInNodeManifests.RetainingReactiveSequenceTypeId,
+                Authoring.BuiltInNodeManifests.RetainingReactiveSelectorTypeId,
             };
 
             Assert.That(Authoring.BuiltInNodeManifests.All.Select(item => item.TypeId), Is.EquivalentTo(expected));
@@ -96,6 +98,8 @@ namespace AIBT.Tests.Editor.NodeRegistry
             AssertLayout(Authoring.BuiltInNodeManifests.RepeaterTypeId, 4, 4, NodeMemoryLifetime.Activation, 8, 4, NodeStatus.Failure, NodeStatus.Running, NodeStatus.Success);
             AssertLayout(Authoring.BuiltInNodeManifests.TimeoutTypeId, 8, 8, NodeMemoryLifetime.Activation, 16, 8, NodeStatus.Failure, NodeStatus.Running, NodeStatus.Success);
             AssertLayout(Authoring.BuiltInNodeManifests.CooldownTypeId, 8, 8, NodeMemoryLifetime.Instance, 16, 8, NodeStatus.Failure, NodeStatus.Running, NodeStatus.Success);
+            AssertLayout(Authoring.BuiltInNodeManifests.RetainingReactiveSequenceTypeId, 8, 4, NodeMemoryLifetime.Activation, 0, 1, NodeStatus.Failure, NodeStatus.Running, NodeStatus.Success);
+            AssertLayout(Authoring.BuiltInNodeManifests.RetainingReactiveSelectorTypeId, 8, 4, NodeMemoryLifetime.Activation, 0, 1, NodeStatus.Failure, NodeStatus.Running, NodeStatus.Success);
         }
 
         [Test]
@@ -122,6 +126,8 @@ namespace AIBT.Tests.Editor.NodeRegistry
                 Authoring.BuiltInNodeManifests.ReactiveSequenceTypeId,
                 Authoring.BuiltInNodeManifests.MemorySelectorTypeId,
                 Authoring.BuiltInNodeManifests.ReactiveSelectorTypeId,
+                Authoring.BuiltInNodeManifests.RetainingReactiveSequenceTypeId,
+                Authoring.BuiltInNodeManifests.RetainingReactiveSelectorTypeId,
             };
             Assert.That(composites.Select(Find).All(item => item.ChildPolicy.Minimum == 0 && item.ChildPolicy.Maximum == null), Is.True);
             Assert.That(Authoring.BuiltInNodeManifests.All.All(item => item.ChildPolicy.Ordered), Is.True);

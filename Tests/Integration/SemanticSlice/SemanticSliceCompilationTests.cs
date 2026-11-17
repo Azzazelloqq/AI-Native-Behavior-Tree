@@ -74,6 +74,11 @@ namespace AIBT.Tests.Integration.SemanticSlice
         [TestCase("async-completion.aibtcase.json")]
         [TestCase("async-budgeted-abort.aibtcase.json")]
         [TestCase("initial-blackboard.aibtcase.json")]
+        [TestCase("retaining-crew.aibtcase.json")]
+        [TestCase("retaining-wait.aibtcase.json")]
+        [TestCase("retaining-takeover.aibtcase.json")]
+        [TestCase("retaining-pitfall.aibtcase.json")]
+        [TestCase("retaining-timeout.aibtcase.json")]
         public void GoldenBehaviorCase_RoundTripsExactCanonicalBytes(string fileName)
         {
             var source = File.ReadAllBytes(GoldenCasePath(fileName));

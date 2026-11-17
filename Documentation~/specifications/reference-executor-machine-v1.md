@@ -21,6 +21,12 @@ One budget step is exactly one of:
 
 Entering and first ticking therefore require separate steps even when both occur in one execution pass. A callback is never split. Child execution occurs in its own frame and is never hidden inside one parent callback.
 
+Retaining reactive composites (ADR-P10-013) add to item 3: starting a guard pass is one composite
+transition. Resuming the retained child after a successful guard pass is one composite transition.
+Each guard's selection, lifecycle callbacks and acceptance count exactly as for any other child.
+Budget suspension MAY occur between any of these steps; it preserves the retained branch, the guard
+cursor and any active guard branch.
+
 ## Budget
 
 - Budget `0` performs no step and returns an internal suspended outcome.
@@ -46,6 +52,43 @@ After root Exit, the instance retains the terminal result and has no active fram
 Reactive composites avoid speculative side effects. On each eligible update they first abort and exit the previously running child subtree, deepest-first, then evaluate children from index zero. A previously selected child may consequently be re-entered. This deterministic restart behavior is the Phase 1 contract.
 
 For a reactive sequence, children are evaluated until Failure or Running; for a reactive selector, until Success or Running. The newly selected branch is entered only after the old branch has fully exited. This rule replaces any interpretation that requires discovering a new child's result before aborting the old branch.
+
+## Retaining reactive composites
+
+`aibt.core.reactive-sequence-retaining` and `aibt.core.reactive-selector-retaining` follow
+`execution-semantics-v1.md`, "Retaining reactive sequence and selector". The rules of "Reactive
+replacement" above apply only to the v1 reactive composites.
+
+**Update-start processing with retaining composites.** At the start of an eligible update the
+executor considers the active path from the root. Let `R` be the shallowest retaining reactive
+composite on that path that has a retained child. The existing update-start rules (an expired
+`Timeout`, else v1 reactive replacement, each shallowest first) apply unchanged to the frames from
+the root down to `R`. They do not look into `R`'s retained branch. If none of them aborts `R` or an
+ancestor of `R`, the update continues with `R`'s guard pass. When `R` resumes its retained child, the
+same update-start rules are applied to the retained branch down to the next retaining composite with
+a retained child, which then performs its guard pass, and so on. A path without retaining composites
+is processed exactly as today. Restoring a suspended `Parallel` branch applies the same processing to
+the restored frames, as it applies today's rules.
+
+**Retained branch.** During the guard pass the retained branch stays active and is not on the path
+being executed: its frames keep their state and receive no callback. The steps of one guard pass are,
+in order: start (one transition, also when the retained child is child `0` and the pass is empty);
+for each guard, selection, the guard's own steps and acceptance; then exactly one of the following.
+
+- *Resume* (one transition) after the last guard was accepted without ending the pass. The update-start
+  rules are then applied to the retained branch as described above.
+- *End.* The acceptance that ends the composite starts the abort of the retained branch. The branch is
+  aborted deepest-first with reason `Explicit` and the guard child as source; afterwards the
+  composite's terminal result is recorded (no extra step) and the composite exits as usual.
+- *Takeover.* When the guard branch has returned `Running` and execution would leave the composite's
+  subtree (the update would wait, or an enclosing `Parallel` would suspend the branch), the retained
+  branch is first aborted deepest-first with reason `Explicit` and the guard child as source. The
+  update then continues exactly as it would have after the guard returned `Running`. A `Parallel`
+  inside the guard branch suspending one of its own branches does not leave the composite's subtree.
+
+An abort that reaches the composite while a branch is retained aborts the active guard branch first,
+then the retained branch, then the composite, as one deepest-first traversal; no extra step is spent
+on moving between the branches.
 
 ## Trace points
 

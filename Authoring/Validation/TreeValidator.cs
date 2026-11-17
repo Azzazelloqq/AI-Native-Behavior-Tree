@@ -835,7 +835,19 @@ namespace AIBT.Authoring
             var reactive = oneParent && (parents[0].TypeId == BuiltInNodeManifests.ReactiveSequenceTypeId
                 || parents[0].TypeId == BuiltInNodeManifests.ReactiveSelectorTypeId);
             var reactiveSelector = oneParent && parents[0].TypeId == BuiltInNodeManifests.ReactiveSelectorTypeId;
-            if (!reactive || (lower || both) && !reactiveSelector)
+            var retaining = oneParent && (parents[0].TypeId == BuiltInNodeManifests.RetainingReactiveSequenceTypeId
+                || parents[0].TypeId == BuiltInNodeManifests.RetainingReactiveSelectorTypeId);
+            if (retaining)
+            {
+                // ADR-P10-013 §2.4: their guard pass already rechecks every guard on each update.
+                diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.InvalidObserverContext,
+                    "Retaining reactive composites do not support observers yet: '" + parents[0].TypeId
+                    + "' rechecks its earlier children on every update. Remove the observer, or use '"
+                    + BuiltInNodeManifests.ReactiveSequenceTypeId + "' or '" + BuiltInNodeManifests.ReactiveSelectorTypeId
+                    + "' as the observer's parent.",
+                    pointer, document.TreeId, node.Id));
+            }
+            else if (!reactive || (lower || both) && !reactiveSelector)
             {
                 diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.InvalidObserverContext,
                     "Observer must be a condition child of one reactive composite; lower-priority modes require a reactive selector.",

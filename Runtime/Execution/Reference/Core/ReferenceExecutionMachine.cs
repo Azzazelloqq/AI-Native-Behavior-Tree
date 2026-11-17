@@ -61,6 +61,12 @@ namespace AIBT
         private bool _abortForTimeout;
         private int _timeoutOwnerDepth = -1;
         private RuntimeNodeIndex _requestedReevaluation = RuntimeNodeIndex.Invalid;
+        // A reevaluation request whose composite lies in a retained branch waits for that branch's
+        // guard pass to resume it within the same update (ADR-P10-013); it is dropped otherwise.
+        private RuntimeNodeIndex _deferredReevaluation = RuntimeNodeIndex.Invalid;
+        // Retaining composites whose guard pass is running on the stack. Lets the leaf-tick path
+        // skip the takeover scan entirely on trees without one.
+        private int _activeGuardPasses;
 
         internal ReferenceExecutionMachine(
             CompiledProgram program,
@@ -511,6 +517,8 @@ namespace AIBT
                 ClearAbortTraversal();
                 _reactiveResetOwnerDepth = -1;
                 _requestedReevaluation = RuntimeNodeIndex.Invalid;
+                _deferredReevaluation = RuntimeNodeIndex.Invalid;
+                _activeGuardPasses = 0;
                 return Deliver(Envelope(ReferenceExecutionProgress.Completed, null, 0));
             }
             finally
@@ -531,6 +539,7 @@ namespace AIBT
             _hasOpenUpdate = true;
             _budgetSuspended = false;
             _cumulativeUpdateSteps = 0;
+            _deferredReevaluation = RuntimeNodeIndex.Invalid;
             Emit(ReferenceTraceEventKind.UpdateStarted);
             if (_pendingNodeServiceFault != null) return BlackboardFault();
             if (!TryValidateObserverTopology(out var observerTopologyFailure)) return observerTopologyFailure;
@@ -554,8 +563,7 @@ namespace AIBT
             }
             else
             {
-                if (!PrepareRequestedReevaluationForNewUpdate()
-                    && !PrepareExpiredTimeoutForNewUpdate()) PrepareReactiveResetForNewUpdate();
+                if (!PrepareRequestedReevaluationForNewUpdate()) PrepareUpdateStart(0, false);
             }
 
             return Envelope(ReferenceExecutionProgress.Suspended, null, 0);
@@ -687,6 +695,11 @@ namespace AIBT
             if (binding.HasDecorator)
             {
                 return AdvanceDecorator(frame, node, binding.DecoratorKind);
+            }
+
+            if (binding.IsRetaining)
+            {
+                return AdvanceRetainingComposite(frame, node, binding.Reactive);
             }
 
             if (binding.HasReactive)
@@ -845,9 +858,9 @@ namespace AIBT
             }
         }
 
-        private bool PrepareExpiredTimeoutForNewUpdate(int startDepth = 0)
+        private bool PrepareExpiredTimeoutForNewUpdate(int startDepth, int endDepth)
         {
-            for (var depth = startDepth; depth < _frames.Count; depth++)
+            for (var depth = startDepth; depth < endDepth && depth < _frames.Count; depth++)
             {
                 var frame = _frames[depth];
                 ref readonly var binding = ref _nodeBindings[frame.NodeIndex.Value];
@@ -986,10 +999,7 @@ namespace AIBT
                 var branchStartDepth = _frames.Count;
                 AppendFrames(branch.SuspendedFrames);
                 branch.SuspendedFrames = null;
-                if (!PrepareExpiredTimeoutForNewUpdate(branchStartDepth))
-                {
-                    PrepareReactiveResetForNewUpdate(branchStartDepth);
-                }
+                PrepareUpdateStart(branchStartDepth, false);
             }
 
             return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
@@ -1037,6 +1047,8 @@ namespace AIBT
             frame.ParallelVisitCursor = 0;
             if (!decision.IsTerminal)
             {
+                if (TryBeginGuardTakeover(ReferenceRetainedRest.Visit))
+                    return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
                 if (TrySuspendActiveParallelBranch())
                     return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
                 if (_observerQueue.Count != 0)
@@ -1350,6 +1362,299 @@ namespace AIBT
             return AdvanceMemoryComposite(frame, node, handler);
         }
 
+        // ---- Retaining reactive composites (ADR-P10-013) -------------------------------------
+        //
+        // On the update in which it is entered the composite is a memory composite. On a later
+        // update, update-start processing parks its running branch (ParkRetainedBranch) and the
+        // composite runs a guard pass over children 0 .. r-1 as new activations, while the parked
+        // branch stays active and receives no callback. The pass then resumes the parked branch,
+        // ends the composite after aborting it, or lets a running guard take over after aborting
+        // it. Activation memory: cursor at offset 0 (the guard cursor during the pass, otherwise
+        // the running child) and the retained child index plus one at offset 4 while a pass holds
+        // a parked branch.
+
+        private ReferenceExecutionEnvelope AdvanceRetainingComposite(
+            ReferenceFrame frame,
+            CompiledNodeRecord node,
+            IReferenceReactiveCompositeHandler handler)
+        {
+            if (!IsValidRetainingStorage(node))
+            {
+                return Fault(
+                    ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                    "A retaining reactive composite requires exactly eight bytes of four-byte-aligned Activation memory.",
+                    frame.NodeIndex);
+            }
+
+            switch (frame.State)
+            {
+                case ReferenceFrameState.Inactive:
+                    // The update in which the composite is entered has no guard pass.
+                    frame.LastGuardPassUpdateId = _currentUpdate.UpdateId;
+                    return EnterComposite(frame, node);
+                case ReferenceFrameState.Entered:
+                case ReferenceFrameState.Running:
+                    if (frame.GuardPassPending) return StartGuardPass(frame, node);
+                    if (frame.GuardPassActive)
+                    {
+                        if (frame.HasPendingChildResult) return AcceptGuard(frame, node, handler);
+                        return ReadCompositeCursor(node) == frame.RetainedChildOrdinal
+                            ? ResumeRetainedBranch(frame, node)
+                            : SelectCompositeChild(frame, node, handler);
+                    }
+
+                    if (frame.RetainedAbortActive)
+                    {
+                        return Fault(
+                            ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                            "A retaining reactive composite cannot advance while its retained branch is being aborted.",
+                            frame.NodeIndex);
+                    }
+
+                    return frame.HasPendingChildResult
+                        ? AcceptCompositeChild(frame, node, handler)
+                        : SelectCompositeChild(frame, node, handler);
+                case ReferenceFrameState.TerminalPendingExit:
+                    return ExitCompositeTerminal(frame, node);
+                case ReferenceFrameState.Aborting:
+                    return frame.AbortCallbackCompleted
+                        ? ExitCompositeAborted(frame, node)
+                        : AbortComposite(frame);
+                default:
+                    return Fault(
+                        ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                        "The retaining reactive composite frame has an unknown lifecycle state.",
+                        frame.NodeIndex);
+            }
+        }
+
+        private ReferenceExecutionEnvelope StartGuardPass(ReferenceFrame frame, CompiledNodeRecord node)
+        {
+            if (_frames[_frames.Count - 1] != frame
+                || frame.RetainedFrames.Count == 0
+                || frame.RetainedChildOrdinal >= node.Children.Count)
+            {
+                return Fault(
+                    ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                    "A guard pass requires a parked retained branch and no active child.",
+                    frame.NodeIndex);
+            }
+
+            frame.GuardPassPending = false;
+            frame.GuardPassActive = true;
+            _activeGuardPasses++;
+            frame.State = ReferenceFrameState.Running;
+            WriteUInt32(node, 4, frame.RetainedChildOrdinal + 1);
+            WriteCompositeCursor(node, 0);
+            return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
+        }
+
+        private ReferenceExecutionEnvelope AcceptGuard(
+            ReferenceFrame frame,
+            CompiledNodeRecord node,
+            IReferenceReactiveCompositeHandler handler)
+        {
+            var cursor = ReadCompositeCursor(node);
+            if (cursor >= frame.RetainedChildOrdinal)
+            {
+                return Fault(
+                    ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                    "A guard result arrived for a child that is not before the retained child.",
+                    frame.NodeIndex);
+            }
+
+            var guardNodeIndex = _program.ChildIndices[checked((int)(node.Children.Offset + cursor))];
+            if (!frame.PendingChildNodeIndex.IsValid || frame.PendingChildNodeIndex.Value != guardNodeIndex)
+            {
+                return Fault(
+                    ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                    "The pending guard result does not match the guard cursor.",
+                    frame.NodeIndex);
+            }
+
+            ReferenceCompositeDecision decision;
+            try
+            {
+                decision = handler.Accept(frame.PendingChildResult, cursor, node.Children.Count);
+            }
+            catch (Exception exception)
+            {
+                return Fault(
+                    ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                    "The retaining-composite handler rejected a guard result: " + exception.GetType().Name + ".",
+                    frame.NodeIndex);
+            }
+
+            frame.HasPendingChildResult = false;
+            frame.PendingChildNodeIndex = RuntimeNodeIndex.Invalid;
+            if (decision.IsTerminal)
+            {
+                if (decision.Status != NodeStatus.Success && decision.Status != NodeStatus.Failure)
+                {
+                    return Fault(
+                        ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                        "The retaining-composite handler returned an invalid terminal guard decision.",
+                        frame.NodeIndex);
+                }
+
+                // The guard ends the composite: abort the retained branch, then record the result.
+                WriteCompositeCursor(node, cursor);
+                frame.RetainedEndPending = true;
+                frame.RetainedEndStatus = decision.Status;
+                BeginRetainedBranchAbort(frame, _frames.Count - 1, new RuntimeNodeIndex(guardNodeIndex));
+                return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
+            }
+
+            if (decision.CursorAfterAcceptance != checked(cursor + 1))
+            {
+                return Fault(
+                    ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                    "The retaining-composite handler returned an invalid guard acceptance decision.",
+                    frame.NodeIndex);
+            }
+
+            WriteCompositeCursor(node, decision.CursorAfterAcceptance);
+            return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
+        }
+
+        private ReferenceExecutionEnvelope ResumeRetainedBranch(ReferenceFrame frame, CompiledNodeRecord node)
+        {
+            if (_frames[_frames.Count - 1] != frame || frame.RetainedFrames.Count == 0)
+            {
+                return Fault(
+                    ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                    "A retained branch can resume only when its guard pass has no active guard.",
+                    frame.NodeIndex);
+            }
+
+            frame.GuardPassActive = false;
+            _activeGuardPasses--;
+            WriteUInt32(node, 4, 0);
+            var branchStartDepth = _frames.Count;
+            AppendFrames(frame.RetainedFrames);
+            frame.RetainedFrames.Clear();
+            // The resumed branch now gets the update-start processing it skipped (timeouts, v1
+            // reactive replacement, the next retaining composite's guard pass).
+            PrepareUpdateStart(branchStartDepth, true);
+            return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
+        }
+
+        /// <summary>
+        /// Starts the deepest-first abort of <paramref name="owner"/>'s parked branch, caused by the
+        /// guard <paramref name="guardNodeIndex"/>. Frames above the owner (a guard branch that took
+        /// over) are held aside and come back once the parked branch has exited.
+        /// </summary>
+        private void BeginRetainedBranchAbort(ReferenceFrame owner, int ownerDepth, RuntimeNodeIndex guardNodeIndex)
+        {
+            owner.GuardPassActive = false;
+            _activeGuardPasses--;
+            owner.RetainedAbortActive = true;
+            MoveFramesAbove(ownerDepth, owner.HeldGuardFrames);
+            AppendFrames(owner.RetainedFrames);
+            owner.RetainedFrames.Clear();
+            BeginAbortTraversal(ownerDepth + 1, NodeAbortReason.Explicit, guardNodeIndex);
+        }
+
+        /// <summary>
+        /// Called where a branch has come to rest with a running result. If that leaves the subtree
+        /// of a retaining composite in its guard pass (no parallel owner in between), the running
+        /// guard takes over: the parked branch is aborted first and the update continues
+        /// afterwards as it would have here.
+        /// </summary>
+        private bool TryBeginGuardTakeover(ReferenceRetainedRest rest)
+        {
+            if (_activeGuardPasses == 0) return false;
+            for (var depth = _frames.Count - 2; depth >= 0; depth--)
+            {
+                var frame = _frames[depth];
+                if (_nodeBindings[frame.NodeIndex.Value].IsParallel && frame.ActiveParallelBranchOrdinal >= 0)
+                    return false;
+                if (!frame.GuardPassActive) continue;
+                frame.TakeoverRest = rest;
+                BeginRetainedBranchAbort(frame, depth, _frames[depth + 1].NodeIndex);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryCompleteRetainedAbortBoundary(out ReferenceExecutionEnvelope envelope)
+        {
+            envelope = default;
+            if (_abortTargetDepth <= 0 || _frames.Count != _abortTargetDepth) return false;
+            var owner = _frames[_abortTargetDepth - 1];
+            if (!owner.RetainedAbortActive) return false;
+
+            owner.RetainedAbortActive = false;
+            ClearAbortTraversal();
+            var node = _program.Nodes[(int)owner.NodeIndex.Value];
+            WriteUInt32(node, 4, 0);
+            if (owner.RetainedEndPending)
+            {
+                owner.RetainedEndPending = false;
+                owner.PendingTerminalStatus = owner.RetainedEndStatus;
+                owner.State = ReferenceFrameState.TerminalPendingExit;
+                Emit(ReferenceTraceEventKind.NodeTicked, owner.NodeIndex, status: owner.PendingTerminalStatus);
+                envelope = Envelope(ReferenceExecutionProgress.Suspended, null, 1);
+                return true;
+            }
+
+            // Takeover: the running guard is the composite's running child now.
+            AppendFrames(owner.HeldGuardFrames);
+            owner.HeldGuardFrames.Clear();
+            envelope = ContinueAfterRunningRest(owner.TakeoverRest, 1);
+            return true;
+        }
+
+        /// <summary>The continuation of a branch at rest, as in <see cref="Tick"/> and <see cref="CompleteParallelVisit"/>.</summary>
+        private ReferenceExecutionEnvelope ContinueAfterRunningRest(ReferenceRetainedRest rest, ulong steps)
+        {
+            if (rest == ReferenceRetainedRest.LeafTick && _observerQueue.Count != 0 && HasActiveParallelOwner())
+            {
+                _parallelSuspendPending = true;
+                return Envelope(ReferenceExecutionProgress.Suspended, null, steps);
+            }
+
+            if (TrySuspendActiveParallelBranch())
+                return Envelope(ReferenceExecutionProgress.Suspended, null, steps);
+            if (_observerQueue.Count != 0)
+            {
+                _waitingPending = true;
+                return Envelope(ReferenceExecutionProgress.Suspended, null, steps);
+            }
+
+            FinishUpdate();
+            return Envelope(ReferenceExecutionProgress.Waiting, null, steps);
+        }
+
+        /// <summary>
+        /// An abort that reaches a retaining composite still holding parked frames aborts them as
+        /// part of the same deepest-first traversal: the held guard branch first, then the retained
+        /// branch, then the composite itself (execution-semantics-v1.md, common rule 3).
+        /// </summary>
+        private bool TryUnparkForAbort(ReferenceFrame frame)
+        {
+            if (!frame.HasParkedFrames) return false;
+            if (frame.GuardPassActive) _activeGuardPasses--;
+            frame.GuardPassPending = false;
+            frame.GuardPassActive = false;
+            frame.RetainedAbortActive = false;
+            frame.RetainedEndPending = false;
+            AppendFrames(frame.RetainedFrames);
+            frame.RetainedFrames.Clear();
+            AppendFrames(frame.HeldGuardFrames);
+            frame.HeldGuardFrames.Clear();
+            return true;
+        }
+
+        private static bool IsValidRetainingStorage(CompiledNodeRecord node)
+        {
+            return node.MemoryLifetime == NodeMemoryLifetime.Activation
+                && node.InstanceMemorySize == 8
+                && node.InstanceMemoryAlignment == 4
+                && node.InstanceMemoryOffset % 4 == 0;
+        }
+
         /// <summary>
         /// Asks an active memory composite to abandon its running child and choose again from its
         /// first child at the start of the next update (P9-001). This is the managed agent layer's
@@ -1395,10 +1700,17 @@ namespace AIBT
             if (depth < 0 || _frames.Count <= depth + 1) return false;
 
             // A reactive composite above the requested one restarts this whole subtree in this
-            // update anyway, through the normative reactive reset.
+            // update anyway, through the normative reactive reset. A retaining composite above it
+            // first runs its guard pass; the request waits until that pass resumes the branch.
             for (var above = 0; above < depth; above++)
             {
-                if (_nodeBindings[_frames[above].NodeIndex.Value].HasReactive) return false;
+                ref readonly var aboveBinding = ref _nodeBindings[_frames[above].NodeIndex.Value];
+                if (aboveBinding.HasReactive) return false;
+                if (aboveBinding.IsRetaining && _frames[above].LastGuardPassUpdateId != _currentUpdate.UpdateId)
+                {
+                    _deferredReevaluation = requested;
+                    return false;
+                }
             }
 
             var owner = _frames[depth];
@@ -1430,10 +1742,65 @@ namespace AIBT
             return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
         }
 
-        private void PrepareReactiveResetForNewUpdate(int startDepth = 0)
+        /// <summary>
+        /// Update-start processing for the active frames from <paramref name="startDepth"/> up
+        /// (reference-executor-machine-v1.md, "Retaining reactive composites"): an expired timeout,
+        /// else a v1 reactive replacement, each shallowest first, but not below the shallowest
+        /// retaining composite that still holds a running child; if neither aborts that composite,
+        /// its running branch is parked for its guard pass. Without retaining composites this is
+        /// exactly the Phase 1 processing.
+        /// </summary>
+        private void PrepareUpdateStart(int startDepth, bool applyDeferredReevaluation)
+        {
+            if (applyDeferredReevaluation && _deferredReevaluation.IsValid)
+            {
+                _requestedReevaluation = _deferredReevaluation;
+                _deferredReevaluation = RuntimeNodeIndex.Invalid;
+                if (PrepareRequestedReevaluationForNewUpdate()) return;
+            }
+
+            var cut = FindRetainingCut(startDepth);
+            var endDepth = cut < 0 ? _frames.Count : cut;
+            if (PrepareExpiredTimeoutForNewUpdate(startDepth, endDepth)) return;
+            if (PrepareReactiveResetForNewUpdate(startDepth, endDepth)) return;
+            if (cut >= 0) ParkRetainedBranch(cut);
+        }
+
+        private int FindRetainingCut(int startDepth)
+        {
+            for (var depth = startDepth; depth < _frames.Count - 1; depth++)
+            {
+                var frame = _frames[depth];
+                if (_nodeBindings[frame.NodeIndex.Value].IsRetaining
+                    && frame.LastGuardPassUpdateId != _currentUpdate.UpdateId)
+                    return depth;
+            }
+
+            return -1;
+        }
+
+        private void ParkRetainedBranch(int depth)
+        {
+            var owner = _frames[depth];
+            owner.RetainedChildOrdinal = ReadCompositeCursor(_program.Nodes[(int)owner.NodeIndex.Value]);
+            MoveFramesAbove(depth, owner.RetainedFrames);
+            owner.HasPendingChildResult = false;
+            owner.PendingChildNodeIndex = RuntimeNodeIndex.Invalid;
+            owner.LastGuardPassUpdateId = _currentUpdate.UpdateId;
+            owner.GuardPassPending = true;
+        }
+
+        private void MoveFramesAbove(int depth, List<ReferenceFrame> target)
+        {
+            target.Clear();
+            for (var index = depth + 1; index < _frames.Count; index++) target.Add(_frames[index]);
+            _frames.RemoveRange(depth + 1, _frames.Count - depth - 1);
+        }
+
+        private bool PrepareReactiveResetForNewUpdate(int startDepth, int endDepth)
         {
             _reactiveResetOwnerDepth = -1;
-            for (var depth = startDepth; depth < _frames.Count; depth++)
+            for (var depth = startDepth; depth < endDepth && depth < _frames.Count; depth++)
             {
                 var candidate = _frames[depth];
                 if (_nodeBindings[candidate.NodeIndex.Value].HasReactive
@@ -1447,9 +1814,10 @@ namespace AIBT
                 }
             }
 
-            if (_reactiveResetOwnerDepth < 0 || _frames.Count <= _reactiveResetOwnerDepth + 1)
+            if (_reactiveResetOwnerDepth < 0) return false;
+            if (_frames.Count <= _reactiveResetOwnerDepth + 1)
             {
-                return;
+                return true;
             }
 
             BeginAbortTraversal(
@@ -1457,6 +1825,7 @@ namespace AIBT
                 NodeAbortReason.Explicit,
                 _frames[_reactiveResetOwnerDepth].NodeIndex,
                 forReactiveReset: true);
+            return true;
         }
 
         /// <summary>
@@ -1475,6 +1844,14 @@ namespace AIBT
                 binding.IsParallel = _parallelRegistry.Contains(node.NodeTypeId, node.NodeTypeVersion);
                 binding.HasDecorator = _decoratorRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out binding.DecoratorKind);
                 binding.HasReactive = _reactiveCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out binding.Reactive);
+                if (binding.HasReactive
+                    && _reactiveCompositeRegistry.TryGetKind(node.NodeTypeId, node.NodeTypeVersion, out var reactiveKind)
+                    && reactiveKind.IsRetaining())
+                {
+                    // HasReactive keeps meaning "v1 reactive composite" for every existing rule.
+                    binding.HasReactive = false;
+                    binding.IsRetaining = true;
+                }
                 binding.HasMemory = _memoryCompositeRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out binding.Memory);
                 binding.HasLeaf = _leafRegistry.TryGet(node.NodeTypeId, node.NodeTypeVersion, out binding.Leaf);
             }
@@ -1488,6 +1865,7 @@ namespace AIBT
             internal bool HasDecorator;
             internal ReferenceDecoratorKind DecoratorKind;
             internal bool HasReactive;
+            internal bool IsRetaining;
             internal IReferenceReactiveCompositeHandler Reactive;
             internal bool HasMemory;
             internal IReferenceMemoryCompositeHandler Memory;
@@ -1692,6 +2070,8 @@ namespace AIBT
         {
             if (frame.LastTickUpdateId == _currentUpdate.UpdateId)
             {
+                if (TryBeginGuardTakeover(ReferenceRetainedRest.Visit))
+                    return Envelope(ReferenceExecutionProgress.Suspended, null, 0);
                 if (TrySuspendActiveParallelBranch())
                     return Envelope(ReferenceExecutionProgress.Suspended, null, 0);
                 if (_observerQueue.Count != 0)
@@ -1726,6 +2106,8 @@ namespace AIBT
             if (status == NodeStatus.Running)
             {
                 frame.State = ReferenceFrameState.Running;
+                if (TryBeginGuardTakeover(ReferenceRetainedRest.LeafTick))
+                    return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
                 if (_observerQueue.Count != 0 && HasActiveParallelOwner())
                 {
                     _parallelSuspendPending = true;
@@ -1874,6 +2256,8 @@ namespace AIBT
             {
                 if (TryCompleteParallelBranchAbortBoundary())
                     return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
+                if (TryCompleteRetainedAbortBoundary(out var retainedBoundary))
+                    return retainedBoundary;
                 if (_abortForReactiveReset && _frames.Count == _abortTargetDepth)
                 {
                     ClearAbortTraversal();
@@ -1925,6 +2309,9 @@ namespace AIBT
             if (TryCompleteParallelBranchAbortBoundary())
                 return Envelope(ReferenceExecutionProgress.Suspended, null, 1);
 
+            if (TryCompleteRetainedAbortBoundary(out var retainedBoundary))
+                return retainedBoundary;
+
             if (_abortForReactiveReset && _frames.Count == _abortTargetDepth)
             {
                 ClearAbortTraversal();
@@ -1975,6 +2362,11 @@ namespace AIBT
                     continue;
                 }
 
+                if (_nodeBindings[frame.NodeIndex.Value].IsRetaining && TryUnparkForAbort(frame))
+                {
+                    continue;
+                }
+
                 frame.AbortReason = _abortReason;
                 frame.SourceNodeIndex = _abortSourceNodeIndex;
                 frame.AbortCallbackCompleted = false;
@@ -2010,6 +2402,15 @@ namespace AIBT
                     failure = Fault(
                         ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
                         "An observer owner must have an explicit reactive-composite binding.",
+                        observerNode);
+                    return false;
+                }
+
+                if (ownerKind.IsRetaining())
+                {
+                    failure = Fault(
+                        ReferenceExecutionDiagnosticCodes.InvalidCompositeState,
+                        "Retaining reactive composites do not support observers (ADR-P10-013).",
                         observerNode);
                     return false;
                 }
@@ -2444,6 +2845,15 @@ namespace AIBT
             _nodeMemory[offset + 3] = (byte)(value >> 24);
         }
 
+        private void WriteUInt32(CompiledNodeRecord node, int fieldOffset, uint value)
+        {
+            var offset = checked((int)node.InstanceMemoryOffset + fieldOffset);
+            _nodeMemory[offset] = (byte)value;
+            _nodeMemory[offset + 1] = (byte)(value >> 8);
+            _nodeMemory[offset + 2] = (byte)(value >> 16);
+            _nodeMemory[offset + 3] = (byte)(value >> 24);
+        }
+
         private void WriteUInt32(CompiledNodeRecord node, uint value)
         {
             var offset = checked((int)node.InstanceMemoryOffset);
@@ -2524,6 +2934,11 @@ namespace AIBT
             {
                 var frame = frames[index];
                 if (frame.State != ReferenceFrameState.Inactive) count = checked(count + 1);
+                if (frame.HasParkedFrames)
+                {
+                    count = checked(count + CountActiveFrames(frame.RetainedFrames));
+                    count = checked(count + CountActiveFrames(frame.HeldGuardFrames));
+                }
                 if (frame.ParallelBranches == null) continue;
 
                 for (var branchIndex = 0; branchIndex < frame.ParallelBranches.Length; branchIndex++)
@@ -2558,6 +2973,7 @@ namespace AIBT
             });
             ClearActivationMemory();
             _frames.Clear();
+            _activeGuardPasses = 0;
             _terminalResult = null;
             _faulted = true;
             ClearObserverQueue();

@@ -7,6 +7,17 @@ namespace AIBT
     {
         Sequence = 1,
         Selector = 2,
+        // ADR-P10-013: re-evaluate the children before the running one as a guard pass and keep
+        // the running child. Accept their results with the memory-composite tables.
+        RetainingSequence = 3,
+        RetainingSelector = 4,
+    }
+
+    internal static class ReferenceReactiveCompositeKindExtensions
+    {
+        internal static bool IsRetaining(this ReferenceReactiveCompositeKind kind)
+            => kind == ReferenceReactiveCompositeKind.RetainingSequence
+                || kind == ReferenceReactiveCompositeKind.RetainingSelector;
     }
 
     internal interface IReferenceReactiveCompositeHandler : IReferenceMemoryCompositeHandler
@@ -74,6 +85,16 @@ namespace AIBT
                     1,
                     new ReferenceReactiveSelectorHandler(),
                     ReferenceReactiveCompositeKind.Selector),
+                new ReferenceReactiveCompositeBinding(
+                    StableHash.Fnv1A64("aibt.core.reactive-sequence-retaining"),
+                    1,
+                    new ReferenceReactiveSequenceHandler(),
+                    ReferenceReactiveCompositeKind.RetainingSequence),
+                new ReferenceReactiveCompositeBinding(
+                    StableHash.Fnv1A64("aibt.core.reactive-selector-retaining"),
+                    1,
+                    new ReferenceReactiveSelectorHandler(),
+                    ReferenceReactiveCompositeKind.RetainingSelector),
             });
         }
 

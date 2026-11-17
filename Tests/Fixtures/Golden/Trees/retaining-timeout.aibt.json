@@ -1,0 +1,36 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.retaining-timeout",
+  "name": "Retaining Timeout",
+  "root": "root",
+  "nodes": {
+    "limit": {
+      "type": "aibt.core.timeout",
+      "typeVersion": 1,
+      "parameters": {
+        "durationMicroseconds": 3000000,
+        "terminalResult": "failure"
+      },
+      "children": [
+        "wait"
+      ]
+    },
+    "ok": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "root": {
+      "type": "aibt.core.reactive-sequence-retaining",
+      "typeVersion": 1,
+      "children": [
+        "ok",
+        "limit"
+      ]
+    },
+    "wait": {
+      "type": "aibt.test.running",
+      "typeVersion": 1
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.retaining-pitfall",
+  "name": "Retaining Pitfall",
+  "root": "root",
+  "nodes": {
+    "cond": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "root": {
+      "type": "aibt.core.reactive-sequence-retaining",
+      "typeVersion": 1,
+      "children": [
+        "cond",
+        "stepA",
+        "stepB"
+      ]
+    },
+    "stepA": {
+      "type": "aibt.test.count-to-two",
+      "typeVersion": 1
+    },
+    "stepB": {
+      "type": "aibt.test.count-to-two",
+      "typeVersion": 1
+    }
+  }
+}

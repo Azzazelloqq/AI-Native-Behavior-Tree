@@ -1,0 +1,176 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "retaining selector keeps a running job (ADR-P10-013 example 1)",
+  "tree": "Trees/retaining-crew.aibt.json",
+  "treeInstanceId": 21,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "waiting",
+        "trace": [
+          {
+            "event": "update-started"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 0
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 1
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 2
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 2,
+            "status": "failure"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 2,
+            "exitReason": "failure"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 3
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 3,
+            "status": "running"
+          },
+          {
+            "event": "update-completed"
+          }
+        ],
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-error-diagnostics"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "update",
+      "updateId": 2,
+      "snapshotRevision": 2,
+      "timeMicroseconds": 1000000,
+      "expect": {
+        "progress": "waiting",
+        "trace": [
+          {
+            "event": "update-started"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 2
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 2,
+            "status": "failure"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 2,
+            "exitReason": "failure"
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 3,
+            "status": "running"
+          },
+          {
+            "event": "update-completed"
+          }
+        ],
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-error-diagnostics"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "update",
+      "updateId": 3,
+      "snapshotRevision": 3,
+      "timeMicroseconds": 2000000,
+      "expect": {
+        "progress": "waiting",
+        "trace": [
+          {
+            "event": "update-started"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 2
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 2,
+            "status": "failure"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 2,
+            "exitReason": "failure"
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 3,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 3,
+            "exitReason": "success"
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 1,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 1,
+            "exitReason": "success"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 4
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 4,
+            "status": "running"
+          },
+          {
+            "event": "update-completed"
+          }
+        ],
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-error-diagnostics"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "reactive",
+    "retaining"
+  ]
+}

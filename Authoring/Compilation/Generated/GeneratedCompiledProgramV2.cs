@@ -295,6 +295,7 @@ namespace AIBT.Authoring
             }
             var scopeResult = GeneratedScopeCompiler.Compile(document, generated, registeredTypes, options.SourceId);
             Add(diagnostics, scopeResult.Diagnostics);
+            AddUnsupportedNativeNodes(diagnostics, document, options.SourceId);
             if (HasError(diagnostics)) return Failure(diagnostics);
             var semanticDocument = CreateSemanticProjection(document, generated);
             var projectionRegistry = NodeRegistryBuilder.CreateWithBuiltIns().Build();
@@ -320,6 +321,31 @@ namespace AIBT.Authoring
                 diagnostics.Add(ReferenceCompilerDiagnostics.Create(ReferenceCompilerDiagnosticCodes.InvalidCompiledStructure,
                     "Generated compiled v2 construction failed: " + exception.Message, options?.SourceId, treeId: document.TreeId));
                 return Failure(diagnostics);
+            }
+        }
+
+        /// <summary>
+        /// ADR-P10-013 stage 1: the retaining reactive composites run on the reference executor
+        /// only; the native lifecycle machine implements them in stage 2. Compiling such a tree for
+        /// native execution is refused with a clear error instead of producing a program that the
+        /// native preparation would reject with a generic type mismatch.
+        /// </summary>
+        private static void AddUnsupportedNativeNodes(ICollection<Diagnostic> diagnostics, TreeDocument document, string sourceId)
+        {
+            foreach (var node in document.Nodes)
+            {
+                if (node.TypeId != BuiltInNodeManifests.RetainingReactiveSequenceTypeId
+                    && node.TypeId != BuiltInNodeManifests.RetainingReactiveSelectorTypeId) continue;
+                diagnostics.Add(ReferenceCompilerDiagnostics.Create(
+                    ReferenceCompilerDiagnosticCodes.UnsupportedCapability,
+                    "'" + node.TypeId + "' is not supported by the native executor yet (ADR-P10-013 stage 2). "
+                    + "A tree that uses it runs only on the reference executor (BehaviorTreeAgent); "
+                    + "for native execution use '" + BuiltInNodeManifests.ReactiveSequenceTypeId + "' or '"
+                    + BuiltInNodeManifests.ReactiveSelectorTypeId + "', which restart their running child on every update.",
+                    sourceId,
+                    "/nodes/" + node.Id.Value.Replace("~", "~0").Replace("/", "~1") + "/type",
+                    document.TreeId,
+                    node.Id));
             }
         }
 
@@ -640,6 +666,10 @@ namespace AIBT.Authoring
                 if (!registry.TryGet(node.TypeId, out var entry) || entry.Manifest.Version != (uint)node.TypeVersion
                     || entry.Manifest.Kind != NodeBehaviorKind.Condition)
                     throw new InvalidOperationException("Only an exact registered Condition node may own a version-2 observer.");
+                if (parents.TryGetValue(node.Id, out var retainingParent)
+                    && (retainingParent.TypeId == BuiltInNodeManifests.RetainingReactiveSequenceTypeId
+                        || retainingParent.TypeId == BuiltInNodeManifests.RetainingReactiveSelectorTypeId))
+                    throw new InvalidOperationException("Retaining reactive composites do not support observers yet (ADR-P10-013).");
                 if (!parents.TryGetValue(node.Id, out var parent)
                     || (parent.TypeId != BuiltInNodeManifests.ReactiveSequenceTypeId && parent.TypeId != BuiltInNodeManifests.ReactiveSelectorTypeId))
                     throw new InvalidOperationException("A version-2 observer must be a direct child of one reactive composite.");

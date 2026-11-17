@@ -4,6 +4,31 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Reactive composites that keep their running child, stage 1 (P10-013 finding F2, ADR-P10-013)
+
+- **New built-in composites:** `aibt.core.reactive-sequence-retaining` ("Reactive sequence (keeps
+  running child)") and `aibt.core.reactive-selector-retaining` ("Reactive selector (keeps running
+  child)"). On every update after the one they are entered in, they re-evaluate the children before
+  the running one as a *guard pass* and then resume the running child instead of aborting and
+  re-entering it. Long work under them makes progress: `aibt.stdlib.wait` with `ticks >= 2` finishes,
+  a `Timeout` keeps its deadline, an `on-enter` `Cooldown` is entered once. A guard that ends the
+  composite or starts running aborts the kept branch with reason `Explicit`, after the guard's own
+  records. Every child before the running one is a guard, so put multi-step work in one child
+  (`retaining-seq [cond, memory-seq [stepA, stepB]]`).
+- **Reference executor only in this stage.** Managed agents (`BehaviorTreeAgent`, `ManagedTreeInstance`)
+  run them. The native path rejects them explicitly until stage 2: the generated compiler (production
+  tree assets, graph execution, native-only validation) reports `AIBT3012` at `/nodes/<id>/type`, and
+  building a native machine or a generated runtime definition from a program containing them fails.
+- **Validation:** an abort observer whose parent is a retaining composite is an error
+  (`InvalidObserverContext`, "Retaining reactive composites do not support observers yet").
+- **Unchanged:** v1 `reactive-sequence`/`reactive-selector` (manifests, behaviour, traces; new pin
+  tests), ABI v2, the compiled format version, the trace format, the package version. Adding the two
+  manifests changes the built-in registry hash and therefore compiled content hashes; fixtures that
+  pin them were regenerated. `aibt.core.` is now documented as reserved for structural composites and
+  decorators executed by the native lifecycle machine (amended P7-028 note); adding one needs an ADR.
+- **Public API (additive):** `BuiltInNodeManifests.RetainingReactiveSequenceTypeId` and
+  `RetainingReactiveSelectorTypeId` (`AIBT.Authoring`).
+
 ### Simulation container: default step limit (P10-011 finding F1)
 
 - **Changed (experimental API):** `TreeSimulationSettings.Default` now sets `MaximumStepsPerThink` to

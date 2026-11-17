@@ -2,7 +2,7 @@
 
 Source: the real AIBT node registry, via `AIBT.Authoring.NodeCatalogQuery` (P6-003). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
-65 registered node type(s).
+67 registered node type(s).
 
 ---
 
@@ -554,6 +554,68 @@ Full contract (verbatim `get_node_contract` output):
 
 ---
 
+### `aibt.core.reactive-selector-retaining` (v1)
+
+- **Summary:** Recheck higher-priority choices on every eligible update and keep the running choice unless one of them succeeds or runs.
+- **Category:** Reactive selector (keeps running child)
+- **Kind:** Composite
+- **When to use:** Use for priority behavior in which a higher-priority choice preempts long-running work only when it actually succeeds or runs.
+- **When not to use:** Do not put a leaf whose Enter or Tick starts expensive or non-idempotent work before the running choice: it runs again on every update.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Low
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.core.reactive-selector-retaining",
+  "version": 1,
+  "summary": "Recheck higher-priority choices on every eligible update and keep the running choice unless one of them succeeds or runs.",
+  "category": "Reactive selector (keeps running child)",
+  "kind": "composite",
+  "whenToUse": "Use for priority behavior in which a higher-priority choice preempts long-running work only when it actually succeeds or runs.",
+  "whenNotToUse": "Do not put a leaf whose Enter or Tick starts expensive or non-idempotent work before the running choice: it runs again on every update.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": null,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "running",
+    "success"
+  ],
+  "memory": {
+    "size": 8,
+    "alignment": 4,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 0,
+    "alignment": 1
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "low",
+  "examples": [
+    {
+      "title": "Base behavior",
+      "parameters": {},
+      "expectedBehavior": "An empty selector that keeps its running child fails."
+    }
+  ]
+}
+```
+
+---
+
 ### `aibt.core.reactive-sequence` (v1)
 
 - **Summary:** Reevaluate ordered children from the first child on every eligible update.
@@ -609,6 +671,68 @@ Full contract (verbatim `get_node_contract` output):
       "title": "Base behavior",
       "parameters": {},
       "expectedBehavior": "An empty reactive sequence succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.core.reactive-sequence-retaining` (v1)
+
+- **Summary:** Recheck the children before the running one on every eligible update and keep the running child unless one of them fails or runs.
+- **Category:** Reactive sequence (keeps running child)
+- **Kind:** Composite
+- **When to use:** Use when conditions must guard long-running work, such as a multi-update action, that must not restart on every update.
+- **When not to use:** Do not put several multi-update children in one sequence: every child before the running one is rechecked and takes over when it runs; group the steps in one memory sequence.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Low
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.core.reactive-sequence-retaining",
+  "version": 1,
+  "summary": "Recheck the children before the running one on every eligible update and keep the running child unless one of them fails or runs.",
+  "category": "Reactive sequence (keeps running child)",
+  "kind": "composite",
+  "whenToUse": "Use when conditions must guard long-running work, such as a multi-update action, that must not restart on every update.",
+  "whenNotToUse": "Do not put several multi-update children in one sequence: every child before the running one is rechecked and takes over when it runs; group the steps in one memory sequence.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": null,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "running",
+    "success"
+  ],
+  "memory": {
+    "size": 8,
+    "alignment": 4,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 0,
+    "alignment": 1
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "low",
+  "examples": [
+    {
+      "title": "Base behavior",
+      "parameters": {},
+      "expectedBehavior": "An empty sequence that keeps its running child succeeds."
     }
   ]
 }

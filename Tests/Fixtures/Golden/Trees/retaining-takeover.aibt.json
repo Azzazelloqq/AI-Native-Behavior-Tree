@@ -1,0 +1,37 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.retaining-takeover",
+  "name": "Retaining Takeover",
+  "root": "root",
+  "nodes": {
+    "alarm": {
+      "type": "aibt.test.failure-except-update-3",
+      "typeVersion": 1
+    },
+    "flee": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "alarm",
+        "run"
+      ]
+    },
+    "patrol": {
+      "type": "aibt.test.running",
+      "typeVersion": 1
+    },
+    "root": {
+      "type": "aibt.core.reactive-selector-retaining",
+      "typeVersion": 1,
+      "children": [
+        "flee",
+        "patrol"
+      ]
+    },
+    "run": {
+      "type": "aibt.test.running",
+      "typeVersion": 1
+    }
+  }
+}

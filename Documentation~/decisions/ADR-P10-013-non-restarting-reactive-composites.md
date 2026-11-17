@@ -1,8 +1,9 @@
 # ADR P10-013: Reactive composites that keep their running child
 
-- Status: Proposed (2026-11-17). The owner approved writing this ADR only. Code, specification
-  edits and tests need a separate approval after the owner has read it. Nothing here is implemented.
-- Decision ID: not assigned
+- Status: Accepted (2026-11-17). Proposed the same day; the owner accepted it with all nine
+  recommendations of §6 (see "Owner decisions" below) and approved stage 1 of §5, including the
+  specification edits of §2.1. Stages 2 and 3 need their own approval.
+- Decision ID: AIBT-048
 - Task: `Planning~/Tasks/P10/P10-013-non-restarting-reactive-composites.md`
 - Origin: finding F2 of P10-011 (`Planning~/Evidence/P10-011/README.md` §7, "F2"), confirmed in
   numbers by P10-011 §5.1 and P10-012.
@@ -544,3 +545,25 @@ owner's acceptance before the next stage.
    work; it does not bring `io-reactive16` close to `io-loop16`, because re-evaluating 14 guards per
    think is the requested behaviour. *Recommendation: accept the stage-3 targets in §5 as the
    measure of success.*
+
+## Owner decisions (2026-11-17)
+
+The owner accepted every recommendation of §6:
+
+1. Versioning: new type IDs, option (b). The P7-028 sentence now reads "reserved for structural
+   composites and decorators executed by the native lifecycle machine; adding one needs an ADR"
+   (`Planning~/Tasks/P7/P7-028-production-node-library.md`).
+2. Names: `aibt.core.reactive-sequence-retaining` and `aibt.core.reactive-selector-retaining`,
+   display names "Reactive sequence (keeps running child)" and "Reactive selector (keeps running
+   child)".
+3. Observers under the new nodes are a validation error for now.
+4. Preemption keeps abort reason `Explicit`; `ExpectedPublicAbiV2.txt` does not change.
+5. v1 nodes stay untouched and are not deprecated; their manifest bytes do not change.
+6. The pitfall of example 5 is documented only; no validator warning.
+7. New benchmark trees (`act-retain16`, `io-retain16`) in stage 3; existing trees unchanged.
+8. The v1 observation of §1.5 (no reactive reset in an update in which a `Timeout` expires) is not
+   touched by this work.
+9. Success is measured by the stage-3 targets of §5.
+
+Stage 1 is approved; stages 2 and 3 are not yet approved. Stage-1 results and any deviation from
+this document are recorded in `Planning~/Evidence/P10-013/README.md`.

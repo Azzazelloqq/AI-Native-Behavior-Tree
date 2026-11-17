@@ -1,5 +1,17 @@
 namespace AIBT
 {
+    /// <summary>
+    /// How an update continues after a retaining composite's takeover abort (ADR-P10-013): the
+    /// same way it would have continued at the point where the guard branch came to rest.
+    /// </summary>
+    internal enum ReferenceRetainedRest : byte
+    {
+        /// <summary>A leaf returned Running in this tick.</summary>
+        LeafTick,
+        /// <summary>A parallel visit ended non-terminal, or an already ticked leaf was reached again.</summary>
+        Visit,
+    }
+
     internal enum ReferenceParallelChildState : byte
     {
         NotStarted,
@@ -104,7 +116,47 @@ namespace AIBT
             ParallelAbortResumeSource = RuntimeNodeIndex.Invalid;
             ParallelAbortResumeReactiveReset = false;
             ParallelAbortResumeTimeout = false;
+            _retainedFrames?.Clear();
+            _heldGuardFrames?.Clear();
+            RetainedChildOrdinal = 0;
+            LastGuardPassUpdateId = 0;
+            GuardPassPending = false;
+            GuardPassActive = false;
+            RetainedAbortActive = false;
+            RetainedEndPending = false;
+            RetainedEndStatus = default;
+            TakeoverRest = default;
         }
+
+        private System.Collections.Generic.List<ReferenceFrame> _retainedFrames;
+        private System.Collections.Generic.List<ReferenceFrame> _heldGuardFrames;
+
+        /// <summary>
+        /// Retaining reactive composite (ADR-P10-013): the retained branch, parked off the execution
+        /// stack while the guard pass runs. Empty whenever no guard pass holds a branch.
+        /// </summary>
+        internal System.Collections.Generic.List<ReferenceFrame> RetainedFrames
+            => _retainedFrames ?? (_retainedFrames = new System.Collections.Generic.List<ReferenceFrame>());
+
+        /// <summary>
+        /// Retaining reactive composite: the guard branch that took over, held off the stack while
+        /// the retained branch below it is aborted. Empty otherwise.
+        /// </summary>
+        internal System.Collections.Generic.List<ReferenceFrame> HeldGuardFrames
+            => _heldGuardFrames ?? (_heldGuardFrames = new System.Collections.Generic.List<ReferenceFrame>());
+
+        internal bool HasParkedFrames
+            => (_retainedFrames != null && _retainedFrames.Count != 0)
+                || (_heldGuardFrames != null && _heldGuardFrames.Count != 0);
+
+        internal uint RetainedChildOrdinal { get; set; }
+        internal ulong LastGuardPassUpdateId { get; set; }
+        internal bool GuardPassPending { get; set; }
+        internal bool GuardPassActive { get; set; }
+        internal bool RetainedAbortActive { get; set; }
+        internal bool RetainedEndPending { get; set; }
+        internal NodeStatus RetainedEndStatus { get; set; }
+        internal ReferenceRetainedRest TakeoverRest { get; set; }
 
         /// <summary>
         /// Branch records for a new parallel activation with <paramref name="count"/> children, all

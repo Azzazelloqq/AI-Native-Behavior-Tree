@@ -54,6 +54,14 @@ namespace AIBT
             for (var index = 0; index < program.Nodes.Count; index++)
             {
                 var node = program.Nodes[index];
+                // ADR-P10-013 stage 1: no native kind exists for the retaining reactive composites
+                // yet; refuse the program rather than looking them up as a generated leaf.
+                if (NativeReactivePolicyV1.IsUnsupportedRetaining(node.NodeTypeId))
+                {
+                    failure = BurstContextResult.TypeMismatch;
+                    return false;
+                }
+
                 if (NativeHotReloadInstance.ClassifyKind(node.NodeTypeId)
                     != NativeLifecycleNodeKindV1.GeneratedLeaf)
                     continue;

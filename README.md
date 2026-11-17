@@ -264,7 +264,7 @@ The full, generated reference with every parameter, default and status is
 
 | Category | Nodes |
 | --- | --- |
-| Composites | `aibt.core.memory-sequence`, `memory-selector`, `reactive-sequence`, `reactive-selector`, `parallel` |
+| Composites | `aibt.core.memory-sequence`, `memory-selector`, `reactive-sequence`, `reactive-selector`, `reactive-sequence-retaining`, `reactive-selector-retaining`, `parallel` |
 | Decorators | `aibt.core.inverter`, `succeeder`, `failer`, `repeater`, `timeout`, `cooldown` |
 | Flow (7) | `aibt.unity.wait-seconds`, `wait-random`, `wait-frames`, `wait-until`, `idle`, `succeed`, `fail` |
 | Blackboard (21) | `set-bool`, `set-int`, `set-float`, `set-vector3`, `copy-*`, `increment-int`, `increment-float`, `toggle-bool`, `is-true`, `compare-int`, `compare-float`, `compare-*-keys`, `is-vector3-set`, `random-int`, `random-float`, `random-point`, `distance` |

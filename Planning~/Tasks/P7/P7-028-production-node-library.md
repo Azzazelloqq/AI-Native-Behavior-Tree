@@ -109,8 +109,11 @@ Two genuinely new architectural facts surfaced mid-implementation, each resolved
    live `[AibtCatalogSet]` shard (AIBT5012) — its authority-merge step treats a shard's own declared
    identity as a duplicate the moment it also appears in `RuntimeBuiltInCatalogAuthority` (the frozen
    11-composite snapshot), and as unauthorized the moment it doesn't. There is no way to add a new
-   natively-executed `aibt.core.*` node through this pathway; that namespace is permanently reserved
-   for the original 11 hardcoded structural composites/decorators. Owner chose a new always-on
+   natively-executed `aibt.core.*` node through this pathway; that namespace is reserved for
+   structural composites and decorators executed by the native lifecycle machine; adding one needs an
+   ADR. (Amended 2026-11-17 by the owner's acceptance of ADR-P10-013, which adds the two retaining
+   reactive composites to `RuntimeBuiltInCatalogAuthority`; the sentence originally read "permanently
+   reserved for the original 11 hardcoded structural composites/decorators".) Owner chose a new always-on
    namespace, `aibt.stdlib.*`, for built-in leaves that do carry a real native declaration.
 
 Delivered: two production nodes, each shipping both a real native Burst execution path and a real

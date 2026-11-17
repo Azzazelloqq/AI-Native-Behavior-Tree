@@ -174,6 +174,8 @@ A type's own summary line is shown where an XML-doc `<summary>` exists in source
 - `FIELD System.String ReactiveSelectorTypeId`
 - `FIELD System.String ReactiveSequenceTypeId`
 - `FIELD System.String RepeaterTypeId`
+- `FIELD System.String RetainingReactiveSelectorTypeId`
+- `FIELD System.String RetainingReactiveSequenceTypeId`
 - `FIELD System.String SucceederTypeId`
 - `FIELD System.String TimeoutTypeId`
 - `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.NodeManifest> All`

@@ -16,6 +16,8 @@ namespace AIBT.Authoring
         public const string RepeaterTypeId = "aibt.core.repeater";
         public const string TimeoutTypeId = "aibt.core.timeout";
         public const string CooldownTypeId = "aibt.core.cooldown";
+        public const string RetainingReactiveSequenceTypeId = "aibt.core.reactive-sequence-retaining";
+        public const string RetainingReactiveSelectorTypeId = "aibt.core.reactive-selector-retaining";
 
         private static readonly IReadOnlyList<NodeManifest> Manifests = Array.AsReadOnly(new[]
         {
@@ -30,6 +32,8 @@ namespace AIBT.Authoring
             CreateRepeater(),
             CreateTimeout(),
             CreateCooldown(),
+            CreateRetainingReactiveSequence(),
+            CreateRetainingReactiveSelector(),
         });
 
         public static IReadOnlyList<NodeManifest> All => Manifests;
@@ -80,6 +84,32 @@ namespace AIBT.Authoring
                 "Do not use when the chosen branch must run without priority reevaluation.",
                 new NodeMemoryDescriptor(4, 4, NodeMemoryLifetime.Activation),
                 "An empty reactive selector fails.");
+        }
+
+        // ADR-P10-013. Activation memory: the child cursor, then the retained child index plus one
+        // while a guard pass holds a retained branch (zero otherwise).
+        private static NodeManifest CreateRetainingReactiveSequence()
+        {
+            return Composite(
+                RetainingReactiveSequenceTypeId,
+                "Reactive sequence (keeps running child)",
+                "Recheck the children before the running one on every eligible update and keep the running child unless one of them fails or runs.",
+                "Use when conditions must guard long-running work, such as a multi-update action, that must not restart on every update.",
+                "Do not put several multi-update children in one sequence: every child before the running one is rechecked and takes over when it runs; group the steps in one memory sequence.",
+                new NodeMemoryDescriptor(8, 4, NodeMemoryLifetime.Activation),
+                "An empty sequence that keeps its running child succeeds.");
+        }
+
+        private static NodeManifest CreateRetainingReactiveSelector()
+        {
+            return Composite(
+                RetainingReactiveSelectorTypeId,
+                "Reactive selector (keeps running child)",
+                "Recheck higher-priority choices on every eligible update and keep the running choice unless one of them succeeds or runs.",
+                "Use for priority behavior in which a higher-priority choice preempts long-running work only when it actually succeeds or runs.",
+                "Do not put a leaf whose Enter or Tick starts expensive or non-idempotent work before the running choice: it runs again on every update.",
+                new NodeMemoryDescriptor(8, 4, NodeMemoryLifetime.Activation),
+                "An empty selector that keeps its running child fails.");
         }
 
         private static NodeManifest CreateParallel()

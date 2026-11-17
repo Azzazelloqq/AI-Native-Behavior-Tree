@@ -79,6 +79,103 @@ The index of a running child is retained. Earlier failed children are not reeval
 
 An empty reactive selector fails.
 
+## Retaining reactive sequence and selector
+
+Added by `Documentation~/decisions/ADR-P10-013-non-restarting-reactive-composites.md`. The type IDs
+are `aibt.core.reactive-sequence-retaining` and `aibt.core.reactive-selector-retaining`. They are new
+nodes beside `ReactiveSequence` and `ReactiveSelector`, whose rules above are unchanged. In this
+section "v1 reactive composite" means `ReactiveSequence` or `ReactiveSelector`.
+
+**Retaining reactive sequence.** `RetainingReactiveSequence` evaluates its children in semantic
+order. On the update in which it is entered it behaves exactly like `MemorySequence`. On every
+later eligible update in which it still has a running child `r` (the *retained child*), it first
+performs a *guard pass* over children `0 … r-1` and only then continues `r`.
+
+- Each child `i < r` is evaluated as a new activation (`Enter`, `Tick` until a result, `Exit`)
+  in semantic order. While this happens the retained child `r` and its descendants stay active
+  and receive no callback.
+- A guard that returns `Success` lets the pass continue with child `i + 1`.
+- A guard that returns `Failure` ends the sequence: the retained branch is aborted deepest-first
+  (`Abort`, then `Exit(Aborted)` per node), and then the sequence exits with `Failure`.
+- A guard that returns `Running` becomes the new running child: the retained branch is aborted
+  deepest-first, and the sequence stays `Running` with child `i` as its running child.
+- When every child `0 … r-1` has returned `Success`, the sequence *resumes* `r`. Resuming is not an
+  activation: `r` is not entered again and keeps its activation memory. Execution continues in
+  `r`'s branch as it would under a `MemorySequence`, and a leaf in it is ticked at most once in
+  this update.
+- A result of `r` is accepted as in `MemorySequence`: `Success` continues with `r + 1` in the same
+  update, `Failure` fails the sequence, `Running` keeps `r` retained.
+
+An empty retaining reactive sequence succeeds.
+
+**Retaining reactive selector.** `RetainingReactiveSelector` follows the same rules with the
+roles of the results exchanged: in the guard pass a child returning `Failure` lets the pass
+continue, a child returning `Success` ends the selector with `Success` after the retained branch
+is aborted, and a child returning `Running` takes over as above. A higher-priority child (lower
+index) therefore preempts the retained child only when it actually succeeds or runs; when every
+higher-priority child fails, the retained child continues. `r` failing continues with `r + 1` in
+the same update. An empty retaining reactive selector fails.
+
+**Common rules.**
+
+1. A guard pass happens at most once per activation of the composite per eligible update. It does
+   not happen in the update in which the composite is entered, and resuming a budget-suspended
+   update does not repeat it (`reference-executor-machine-v1.md`, "Budget").
+2. Abort of a retained branch because of a guard uses reason `Explicit`, and its source node is the
+   guard child whose result caused it. The guard's own `Enter` and `Tick` (and `Exit`, when it
+   completed) precede the retained branch's `Abort`. This is the one ordering in which a candidate
+   child is entered while the previous running subtree is still active; it applies only to
+   retaining reactive composites. The v1 rule "No candidate child is entered while the previous
+   running subtree is still active" is unchanged for v1 reactive composites.
+3. When the composite itself is aborted (by an ancestor, a `Timeout`, a parallel completion, a
+   tree stop or hot reload), its running child is aborted as for any composite. If the abort
+   arrives during a guard pass, the active guard branch is aborted first, then the retained
+   branch, each deepest-first.
+4. Children after `r` are evaluated only after `r` completes, as in a memory composite.
+5. A leaf in a guard position is entered, ticked and exited on every eligible update, including any
+   command it emits. Authors MUST NOT place a leaf whose `Enter` or `Tick` starts work that is
+   expensive or not idempotent in a guard position. (This is unchanged from v1, where the same leaf
+   is re-run on every update.)
+
+**Interactions.**
+
+- *Memory composites* are unchanged. A memory composite inside a retained branch keeps its cursor;
+  it does not re-check its earlier children. To re-check a guard deeper down, use a retaining
+  composite there too.
+- *A v1 reactive composite inside a retained branch* still restarts its own running child whenever
+  the update reaches it (update-start processing, `reference-executor-machine-v1.md`). Mixing is
+  allowed and does what each node says.
+- *A v1 reactive composite above a retaining composite* aborts the retaining composite with
+  everything below it at update start, as for any running child.
+- *Parallel.* A retaining composite inside a parallel branch performs its guard pass when the branch
+  is restored in the update. A `Parallel` used as a guard child is a new activation on each update;
+  if it returns `Running` it takes over. Parallel completion aborts a retaining child like any
+  running child.
+- *Repeater* is unchanged. A retaining composite as the repeated child is a new activation per
+  iteration, so the first update of each iteration has no guard pass. A repeater as the retained
+  child keeps its iteration count.
+- *Timeout.* A `Timeout` above the retaining composite is checked first and aborts it with reason
+  `Timeout`. A `Timeout` inside the retained branch keeps its deadline, because it is not
+  re-entered; it is checked when the update reaches it after the guard pass. If a guard takes over
+  first, the timeout's subtree is aborted with reason `Explicit`, not `Timeout`. A `Timeout` in a
+  guard position is re-entered on each update, as under a v1 reactive composite.
+- *Cooldown.* A `Cooldown` in the retained branch is not re-entered, so `OnEnter` records its
+  deadline once per real activation. A `Cooldown` in a guard position is evaluated on each update
+  like any guard.
+- *Budget suspension* happens only between atomic steps. The retained branch is neither aborted nor
+  exited by suspension. A resumed update does not start a second guard pass.
+- *Root completion* is unchanged: a retaining composite as root that ends because of a guard exposes
+  its result after the retained branch was aborted and exited and the composite exited.
+- *Hot reload* runs between updates, so no guard pass is ever in progress. A retaining composite is
+  a composite for the hot-reload cursor-reset rule. Changing a node between a v1 reactive composite
+  and a retaining one is a type change.
+
+**Several multi-update children in one retaining sequence (informative).** Every child before the
+running one is a guard. In `RetainingReactiveSequence [cond, stepA, stepB]` with multi-update
+`stepA` and `stepB`, `stepA` becomes a guard once `stepB` runs, is re-entered on the next update,
+returns `Running` and takes over, so `stepB` never finishes. Multi-step work belongs in one child,
+for example `RetainingReactiveSequence [cond, MemorySequence [stepA, stepB]]`.
+
 ## Parallel
 
 Every currently non-terminal child is visited in semantic order once per eligible update. Terminal children are remembered and are not ticked again during the same activation. Completion is evaluated after that full child visit, not immediately after an individual child result.
@@ -129,6 +226,11 @@ Queued observers are ordered by tree instance ID and runtime observer node index
 Abort reason and source node are recorded in trace output.
 
 Priority is semantic child order under a selector: lower index means higher priority. `LowerPriority` outside a selector context is a validation error.
+
+The parent of an observer MUST be a v1 reactive composite (`ReactiveSequence` or `ReactiveSelector`);
+`LowerPriority` and `Both` require `ReactiveSelector`. An observer under a retaining reactive composite
+is a validation error: retaining reactive composites do not support observers yet
+(ADR-P10-013 §2.4). Their guard pass already re-evaluates every guard on each eligible update.
 
 ## Budget suspension
 

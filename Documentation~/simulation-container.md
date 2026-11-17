@@ -227,6 +227,13 @@ void OnArrived(ActionHandle action, bool reached, float distance)
   - It never reads a completion: the completion's own wake-up think aborts it first.
   - Put long actions under memory composites. Use a reactive composite only for a node whose action
     is fire-and-forget, or whose restart at every think is intended.
+  - `aibt.core.reactive-sequence-retaining` and `aibt.core.reactive-selector-retaining` re-check the
+    children before the running one at every think and keep the running child, so an action under
+    them is started once and reads its completion (ADR-P10-013). Every child before the running one is
+    such a guard: put multi-step work in one child, for example
+    `reactive-sequence-retaining [cond, memory-sequence [stepA, stepB]]`, not as two siblings.
+    They run on the reference executor only; the native executor and this container reject them
+    until stage 2 of ADR-P10-013.
 - **Polling.** A poll before the game completed the action (`TryConsume` returns `StaleCompletion`)
   keeps the node `Running` and changes nothing else in that dispatch: anything the node did before
   the poll in the same Tick is dropped. Decide time-outs and other early exits before polling.

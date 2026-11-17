@@ -1,7 +1,8 @@
 # P10-013 — Reactive composites that keep their running child (finding F2)
 
-Status: `Blocked` — ADR proposed, awaiting the owner's decision. Only the ADR is approved; code,
-specification edits and tests need a separate approval.
+Status: `Review` — stage 1 (specification, manifests, reference executor, behaviour cases) done
+2026-11-17 and awaiting the owner's acceptance; stages 2 (native) and 3 (IL2CPP) not started. The
+ADR was accepted on 2026-11-17 with all nine recommendations of its §6 (decision AIBT-048).
 
 ## Objective
 
@@ -12,7 +13,7 @@ or when the composite is aborted from above. Existing trees keep their behaviour
 
 ## Decision record
 
-`Documentation~/decisions/ADR-P10-013-non-restarting-reactive-composites.md` (Proposed). Recommended:
+`Documentation~/decisions/ADR-P10-013-non-restarting-reactive-composites.md` (Accepted 2026-11-17). Chosen:
 two new built-in composites with new type IDs (`aibt.core.reactive-sequence-retaining`,
 `aibt.core.reactive-selector-retaining`), not `typeVersion: 2` — the registry, validator, code
 generator and native classifiers support one version per type ID (ADR §3). Open questions: ADR §6.
@@ -55,8 +56,9 @@ generator and native classifiers support one version per type ID (ADR §3). Open
 
 ## Deliverables
 
-- This stage (done): the ADR, this card, the `work-items.json` entry.
-- After approval: stages 1–3 of ADR §5, each with evidence.
+- ADR stage (done): the ADR, this card, the `work-items.json` entry.
+- Stage 1 (done, in review): ADR §5 stage 1; evidence `Planning~/Evidence/P10-013/README.md`.
+- Stages 2–3: after the owner accepts stage 1.
 
 ## Acceptance criteria
 
@@ -92,3 +94,9 @@ IL2CPP Player benchmark as in Planning~/Evidence/P10-011 §5.1 and P10-012 (stag
   (ADR §3 (a)).
 - The fix does not close the cost gap between `io-reactive16` and `io-loop16`; that gap is guard
   re-evaluation, which the owner's decision keeps (ADR §1.3).
+- Stage 1 (2026-11-17): see `Planning~/Evidence/P10-013/README.md` for what changed, the test table,
+  the public API delta, deviations from the ADR wording and open issues. The native path rejects the
+  new type IDs explicitly (generated compiler `AIBT3012`; native machine build and generated runtime
+  definition refuse them); stage 2 replaces that rejection with the native implementation.
+  `Agents/Runtime/ManagedTreeInstance.cs` needed no change: the deferred reevaluation request lives
+  in the reference machine.

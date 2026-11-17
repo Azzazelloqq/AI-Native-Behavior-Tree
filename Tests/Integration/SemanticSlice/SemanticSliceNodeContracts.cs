@@ -10,6 +10,10 @@ namespace AIBT.Tests.Integration.SemanticSlice
         internal const string AlertConditionTypeId = "aibt.test.alert-condition";
         internal const string RaiseAlertTypeId = "aibt.test.raise-alert";
         internal const string AsyncActionTypeId = "aibt.test.async-action";
+        // ADR-P10-013 golden cases: deterministic multi-update work and a guard that changes on one update.
+        internal const string CountToTwoTypeId = "aibt.test.count-to-two";
+        internal const string CountToThreeTypeId = "aibt.test.count-to-three";
+        internal const string FailureExceptUpdateThreeTypeId = "aibt.test.failure-except-update-3";
         internal const string AlertKey = "alert";
         internal const string AsyncStartCommandType = "aibt.test.command.async-start";
         internal const string AsyncCancelCommandType = "aibt.test.command.async-cancel";
@@ -24,6 +28,9 @@ namespace AIBT.Tests.Integration.SemanticSlice
             registrations.Add(new Registration(CreateAlertConditionManifest(), NodeManifestSource.TestFixture));
             registrations.Add(new Registration(CreateRaiseAlertManifest(), NodeManifestSource.TestFixture));
             registrations.Add(new Registration(CreateAsyncActionManifest(), NodeManifestSource.TestFixture));
+            registrations.Add(new Registration(CreateCountingManifest(CountToTwoTypeId), NodeManifestSource.TestFixture));
+            registrations.Add(new Registration(CreateCountingManifest(CountToThreeTypeId), NodeManifestSource.TestFixture));
+            registrations.Add(new Registration(CreateUpdateGateManifest(), NodeManifestSource.TestFixture));
             registrations.Sort((left, right) => string.Compare(
                 left.Manifest.TypeId,
                 right.Manifest.TypeId,
@@ -58,6 +65,9 @@ namespace AIBT.Tests.Integration.SemanticSlice
                 Binding(AlertConditionTypeId, new AlertConditionHandler()),
                 Binding(RaiseAlertTypeId, new RaiseAlertHandler()),
                 Binding(AsyncActionTypeId, new ReferenceAsyncActionHandler(commandContract)),
+                Binding(CountToTwoTypeId, new CountingHandler(2)),
+                Binding(CountToThreeTypeId, new CountingHandler(3)),
+                Binding(FailureExceptUpdateThreeTypeId, new UpdateGateHandler(3)),
             });
         }
 
@@ -102,6 +112,26 @@ namespace AIBT.Tests.Integration.SemanticSlice
                 new[] { NodeStatus.Success, NodeStatus.Failure, NodeStatus.Running },
                 new NodeMemoryDescriptor(16, 8, NodeMemoryLifetime.Activation),
                 NodeCancellationMode.Command);
+
+        private static NodeManifest CreateCountingManifest(string typeId)
+            => Leaf(
+                typeId,
+                NodeBehaviorKind.Action,
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                new[] { NodeStatus.Success, NodeStatus.Running },
+                new NodeMemoryDescriptor(4, 4, NodeMemoryLifetime.Activation),
+                NodeCancellationMode.AbortOnly);
+
+        private static NodeManifest CreateUpdateGateManifest()
+            => Leaf(
+                FailureExceptUpdateThreeTypeId,
+                NodeBehaviorKind.Condition,
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                new[] { NodeStatus.Success, NodeStatus.Failure },
+                new NodeMemoryDescriptor(0, 1, NodeMemoryLifetime.Activation),
+                NodeCancellationMode.NotApplicable);
 
         private static NodeManifest Leaf(
             string typeId,
@@ -171,6 +201,47 @@ namespace AIBT.Tests.Integration.SemanticSlice
                     throw new InvalidOperationException("Alert observer requires its declared Bool read.");
                 return result ? NodeStatus.Success : NodeStatus.Failure;
             }
+        }
+
+        /// <summary>Counts its ticks in activation memory; succeeds on tick <c>target</c>, runs before.</summary>
+        private sealed class CountingHandler : IReferenceLeafHandler
+        {
+            private readonly uint _target;
+
+            internal CountingHandler(uint target) => _target = target;
+
+            public void Enter(ref ReferenceNodeContext context) { }
+
+            public NodeStatus Tick(ref ReferenceNodeContext context)
+            {
+                var memory = context.Memory;
+                if (memory.Length < 4) throw new InvalidOperationException("Counting leaf requires its 4-byte memory.");
+                var count = (uint)(memory[0] | memory[1] << 8 | memory[2] << 16 | memory[3] << 24) + 1;
+                memory[0] = (byte)count;
+                memory[1] = (byte)(count >> 8);
+                memory[2] = (byte)(count >> 16);
+                memory[3] = (byte)(count >> 24);
+                return count >= _target ? NodeStatus.Success : NodeStatus.Running;
+            }
+
+            public void Abort(ref ReferenceNodeContext context, NodeAbortReason reason) { }
+            public void Exit(ref ReferenceNodeContext context, NodeExitReason reason) { }
+        }
+
+        /// <summary>Fails on every update except update <c>open</c>, where it succeeds.</summary>
+        private sealed class UpdateGateHandler : IReferenceLeafHandler
+        {
+            private readonly ulong _open;
+
+            internal UpdateGateHandler(ulong open) => _open = open;
+
+            public void Enter(ref ReferenceNodeContext context) { }
+
+            public NodeStatus Tick(ref ReferenceNodeContext context)
+                => context.Update.UpdateId == _open ? NodeStatus.Success : NodeStatus.Failure;
+
+            public void Abort(ref ReferenceNodeContext context, NodeAbortReason reason) { }
+            public void Exit(ref ReferenceNodeContext context, NodeExitReason reason) { }
         }
 
         private sealed class RaiseAlertHandler : IReferenceLeafHandler

@@ -1,0 +1,25 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.retaining-wait",
+  "name": "Retaining Wait",
+  "root": "root",
+  "nodes": {
+    "ok": {
+      "type": "aibt.test.success",
+      "typeVersion": 1
+    },
+    "root": {
+      "type": "aibt.core.reactive-sequence-retaining",
+      "typeVersion": 1,
+      "children": [
+        "ok",
+        "wait"
+      ]
+    },
+    "wait": {
+      "type": "aibt.test.count-to-three",
+      "typeVersion": 1
+    }
+  }
+}

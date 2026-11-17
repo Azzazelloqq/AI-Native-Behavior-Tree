@@ -1702,6 +1702,7 @@ namespace AIBT
                     && node.NodeTypeId != ParallelTypeId
                     && !NativeReactivePolicyV1.Matches(node.NodeTypeId, NativeLifecycleNodeKindV1.ReactiveSequence)
                     && !NativeReactivePolicyV1.Matches(node.NodeTypeId, NativeLifecycleNodeKindV1.ReactiveSelector)
+                    && !NativeReactivePolicyV1.IsUnsupportedRetaining(node.NodeTypeId)
                     && !NativeDecoratorPolicyV1.TryGetKind(node.NodeTypeId, out _);
             if (!IsDecorator(kind))
             {

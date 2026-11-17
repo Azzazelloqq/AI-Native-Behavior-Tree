@@ -224,6 +224,41 @@ namespace AIBT.Tests.Editor.Validation
             AssertCode(invalid, TreeValidationDiagnosticCodes.InvalidObserverContext);
         }
 
+        // ADR-P10-013 owner decision 3: an observer under a retaining reactive composite is a
+        // validation error that names the reason; the same observer under v1 stays valid.
+        [TestCase(BuiltInNodeManifests.RetainingReactiveSequenceTypeId, "self")]
+        [TestCase(BuiltInNodeManifests.RetainingReactiveSelectorTypeId, "self")]
+        [TestCase(BuiltInNodeManifests.RetainingReactiveSelectorTypeId, "lower-priority")]
+        [TestCase(BuiltInNodeManifests.RetainingReactiveSelectorTypeId, "both")]
+        public void Validate_ObserverUnderARetainingReactiveCompositeIsRejectedWithItsReason(string parentType, string mode)
+        {
+            var key = Key("ready", "ready", BlackboardScope.Tree);
+            var conditionManifest = Manifest(
+                "game.ready-condition", NodeExecutionDomain.Burst, true,
+                new[] { "ready" }, Array.Empty<string>(), NodeBehaviorKind.Condition);
+            var condition = new NodeDocument(
+                Id("condition"), conditionManifest.TypeId, 1,
+                observer: new NodeObserver(mode, new[] { "ready" }));
+            var registry = NodeRegistryBuilder.CreateWithBuiltIns()
+                .AddUserExtension(conditionManifest).Build().Registry;
+            var v1Parent = parentType == BuiltInNodeManifests.RetainingReactiveSequenceTypeId
+                ? BuiltInNodeManifests.ReactiveSequenceTypeId
+                : BuiltInNodeManifests.ReactiveSelectorTypeId;
+
+            var rejected = TreeValidator.Validate(
+                Document(new[] { Node("root", parentType, children: new[] { Id("condition") }), condition }, blackboard: new[] { key }),
+                registry);
+            var accepted = TreeValidator.Validate(
+                Document(new[] { Node("root", v1Parent, children: new[] { Id("condition") }), condition }, blackboard: new[] { key }),
+                registry);
+
+            var context = rejected.Where(item => item.Code == TreeValidationDiagnosticCodes.InvalidObserverContext).ToArray();
+            Assert.That(context, Has.Length.EqualTo(1));
+            Assert.That(context[0].Message, Does.Contain("Retaining reactive composites do not support observers yet"));
+            Assert.That(context[0].Message, Does.Contain(parentType));
+            Assert.That(accepted.Any(item => item.Code == TreeValidationDiagnosticCodes.InvalidObserverContext), Is.False);
+        }
+
         [TestCase(BlackboardScope.Agent)]
         [TestCase(BlackboardScope.Shared)]
         public void Validate_Version2ObserverAcceptsContractedPersistedScopesWhileVersion1RejectsThem(BlackboardScope scope)

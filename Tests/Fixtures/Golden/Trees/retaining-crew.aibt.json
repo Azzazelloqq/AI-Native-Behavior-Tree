@@ -1,0 +1,37 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 1,
+  "treeId": "tree.golden.retaining-crew",
+  "name": "Retaining Crew",
+  "root": "root",
+  "nodes": {
+    "alarm": {
+      "type": "aibt.test.failure",
+      "typeVersion": 1
+    },
+    "hold": {
+      "type": "aibt.test.running",
+      "typeVersion": 1
+    },
+    "job": {
+      "type": "aibt.test.count-to-three",
+      "typeVersion": 1
+    },
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "top",
+        "hold"
+      ]
+    },
+    "top": {
+      "type": "aibt.core.reactive-selector-retaining",
+      "typeVersion": 1,
+      "children": [
+        "alarm",
+        "job"
+      ]
+    }
+  }
+}
