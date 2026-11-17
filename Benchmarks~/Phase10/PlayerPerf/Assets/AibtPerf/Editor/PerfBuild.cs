@@ -23,6 +23,8 @@ namespace AIBT.Perf.Editor
         {
             "shared-shape15", "shared-loop16", "shared-reactive2", "shared-reactive16", "shared-reactive64",
             "native-shape15", "native-move1", "native-wait1",
+            // P10-010: native only (benchmark input and command nodes, PerfIoShard).
+            "io-reactive16", "io-loop16",
         };
 
         private static readonly string[] ManagedTrees =

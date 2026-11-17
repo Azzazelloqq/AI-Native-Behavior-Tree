@@ -60,6 +60,9 @@ namespace AIBT.Perf
         // PerfSimulationStepper. SimUseJobs false = TreeSimulationSettings.UseJobs off.
         public bool SimUseJobs = true;
         public uint SimSpread = 5;
+        // P10-010: the group's "sense" input is bound to a NativeArray written every tick and the
+        // "order" commands are read after every step (trees io-*).
+        public bool SimIo;
         // ABBA position label written to runs.jsonl ("A1", "B1", ...), empty outside ABBA sets.
         public string Abba = string.Empty;
     }
@@ -79,13 +82,30 @@ namespace AIBT.Perf
         public static long Faults;
         public static long Completions;
         public static long FailedSteps;
+        // P10-010: game inputs (one PerfSense row per slot, written before every Step, outside the
+        // timed call) and the commands read after it. Inputs not created = no input channel.
+        public static Unity.Collections.NativeArray<IoNodes.PerfSense> Sense;
+        public static readonly InputChannel<IoNodes.PerfSense> SenseChannel = InputChannel<IoNodes.PerfSense>.Create("sense");
+        public static readonly CommandChannel<IoNodes.PerfOrder> OrderChannel = CommandChannel<IoNodes.PerfOrder>.Create("order");
+        public static long Commands;
+        public static long CommandChecksum;
+        public static long InputTicks;
 
         private void Update()
         {
             StepTicks = 0;
             StepAlloc = 0;
+            InputTicks = 0;
             var simulation = Simulation;
             if (simulation == null) return;
+            var tick = Tick + 1;
+            if (Sense.IsCreated)
+            {
+                var inputStart = PerfClock.Watch.ElapsedTicks;
+                for (var row = 0; row < Sense.Length; row++)
+                    Sense[row] = new IoNodes.PerfSense { Threat = 1f + ((row + tick) & 7), Target = row };
+                InputTicks = PerfClock.Watch.ElapsedTicks - inputStart;
+            }
             var alloc = GC.GetAllocatedBytesForCurrentThread();
             var start = PerfClock.Watch.ElapsedTicks;
             var result = simulation.Step(++Tick);
@@ -94,6 +114,11 @@ namespace AIBT.Perf
             if (result != SimulationResult.Success) FailedSteps++;
             Faults += Group.GetFaults().Length;
             Completions += Group.GetRootCompletions().Length;
+            if (Sense.IsCreated && Group.TryGetCommands(OrderChannel, out var orders) == SimulationResult.Success)
+            {
+                Commands += orders.Length;
+                for (var i = 0; i < orders.Length; i++) CommandChecksum += orders[i].Value.Target;
+            }
         }
     }
 
@@ -244,6 +269,28 @@ namespace AIBT.Perf
                         Add(Cadence5("a2"));
                     }
                     for (var i = 0; i < _plan.Count; i++) { _plan[i].Warmup = 200; _plan[i].Measure = 1000; }
+                }
+                // P10-010: G2 inputs and commands against the G1 trees, N = 500, Spread(5), default
+                // container settings, ABBA inside each run: B = the G1 tree (no inputs, no
+                // commands), D = its io-* twin with the "sense" input written every tick and the
+                // "order" commands read after every step.
+                else if (part == "sim-io")
+                {
+                    foreach (var pair in new[] { new[] { "shared-loop16", "io-loop16" }, new[] { "shared-reactive16", "io-reactive16" } })
+                    {
+                        Scenario Sim(string tree, string label, bool io)
+                        {
+                            var s = new Scenario { Id = "sim-" + tree + "-" + label, Kind = ScenarioKind.Simulation, Tree = tree, N = 500, SimUseJobs = true, SimIo = io };
+                            s.Abba = label.ToUpperInvariant();
+                            s.Warmup = 200;
+                            s.Measure = 1000;
+                            return s;
+                        }
+                        Add(Sim(pair[0], "b1", false));
+                        Add(Sim(pair[1], "d1", true));
+                        Add(Sim(pair[1], "d2", true));
+                        Add(Sim(pair[0], "b2", false));
+                    }
                 }
                 else if (part == "full-immediate") { BuildPlan(quick); _plan.RemoveAll(x => x.Jobs || x.Pipelined || x.AgentFrame); }
                 // P10-005: the same without N > 5 000 (N = 20 000 of the J3 trees is in j3-scale).
@@ -688,7 +735,19 @@ namespace AIBT.Perf
                             group.TryAdd(ThinkSchedule.Spread(s.SimSpread), out _);
                             if (i == 0) { firstEnd = PerfClock.Watch.ElapsedTicks; firstAllocEnd = GC.GetAllocatedBytesForCurrentThread(); }
                         }
+                        if (s.SimIo)
+                        {
+                            PerfSimulationStepper.Sense = new Unity.Collections.NativeArray<IoNodes.PerfSense>(group.Capacity, Unity.Collections.Allocator.Persistent);
+                            var bind = group.TryBindInput(PerfSimulationStepper.SenseChannel, PerfSimulationStepper.Sense);
+                            if (bind != SimulationResult.Success)
+                            {
+                                Debug.LogError("AIBT_PERF|FAULT|simulation input bind: " + bind);
+                                _faults++;
+                            }
+                        }
                     }
+                    PerfSimulationStepper.Commands = 0;
+                    PerfSimulationStepper.CommandChecksum = 0;
                     PerfSimulationStepper.Group = group;
                     PerfSimulationStepper.Tick = 0;
                     PerfSimulationStepper.Faults = 0;
@@ -833,6 +892,8 @@ namespace AIBT.Perf
             _csv = new StreamWriter(Path.Combine(_out, name + ".csv"), false, new UTF8Encoding(false));
             _csv.WriteLine("frame,bracket_us,alloc_bytes,feeder_us,feeder_alloc_bytes,scheduler_drive_us,frame_dt_us,gc_alloc_in_frame,main_thread_ns,heap_delta_bytes,gc_in_bracket,sim_step_us,sim_step_alloc_bytes");
             _simStart = PerfSimulationStepper.Completions;
+            _simCommandsStart = PerfSimulationStepper.Commands;
+            _simTickStart = PerfSimulationStepper.Tick;
             _meta = new StringBuilder();
             _meta.Append("{\"scenario\":\"").Append(s.Id).Append("\",\"kind\":\"").Append(s.Kind)
                 .Append("\",\"tree\":\"").Append(s.Tree ?? string.Empty).Append("\",\"n\":").Append(s.N)
@@ -906,6 +967,10 @@ namespace AIBT.Perf
                     .Append(",\"faults\":").Append(PerfSimulationStepper.Faults)
                     .Append(",\"failedSteps\":").Append(PerfSimulationStepper.FailedSteps)
                     .Append(",\"alive\":").Append(PerfSimulationStepper.Group != null ? PerfSimulationStepper.Group.Count : 0)
+                    .Append(",\"io\":").Append(s.SimIo ? "true" : "false")
+                    .Append(",\"commandsMeasured\":").Append(PerfSimulationStepper.Commands - _simCommandsStart)
+                    .Append(",\"ticksMeasured\":").Append(PerfSimulationStepper.Tick - _simTickStart)
+                    .Append(",\"commandChecksum\":").Append(PerfSimulationStepper.CommandChecksum)
                     .Append('}');
             }
             if (_profile != null) _meta.Append(",\"frameProfile\":").Append(_profile);
@@ -918,6 +983,8 @@ namespace AIBT.Perf
         private bool _fpInstallFailed;
         private ProductionTreeProgram _simProgram;
         private long _simStart;
+        private long _simCommandsStart;
+        private uint _simTickStart;
         private readonly List<GameObject> _pendingActivation = new List<GameObject>();
 
         // P10-005: CPU time of the whole process and of the main thread over the measured frames
@@ -968,6 +1035,7 @@ namespace AIBT.Perf
                 PerfSimulationStepper.Simulation = null;
                 PerfSimulationStepper.Group = null;
             }
+            if (PerfSimulationStepper.Sense.IsCreated) PerfSimulationStepper.Sense.Dispose();
             if (_simProgram != null)
             {
                 _simProgram.Dispose();

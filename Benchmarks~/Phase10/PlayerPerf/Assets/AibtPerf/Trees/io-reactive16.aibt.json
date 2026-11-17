@@ -1,0 +1,133 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "aibt.perf.io-reactive16",
+  "name": "io-reactive16",
+  "root": "root",
+  "blackboard": {},
+  "nodes": {
+    "root": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "children": [
+        "sense",
+        "c0",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+        "c6",
+        "c7",
+        "c8",
+        "c9",
+        "c10",
+        "c11",
+        "c12",
+        "hold"
+      ]
+    },
+    "sense": {
+      "type": "aibt.perf.sense-at-least",
+      "typeVersion": 1,
+      "parameters": {
+        "threshold": 0.0
+      }
+    },
+    "c0": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c1": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c2": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c3": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c4": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c5": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c6": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c7": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c8": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c9": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c10": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c11": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "c12": {
+      "type": "aibt.stdlib.wait",
+      "typeVersion": 1,
+      "parameters": {
+        "ticks": 1
+      }
+    },
+    "hold": {
+      "type": "aibt.perf.order-hold",
+      "typeVersion": 1
+    }
+  }
+}

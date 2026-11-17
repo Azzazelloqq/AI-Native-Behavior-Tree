@@ -1,5 +1,5 @@
 {
   "name": "AIBT.Perf",
-  "references": ["AIBT.Runtime", "AIBT.Agents", "AIBT.Samples.SimpleAgent", "AIBT.Perf.Catalog", "Unity.Burst", "Unity.Collections"],
+  "references": ["AIBT.Runtime", "AIBT.Agents", "AIBT.Samples.SimpleAgent", "AIBT.Perf.Catalog", "AIBT.Perf.IoNodes", "Unity.Burst", "Unity.Collections"],
   "autoReferenced": false
 }

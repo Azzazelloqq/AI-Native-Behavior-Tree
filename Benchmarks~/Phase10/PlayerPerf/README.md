@@ -93,6 +93,29 @@ removed from the machine). The copy needs three built-in modules removed from it
 (`Planning~/Evidence/P10-005/README.md`, section 0). Numbers before P10-005 come from 6000.7.0b1
 and are not directly comparable.
 
+## Simulation container inputs and commands (P10-010)
+
+Set `sim-io` measures `TreeSimulation` (stage G2) with game inputs and commands.
+- **Agents and timing.** 500 agents, `Spread(5)`, jobs on, 200 warm-up and 1000 measured ticks.
+- **Pairs.** Each pair runs ABBA: `sim-shared-loop16` vs `sim-io-loop16`, and `sim-shared-reactive16`
+  vs `sim-io-reactive16`.
+- **The `io-*` trees** (`Tools/gen_trees.py`, `io_trees`) use the nodes in `Assets/AibtPerf/IoNodes`
+  (`PerfIoShard`, own assembly `AIBT.Perf.IoNodes`).
+  - Their input condition reads the agent's `PerfSense` row.
+  - Their order nodes emit `PerfOrder` commands.
+- **Per tick.** Before `Step`, the runner writes every row of the bound `PerfSense` array (outside
+  the timing). After `Step` it reads the commands.
+- **`runs.jsonl`.** `sim.io`, `sim.commandsMeasured`, `sim.ticksMeasured` and `sim.commandChecksum`.
+
+```text
+python sim_io.py <run folder> [<run folder> ...] > sim-io-table.md   # per scenario and ABBA D/B
+```
+
+`PerfFrameBegin`, `PerfFrameEnd` and `PerfFeeder` live in files named after their class (P10-010).
+When they shared `PerfClock.cs`, Unity 6000.6 embedded their MonoScripts in the scene. With a
+catalog containing an `[AibtInput]` node, one of them then resolved as missing in the build, and
+the Player crashed loading `level0` (`Planning~/Evidence/P10-010/README.md`, deviation 10).
+
 ## What is measured
 
 - **Bracket:** main-thread time from the first script `Update` to the last `LateUpdate` of a frame

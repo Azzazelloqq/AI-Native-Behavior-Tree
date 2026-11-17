@@ -1,0 +1,6 @@
+{
+  "name": "AIBT.Perf.IoNodes",
+  "references": ["AIBT.Runtime", "Unity.Burst"],
+  "autoReferenced": false,
+  "analyzers": ["GUID:31a3f09584684895a0a72916d3ad4de0"]
+}

@@ -149,6 +149,29 @@ def native_trees():
         "move": n("aibt.samples.first-agent.move", parameters={"speed": 1.5, "stop-distance": 0.25}, bindings={"distance": "distance"}),
     }, io_bb)
     out["native-wait1"] = tree("native-wait1", "hold", {"hold": wait(BIG)})
+    out.update(io_trees())
+    return out
+
+
+def io_trees():
+    # P10-010 (simulation container stage G2): the G1 `sim` trees with game inputs and commands.
+    # io-reactive16 = shared-reactive16 with its first condition reading the "sense" input row and
+    # its held leaf giving an order (one command) on every think while it keeps running.
+    # io-loop16 = shared-loop16 with patrol's first step reading the input and its third step
+    # giving one order (a command per patrol pass, not per think).
+    out = {}
+    sense = n("aibt.perf.sense-at-least", parameters={"threshold": 0.0})
+    nodes = {"root": n("aibt.core.reactive-sequence", ["sense"] + ["c%d" % i for i in range(13)] + ["hold"])}
+    nodes["sense"] = sense
+    for i in range(13):
+        nodes["c%d" % i] = ok()
+    nodes["hold"] = n("aibt.perf.order-hold")
+    out["io-reactive16"] = tree("io-reactive16", "root", nodes)
+    loop = shape15_nodes()
+    loop["p-ok1"] = n("aibt.perf.sense-at-least", parameters={"threshold": 0.0})
+    loop["p-ok3"] = n("aibt.perf.order-once")
+    loop["loop"] = n("aibt.core.repeater", ["priority"], {"count": BIG, "stopOnFailure": False})
+    out["io-loop16"] = tree("io-loop16", "loop", loop)
     return out
 
 

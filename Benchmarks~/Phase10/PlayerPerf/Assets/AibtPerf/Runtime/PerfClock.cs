@@ -27,37 +27,6 @@ namespace AIBT.Perf
         public static double TicksToMicroseconds(long ticks) => ticks * 1000000.0 / Stopwatch.Frequency;
     }
 
-    /// <summary>First script in Update: opens the frame bracket.</summary>
-    [DefaultExecutionOrder(-32000)]
-    public sealed class PerfFrameBegin : MonoBehaviour
-    {
-        private void Update()
-        {
-            PerfClock.FeederTicks = 0;
-            PerfClock.FeederAlloc = 0;
-            PerfClock.BeginGc = GC.CollectionCount(0);
-            PerfClock.BeginHeap = GC.GetTotalMemory(false);
-            PerfClock.BeginAlloc = GC.GetAllocatedBytesForCurrentThread();
-            PerfClock.BeginTicks = PerfClock.Watch.ElapsedTicks;
-        }
-    }
-
-    /// <summary>Last script in LateUpdate: closes the bracket and lets the runner act outside it.</summary>
-    [DefaultExecutionOrder(32000)]
-    public sealed class PerfFrameEnd : MonoBehaviour
-    {
-        public PerfRunner runner;
-
-        private void LateUpdate()
-        {
-            PerfClock.EndTicks = PerfClock.Watch.ElapsedTicks;
-            PerfClock.EndAlloc = GC.GetAllocatedBytesForCurrentThread();
-            PerfClock.EndHeap = GC.GetTotalMemory(false);
-            PerfClock.EndGc = GC.CollectionCount(0);
-            if (runner != null) runner.AfterFrame();
-        }
-    }
-
     public enum FeederMode
     {
         None,
@@ -66,47 +35,6 @@ namespace AIBT.Perf
         NativeFactBool,
         NativeFactDistance,
         AllocProbe,
-    }
-
-    /// <summary>Central "game code": runs early in Update and times itself.</summary>
-    [DefaultExecutionOrder(-31000)]
-    public sealed class PerfFeeder : MonoBehaviour
-    {
-        public FeederMode mode;
-        public readonly List<BehaviorTreeAgent> Managed = new List<BehaviorTreeAgent>();
-        public readonly List<NativeTreeAgent> Native = new List<NativeTreeAgent>();
-        public int allocCount;
-        private byte[][] _sink = new byte[0][];
-
-        private void Update()
-        {
-            if (mode == FeederMode.None) return;
-            var visible = (Time.frameCount / 120) % 2 == 0;
-            var alloc = GC.GetAllocatedBytesForCurrentThread();
-            var start = PerfClock.Watch.ElapsedTicks;
-            switch (mode)
-            {
-                case FeederMode.ManagedBlackboardWrite:
-                    for (var i = 0; i < Managed.Count; i++) Managed[i].Blackboard.Set("target-visible", visible);
-                    break;
-                case FeederMode.ManagedManualTick:
-                    var dt = Time.deltaTime;
-                    for (var i = 0; i < Managed.Count; i++) Managed[i].Tick(dt);
-                    break;
-                case FeederMode.NativeFactBool:
-                    for (var i = 0; i < Native.Count; i++) Native[i].SetFact("target-visible", visible);
-                    break;
-                case FeederMode.NativeFactDistance:
-                    for (var i = 0; i < Native.Count; i++) Native[i].SetFact("distance", 100f);
-                    break;
-                case FeederMode.AllocProbe:
-                    if (_sink.Length != allocCount) _sink = new byte[allocCount][];
-                    for (var i = 0; i < allocCount; i++) _sink[i] = new byte[40];
-                    break;
-            }
-            PerfClock.FeederTicks = PerfClock.Watch.ElapsedTicks - start;
-            PerfClock.FeederAlloc = GC.GetAllocatedBytesForCurrentThread() - alloc;
-        }
     }
 
     public enum ApiRole { Guard, Wanderer, Scout }
