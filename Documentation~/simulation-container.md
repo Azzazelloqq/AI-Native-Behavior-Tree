@@ -230,7 +230,10 @@ void OnArrived(ActionHandle action, bool reached, float distance)
   game completes the action in the same step the guard fires, the guard runs first and preemption wins.
   - Every child before the running one is such a guard. Put multi-step work in one child, for example
     `reactive-sequence-retaining [cond, memory-sequence [stepA, stepB]]`: as two siblings
-    `[cond, stepA, stepB]`, a long `stepA` would be ticked again as a guard while `stepB` runs.
+    `[cond, stepA, stepB]`, once `stepA` succeeds and `stepB` runs, `stepA` becomes a guard: at the
+    next think it is entered again from scratch (its action starts again); if it returns `Running` it
+    takes over, `stepB` is aborted (its action ends with `Cancelled`, `Preempted`) and never finishes
+    while `stepA` keeps running.
   - The v1 `reactive-sequence` and `reactive-selector` abort their running child at every update
     before they re-evaluate (`execution-semantics-v1.md`, "Reactive selector"). An action node anywhere
     below one is cancelled (`Preempted`) and started again at every think and never reads a

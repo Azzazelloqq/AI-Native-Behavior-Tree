@@ -70,6 +70,18 @@ namespace AIBT
             if (classification == null) throw new ArgumentNullException(nameof(classification));
 
             report = default;
+            // P10-014 (review risk R1): migration copies only the active frames and no control
+            // state, so it runs between updates only. During an open update a retaining
+            // composite's guard pass may hold its running branch parked (and a Parallel its
+            // suspended branches mid-visit); copying then would drop them without Abort/Exit.
+            var openControl = oldInstance.Control[0];
+            if (openControl.UpdateOpen != 0 || openControl.ActiveDispatchId != 0)
+            {
+                freshInstance = default;
+                failure = new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid);
+                return false;
+            }
+
             if (!NativeHotReloadInstance.TryBuild(newProgram, allocator, out freshInstance, out failure))
             {
                 return false;

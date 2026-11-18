@@ -33,8 +33,16 @@ namespace AIBT
         public uint CapacityOrdinal;
         public uint NodeIndex;
         public byte State;
+
+        // P10-014: used on a Parallel's first branch record only, while the Parallel aborts its
+        // suspended branches: the abort that was in progress when it started (flags, target depth
+        // and source), restored when the last branch has exited (the reference executor's
+        // ParallelAbortResume* state).
+        internal byte AbortResumeFlags;
         internal uint FirstSuspendedFrame;
         internal uint SuspendedFrameCount;
+        internal uint AbortResumeTargetDepth;
+        internal uint AbortResumeSourceNode;
     }
 
     public struct NativeObserverStateV1

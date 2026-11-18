@@ -50,6 +50,32 @@ namespace AIBT.Tests.Runtime.NativeExecution.HotReload
         }
 
         [Test]
+        public void AMigrationDuringAnOpenUpdateWithAParkedRetainedBranch_IsRefused_AndTheOldInstanceRunsOn()
+        {
+            // P10-014, review risk R1: the update start of update 2 parks b for comp's guard pass;
+            // migration copies only active frames, so it must not run now.
+            var program = Tree(Retaining, reorder: false);
+            Assert.That(NativeHotReloadInstance.TryBuild(program, Allocator.Persistent, out var old, out var failure), Is.True, failure.Code.ToString());
+            try
+            {
+                Assert.That(old.Machine.TryBeginUpdate(1, 10, out _), Is.True);
+                Drive(ref old.Machine, program);
+                Assert.That(old.Machine.TryBeginUpdate(2, 20, out _), Is.True);
+                Assert.That(old.Control[0].RetainedFrameCount, Is.GreaterThan(0u), "b is parked for the guard pass.");
+
+                var classification = HotReloadCompatibilityClassifier.Classify(program, program);
+                Assert.That(NativeHotReloadStateMigration.TryMigrate(old, program, program, classification, NoExclusions,
+                    Allocator.Persistent, out var fresh, out _, out failure), Is.False);
+                Assert.That(failure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid));
+                Assert.That(fresh.Machine.SchedulingOwnerId, Is.Zero, "No fresh instance is built.");
+
+                Assert.That(Drive(ref old.Machine, program), Is.EqualTo(new[] {
+                    "a:Enter", "a:Tick", "a:Exit:Success", "b:Tick" }), "The old instance resumes b as if nothing happened.");
+            }
+            finally { old.Dispose(); }
+        }
+
+        [Test]
         public void AStructuralEditUnderARetainingComposite_ResetsItsCursor_AndAbortsTheRetainedBranchWithHotReload()
         {
             var program = Tree(Retaining, reorder: false);
@@ -158,22 +184,30 @@ namespace AIBT.Tests.Runtime.NativeExecution.HotReload
         }
 
         [Test]
-        [Ignore("Finding F-S2-2 (pre-existing, v1, test-only API): NativeHotReloadFullRestart.TryRestart begins an update and "
-            + "then requests a HotReload abort, but a v1 reactive composite with a running branch has already scheduled its "
-            + "reactive replacement at update start, so TryRequestAbort refuses (NativeLifetimeStateInvalid). Kept as evidence; "
-            + "v1 behaviour is out of scope for ADR-P10-013.")]
+        // Finding F-S2-2, fixed by P10-014: TryRestart's HotReload abort replaces the v1 reactive
+        // replacement scheduled at update start instead of being refused.
         public void AV1ReactiveCompositeWithARunningBranch_CanBeFullyRestarted()
         {
             var program = Tree(V1Reactive, reorder: false);
             Assert.That(NativeHotReloadInstance.TryBuild(program, Allocator.Persistent, out var old, out var failure), Is.True, failure.Code.ToString());
             Assert.That(old.Machine.TryBeginUpdate(1, 10, out _), Is.True);
             Drive(ref old.Machine, program, RunningB);
-            if (!NativeHotReloadFullRestart.TryRestart(old, program, 2, Allocator.Persistent, out var fresh, out _, out failure))
+            if (!NativeHotReloadFullRestart.TryRestart(old, program, 2, Allocator.Persistent, out var fresh, out var report, out failure))
             {
                 old.Dispose();
                 Assert.Fail(failure.Code.ToString());
             }
-            fresh.Dispose();
+            try
+            {
+                Assert.That(report.OldInstanceWasAborted, Is.True);
+                Assert.That(fresh.Machine.TryBeginUpdate(1, 10, out _), Is.True);
+                Assert.That(Drive(ref fresh.Machine, program, RunningB), Is.EqualTo(new[] {
+                    "a:Enter", "a:Tick", "a:Exit:Success", "b:Enter", "b:Tick" }), "The fresh instance starts from the root.");
+            }
+            finally
+            {
+                fresh.Dispose();
+            }
         }
 
         private static void AssertSecondUpdate(string kind, List<string> calls)

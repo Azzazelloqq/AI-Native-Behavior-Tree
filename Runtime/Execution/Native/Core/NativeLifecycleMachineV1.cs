@@ -191,10 +191,14 @@ namespace AIBT
         private NativeArray<NativeParallelBranchStateV1> _parallelBranches;
         private NativeArray<NativeLifecycleControlV1> _control;
 
-        // ADR-P10-013: 1 when the program has a retaining reactive composite. Such programs restore
-        // suspended-frame segments with the overlap-safe rotation (TryRestoreSegment); programs
-        // without one keep the original v1 restore unchanged.
-        private byte _safeSegmentRestore;
+        // P10-014 (review finding D1): flags of the abort a Parallel interrupted to abort its
+        // suspended branches, kept on its first branch record (NativeParallelBranchStateV1).
+        private const byte ResumeActive = 1;
+        private const byte ResumeAbortRequested = 2;
+        private const byte ResumeReactiveReset = 4;
+        private const byte ResumeTimeout = 8;
+        private const byte ResumeParallelAbort = 16;
+        private const byte ResumeHasSource = 32;
 
         internal static bool TryCreate(
             NativeArray<NativeCompiledNodeRecordV1> nodes,
@@ -314,9 +318,6 @@ namespace AIBT
             }
             for (var index = 0; index < parallelBranches.Length; index++)
                 parallelBranches[index] = new NativeParallelBranchStateV1 { CapacityOrdinal = (uint)index };
-            byte safeSegmentRestore = 0;
-            for (var index = 0; index < bindings.Length; index++)
-                if (NativeReactivePolicyV1.IsRetaining(bindings[index].Kind)) safeSegmentRestore = 1;
 
             if (!NativeOwnerIdentityV1.TryNext(out var ownerId))
             {
@@ -346,7 +347,6 @@ namespace AIBT
                 _cooldownInitialized = cooldownInitialized,
                 _parallelBranches = parallelBranches,
                 _control = control,
-                _safeSegmentRestore = safeSegmentRestore,
             };
             failure = default;
             return true;
@@ -509,25 +509,18 @@ namespace AIBT
                     failure = default;
                     return true;
                 }
-                control.ParallelAbortPending = 0;
-                if (ownerFrame.LifecycleState == NativeFrameLifecycleStateV1.Aborting)
-                {
-                    control.AbortTargetDepth = 0;
-                    ownerFrame.LifecycleState = NativeFrameLifecycleStateV1.Exiting;
-                    _frames[ownerIndex] = ownerFrame;
-                    control.SemanticSteps++;
-                    _control[0] = control;
-                    result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.CompositeAborted, ownerFrame.NodeIndex);
-                    failure = default;
-                    return true;
-                }
-                control.AbortRequested = 0;
-                control.AbortTargetDepth = 0;
+                // The last branch has exited: the abort the Parallel interrupted (a timeout, a
+                // reset, an outer Parallel's branch abort, a retained abort, a tree stop) resumes
+                // toward its own target, or, after the Parallel's terminal decision, none remains.
+                var aborted = ownerFrame.LifecycleState == NativeFrameLifecycleStateV1.Aborting;
+                RestoreOuterAbort(ownerFrame, aborted, ref control);
                 ownerFrame.LifecycleState = NativeFrameLifecycleStateV1.Exiting;
                 _frames[ownerIndex] = ownerFrame;
                 control.SemanticSteps++;
                 _control[0] = control;
-                result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.ChildAccepted, ownerFrame.NodeIndex);
+                result = new NativeLifecycleStepResultV1(
+                    aborted ? NativeLifecycleStepKindV1.CompositeAborted : NativeLifecycleStepKindV1.ChildAccepted,
+                    ownerFrame.NodeIndex);
                 failure = default;
                 return true;
             }
@@ -631,8 +624,12 @@ namespace AIBT
         internal bool TryRequestAbort(BurstNodeAbortReason reason, out NativeRuntimeFailureV1 failure,
             bool replacePendingForTreeStop = false)
         {
+            // replacePendingForTreeStop: a whole-tree abort that replaces an abort already pending
+            // or in progress -- the host's tree stop, or (P10-014, finding F-S2-2) the HotReload
+            // abort of NativeHotReloadFullRestart after update start scheduled a v1 reset or timeout.
             if (!IsCreated || (byte)reason > (byte)BurstNodeAbortReason.Timeout
-                || (replacePendingForTreeStop && reason != BurstNodeAbortReason.TreeStopped))
+                || (replacePendingForTreeStop && reason != BurstNodeAbortReason.TreeStopped
+                    && reason != BurstNodeAbortReason.HotReload))
             {
                 failure = LifetimeFailure();
                 return false;
@@ -653,6 +650,10 @@ namespace AIBT
             control.AbortSourceNode = 0;
             if (control.RetainPhase == RetainAbortEnd || control.RetainPhase == RetainAbortTakeover)
                 control.RetainPhase = RetainAbortSuperseded;
+            // P10-014 (review finding D3): a takeover completed by a Parallel guard's visit leaves
+            // the rest of that visit pending; an abort replaces it.
+            control.RetainVisitRestPending = 0;
+            if (replacePendingForTreeStop) ReplaceSavedOuterAborts();
             _control[0] = control;
             failure = default;
             return true;
@@ -713,6 +714,7 @@ namespace AIBT
             control.ReactiveResetPending = 1;
             control.HasAbortSource = 1;
             control.AbortSourceNode = transition.ObserverNodeIndex;
+            control.RetainVisitRestPending = 0; // P10-014, finding D3: the reset replaces the rest of a guard's visit.
             _control[0] = control;
             failure = default;
             return true;
@@ -1019,8 +1021,6 @@ namespace AIBT
                     _parallelBranches[activeIndex] = active;
                     frame.ParallelActiveBranch = -1;
                 }
-                control.ParallelAbortPending = 1;
-                control.ParallelAbortOwnerDepth = checked((uint)frameIndex + 1u);
                 frame.LifecycleState = NativeFrameLifecycleStateV1.Aborting;
                 if (TryBeginNextParallelBranchAbort(frameIndex, ref frame, ref control))
                 {
@@ -1037,6 +1037,7 @@ namespace AIBT
                     return PublishDispatch(ref control, frame.NodeIndex, BurstCallbackPhase.Exit, out result, out failure);
                 control.SemanticSteps++;
                 ClearActivationMemory(node);
+                if (kind == NativeLifecycleNodeKindV1.Parallel) ClearSavedOuterAbort(frame);
                 PopAbortedFrame(ref control);
                 _control[0] = control;
                 result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.CompositeExited, frame.NodeIndex);
@@ -1142,16 +1143,14 @@ namespace AIBT
                     frame.PendingStatus = decision.Status;
                     if (HasRunningParallelBranch(frame, node))
                     {
-                        control.ParallelAbortPending = 1;
-                        control.ParallelAbortOwnerDepth = checked((uint)frameIndex + 1u);
-                        control.HasAbortSource = 1;
-                        control.AbortSourceNode = frame.NodeIndex;
                         if (!TryBeginNextParallelBranchAbort(frameIndex, ref frame, ref control))
                         {
                             result = default;
                             failure = LifetimeFailure(control);
                             return false;
                         }
+                        control.HasAbortSource = 1;
+                        control.AbortSourceNode = frame.NodeIndex;
                     }
                     else frame.LifecycleState = NativeFrameLifecycleStateV1.Exiting;
                     _frames[frameIndex] = frame;
@@ -1688,11 +1687,10 @@ namespace AIBT
         /// <summary>
         /// Moves one segment of the suspended-frame region back onto the active stack and closes
         /// the gap: segments below it move up, and every segment record (parallel branches and the
-        /// parked retaining segments) follows. In a program without retaining composites this is
-        /// the original Parallel restore, unchanged. In a program with one the move goes through an
-        /// in-place rotation: the original copy overwrites a lower segment when the frame array has
-        /// fewer free frames than the restored segment is long (P10-013 stage 2 finding, see
-        /// Planning~/Evidence/P10-013/README.md).
+        /// parked retaining segments) follows. The move is an in-place rotation for every program
+        /// (P10-014, review finding D2): the original copy-then-shift overwrote a lower segment when
+        /// the frame array had fewer free frames than the restored segment is long. Where the copy
+        /// was correct, both leave the same active and suspended frames.
         /// </summary>
         private bool TryRestoreSegment(uint first, uint count, ref NativeLifecycleControlV1 control)
         {
@@ -1700,29 +1698,9 @@ namespace AIBT
                 || first + count > _frames.Length
                 || control.Depth > first)
                 return false;
-            var destination = control.Depth;
             var removedStart = first;
             var removedCount = count;
-            if (_safeSegmentRestore == 0)
-            {
-                for (uint offset = 0; offset < count; offset++)
-                    _frames[checked((int)(destination + offset))] = _frames[checked((int)(first + offset))];
-                for (var source = checked((int)removedStart) - 1; source >= control.SuspendedFrameStart; source--)
-                    _frames[source + checked((int)removedCount)] = _frames[source];
-            }
-            else
-            {
-                // [SuspendedFrameStart, first) holds the lower segments L, [first, first + count)
-                // the segment S. Rotate "L S" into "S L" in place, then move S down to the stack top.
-                var lowStart = checked((int)control.SuspendedFrameStart);
-                var segmentStart = checked((int)first);
-                var segmentEnd = checked((int)(first + count));
-                ReverseFrames(lowStart, segmentStart);
-                ReverseFrames(segmentStart, segmentEnd);
-                ReverseFrames(lowStart, segmentEnd);
-                for (uint offset = 0; offset < count; offset++)
-                    _frames[checked((int)(destination + offset))] = _frames[checked((int)(control.SuspendedFrameStart + offset))];
-            }
+            MoveSegmentToStackTop(_frames, control.SuspendedFrameStart, first, count, control.Depth);
             for (var index = 0; index < _parallelBranches.Length; index++)
             {
                 var other = _parallelBranches[index];
@@ -1741,13 +1719,33 @@ namespace AIBT
             return true;
         }
 
-        private void ReverseFrames(int start, int end)
+        /// <summary>
+        /// The frame move of <see cref="TryRestoreSegment"/>: [<paramref name="suspendedStart"/>,
+        /// <paramref name="first"/>) holds the lower segments L and [first, first + count) the
+        /// segment S. "L S" is rotated into "S L" in place, then S is copied down to
+        /// <paramref name="destination"/> (the stack top). Internal for the P10-014 test that
+        /// compares it with the original copy-then-shift.
+        /// </summary>
+        internal static void MoveSegmentToStackTop(
+            NativeArray<NativeFrameStateV1> frames, uint suspendedStart, uint first, uint count, uint destination)
+        {
+            var lowStart = checked((int)suspendedStart);
+            var segmentStart = checked((int)first);
+            var segmentEnd = checked((int)(first + count));
+            ReverseFrames(frames, lowStart, segmentStart);
+            ReverseFrames(frames, segmentStart, segmentEnd);
+            ReverseFrames(frames, lowStart, segmentEnd);
+            for (uint offset = 0; offset < count; offset++)
+                frames[checked((int)(destination + offset))] = frames[checked((int)(suspendedStart + offset))];
+        }
+
+        private static void ReverseFrames(NativeArray<NativeFrameStateV1> frames, int start, int end)
         {
             for (int low = start, high = end - 1; low < high; low++, high--)
             {
-                var swap = _frames[low];
-                _frames[low] = _frames[high];
-                _frames[high] = swap;
+                var swap = frames[low];
+                frames[low] = frames[high];
+                frames[high] = swap;
             }
         }
 
@@ -1799,14 +1797,105 @@ namespace AIBT
                     continue;
                 ownerFrame.ParallelActiveBranch = ordinal;
                 if (!RestoreSuspendedBranch(ownerFrameIndex, branchIndex, ref control)) return false;
+                SaveOuterAbort(ownerFrame, ref control);
                 control.AbortRequested = 1;
                 control.AbortReason = ownerFrame.LifecycleState == NativeFrameLifecycleStateV1.Aborting
                     ? control.AbortReason : BurstNodeAbortReason.Explicit;
                 control.AbortTargetDepth = checked((uint)ownerFrameIndex + 1u);
+                control.ReactiveResetPending = 0;
+                control.TimeoutPending = 0;
+                control.ParallelAbortPending = 1;
+                control.ParallelAbortOwnerDepth = checked((uint)ownerFrameIndex + 1u);
                 control.SemanticSteps++;
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Before a Parallel aborts its first suspended branch, keeps the abort state it interrupts
+        /// on its first branch record; later branches of the same sequence keep the first save.
+        /// </summary>
+        private void SaveOuterAbort(NativeFrameStateV1 owner, ref NativeLifecycleControlV1 control)
+        {
+            var index = checked((int)owner.ParallelFirstBranch);
+            var record = _parallelBranches[index];
+            if ((record.AbortResumeFlags & ResumeActive) != 0) return;
+            var flags = ResumeActive;
+            if (control.AbortRequested != 0) flags |= ResumeAbortRequested;
+            if (control.ReactiveResetPending != 0) flags |= ResumeReactiveReset;
+            if (control.TimeoutPending != 0) flags |= ResumeTimeout;
+            if (control.ParallelAbortPending != 0) flags |= ResumeParallelAbort;
+            if (control.HasAbortSource != 0) flags |= ResumeHasSource;
+            record.AbortResumeFlags = flags;
+            record.AbortResumeTargetDepth = control.AbortTargetDepth;
+            record.AbortResumeSourceNode = control.AbortSourceNode;
+            _parallelBranches[index] = record;
+        }
+
+        /// <summary>
+        /// After the last branch of a Parallel has exited, restores the abort state saved by
+        /// <see cref="SaveOuterAbort"/>. Without an interrupted abort (a terminal decision) the
+        /// Parallel's abort simply ends, as before P10-014.
+        /// </summary>
+        private void RestoreOuterAbort(NativeFrameStateV1 owner, bool aborted, ref NativeLifecycleControlV1 control)
+        {
+            var index = checked((int)owner.ParallelFirstBranch);
+            var record = _parallelBranches[index];
+            var flags = record.AbortResumeFlags;
+            var targetDepth = record.AbortResumeTargetDepth;
+            var sourceNode = record.AbortResumeSourceNode;
+            record.AbortResumeFlags = 0;
+            record.AbortResumeTargetDepth = 0;
+            record.AbortResumeSourceNode = 0;
+            _parallelBranches[index] = record;
+            if ((flags & ResumeAbortRequested) == 0)
+            {
+                control.ParallelAbortPending = 0;
+                control.AbortTargetDepth = 0;
+                if (!aborted) control.AbortRequested = 0;
+                return;
+            }
+            control.AbortRequested = 1;
+            control.AbortTargetDepth = targetDepth;
+            control.ReactiveResetPending = (byte)((flags & ResumeReactiveReset) != 0 ? 1 : 0);
+            control.TimeoutPending = (byte)((flags & ResumeTimeout) != 0 ? 1 : 0);
+            control.ParallelAbortPending = (byte)((flags & ResumeParallelAbort) != 0 ? 1 : 0);
+            control.HasAbortSource = (byte)((flags & ResumeHasSource) != 0 ? 1 : 0);
+            control.AbortSourceNode = sourceNode;
+        }
+
+        /// <summary>
+        /// A Parallel that leaves through an abort without finishing its own branch-abort sequence
+        /// (a tree stop reached it from below) drops what it had saved.
+        /// </summary>
+        private void ClearSavedOuterAbort(NativeFrameStateV1 owner)
+        {
+            if (!_parallelBranches.IsCreated || owner.ParallelFirstBranch >= _parallelBranches.Length) return;
+            var index = checked((int)owner.ParallelFirstBranch);
+            var record = _parallelBranches[index];
+            if (record.AbortResumeFlags == 0) return;
+            record.AbortResumeFlags = 0;
+            record.AbortResumeTargetDepth = 0;
+            record.AbortResumeSourceNode = 0;
+            _parallelBranches[index] = record;
+        }
+
+        /// <summary>
+        /// A tree stop that replaces a pending abort also replaces what every Parallel in the
+        /// middle of its branch aborts will resume: the stop continues to the root.
+        /// </summary>
+        private void ReplaceSavedOuterAborts()
+        {
+            for (var index = 0; index < _parallelBranches.Length; index++)
+            {
+                var record = _parallelBranches[index];
+                if ((record.AbortResumeFlags & ResumeActive) == 0) continue;
+                record.AbortResumeFlags = ResumeActive | ResumeAbortRequested;
+                record.AbortResumeTargetDepth = 0;
+                record.AbortResumeSourceNode = 0;
+                _parallelBranches[index] = record;
+            }
         }
 
         private void ClearActivationMemory(NativeCompiledNodeRecordV1 node)

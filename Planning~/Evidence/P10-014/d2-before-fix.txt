@@ -1,0 +1,31 @@
+﻿{"errors":[],"status":"completed","compilationFailed":false,"failed":false}
+testName NativeParallelSegmentRestoreTests 0/3 (failed=3 skipped=0)
+  FAIL AIBT.Tests.Runtime.NativeParallelSegmentRestoreTests.Review_ParallelOfMemorySequenceAndLeaf
+      Immediate, update 2
+    Reference: T work R; T other R
+       Native: T work R; T work R
+      Expected and actual are both <System.String[2]>
+    ... (5 more lines)
+    at AIBT.Tests.Runtime.NativeParallelSegmentRestoreTests.V1ParallelAtProductionCapacityMatchesTheReference (System.Func`1[TResult] build, System.Int32 updates) [0x00084] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Runtime\NativeExecution\ParallelAndDecorators\NativeParallelSegmentRestoreTests.cs:60
+  FAIL AIBT.Tests.Runtime.NativeParallelSegmentRestoreTests.Review_ParallelOfTwoRepeaters
+      Immediate, update 3
+    Reference: T b S; X b; T seq1 S; X seq1; E seq1; E a; T a S; X a; E b; T b R; T d S; X d; T seq2 S; X seq2; E seq2; E c; T c S; X c; E d; T d R
+       Native: T b S; X b; T seq1 S; X seq1; T d S; X d; T d R
+      Expected is <System.String[20]>, actual is <System.String[7]>
+    ... (5 more lines)
+    at AIBT.Tests.Runtime.NativeParallelSegmentRestoreTests.V1ParallelAtProductionCapacityMatchesTheReference (System.Func`1[TResult] build, System.Int32 updates) [0x00084] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Runtime\NativeExecution\ParallelAndDecorators\NativeParallelSegmentRestoreTests.cs:60
+  FAIL AIBT.Tests.Runtime.NativeParallelSegmentRestoreTests.ThreeBranchesOfDifferentLengths
+      Immediate, update 2
+    Reference: T x R; T y R; T z R
+       Native: T x R; T y R; T y R
+      Expected and actual are both <System.String[3]>
+    ... (5 more lines)
+    at AIBT.Tests.Runtime.NativeParallelSegmentRestoreTests.V1ParallelAtProductionCapacityMatchesTheReference (System.Func`1[TResult] build, System.Int32 updates) [0x00084] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Runtime\NativeExecution\ParallelAndDecorators\NativeParallelSegmentRestoreTests.cs:60
+testName RetainingReactiveNativeEquivalenceTests.V1ParallelWithTwoSuspendedBranchesMatchesTheReference 0/1 (failed=1 skipped=0)
+  FAIL AIBT.Tests.Runtime.RetainingReactiveNativeEquivalenceTests.V1ParallelWithTwoSuspendedBranchesMatchesTheReference
+      Update 2
+      Expected and actual are both <System.String[2]>
+      Values differ at index [1]
+      Expected string length 9 but was 8. Strings differ at index 2.
+    ... (3 more lines)
+    at AIBT.Tests.Runtime.RetainingReactiveNativeEquivalenceTests.V1ParallelWithTwoSuspendedBranchesMatchesTheReference () [0x00039] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Runtime\NativeExecution\RetainingReactive\RetainingReactiveNativeEquivalenceTests.cs:159

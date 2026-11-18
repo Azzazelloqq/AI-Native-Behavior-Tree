@@ -144,6 +144,51 @@ namespace AIBT.Tests.Integration.Simulation
             }
         }
 
+        /// <summary>
+        /// P10-014 (review risk R4 / missing coverage): the step limit is hit inside the retaining
+        /// selector's guard pass (its first steps in a think: the pass start, the alarm's selection and
+        /// Enter). The agent faults with NativeUpdateStepLimitExceeded, the parked job's action ends with
+        /// one Cancelled (Fault), nothing stays live, and a restart runs the agent again from the root:
+        /// the next think starts a new job and nothing faults.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void AStepLimitInsideAGuardPass_FaultsTheAgentCleanly_AndARestartRunsItAgain(bool useJobs)
+        {
+            using (var rig = NewRig(RetainingCrewTree, useJobs, TreeGroupSettings.Default(2), ThinkSchedule.Every(1, 0)))
+            {
+                uint tick = 1;
+                Assert.That(rig.Simulation.Step(tick), Is.EqualTo(SimulationResult.Success));
+                var job = rig.Single(ActionEventKind.Started).Action;
+                Assert.That(rig.Simulation.Step(++tick), Is.EqualTo(SimulationResult.Success));
+                Assert.That(rig.Group.GetFaults().Length, Is.Zero);
+
+                const uint limit = 3u;
+                rig.Group.CoreForTests(0).MaximumStepsPerUpdate = limit;
+                rig.Sense[0] = new CrewSense { Threat = 1f, Alarm = true };
+                Assert.That(rig.Simulation.Step(++tick), Is.EqualTo(SimulationResult.Success));
+                var faults = rig.Group.GetFaults();
+                Assert.That(faults.Length, Is.EqualTo(1));
+                Assert.That(faults[0].Failure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeUpdateStepLimitExceeded));
+                Assert.That(rig.Group.CoreForTests(0).StepsThisUpdate, Is.EqualTo((ulong)limit), "Stopped inside the guard pass.");
+                var cancelled = rig.Single(ActionEventKind.Cancelled);
+                Assert.That(cancelled.Action, Is.EqualTo(job), "The parked job is the one cancelled.");
+                Assert.That(cancelled.CancelReason, Is.EqualTo(ActionCancelReason.Fault));
+                Assert.That(rig.Group.LiveActionCountForTests(0), Is.Zero);
+                Assert.That(rig.Group.TryComplete(job, ActionOutcome.Succeeded), Is.EqualTo(SimulationResult.StaleAction));
+
+                rig.Group.CoreForTests(0).MaximumStepsPerUpdate = TreeSimulationSettings.Default(SimulationTestPrograms.TickMicroseconds).MaximumStepsPerThink;
+                rig.Sense[0] = new CrewSense { Threat = 0f, Alarm = false };
+                Assert.That(rig.Group.TryRestart(rig.Agent), Is.EqualTo(SimulationResult.Success));
+                var restartedJob = NextStart(rig, ref tick);
+                Assert.That(restartedJob, Is.Not.EqualTo(job));
+                Assert.That(rig.Simulation.Step(++tick), Is.EqualTo(SimulationResult.Success));
+                Assert.That(rig.Group.GetFaults().Length, Is.Zero);
+                Assert.That(rig.Group.GetActionEvents().Length, Is.Zero, "The new job is retained, not restarted.");
+                Assert.That(rig.Group.LiveActionCountForTests(0), Is.EqualTo(1));
+            }
+        }
+
         private static ActionHandle NextStart(Rig rig, ref uint tick)
         {
             for (var guard = 0; guard < 8; guard++)

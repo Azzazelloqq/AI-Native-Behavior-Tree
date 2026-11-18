@@ -138,16 +138,14 @@ namespace AIBT.Tests.Runtime
         }
 
         /// <summary>
-        /// P10-013 stage 2 finding, pre-existing in v1 and not changed by this stage: with the
+        /// P10-013 stage 2 finding F-S2-1, fixed by P10-014 (review finding D2): with the
         /// production frame array (NodeCount frames) a Parallel whose first branch is suspended with
-        /// two or more frames while a later branch is suspended too loses the later branch's frames
-        /// when the first one is restored (RestoreSuspendedBranch copies the segment down before
-        /// moving the lower segments up). Native then ticks "work" twice and never "other". Programs
-        /// with a retaining composite use the overlap-safe restore and pass the same scenario
-        /// (RetainingInsideParallel). Un-ignore when the owner decides to fix v1.
+        /// two or more frames while a later branch is suspended too lost the later branch's frames
+        /// when the first one was restored (the segment was copied down before the lower segments
+        /// moved up), so native ticked "work" twice and never "other". Every program now restores
+        /// with the overlap-safe rotation.
         /// </summary>
         [Test]
-        [Ignore("P10-013 finding F-S2-1: pre-existing v1 native Parallel restore overwrites a suspended branch when no frame is free; v1 left unchanged by decision of the stage constraints.")]
         public void V1ParallelWithTwoSuspendedBranchesMatchesTheReference()
         {
             Func<RetainingTree> build = () => Create(

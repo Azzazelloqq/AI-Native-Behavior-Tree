@@ -1,0 +1,43 @@
+P10-014 D1: NativeParallelOuterAbortTargetTests on 3e4b09e + new tests only (no production change),
+Invoke-UnityTests.ps1 -Recompile -Filter NativeParallelOuterAbortTargetTests -Lines 4, 2026-11-18.
+(First version of the test class: the mid-abort tree-stop cases were then still compared with the
+reference; see the evidence README for why they now assert native's stop-wins records.)
+
+testName NativeParallelOuterAbortTargetTests 4/16 (failed=12 skipped=0)
+  FAIL AnObserverResetOfAV1ReactiveOwnerAboveAParallelAbortsBothBranchesAndRestartsTheOwner
+      NativeLifetimeStateInvalid  (RetainingNativeTwin.Step: TryAdvance returned false)
+  FAIL Stop_V1ReactiveOverParallel_UpdateStart
+      Expected (reference): A b TreeStopped@v1; X(Ab) b; A a TreeStopped@v1; X(Ab) a; A par TreeStopped@v1; X(Ab) par; E cond; T cond S; X cond; E par; E a; T a R; E b; T b R
+      Actual (native):      A b TreeStopped@v1; X(Ab) b; A a TreeStopped@v1; X(Ab) a; A par TreeStopped@v1; X(Ab) par; A v1 TreeStopped@v1; X(Ab) v1
+  FAIL Stop_TimeoutOverParallel_MidTimeoutAbort
+      Expected (reference): A a TreeStopped@timeout; X(Ab) a; A par TreeStopped@timeout; X(Ab) par; T timeout F; X timeout
+      Actual (native):      A a TreeStopped@timeout; X(Ab) a; A par TreeStopped@timeout; X(Ab) par; A timeout TreeStopped@timeout; X(Ab) timeout
+  FAIL Stop_V1ReactiveOverParallel_MidResetAbort
+      Expected (reference): A a TreeStopped@v1; X(Ab) a; A par TreeStopped@v1; X(Ab) par; E cond; T cond S; X cond; E par; E a; T a R; E b; T b R
+      Actual (native):      A a TreeStopped@v1; X(Ab) a; A par TreeStopped@v1; X(Ab) par; A v1 TreeStopped@v1; X(Ab) v1
+  FAIL Stop_NestedParallel_MidTerminalAbort
+      NativeLifetimeStateInvalid
+  FAIL NativeMatchesTheReferenceRecordForRecord(TimeoutOverParallel_AtDeadline)
+      Immediate, update 2
+      Reference: T a R; T b R
+         Native: T a R; T a R            (D2 at production capacity masks D1 here)
+  FAIL NativeMatchesTheReferenceRecordForRecord(TimeoutOverDeepParallel_AtDeadline)
+      Immediate, update 2
+      Reference: T a R; T b R
+         Native: T a R; E a; T a R       (D2)
+  FAIL NativeMatchesTheReferenceRecordForRecord(V1ReactiveSequenceOverParallel_SecondUpdate)
+      NativeLifetimeStateInvalid         (review scenario B: the agent faults)
+  FAIL NativeMatchesTheReferenceRecordForRecord(V1ReactiveSelectorOverParallel_SecondUpdate)
+      NativeLifetimeStateInvalid
+  FAIL NativeMatchesTheReferenceRecordForRecord(NestedParallel_OuterTerminalAbortsInner)
+      Immediate, update 2
+      Reference: T ok S; X ok; T a R; T b R; A b Explicit@outer; X(Ab) b; A a Explicit@outer; X(Ab) a; A inner Explicit@outer; X(Ab) inner; T outer S; X outer
+         Native: T ok S; X ok; T ok R; A ok Explicit@outer; X(Ab) ok; T outer S; X outer
+  FAIL NativeMatchesTheReferenceRecordForRecord(TimeoutOverParallelInsideRetainedBranch)
+      Immediate, update 3      (retaining program: safe restore, so D1 shows alone -- review scenario A)
+      Reference: E ok; T ok S; X ok; A b Timeout@timeout; X(Ab) b; A a Timeout@timeout; X(Ab) a; A par Timeout@timeout; X(Ab) par; T timeout F; X timeout; T seq F; X seq
+         Native: E ok; T ok S; X ok; A b Timeout@timeout; X(Ab) b; T par S; X par; T timeout S; X timeout; T seq S; X seq
+  FAIL NativeMatchesTheReferenceRecordForRecord(V1ReactiveOverParallelInsideRetainedBranch)
+      NativeLifetimeStateInvalid
+Passing before the fix (4): Stop_TimeoutOverParallel_UpdateStart, Stop_NestedParallel_UpdateStart,
+RetainingTakeoverAboveParallel, TimeoutAboveRetainingTakeoverAboveParallel.

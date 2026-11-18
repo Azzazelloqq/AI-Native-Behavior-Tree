@@ -2,7 +2,9 @@
 
 - Status: Accepted (2026-11-17). Proposed the same day; the owner accepted it with all nine
   recommendations of §6 (see "Owner decisions" below) and approved stage 1 of §5, including the
-  specification edits of §2.1. Stages 2 and 3 need their own approval.
+  specification edits of §2.1. Stage 2 (native executor and equivalence) and stage 3 (IL2CPP
+  measurement) were approved and done on 2026-11-18 and are in the owner's review; the fixes of the
+  independent code review are task P10-014 (`Planning~/Evidence/P10-014/README.md`).
 - Decision ID: AIBT-048
 - Task: `Planning~/Tasks/P10/P10-013-non-restarting-reactive-composites.md`
 - Origin: finding F2 of P10-011 (`Planning~/Evidence/P10-011/README.md` §7, "F2"), confirmed in
@@ -233,7 +235,7 @@ The text below is written as normative text for `execution-semantics-v1.md` and
 | **Budget suspension** | Only between atomic steps. The retained branch is neither aborted nor exited by suspension. A resumed update does not start a second guard pass. |
 | **Root completion** | Unchanged (`execution-semantics-v1.md:139-141`): the root's result is exposed after root `Exit`. A retaining composite as root that ends because of a guard exposes its result after the retained branch was aborted and exited and the composite exited. |
 | **Step limit** (`MaximumStepsPerThink`) | Counts the guard-pass steps like any other steps. |
-| **Hot reload** | Hot reload runs between updates (`TryQueueHotReloadChildReset` rejects an open update, `NativeLifecycleMachineV1.cs:537-542`), so no guard pass is ever in progress. A retaining composite is a composite for the cursor-reset rule (ADR-P5-001 item 2). Changing a node between v1 and retaining is a type change and is classified `Incompatible`, which restarts the smallest enclosing subtree (`ADR-P5-001-hot-reload-compatibility-model.md:53-61`). |
+| **Hot reload** | Hot reload runs between updates (`TryQueueHotReloadChildReset` rejects an open update, `NativeLifecycleMachineV1.cs:537-542`), so no guard pass is ever in progress (P10-014: `NativeHotReloadStateMigration.TryMigrate` now also refuses an open update). A retaining composite is a composite for the cursor-reset rule (ADR-P5-001 item 2). In the first update after a structural edit that resets a composite's cursor, update-start processing is replaced by that reset in both executors, so no retaining composite on the active path, above or below the reset owner, has a guard pass in that update; the guard passes resume in the next update (recorded by P10-014, non-normative). Changing a node between v1 and retaining is a type change and is classified `Incompatible`, which restarts the smallest enclosing subtree (`ADR-P5-001-hot-reload-compatibility-model.md:53-61`). |
 
 ### 2.3 Trace records
 
@@ -247,6 +249,11 @@ transitions are not traced today, in either executor; the native recorder delibe
   `NodeEntered` for the running branch.
 - **Preemption:** the guard's records, then `NodeAbortStarted` with reason `Explicit` and source =
   the guard, then `NodeExited(Aborted)` for each node of the retained branch, deepest first.
+  As implemented (recorded by P10-014): the reference trace writes the guard as the source; the
+  production native trace (`NativeTraceRecorderV1`) writes no source for any abort, retaining or
+  v1, so a native preemption record carries reason `Explicit` without a source node. The native
+  machine keeps the guard in its control state (`HasAbortSource`/`AbortSourceNode`), read only by
+  the equivalence tests. The trace format is unchanged.
 - **Simulation container:** a preemption is reported as `Cancelled` with `Preempted`, as today
   (`SimulationNativeV1.cs:511-517`); a kept action produces no event until it is completed and
   consumed.
@@ -565,5 +572,6 @@ The owner accepted every recommendation of §6:
    touched by this work.
 9. Success is measured by the stage-3 targets of §5.
 
-Stage 1 is approved; stages 2 and 3 are not yet approved. Stage-1 results and any deviation from
-this document are recorded in `Planning~/Evidence/P10-013/README.md`.
+Stages 1, 2 and 3 are done (stage 1 on 2026-11-17, stages 2 and 3 on 2026-11-18); their results and
+any deviation from this document are recorded in `Planning~/Evidence/P10-013/README.md`, the review
+fixes in `Planning~/Evidence/P10-014/README.md`.

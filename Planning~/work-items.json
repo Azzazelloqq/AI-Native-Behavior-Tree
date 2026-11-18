@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P10-014", "phase": 10, "title": "Fixes from the P10-013 code review: native Parallel abort target (D1), segment restore (D2), visit-rest flag (D3), F-S2-2, coverage, docs (part C, the v1 loop-tree slowdown, removed by the owner)", "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-014-review-fixes.md",
+      "dependsOn": ["P10-013"],
+      "owns": ["Planning~/Evidence/P10-014/", "Tests/Runtime/NativeExecution/ParallelAndDecorators/NativeParallelOuterAbortTargetTests.cs", "Tests/Runtime/NativeExecution/ParallelAndDecorators/NativeParallelSegmentRestoreTests.cs", "Tests/Runtime/NativeExecution/RetainingReactive/RetainingVisitRestAbortTests.cs", "Tests/Runtime/NativeExecution/RetainingReactive/RetainingReactiveNativeCoverageTests.cs"]
+    },
+    {
       "id": "P10-013", "phase": 10, "title": "Reactive composites that keep their running child (finding F2): ADR accepted; stages 1 (spec, reference executor) and 2 (native executor) done; stage 3 (IL2CPP measurement) in review, two targets missed", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P10/P10-013-non-restarting-reactive-composites.md",
       "dependsOn": ["P10-011", "P10-012"],

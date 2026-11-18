@@ -4,6 +4,32 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Native fixes from the P10-013 code review (P10-014)
+
+- **Abort through a Parallel (D1, native, pre-existing).** Suppose an abort whose target lies above
+  a Parallel with suspended branches: a `Timeout` at its deadline, a v1 reactive reset, an observer
+  reset, a hot-reload reset or an outer Parallel's terminal decision. It now continues to its own
+  target after the Parallel has aborted its branches, as in the reference executor. Before, the
+  Parallel took over the target:
+  - `timeout [parallel [a, b]]` returned `Success` and left a branch's frames behind;
+  - a v1 reactive composite over a Parallel faulted the agent (`NativeLifetimeStateInvalid`);
+  - a nested Parallel's terminal decision aborted the outer Parallel instead of returning.
+
+  A tree stop that replaces such an abort still runs to the root.
+- **Parallel branch restore (D2, native, pre-existing, = P10-013 finding F-S2-1).** Restoring a
+  suspended branch while fewer frames were free than the branch is long overwrote a lower branch.
+  In small v1 trees such as `parallel [memory-sequence [ok, work], other]`, one leaf was ticked
+  twice and another never ticked. Every program now uses the in-place rotation that programs with
+  retaining composites already used. Where the old copy was correct, the frames come out the same.
+- **Retaining composites (D3).** A tree stop or observer reset in the one step after a Parallel
+  guard's takeover no longer leaves the rest of that visit pending into the next update. Before, the
+  next update of a reused machine faulted.
+- **Hot reload.** `NativeHotReloadFullRestart.TryRestart` restarts a v1 reactive composite with a
+  running branch (P10-013 finding F-S2-2). `NativeHotReloadStateMigration.TryMigrate` refuses an
+  open update, where a guard pass may hold parked frames.
+- No public API, trace format, compiled format or reference-executor change. Details and the
+  remaining open questions are in `Planning~/Evidence/P10-014/README.md`.
+
 ### Reactive composites that keep their running child, stage 3: IL2CPP measurement (ADR-P10-013)
 
 - **Benchmark only, no package code changed.** New Player-harness trees `io-retain16` and

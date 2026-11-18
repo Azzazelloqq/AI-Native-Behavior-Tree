@@ -1,0 +1,17 @@
+﻿{"errors":[],"status":"completed","compilationFailed":false,"failed":false}
+testName RetainingVisitRestAbortTests 0/3 (failed=3 skipped=0)
+  FAIL AIBT.Tests.Runtime.RetainingVisitRestAbortTests.AnObserverResetInTheWindowClearsTheRestOfTheVisit
+      NativeLifetimeStateInvalid
+      Expected: True
+      But was:  False
+    at AIBT.Tests.Runtime.RetainingNativeTwin.Step (System.Collections.Generic.List`1[T] lines) [0x00119] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Runtime\NativeExecution\RetainingReactive\RetainingNativeTwin.cs:149
+  FAIL AIBT.Tests.Runtime.RetainingVisitRestAbortTests.ATreeStopInTheWindowClearsTheRestOfTheVisitAndTheMachineRunsAgain(Immediate)
+      The stop replaced the rest of the visit.
+      Expected: 0
+      But was:  1
+    at AIBT.Tests.Runtime.RetainingVisitRestAbortTests.ATreeStopInTheWindowClearsTheRestOfTheVisitAndTheMachineRunsAgain (AIBT.Tests.Runtime.RetainingNativeDrive drive) [0x000d7] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Runtime\NativeExecution\RetainingReactive\RetainingVisitRestAbortTests.cs:56
+  FAIL AIBT.Tests.Runtime.RetainingVisitRestAbortTests.ATreeStopInTheWindowClearsTheRestOfTheVisitAndTheMachineRunsAgain(OneStepBudget)
+      The stop replaced the rest of the visit.
+      Expected: 0
+      But was:  1
+    at AIBT.Tests.Runtime.RetainingVisitRestAbortTests.ATreeStopInTheWindowClearsTheRestOfTheVisitAndTheMachineRunsAgain (AIBT.Tests.Runtime.RetainingNativeDrive drive) [0x000d7] in C:\UnityProjects\Modules\Assets\AIBT\Tests\Runtime\NativeExecution\RetainingReactive\RetainingVisitRestAbortTests.cs:56

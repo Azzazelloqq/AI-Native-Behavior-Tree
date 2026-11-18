@@ -42,6 +42,9 @@ namespace AIBT.Tests.Runtime
         internal NativeArray<NativeLifecycleControlV1> Control;
         internal NativeLifecycleMachineV1 Machine;
 
+        /// <summary>P10-014: the Parallel branch records, for assertions on their saved abort state.</summary>
+        internal NativeArray<NativeParallelBranchStateV1> ParallelBranches => _parallel;
+
         /// <summary>The node named as the source of an abort requested from outside (the reference tests pass the root).</summary>
         internal uint? ExternalAbortSource { get; set; } = 0;
 

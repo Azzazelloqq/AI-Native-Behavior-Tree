@@ -35,7 +35,10 @@ namespace AIBT
             var wasAborted = false;
             if (oldInstance.Machine.TryBeginUpdate(resumeUpdateId, out _))
             {
-                if (!oldInstance.Machine.TryRequestAbort(BurstNodeAbortReason.HotReload, out failure))
+                // The update just opened may already have scheduled a v1 reactive reset or an expired
+                // timeout; the whole-tree abort replaces it (P10-014, finding F-S2-2).
+                if (!oldInstance.Machine.TryRequestAbort(BurstNodeAbortReason.HotReload, out failure,
+                        replacePendingForTreeStop: true))
                 {
                     freshInstance = default;
                     report = default;
