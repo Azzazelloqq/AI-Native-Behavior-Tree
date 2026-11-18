@@ -165,6 +165,32 @@ When they shared `PerfClock.cs`, Unity 6000.6 embedded their MonoScripts in the 
 catalog containing an `[AibtInput]` node, one of them then resolved as missing in the build, and
 the Player crashed loading `level0` (`Planning~/Evidence/P10-010/README.md`, deviation 10).
 
+## Retaining reactive composites (P10-013 stage 3)
+
+Set `sim-retain` measures the retaining reactive sequence (`aibt.core.reactive-sequence-retaining`,
+ADR-P10-013) against its v1 twin and the loop trees.
+- **Agents and timing.** 500 agents, `Spread(5)`, jobs on, 200 warm-up and 1000 measured ticks, the
+  `sense` input written every tick and `order` commands read; the `act-*` trees also run the game's
+  completions (as in `sim-actions`).
+- **Order.** `io-loop16`, `io-reactive16`, `io-retain16`, `act-loop16`, `act-reactive16`,
+  `act-retain16`, then the same in reverse inside each run (ABBA labels `A1`…`F1`, `F2`…`A2`).
+- **The `*-retain16` trees** (`Tools/gen_trees.py`, `retain_trees`) are `io-reactive16` and
+  `act-reactive16` with only the root type changed. The 14 earlier children complete in their first
+  tick and are the guards of every think; the last child (`hold`, or the repeater around
+  `aibt.perf.job`) is the one retained. `PerfBuild` bakes them only when the package has the
+  retaining node types (`OptionalNativeTrees`), so a Player built from an older package still builds.
+
+Set `sim-v1` runs `io-loop16`, `io-reactive16`, `act-loop16` and `act-reactive16` once per run with
+the same settings, for a regression check between two Players whose runs are ABBA-ordered.
+
+`runs.jsonl` (`sim`, every simulation set from P10-013 on) also has `cancelledByReasonMeasured`
+(cancels per `ActionCancelReason`, index = enum value) and the live external actions summed over the
+agents at the start and end of the measured window (`liveStart`, `liveEnd`, and of those the ones
+the game completed, `liveCompletedStart`, `liveCompletedEnd`; read through
+`TreeGroup.TryCopyLiveActions` outside the timing). Consumed completions over the window are
+`started − cancelled − (liveEnd − liveStart)`, since a node's consume produces no event. The tables
+of P10-013 come from `perf-data/P10-013/retain_table.py`.
+
 ## What is measured
 
 - **Bracket:** main-thread time from the first script `Update` to the last `LateUpdate` of a frame

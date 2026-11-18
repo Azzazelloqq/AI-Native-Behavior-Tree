@@ -4,6 +4,23 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Reactive composites that keep their running child, stage 3: IL2CPP measurement (ADR-P10-013)
+
+- **Benchmark only, no package code changed.** New Player-harness trees `io-retain16` and
+  `act-retain16` (the v1 reactive trees with the retaining root) and sets `sim-retain`, `sim-v1` and
+  `sim-retain-thinks` in `Benchmarks~/Phase10/PlayerPerf`. `runs.jsonl` now reports cancels per
+  reason, live actions (consumed completions) and, on request, thinks per tick.
+- **Retaining root, measured (500 agents, `Spread(5)`):**
+  - An action is never preempted; every completion is consumed and gives an order (166.6 per tick;
+    v1: 0). `Step` allocates 0 bytes per tick.
+  - `io-retain16` is not slower than `io-reactive16`: 0.99× with 23 job workers, 0.93× with 0.
+  - `act-retain16` costs about 2× `io-retain16`, so the ≤ 1.2× target is missed. Completions now
+    wake the agent and restart work, which gives 2.33× the thinks; per think it costs the same or
+    less.
+- **v1 trees on the P10-013 package:** hosts and reactive trees are unchanged. The cheapest loop
+  trees are about 8 % slower, with 23 job workers only (reported, not investigated). Details in
+  `Planning~/Evidence/P10-013/README.md`, stage 3.
+
 ### Reactive composites that keep their running child, stage 2: native executor (ADR-P10-013)
 
 - **Native support:** `aibt.core.reactive-sequence-retaining` and `aibt.core.reactive-selector-retaining`

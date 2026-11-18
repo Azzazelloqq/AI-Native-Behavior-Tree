@@ -69,6 +69,9 @@ namespace AIBT.Perf
         // P10-012: agents traced in the group (TreeGroup.TrySetTraced), spread evenly over the slots,
         // with the default trace settings (1024 records per agent, 256 per think).
         public int SimTraced;
+        // P10-013: count thinks per tick after Step (debug state of every agent; diagnostic sets only,
+        // never in a timed comparison).
+        public bool SimCountThinks;
         // ABBA position label written to runs.jsonl ("A1", "B1", ...), empty outside ABBA sets.
         public string Abba = string.Empty;
     }
@@ -105,8 +108,15 @@ namespace AIBT.Perf
         public static int PendingCount;
         public static long Started;
         public static long Cancelled;
+        // P10-013: cancels per ActionCancelReason (index = the enum value, 0 = Preempted).
+        public static readonly long[] CancelledByReason = new long[8];
         public static long Completed;
         public static long CompleteFailures;
+        // P10-013: thinks counted after Step when CountThinks is set (outside the timed call).
+        public static bool CountThinks;
+        public static long Thinks;
+        public static long ThinksScheduled;
+        public static long ThinksCompletion;
         public static long CompleteTicks;
         public static long EventTicks;
 
@@ -160,6 +170,18 @@ namespace AIBT.Perf
                 Commands += orders.Length;
                 for (var i = 0; i < orders.Length; i++) CommandChecksum += orders[i].Value.Target;
             }
+            if (CountThinks)
+            {
+                Span<ActivePathNode> path = stackalloc ActivePathNode[64];
+                for (var index = 0; index < Group.HighWaterIndex; index++)
+                {
+                    if (!Group.TryGetAgentAt(index, out var agent)) continue;
+                    if (Group.TryGetActivePath(agent, path, out _, out var state) != SimulationResult.Success || state.LastThinkTick != Tick) continue;
+                    Thinks++;
+                    if ((state.LastThinkReasons & ThinkReasons.Scheduled) != 0) ThinksScheduled++;
+                    if ((state.LastThinkReasons & ThinkReasons.ActionCompleted) != 0) ThinksCompletion++;
+                }
+            }
             if (Actions)
             {
                 var eventStart = PerfClock.Watch.ElapsedTicks;
@@ -179,6 +201,7 @@ namespace AIBT.Perf
                         continue;
                     }
                     Cancelled++;
+                    CancelledByReason[(int)item.CancelReason & 7]++;
                     for (var p = 0; p < PendingCount; p++)
                         if (Pending[p] == item.Action)
                         {
@@ -383,6 +406,48 @@ namespace AIBT.Perf
                         Add(Sim(pair[1], "e1", true));
                         Add(Sim(pair[1], "e2", true));
                         Add(Sim(pair[0], "b2", false));
+                    }
+                }
+                // P10-013 stage 3: retaining reactive composites against their v1 twins and the loop
+                // trees, N = 500, Spread(5), default container settings, input + commands on every tree,
+                // actions on the act-* trees. ABC...FF...CBA inside each run (a1..f1, f2..a2).
+                else if (part == "sim-retain")
+                {
+                    var trees = new[] { "io-loop16", "io-reactive16", "io-retain16", "act-loop16", "act-reactive16", "act-retain16" };
+                    Scenario Sim(string tree, string label)
+                    {
+                        var s = new Scenario { Id = "sim-" + tree + "-" + label, Kind = ScenarioKind.Simulation, Tree = tree, N = 500, SimUseJobs = true, SimIo = true, SimActions = tree.StartsWith("act-", StringComparison.Ordinal) };
+                        s.Abba = label.ToUpperInvariant();
+                        s.Warmup = 200;
+                        s.Measure = 1000;
+                        return s;
+                    }
+                    for (var i = 0; i < trees.Length; i++) Add(Sim(trees[i], (char)('a' + i) + "1"));
+                    for (var i = trees.Length - 1; i >= 0; i--) Add(Sim(trees[i], (char)('a' + i) + "2"));
+                }
+                // P10-013 stage 3, diagnostic only: the sim-retain trees once each with thinks counted
+                // after every Step (thinks per tick and their reasons); not a timing set.
+                else if (part == "sim-retain-thinks")
+                {
+                    foreach (var tree in new[] { "io-loop16", "io-reactive16", "io-retain16", "act-loop16", "act-reactive16", "act-retain16" })
+                    {
+                        var s = new Scenario { Id = "sim-" + tree + "-thinks", Kind = ScenarioKind.Simulation, Tree = tree, N = 500, SimUseJobs = true, SimIo = true, SimActions = tree.StartsWith("act-", StringComparison.Ordinal), SimCountThinks = true };
+                        s.Warmup = 200;
+                        s.Measure = 1000;
+                        Add(s);
+                    }
+                }
+                // P10-013 stage 3: v1 regression between two Players (package before/after P10-013); one
+                // scenario per tree per run, the Player runs themselves are ABBA-ordered. Same settings
+                // as sim-retain.
+                else if (part == "sim-v1")
+                {
+                    foreach (var tree in new[] { "io-loop16", "io-reactive16", "act-loop16", "act-reactive16" })
+                    {
+                        var s = new Scenario { Id = "sim-" + tree, Kind = ScenarioKind.Simulation, Tree = tree, N = 500, SimUseJobs = true, SimIo = true, SimActions = tree.StartsWith("act-", StringComparison.Ordinal) };
+                        s.Warmup = 200;
+                        s.Measure = 1000;
+                        Add(s);
                     }
                 }
                 // P10-012: tracing cost, N = 500, Spread(5), default container settings, on io-loop16,
@@ -897,8 +962,13 @@ namespace AIBT.Perf
                     PerfSimulationStepper.PendingCount = 0;
                     PerfSimulationStepper.Started = 0;
                     PerfSimulationStepper.Cancelled = 0;
+                    System.Array.Clear(PerfSimulationStepper.CancelledByReason, 0, PerfSimulationStepper.CancelledByReason.Length);
                     PerfSimulationStepper.Completed = 0;
                     PerfSimulationStepper.CompleteFailures = 0;
+                    PerfSimulationStepper.CountThinks = s.SimCountThinks;
+                    PerfSimulationStepper.Thinks = 0;
+                    PerfSimulationStepper.ThinksScheduled = 0;
+                    PerfSimulationStepper.ThinksCompletion = 0;
                     PerfSimulationStepper.Simulation = simulation;
                     break;
                 case ScenarioKind.Realistic:
@@ -1043,6 +1113,13 @@ namespace AIBT.Perf
             _simStartedStart = PerfSimulationStepper.Started;
             _simCancelledStart = PerfSimulationStepper.Cancelled;
             _simCompletedStart = PerfSimulationStepper.Completed;
+            // P10-013: per-reason cancels and the live actions (started, not ended; and of those the
+            // ones the game completed) at the start of the measured window, read outside the timing.
+            System.Array.Copy(PerfSimulationStepper.CancelledByReason, _simCancelledByReasonStart, _simCancelledByReasonStart.Length);
+            _simLiveStart = LiveTotals(out _simLiveCompletedStart);
+            _simThinksStart = PerfSimulationStepper.Thinks;
+            _simThinksScheduledStart = PerfSimulationStepper.ThinksScheduled;
+            _simThinksCompletionStart = PerfSimulationStepper.ThinksCompletion;
             _meta = new StringBuilder();
             _meta.Append("{\"scenario\":\"").Append(s.Id).Append("\",\"kind\":\"").Append(s.Kind)
                 .Append("\",\"tree\":\"").Append(s.Tree ?? string.Empty).Append("\",\"n\":").Append(s.N)
@@ -1127,6 +1204,19 @@ namespace AIBT.Perf
                     .Append(",\"cancelledMeasured\":").Append(PerfSimulationStepper.Cancelled - _simCancelledStart)
                     .Append(",\"completedMeasured\":").Append(PerfSimulationStepper.Completed - _simCompletedStart)
                     .Append(",\"completeFailures\":").Append(PerfSimulationStepper.CompleteFailures)
+                    .Append(",\"cancelledByReasonMeasured\":[");
+                for (var reason = 0; reason < _simCancelledByReasonStart.Length; reason++)
+                    _meta.Append(reason == 0 ? string.Empty : ",").Append(PerfSimulationStepper.CancelledByReason[reason] - _simCancelledByReasonStart[reason]);
+                var liveEnd = LiveTotals(out var liveCompletedEnd);
+                _meta.Append(']')
+                    .Append(",\"liveStart\":").Append(_simLiveStart)
+                    .Append(",\"liveEnd\":").Append(liveEnd)
+                    .Append(",\"liveCompletedStart\":").Append(_simLiveCompletedStart)
+                    .Append(",\"liveCompletedEnd\":").Append(liveCompletedEnd)
+                    .Append(",\"countThinks\":").Append(s.SimCountThinks ? "true" : "false")
+                    .Append(",\"thinksMeasured\":").Append(PerfSimulationStepper.Thinks - _simThinksStart)
+                    .Append(",\"thinksScheduledMeasured\":").Append(PerfSimulationStepper.ThinksScheduled - _simThinksScheduledStart)
+                    .Append(",\"thinksCompletionMeasured\":").Append(PerfSimulationStepper.ThinksCompletion - _simThinksCompletionStart)
                     .Append(",\"traced\":").Append(s.SimTraced)
                     .Append(",\"traceRecorded\":").Append(TraceTotals(out var dropped))
                     .Append(",\"traceDropped\":").Append(dropped)
@@ -1164,6 +1254,34 @@ namespace AIBT.Perf
         }
         private long _simCancelledStart;
         private long _simCompletedStart;
+        private readonly long[] _simCancelledByReasonStart = new long[8];
+        private long _simLiveStart;
+        private long _simLiveCompletedStart;
+        private long _simThinksStart;
+        private long _simThinksScheduledStart;
+        private long _simThinksCompletionStart;
+
+        /// <summary>
+        /// P10-013: live external actions over the group's agents (started, not ended), and how many of
+        /// them the game has completed (reported, not consumed yet). Outside the measurement.
+        /// Consumed completions in a window = started - cancelled - (live at end - live at start).
+        /// </summary>
+        private static long LiveTotals(out long completed)
+        {
+            completed = 0;
+            var group = PerfSimulationStepper.Group;
+            if (group == null || !PerfSimulationStepper.Actions) return 0;
+            long live = 0;
+            using (var actions = new Unity.Collections.NativeList<LiveAction>(8, Unity.Collections.Allocator.Temp))
+                for (var index = 0; index < group.HighWaterIndex; index++)
+                {
+                    if (!group.TryGetAgentAt(index, out var agent)) continue;
+                    if (group.TryCopyLiveActions(agent, actions) != SimulationResult.Success) continue;
+                    live += actions.Length;
+                    for (var i = 0; i < actions.Length; i++) if (actions[i].Completed) completed++;
+                }
+            return live;
+        }
         private uint _simTickStart;
         private readonly List<GameObject> _pendingActivation = new List<GameObject>();
 

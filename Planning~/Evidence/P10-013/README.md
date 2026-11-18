@@ -287,3 +287,230 @@ fields, `NativeReactivePolicyV1` helpers).
 - **Observation, not verified:** in the `ParallelAbortPending` path an abort from above of a Parallel
   with running branches sets `AbortTargetDepth = 0`, which may widen a Timeout or v1 reset target that
   ends inside the Parallel. Read only; no test written.
+
+# P10-013 evidence — stage 3 (IL2CPP measurement), result (2026-11-18)
+
+Benchmark harness only; no runtime code, spec, test expectation, ABI or existing benchmark tree
+changed. Raw data, logs, tables and scripts: `C:\UnityProjects\_aibt_acceptance\perf-data\P10-013\`
+(`build_players.ps1`, `run_measurements.ps1`, `retain_table.py` → `tables.md`). Every number below is
+in `tables.md`, which `python -X utf8 retain_table.py > tables.md` recomputes from `raw/`.
+
+## Verdict per ADR §5 stage-3 target
+
+| target | result | verdict |
+|---|---|---|
+| `act-retain16`: 0 `Preempted` cancels in steady state | 0.00 cancels per tick of any reason, 23 and 0 workers, every run (v1 `act-reactive16`: 200 `Preempted`/tick) | **met** |
+| consumed completions = reported − in flight | 166.60 reported = 166.60 consumed per tick, in-flight change over the window 0, lost 0 (v1: 100 reported, 0 consumed, 100 lost) | **met** |
+| orders > 0 | 166.60 per tick, one per consumed completion (v1: 0) | **met** |
+| `Step` `act-retain16` / `io-retain16` ≤ 1.2 | 2.039 (1.913–2.118) at 23 workers, 2.347 (2.255–2.431) at 0 workers | **missed**; cause: 2.33× the thinks (below) |
+| `io-retain16` `Step` median not above `io-reactive16` | 23 workers 236.3 vs 238.0 µs, paired 0.990 (0.889–1.047); 0 workers 2480.1 vs 2670.7 µs, paired 0.926 (0.906–0.939) | **met** (at 23 workers the difference is inside the noise; at 0 workers −7.4 %, inside the ADR's 5–10 % estimate) |
+| v1 trees head/base within run-to-run noise | hosts 0.996–1.023 (noise 4.5 %); container reactive trees 0.987–1.046, pooled 1.000–1.030; loop trees at 0 workers 0.919–1.050; **loop trees at 23 workers pooled 1.079 (`io-loop16`) and 1.090 (`act-loop16`), +5–6 µs per Step, in both run orders, noise 7.2–8.7 %** | **met, except the loop trees at 23 workers: missed by a small margin** (at the edge of the noise, but reproduced) |
+| 0 bytes per tick in `Step` | 0 B mean and 0 B in the worst frame, every tree, both Players, both worker counts | **met** |
+
+**Why `act-retain16` / `io-retain16` is about 2, not ≤ 1.2.** The target assumed that `act-retain16`
+thinks as often as `io-retain16`. It does not:
+- The retained job reads its completion, gives an order and succeeds. The repeater starts the next
+  job in the same think.
+- The game completes each action 3 ticks later, and the completion wakes the agent. Every agent
+  therefore runs a job cycle every 3 ticks: 166.6 starts, completions, consumes and orders per tick
+  (500 / 3).
+- That adds 166.6 completion wake-ups per tick to the 100 scheduled thinks. Diagnostic run D counts
+  233.3 thinks per tick, against 100 for `io-retain16` and 200 for v1 `act-reactive16`.
+- Per think, `act-retain16` costs 2.03 µs against 2.36 µs for `io-retain16` at 23 workers (0.859×),
+  and 24.83 against 24.80 µs at 0 workers (1.001×).
+
+The retaining composite adds no per-think cost. The ratio measures how much more work the tree does
+now that its actions complete. ADR §1.3 already said that the wake-up thinks remain; the ≤ 1.2 target
+did not account for the shorter job cycle. Against its v1 twin, `act-retain16` costs
+1.054 (0.957–1.092)× `act-reactive16` at 23 workers and 1.012 (0.986–1.074)× at 0 workers, and does
+166.6 useful job cycles per tick instead of 0. Its `Step` p99 is higher than v1's (734.3 vs 606.9 µs
+at 23 workers, 8827.7 vs 6484.4 µs at 0 workers); not investigated.
+
+**v1 loop trees at 23 workers.** These trees contain no reactive composite.
+- B (base, head, head, base; 2 runs per block): `io-loop16` 1.061, `act-loop16` 1.141.
+- C (head, base, base, head; 4 runs per block, added for this): 1.084 and 1.082.
+- Pooled 12+12 runs: 64.6 → 69.7 µs and 64.1 → 69.8 µs.
+- At 0 workers the same trees give head/base 0.92–1.05 (pooled 0.959 and 0.926, noise 17 %). The
+  host check gives 1.023 / 0.998 (`shared-loop16`, 500 / 2000 agents).
+
+The difference appears only with job workers and only on the cheapest trees (Step ≈ 65 µs, about
+0.65 µs per think). That points to the jobified update path rather than per-node work. It was not
+investigated: reported, not fixed, as the brief requires.
+
+## Method
+
+**Players.** IL2CPP, Release, High stripping, non-development, Unity 6000.6.9f1, Intel Core Ultra 9
+275HX (24 logical), Windows 11.
+- **Project.** `C:\UnityProjects\_aibt_acceptance\P9Samples-6069`, not open in any Editor.
+  `build_players.ps1` builds it in batch mode through the harness's `Invoke-Perf.ps1 -Step Prepare`
+  and `-Step Build`.
+- **Package.** The manifest pointed at a `git archive` copy of each commit.
+- **Restore.** Harness, manifest and lock file were backed up to
+  `P9Samples-6069-backup-before-p10013` and restored afterwards. They are byte-identical to the
+  backup; the manifest points at `aibt-659a8b1-6069` again.
+
+| Player | AIBT | Harness |
+|---|---|---|
+| `Build\P10013` (head) | `d47f948` (`aibt-d47f948-6069`) | this stage's, with `io-retain16` / `act-retain16` baked |
+| `Build\P10013-base` (base) | `1dd7dd0` (`aibt-1dd7dd0-6069`) | the same; the retain trees are skipped (`AIBT2021 Node type is not present`) |
+
+Checked in the built Players: the head metadata contains `aibt.core.reactive-sequence-retaining`
+and the `io-retain16` asset; the base contains neither.
+
+**Trees.** `act-retain16` and `io-retain16` (`Tools/gen_trees.py`, `retain_trees`) are byte-identical
+to `act-reactive16` / `io-reactive16` except for `treeId`, `name` and the root type
+(`aibt.core.reactive-sequence-retaining`). Existing trees are unchanged.
+- **Pitfall check (ADR §2.5 example 5), done before measuring.** The 14 children before the last are
+  `sense` and 13 `wait(ticks: 1)`, each completing in its first tick, so they are the guards. The
+  last child (`hold`, or the repeater around `aibt.perf.job`) is the only multi-update child and is
+  the one retained.
+- **Sanity run.** A one-run check (not kept) showed the intended behaviour before the measurement.
+- **Measured confirmation.** No cancels, every completion consumed, one order per consume;
+  `io-retain16` gives the same 100 orders per tick as `io-reactive16`.
+
+**A — `sim-retain`, head Player.**
+- **Agents and timing.** 500 agents, `Spread(5)`, jobs on, 200 warm-up and 1000 measured ticks.
+- **Game side.** The `sense` input is written every tick and `order` commands are read; the game
+  completes every started action 3 ticks later.
+- **Order.** Six trees per run, ABC…FF…CBA (`io-loop16`, `io-reactive16`, `io-retain16`,
+  `act-loop16`, `act-reactive16`, `act-retain16`).
+- **Runs.** 6 Player runs per worker count, in blocks of 3 runs ordered 23, 0, 0, 23 workers (23 is
+  the default `JobWorkerCount`). Each tree has 12 instances per cell (two per run).
+- **Paired ratios.** Per run, the mean of a tree's two halves; the ratio of two trees in the same
+  run; the median (min–max) over the 6 runs.
+
+**B — v1 regression, both Players.**
+- **Sets.** `sim-v1` (`io-loop16`, `io-reactive16`, `act-loop16`, `act-reactive16`; settings as in
+  A; one instance per tree per run) and `host-check` (`NativeTreeAgent`, default profile,
+  `shared-loop16` / `shared-reactive16` at 500 and 2000 agents).
+- **Order.** Player runs ABBA: base, head, head, base, 2 runs per block (4+4 per side).
+- **Workers.** Container at 23 and 0 workers, hosts at the default worker count.
+
+**C — replication of the B container cells** (added after B; see deviations). Head, base, base,
+head, 4 runs per block (8+8 per side), 23 and 0 workers.
+
+**D — thinks per tick (diagnostic, not timing).** Set `sim-retain-thinks`, one run, head Player,
+23 workers. After every `Step` the harness reads every agent's `AgentDebugState` and counts the
+agents whose `LastThinkTick` is this tick, with their reasons.
+
+**Noise.** Run-to-run noise is the largest same-Player block-to-block difference of the medians.
+- **Hosts:** 4.5 %.
+- **Container, 23 workers:** 8.7 % (B) and 7.2 % (C).
+- **Container, 0 workers:** 17.4 % (B) and 17.0 % (C). The loop trees dominate this figure: at 0
+  workers they are bimodal between sessions (`io-loop16` base median 96.5 µs in B, 159.9 µs in C,
+  minutes apart). The reactive trees at 0 workers moved ≤ 4.6 % block to block.
+- **Inside one A run:** the paired ratios vary by about ±5 % (23 workers) and ±2 % (0 workers).
+
+## Tables
+
+### A. `sim-retain` (head `d47f948`), median (min–max) of 12 instances per cell
+
+| workers | tree | Step µs median | Step µs p99 | bytes/tick | starts/tick | cancels/tick | reported/tick | consumed/tick | orders/tick | faults |
+|---:|---|---:|---:|---:|---:|---|---:|---:|---:|---:|
+| 23 | `io-loop16` | 64.9 (62.6–89.8) | 187.0 (172.7–223.4) | 0 | 0 | 0 | 0 | 0 | 5.47 | 0 |
+| 23 | `io-reactive16` | 238.0 (229.8–269.9) | 405.3 (358.4–443.8) | 0 | 0 | 0 | 0 | 0 | 100.00 | 0 |
+| 23 | `io-retain16` | 236.3 (216.5–258.9) | 390.4 (344.6–447.4) | 0 | 0 | 0 | 0 | 0 | 100.00 | 0 |
+| 23 | `act-loop16` | 65.1 (62.3–72.0) | 215.6 (196.7–230.6) | 0 | 5.47 | 0 | 5.19 | 5.19 | 5.19 | 0 |
+| 23 | `act-reactive16` | 454.9 (422.6–518.7) | 606.9 (575.4–693.3) | 0 | 200.00 | Preempted 200.00 | 100.00 | 0.00 | 0.00 | 0 |
+| 23 | `act-retain16` | 473.6 (451.7–533.0) | 734.3 (688.8–805.9) | 0 | 166.60 | 0 | 166.60 | 166.60 | 166.60 | 0 |
+| 0 | `io-loop16` | 98.3 (91.5–135.2) | 1406.8 (1320.6–1590.9) | 0 | 0 | 0 | 0 | 0 | 5.47 | 0 |
+| 0 | `io-reactive16` | 2670.7 (2575.5–2861.2) | 3185.1 (2797.7–3683.5) | 0 | 0 | 0 | 0 | 0 | 100.00 | 0 |
+| 0 | `io-retain16` | 2480.1 (2408.2–2596.9) | 2854.7 (2660.0–3170.4) | 0 | 0 | 0 | 0 | 0 | 100.00 | 0 |
+| 0 | `act-loop16` | 97.7 (96.2–129.9) | 1774.2 (1726.2–1939.3) | 0 | 5.47 | 0 | 5.19 | 5.19 | 5.19 | 0 |
+| 0 | `act-reactive16` | 5702.6 (5599.5–6195.4) | 6484.4 (6102.7–7486.8) | 0 | 200.00 | Preempted 200.00 | 100.00 | 0.00 | 0.00 | 0 |
+| 0 | `act-retain16` | 5792.5 (5577.0–6253.0) | 8827.7 (8419.1–9648.5) | 0 | 166.60 | 0 | 166.60 | 166.60 | 166.60 | 0 |
+
+The per-tick flows are identical in every instance (deterministic trees). `act-loop16` starts 5.47
+and consumes 5.19 per tick. The difference is actions still running when the window ends, the same
+in every instance (300 live actions at both ends of the window, 0 completed and not consumed).
+
+| paired ratio (median, min–max over 6 runs) | 23 workers | 0 workers |
+|---|---:|---:|
+| `act-retain16` / `io-retain16` | 2.039 (1.913–2.118) | 2.347 (2.255–2.431) |
+| `act-reactive16` / `io-reactive16` | 1.860 (1.834–2.003) | 2.111 (2.102–2.236) |
+| `act-loop16` / `io-loop16` | 0.960 (0.863–1.038) | 1.000 (0.836–1.187) |
+| `io-retain16` / `io-reactive16` | 0.990 (0.889–1.047) | 0.926 (0.906–0.939) |
+| `act-retain16` / `act-reactive16` | 1.054 (0.957–1.092) | 1.012 (0.986–1.074) |
+| `io-retain16` / `io-loop16` | 3.475 (3.113–3.694) | 25.077 (20.701–26.407) |
+
+### D/E. Thinks per tick and Step per think
+
+| tree | thinks/tick | scheduled | with a completion | µs per think, 23 workers | µs per think, 0 workers |
+|---|---:|---:|---:|---:|---:|
+| `io-loop16` | 100.00 | 100.00 | 0.00 | 0.65 | 0.98 |
+| `io-reactive16` | 100.00 | 100.00 | 0.00 | 2.38 | 26.71 |
+| `io-retain16` | 100.00 | 100.00 | 0.00 | 2.36 | 24.80 |
+| `act-loop16` | 105.19 | 100.00 | 5.19 | 0.62 | 0.93 |
+| `act-reactive16` | 200.00 | 100.00 | 100.00 | 2.27 | 28.51 |
+| `act-retain16` | 233.30 | 100.00 | 166.60 | 2.03 | 24.83 |
+
+µs per think = the A Step median divided by the D thinks per tick. D's own Step times are perturbed by
+the count and are not used.
+
+### B and C. v1 regression, base `1dd7dd0` vs head `d47f948`
+
+Step µs median; each cell is the median (min–max) of the runs.
+
+| workers | tree | B base (4) | B head (4) | B head/base | C base (8) | C head (8) | C head/base | pooled head/base (12+12) |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| 23 | `io-loop16` | 64.6 (60.8–66.1) | 68.5 (65.0–72.8) | 1.061 | 64.6 (62.2–67.2) | 70.0 (64.4–73.5) | 1.084 | 1.079 |
+| 23 | `io-reactive16` | 245.2 (235.1–249.0) | 242.0 (231.7–245.2) | 0.987 | 241.8 (228.4–268.9) | 242.2 (230.0–273.4) | 1.002 | 1.000 |
+| 23 | `act-loop16` | 61.0 (59.5–62.1) | 69.6 (68.5–73.7) | 1.141 | 64.8 (63.2–67.5) | 70.2 (66.0–82.7) | 1.082 | 1.090 |
+| 23 | `act-reactive16` | 437.7 (420.2–492.8) | 458.0 (445.4–474.1) | 1.046 | 471.5 (465.4–486.4) | 478.9 (440.8–527.4) | 1.016 | 1.012 |
+| 0 | `io-loop16` | 96.5 (89.8–106.2) | 101.3 (94.2–109.7) | 1.050 | 159.9 (133.9–169.2) | 151.0 (115.1–179.1) | 0.944 | 0.959 |
+| 0 | `io-reactive16` | 2556.7 (2504.8–2708.1) | 2605.2 (2595.4–2617.1) | 1.019 | 2925.3 (2873.1–2999.2) | 2910.1 (2634.2–2997.5) | 0.995 | 1.001 |
+| 0 | `act-loop16` | 105.0 (90.3–115.2) | 96.5 (93.4–132.6) | 0.919 | 160.3 (131.4–173.1) | 155.7 (113.5–186.9) | 0.971 | 0.926 |
+| 0 | `act-reactive16` | 5592.3 (5485.8–5829.6) | 5762.1 (5751.1–5766.4) | 1.030 | 6163.0 (5839.9–6291.5) | 6236.8 (5996.9–6461.1) | 1.012 | 1.030 |
+
+The per-tick flows (starts, cancels, consumed, orders) are identical on both Players for every tree:
+`act-reactive16` 200, 200 `Preempted`, 0, 0; `act-loop16` 5.47, 0, 5.19, 5.19. Bytes per tick 0,
+faults 0. The p99 values and block ratios are in `tables.md`.
+
+| host tree | N | base bracket µs (4) | head bracket µs (4) | head/base | base drive µs | head drive µs | head/base drive |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `shared-loop16` | 500 | 418.6 (408.9–457.9) | 428.1 (419.9–435.2) | 1.023 | 253.3 | 260.9 | 1.030 |
+| `shared-loop16` | 2000 | 2099.3 (1980.7–2215.2) | 2095.7 (1918.4–2219.7) | 0.998 | 1298.8 | 1282.3 | 0.987 |
+| `shared-reactive16` | 500 | 2479.1 (2474.2–2705.6) | 2469.8 (2461.4–2559.3) | 0.996 | 2279.0 | 2271.3 | 0.997 |
+| `shared-reactive16` | 2000 | 10266.6 (10004.2–10464.8) | 10284.8 (9994.0–10429.7) | 1.002 | 9301.8 | 9323.5 | 1.002 |
+
+For context only (other sessions, not compared): P10-012 measured `io-loop16` 61 / 92 µs and
+`io-reactive16` 238 / 2582 µs; this session's head gives 64.9 / 98.3 and 238.0 / 2670.7 µs.
+
+## Harness changes (`Benchmarks~/Phase10/PlayerPerf/`)
+
+- **`Tools/gen_trees.py`:** `retain_trees()` generates `io-retain16` and `act-retain16`.
+- **`PerfBuild.cs`:** `OptionalNativeTrees` (the two retain trees) are baked only when the package
+  has the node types, so the base Player builds from the same harness.
+- **`PerfRunner.cs`:**
+  - New sets `sim-retain`, `sim-v1` and `sim-retain-thinks`.
+  - `runs.jsonl` `sim` gains `cancelledByReasonMeasured` and `liveStart`, `liveEnd`,
+    `liveCompletedStart`, `liveCompletedEnd` (`TreeGroup.TryCopyLiveActions`, read outside the
+    timing). Consumed = started − cancelled − Δlive, since a consume has no event.
+  - Only with `SimCountThinks`: `thinksMeasured` and its reasons.
+- **`README.md`:** section "Retaining reactive composites (P10-013 stage 3)".
+
+## Deviations from the method in the brief
+
+1. **Replication C added.** B's container cell at 23 workers showed `act-loop16` head/base 1.141 on
+   4+4 single-instance runs. C repeats both container cells in the reversed order with 8+8 runs, so
+   one block does not decide the verdict. C ran after D in the same session.
+2. **Thinks were counted in a separate diagnostic run (D)**, not in the timing runs. The per-think
+   costs combine A's Step medians with D's counts; this holds because the per-tick flows are
+   deterministic and identical between A and D.
+3. **The Players were built twice.** The measurement uses only the second build (the first lacked
+   the think counter). Both Players have the identical harness; the head has two extra baked trees.
+4. **B container cells** run one instance per tree per run (`sim-v1`), with ABBA at the Player-run
+   level rather than inside a run (two Players cannot share a run).
+5. **A order.** ABBA by worker-count blocks (23, 0, 0, 23) plus ABC…CBA inside each run; "6 runs per
+   cell" gives 12 instances per tree.
+6. **Other processes.** The `C:\UnityProjects\Modules` Editor was open (idle, about 0 CPU, checked
+   before each build and session, no tests running). An Editor for another project (Unity
+   7000.0.0a8) ran throughout. Neither was touched.
+7. **Steady state** = the whole 1000-tick measured window after 200 warm-up ticks; the flows were
+   constant across all instances.
+
+## Not measured
+
+- The retaining **selector** (no benchmark tree; the ADR target is about the sequence).
+- The cause of the loop-tree difference at 23 workers and of `act-retain16`'s higher p99.
+- Retaining trees on `NativeTreeAgent` hosts (the host check covers v1 trees only).

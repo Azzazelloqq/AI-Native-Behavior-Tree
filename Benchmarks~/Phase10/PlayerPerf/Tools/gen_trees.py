@@ -151,6 +151,7 @@ def native_trees():
     out["native-wait1"] = tree("native-wait1", "hold", {"hold": wait(BIG)})
     out.update(io_trees())
     out.update(act_trees())
+    out.update(retain_trees())
     return out
 
 
@@ -195,6 +196,24 @@ def act_trees():
     loop["p-ok3"] = n("aibt.perf.job")
     loop["loop"] = n("aibt.core.repeater", ["priority"], {"count": BIG, "stopOnFailure": False})
     out["act-loop16"] = tree("act-loop16", "loop", loop)
+    return out
+
+
+def retain_trees():
+    # P10-013 stage 3: io-reactive16 and act-reactive16 with the root composite replaced by the
+    # retaining reactive sequence (ADR-P10-013 section 2.1); every other node is unchanged. The 14
+    # earlier children (sense + 13 wait(1)) complete in their first tick and are the guards of each
+    # think; the last child (hold / the job repeater) is the only multi-update child and is the one
+    # retained, so the example-5 pitfall (two multi-update children) does not apply.
+    out = {}
+    for name in ("io-reactive16", "act-reactive16"):
+        doc = io_trees()[name] if name.startswith("io-") else act_trees()[name]
+        assert doc["nodes"]["root"]["type"] == "aibt.core.reactive-sequence"
+        doc["nodes"]["root"]["type"] = "aibt.core.reactive-sequence-retaining"
+        retained = name.replace("reactive", "retain")
+        doc["treeId"] = "aibt.perf." + retained
+        doc["name"] = retained
+        out[retained] = doc
     return out
 
 

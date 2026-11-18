@@ -1,8 +1,8 @@
 # P10-013 — Reactive composites that keep their running child (finding F2)
 
 Status: `Review` — stage 1 (specification, manifests, reference executor, behaviour cases) done
-2026-11-17; stage 2 (native executor and equivalence) done 2026-11-18, awaiting the owner's
-acceptance; stage 3 (IL2CPP) not started. The
+2026-11-17; stage 2 (native executor and equivalence) done 2026-11-18; stage 3 (IL2CPP measurement)
+done 2026-11-18, awaiting the owner's acceptance (two targets missed, see the evidence). The
 ADR was accepted on 2026-11-17 with all nine recommendations of its §6 (decision AIBT-048).
 
 ## Objective
@@ -60,7 +60,8 @@ generator and native classifiers support one version per type ID (ADR §3). Open
 - ADR stage (done): the ADR, this card, the `work-items.json` entry.
 - Stage 1 (done): ADR §5 stage 1; evidence `Planning~/Evidence/P10-013/README.md`.
 - Stage 2 (done, in review): ADR §5 stage 2; evidence in the same README, section "stage 2".
-- Stage 3: after the owner accepts stage 2.
+- Stage 3 (done, in review): ADR §5 stage 3; evidence in the same README, section "stage 3";
+  raw data `C:\UnityProjects\_aibt_acceptance\perf-data\P10-013\`.
 
 ## Acceptance criteria
 
@@ -110,3 +111,13 @@ IL2CPP Player benchmark as in Planning~/Evidence/P10-011 §5.1 and P10-012 (stag
   `NativeHotReloadFullRestart.TryRestart` refuses a v1 reactive composite with a running branch);
   both are pinned by ignored tests. `RetainingReactiveNativeRejectionTests` became
   `RetainingReactiveNativeAcceptanceTests`.
+- Stage 3 (2026-11-18): IL2CPP measurement, harness only (`Benchmarks~/Phase10/PlayerPerf`); see the
+  "stage 3" section of `Planning~/Evidence/P10-013/README.md`.
+  - **Met:** no `Preempted` cancels under the retaining root; every completion consumed; orders > 0;
+    `io-retain16` not slower than `io-reactive16`; 0 bytes per tick; hosts and v1 reactive trees
+    unchanged.
+  - **Missed:** `act-retain16`/`io-retain16` is 2.04 (23 workers) / 2.35 (0 workers) instead of
+    ≤ 1.2. The tree now completes and restarts its job every 3 ticks: 233 thinks per tick against
+    100, and per think 0.86× / 1.00×.
+  - **Missed:** v1 `io-loop16` and `act-loop16` are 1.08–1.09× slower on the P10-013 package, with
+    23 job workers only (noise 7–9 %, reproduced in both orders, cause not investigated).

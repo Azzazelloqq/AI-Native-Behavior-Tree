@@ -29,6 +29,11 @@ namespace AIBT.Perf.Editor
             "act-reactive16", "act-loop16",
         };
 
+        // P10-013 stage 3: trees with the retaining reactive composites. Baked only when the package
+        // has those node types, so a base Player built from a package before P10-013 (for the v1
+        // regression check) builds without them; the sim-retain set then cannot run in that Player.
+        private static readonly string[] OptionalNativeTrees = { "io-retain16", "act-retain16" };
+
         private static readonly string[] ManagedTrees =
         {
             "shared-shape15", "shared-loop16", "shared-reactive2", "shared-reactive16", "shared-reactive64",
@@ -41,6 +46,16 @@ namespace AIBT.Perf.Editor
             AssetDatabase.Refresh();
             if (!AssetDatabase.IsValidFolder(RuntimeFolder)) AssetDatabase.CreateFolder(Root, "Prepared");
             foreach (var name in NativeTrees) Bake(name);
+            var optional = new System.Collections.Generic.List<string>();
+            foreach (var name in OptionalNativeTrees)
+            {
+                try { Bake(name); optional.Add(name); }
+                catch (Exception error)
+                {
+                    Debug.LogWarning("AIBT_PERF_OPTIONAL_TREE_SKIPPED|" + name + "|" + error.Message);
+                    AssetDatabase.DeleteAsset(RuntimeFolder + "/" + name + ".runtime.asset");
+                }
+            }
             AssetDatabase.SaveAssets();
 
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -61,7 +76,7 @@ namespace AIBT.Perf.Editor
                 if (text == null) throw new InvalidOperationException("Missing tree " + name);
                 runner.managedTrees.Add(new NamedText { name = name, json = text });
             }
-            foreach (var name in NativeTrees)
+            foreach (var name in NativeTrees.Concat(optional))
             {
                 var asset = AssetDatabase.LoadAssetAtPath<ProductionTreeAsset>(RuntimeFolder + "/" + name + ".runtime.asset");
                 if (asset == null) throw new InvalidOperationException("Missing prepared tree " + name);
