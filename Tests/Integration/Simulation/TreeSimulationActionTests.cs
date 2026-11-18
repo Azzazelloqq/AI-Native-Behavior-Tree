@@ -25,7 +25,7 @@ namespace AIBT.Tests.Integration.Simulation
     /// completion (<c>CompletionHandle</c>). EditMode, no GameObject on the container side. Proof table:
     /// <c>Planning~/Evidence/P10-011/README.md</c>.
     /// </summary>
-    public sealed class TreeSimulationActionTests
+    public sealed partial class TreeSimulationActionTests
     {
         private const ulong Seed = 0x10_0111UL;
         private static readonly InputChannel<CrewSense> Sense = InputChannel<CrewSense>.Create("sense");

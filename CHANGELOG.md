@@ -4,6 +4,28 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Reactive composites that keep their running child, stage 2: native executor (ADR-P10-013)
+
+- **Native support:** `aibt.core.reactive-sequence-retaining` and `aibt.core.reactive-selector-retaining`
+  now run on the native lifecycle machine: production tree assets (`NativeTreeAgent`,
+  `ProductionTreeHost`), graph execution, generated dispatch and the simulation container
+  (`TreeSimulation`), in place and inside the Burst agent-frame job, with no managed allocation per
+  update. The stage-1 rejection is gone: the generated compiler no longer reports `AIBT3012` for them,
+  and native machines and generated runtime definitions build from programs that contain them.
+- **Same behaviour as the reference executor,** record for record: guard pass, resume of the kept
+  branch, takeover (the kept branch is aborted with `Explicit` after the guard's records), aborts from
+  above during a guard pass or a takeover, update-start processing and step counts, under Immediate,
+  step budgets of one step, BatchedJobsSameFrame and JobsAgentFrame. The five `retaining-*` golden
+  behaviour cases pass on the native adapter.
+- **Simulation container:** an action under a retaining composite is started once, reads its
+  completion and is preempted with one `Cancelled` (`Preempted`); the "not under a reactive
+  composite" guidance in `simulation-container.md` now points to the retaining composites.
+- **Hot reload:** a retaining composite is a composite for the cursor-reset rule; changing a node
+  between v1 and retaining is `Incompatible` and restarts its subtree.
+- **Unchanged:** the native behaviour of every existing node kind (callbacks, order, step counts),
+  ABI v2 (`ExpectedPublicAbiV2.txt`), the compiled format version, the trace format, the package
+  version, `ProductionTreeHost`, `NativeTreeAgent` and `ProductionTreeScheduler`. No public API change.
+
 ### Reactive composites that keep their running child, stage 1 (P10-013 finding F2, ADR-P10-013)
 
 - **New built-in composites:** `aibt.core.reactive-sequence-retaining` ("Reactive sequence (keeps

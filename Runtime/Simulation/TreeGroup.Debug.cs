@@ -438,6 +438,7 @@ namespace AIBT.Simulation
             "aibt.core.memory-sequence", "aibt.core.memory-selector", "aibt.core.reactive-sequence", "aibt.core.reactive-selector",
             "aibt.core.inverter", "aibt.core.succeeder", "aibt.core.failer", "aibt.core.repeater", "aibt.core.timeout",
             "aibt.core.cooldown", "aibt.core.parallel",
+            "aibt.core.reactive-sequence-retaining", "aibt.core.reactive-selector-retaining",
         };
 
         internal static string TypeName(ulong typeId, Func<ulong, string> nodeTypeName)

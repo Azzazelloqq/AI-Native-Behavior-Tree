@@ -319,7 +319,9 @@ namespace AIBT
             return kind == NativeLifecycleNodeKindV1.MemorySequence
                 || kind == NativeLifecycleNodeKindV1.MemorySelector
                 || kind == NativeLifecycleNodeKindV1.ReactiveSequence
-                || kind == NativeLifecycleNodeKindV1.ReactiveSelector;
+                || kind == NativeLifecycleNodeKindV1.ReactiveSelector
+                || kind == NativeLifecycleNodeKindV1.RetainingReactiveSequence
+                || kind == NativeLifecycleNodeKindV1.RetainingReactiveSelector;
         }
     }
 }

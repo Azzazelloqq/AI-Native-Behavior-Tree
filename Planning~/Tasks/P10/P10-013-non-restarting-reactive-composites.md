@@ -1,7 +1,8 @@
 # P10-013 — Reactive composites that keep their running child (finding F2)
 
 Status: `Review` — stage 1 (specification, manifests, reference executor, behaviour cases) done
-2026-11-17 and awaiting the owner's acceptance; stages 2 (native) and 3 (IL2CPP) not started. The
+2026-11-17; stage 2 (native executor and equivalence) done 2026-11-18, awaiting the owner's
+acceptance; stage 3 (IL2CPP) not started. The
 ADR was accepted on 2026-11-17 with all nine recommendations of its §6 (decision AIBT-048).
 
 ## Objective
@@ -57,8 +58,9 @@ generator and native classifiers support one version per type ID (ADR §3). Open
 ## Deliverables
 
 - ADR stage (done): the ADR, this card, the `work-items.json` entry.
-- Stage 1 (done, in review): ADR §5 stage 1; evidence `Planning~/Evidence/P10-013/README.md`.
-- Stages 2–3: after the owner accepts stage 1.
+- Stage 1 (done): ADR §5 stage 1; evidence `Planning~/Evidence/P10-013/README.md`.
+- Stage 2 (done, in review): ADR §5 stage 2; evidence in the same README, section "stage 2".
+- Stage 3: after the owner accepts stage 2.
 
 ## Acceptance criteria
 
@@ -100,3 +102,11 @@ IL2CPP Player benchmark as in Planning~/Evidence/P10-011 §5.1 and P10-012 (stag
   definition refuse them); stage 2 replaces that rejection with the native implementation.
   `Agents/Runtime/ManagedTreeInstance.cs` needed no change: the deferred reevaluation request lives
   in the reference machine.
+- Stage 2 (2026-11-18): see the "stage 2" sections of `Planning~/Evidence/P10-013/README.md` (spike
+  outcome, what changed, test table, public API delta: none, deviations, open issues). The retained
+  branch is parked in the suspended-frame region during a guard pass, so the frame array stays
+  NodeCount long. Two pre-existing v1 native defects were found and left unchanged (findings F-S2-1:
+  Parallel restore with no free frame overwrites a lower suspended branch; F-S2-2:
+  `NativeHotReloadFullRestart.TryRestart` refuses a v1 reactive composite with a running branch);
+  both are pinned by ignored tests. `RetainingReactiveNativeRejectionTests` became
+  `RetainingReactiveNativeAcceptanceTests`.

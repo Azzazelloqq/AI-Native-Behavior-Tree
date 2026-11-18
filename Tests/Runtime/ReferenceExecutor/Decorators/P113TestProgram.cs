@@ -43,8 +43,25 @@ namespace AIBT.Tests.Runtime
             Trace = trace;
         }
 
+        internal P113Fixture(
+            ReferenceExecutionMachine machine,
+            RecordingReferenceTraceSink trace,
+            CompiledProgram program,
+            IReadOnlyList<P113TestNode> nodes)
+            : this(machine, trace)
+        {
+            Program = program;
+            Nodes = nodes;
+        }
+
         internal ReferenceExecutionMachine Machine { get; }
         internal RecordingReferenceTraceSink Trace { get; }
+
+        /// <summary>The compiled program the machine runs (P10-013 stage 2: the native twin runs the same program).</summary>
+        internal CompiledProgram Program { get; }
+
+        /// <summary>The test nodes in runtime node-index order.</summary>
+        internal IReadOnlyList<P113TestNode> Nodes { get; }
     }
 
     internal static class P113TestProgram
@@ -179,7 +196,9 @@ namespace AIBT.Tests.Runtime
                     ReferenceReactiveCompositeRegistry.CreatePhase1BuiltIns(),
                     ReferenceDecoratorRegistry.CreatePhase1BuiltIns(),
                     ReferenceParallelRegistry.CreatePhase1BuiltIns()),
-                trace);
+                trace,
+                program,
+                flattened);
         }
 
         private static void Flatten(P113TestNode node, List<P113TestNode> result)

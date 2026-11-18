@@ -28,7 +28,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
     /// written between frames and emit effects. Async completions are not covered: the facade does
     /// not wire them (generated group dispatch passes an empty completion set).
     /// </summary>
-    public sealed class JobsPolicyEquivalenceTests
+    public sealed partial class JobsPolicyEquivalenceTests
     {
         private const int FrameCount = 90;
         private const int AgentsPerTree = 4;

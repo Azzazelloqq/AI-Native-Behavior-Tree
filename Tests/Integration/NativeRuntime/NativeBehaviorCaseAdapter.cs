@@ -101,6 +101,13 @@ namespace AIBT.Tests.Integration.NativeRuntime
         private uint _activeAbortSource;
         private NodeStatus _lastTerminalStatus;
 
+        // ADR-P10-013 stage 2: a program with a retaining reactive composite reads composite
+        // results, abort reasons/sources and exit reasons from the machine itself, because a
+        // takeover aborts a retained branch in the middle of an update. Programs without one keep
+        // the original approximation unchanged.
+        private bool _retaining;
+        private readonly HashSet<uint> _abortedComposites = new HashSet<uint>();
+
         internal NativeBehaviorCaseExecutor(
             CompiledProgram program,
             TreeDocument document,
@@ -152,6 +159,25 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 consumed++;
                 if (nativeStep.Kind == NativeLifecycleStepKindV1.CompositeEntered)
                     Trace(BehaviorCaseTraceEvent.NodeEntered, nativeStep.NodeIndex);
+                else if (_retaining && nativeStep.Kind == NativeLifecycleStepKindV1.CompositeAborted)
+                {
+                    _abortedComposites.Add(nativeStep.NodeIndex);
+                    Trace(BehaviorCaseTraceEvent.NodeAbortStarted, nativeStep.NodeIndex, null, null,
+                        Map((BurstNodeAbortReason)(byte)_control[0].AbortReason), new RuntimeNodeIndex(AbortSource()));
+                }
+                else if (_retaining && nativeStep.Kind == NativeLifecycleStepKindV1.CompositeExited)
+                {
+                    if (_abortedComposites.Remove(nativeStep.NodeIndex))
+                        Trace(BehaviorCaseTraceEvent.NodeExited, nativeStep.NodeIndex, null, NodeExitReason.Aborted);
+                    else
+                    {
+                        var control = _control[0];
+                        var result = control.Depth == 0 ? control.RootStatus : _frames[(int)control.Depth - 1].PendingStatus;
+                        Trace(BehaviorCaseTraceEvent.NodeTicked, nativeStep.NodeIndex, result);
+                        Trace(BehaviorCaseTraceEvent.NodeExited, nativeStep.NodeIndex, null,
+                            result == NodeStatus.Failure ? NodeExitReason.Failure : NodeExitReason.Success);
+                    }
+                }
                 else if (nativeStep.Kind == NativeLifecycleStepKindV1.CompositeExited)
                 {
                     Trace(BehaviorCaseTraceEvent.NodeTicked, nativeStep.NodeIndex, _lastTerminalStatus);
@@ -268,11 +294,17 @@ namespace AIBT.Tests.Integration.NativeRuntime
                         EmitCommand(CommandPhase.Cancel, SemanticSliceNodeContracts.AsyncCancelCommandType, _operation);
                         _asyncActive = false;
                     }
-                    Trace(BehaviorCaseTraceEvent.NodeAbortStarted, step.NodeIndex, null, null,
-                        Map(_activeAbortReason), new RuntimeNodeIndex(_activeAbortSource));
+                    if (_retaining)
+                        Trace(BehaviorCaseTraceEvent.NodeAbortStarted, step.NodeIndex, null, null,
+                            Map(step.AbortReason), new RuntimeNodeIndex(AbortSource()));
+                    else
+                        Trace(BehaviorCaseTraceEvent.NodeAbortStarted, step.NodeIndex, null, null,
+                            Map(_activeAbortReason), new RuntimeNodeIndex(_activeAbortSource));
                     break;
                 case BurstCallbackPhase.Exit:
-                    var aborted = _abortPending || _activeAbortReason == BurstNodeAbortReason.ObserverLowerPriority;
+                    var aborted = _retaining
+                        ? step.ExitReason == BurstNodeExitReason.Aborted
+                        : _abortPending || _activeAbortReason == BurstNodeAbortReason.ObserverLowerPriority;
                     var terminal = _lastStatuses[step.NodeIndex];
                     Trace(BehaviorCaseTraceEvent.NodeExited, step.NodeIndex, null,
                         aborted ? NodeExitReason.Aborted : terminal == NodeStatus.Failure ? NodeExitReason.Failure : NodeExitReason.Success);
@@ -302,8 +334,18 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        private uint AbortSource()
+        {
+            var control = _control[0];
+            return control.HasAbortSource != 0 ? control.AbortSourceNode : _activeAbortSource;
+        }
+
         private NodeStatus Tick(uint nodeIndex)
         {
+            if (Is(nodeIndex, SemanticSliceNodeContracts.CountToTwoTypeId)) return Count(nodeIndex, 2);
+            if (Is(nodeIndex, SemanticSliceNodeContracts.CountToThreeTypeId)) return Count(nodeIndex, 3);
+            if (Is(nodeIndex, SemanticSliceNodeContracts.FailureExceptUpdateThreeTypeId))
+                return _currentUpdateId == 3 ? NodeStatus.Success : NodeStatus.Failure;
             if (Is(nodeIndex, ReferenceFixtureNodeManifests.SuccessTypeId)) return NodeStatus.Success;
             if (Is(nodeIndex, ReferenceFixtureNodeManifests.FailureTypeId)) return NodeStatus.Failure;
             if (Is(nodeIndex, ReferenceFixtureNodeManifests.RunningTypeId)) return NodeStatus.Running;
@@ -344,6 +386,18 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 }
             }
             throw new InvalidOperationException("Golden native adapter encountered an unsupported leaf.");
+        }
+
+        /// <summary>Mirrors the reference counting fixture: a tick count in the leaf's 4-byte activation memory.</summary>
+        private NodeStatus Count(uint nodeIndex, uint target)
+        {
+            var offset = (int)_nodes[(int)nodeIndex].InstanceMemoryOffset;
+            var count = (uint)(_memory[offset] | _memory[offset + 1] << 8 | _memory[offset + 2] << 16 | _memory[offset + 3] << 24) + 1;
+            _memory[offset] = (byte)count;
+            _memory[offset + 1] = (byte)(count >> 8);
+            _memory[offset + 2] = (byte)(count >> 16);
+            _memory[offset + 3] = (byte)(count >> 24);
+            return count >= target ? NodeStatus.Success : NodeStatus.Running;
         }
 
         private void EmitCommand(CommandPhase phase, string typeId, OperationId operation, bool increment = true)
@@ -423,6 +477,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 _bindings[index] = new NativeLifecycleNodeBindingV1((uint)index, kind);
                 if (kind == NativeLifecycleNodeKindV1.Parallel) parallelCount += _program.Nodes[index].Children.Count;
                 if (kind == NativeLifecycleNodeKindV1.Cooldown) hasCooldown = true;
+                if (NativeReactivePolicyV1.IsRetaining(kind)) _retaining = true;
             }
             for (var index = 0; index < _program.ChildIndices.Count; index++) _children[index] = _program.ChildIndices[index];
             for (var index = 0; index < _program.ConfigBlob.Count; index++) _configuration[index] = _program.ConfigBlob[index];
@@ -455,6 +510,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             if (typeId == StableHash.Fnv1A64("aibt.core.timeout")) return NativeLifecycleNodeKindV1.Timeout;
             if (typeId == StableHash.Fnv1A64("aibt.core.cooldown")) return NativeLifecycleNodeKindV1.Cooldown;
             if (typeId == StableHash.Fnv1A64("aibt.core.parallel")) return NativeLifecycleNodeKindV1.Parallel;
+            if (typeId == StableHash.Fnv1A64("aibt.core.reactive-sequence-retaining")) return NativeLifecycleNodeKindV1.RetainingReactiveSequence;
+            if (typeId == StableHash.Fnv1A64("aibt.core.reactive-selector-retaining")) return NativeLifecycleNodeKindV1.RetainingReactiveSelector;
             return NativeLifecycleNodeKindV1.GeneratedLeaf;
         }
 

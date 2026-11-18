@@ -23,6 +23,9 @@ namespace AIBT.Tests.Runtime
         }
 
         internal P113Fixture Fixture { get; }
+
+        /// <summary>Node names by runtime node index (P10-013 stage 2: shared with the native twin).</summary>
+        internal Dictionary<uint, string> Names => _names;
         internal ReferenceExecutionMachine Machine => Fixture.Machine;
 
         internal static P113TestNode RetainingSequence(params P113TestNode[] children)

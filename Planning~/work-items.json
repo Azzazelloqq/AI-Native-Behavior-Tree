@@ -4,10 +4,10 @@
   "sourceBranch": "main",
   "items": [
     {
-      "id": "P10-013", "phase": 10, "title": "Reactive composites that keep their running child (finding F2): ADR accepted; stage 1 (spec, manifests, reference executor, behaviour cases) in review; stages 2-3 open", "status": "review", "kind": "implementation",
+      "id": "P10-013", "phase": 10, "title": "Reactive composites that keep their running child (finding F2): ADR accepted; stage 1 (spec, manifests, reference executor, behaviour cases) done; stage 2 (native executor, equivalence) in review; stage 3 open", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P10/P10-013-non-restarting-reactive-composites.md",
       "dependsOn": ["P10-011", "P10-012"],
-      "owns": ["Documentation~/decisions/ADR-P10-013-non-restarting-reactive-composites.md", "Planning~/Evidence/P10-013/", "Tests/Runtime/ReferenceExecutor/ReactiveComposites/RetainingReactive*", "Tests/Editor/Agents/ReactiveV1RestartPinTests.cs", "Tests/Editor/Agents/RetainingReactiveManagedTests.cs", "Tests/Integration/NativeRuntime/RetainingReactiveNativeRejectionTests.cs", "Tests/Fixtures/Golden/Cases/retaining-*", "Tests/Fixtures/Golden/Trees/retaining-*"]
+      "owns": ["Documentation~/decisions/ADR-P10-013-non-restarting-reactive-composites.md", "Planning~/Evidence/P10-013/", "Tests/Runtime/ReferenceExecutor/ReactiveComposites/RetainingReactive*", "Tests/Editor/Agents/ReactiveV1RestartPinTests.cs", "Tests/Editor/Agents/RetainingReactiveManagedTests.cs", "Tests/Integration/NativeRuntime/RetainingReactiveNativeAcceptanceTests.cs", "Tests/Integration/NativeRuntime/JobsPolicyEquivalenceTests.Retaining.cs", "Tests/Integration/Simulation/TreeSimulationActionTests.Retaining.cs", "Tests/Runtime/NativeExecution/RetainingReactive/", "Tests/Runtime/NativeExecution/HotReload/RetainingReactiveHotReloadTests.cs", "Tests/Fixtures/Golden/Cases/retaining-*", "Tests/Fixtures/Golden/Trees/retaining-*"]
     },
     {
       "id": "P10-012", "phase": 10, "title": "Simulation container stage G4: traces of selected agents, active-path query, opt-in registry and read-only MCP/CLI tools", "status": "review", "kind": "implementation",

@@ -51,6 +51,8 @@ namespace AIBT
             if (typeId == StableHash.Fnv1A64("aibt.core.memory-selector")) return NativeLifecycleNodeKindV1.MemorySelector;
             if (typeId == StableHash.Fnv1A64("aibt.core.reactive-sequence")) return NativeLifecycleNodeKindV1.ReactiveSequence;
             if (typeId == StableHash.Fnv1A64("aibt.core.reactive-selector")) return NativeLifecycleNodeKindV1.ReactiveSelector;
+            if (typeId == StableHash.Fnv1A64("aibt.core.reactive-sequence-retaining")) return NativeLifecycleNodeKindV1.RetainingReactiveSequence;
+            if (typeId == StableHash.Fnv1A64("aibt.core.reactive-selector-retaining")) return NativeLifecycleNodeKindV1.RetainingReactiveSelector;
             if (typeId == StableHash.Fnv1A64("aibt.core.inverter")) return NativeLifecycleNodeKindV1.Inverter;
             if (typeId == StableHash.Fnv1A64("aibt.core.succeeder")) return NativeLifecycleNodeKindV1.Succeeder;
             if (typeId == StableHash.Fnv1A64("aibt.core.failer")) return NativeLifecycleNodeKindV1.Failer;

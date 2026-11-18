@@ -19,6 +19,10 @@ namespace AIBT
         Timeout = 9,
         Cooldown = 10,
         Parallel = 11,
+
+        // ADR-P10-013: reactive composites that keep their running child (guard pass).
+        RetainingReactiveSequence = 12,
+        RetainingReactiveSelector = 13,
     }
 
     internal readonly struct NativeLifecycleNodeBindingV1
@@ -127,6 +131,25 @@ namespace AIBT
         internal uint SuspendedFrameStart;
         internal byte ParallelAbortPending;
         internal uint ParallelAbortOwnerDepth;
+
+        // The source node of the abort in progress, where the executor knows one (a timeout, a v1
+        // reactive reset, a retaining composite's guard). Diagnostic only; no step reads it.
+        internal uint AbortSourceNode;
+        internal byte HasAbortSource;
+
+        // ADR-P10-013: the one retaining reactive composite that holds parked frames (its frame
+        // index + 1, 0 = none), its guard-pass phase, and the two frame segments it parks in the
+        // suspended-frame region: the retained branch during the pass, the held guard branch
+        // during a takeover abort.
+        internal uint RetainOwnerDepth;
+        internal byte RetainPhase;
+        internal byte RetainRest;
+        internal byte RetainVisitRestPending;
+        internal NodeStatus RetainEndStatus;
+        internal uint RetainedFirstFrame;
+        internal uint RetainedFrameCount;
+        internal uint HeldFirstFrame;
+        internal uint HeldFrameCount;
     }
 
     internal struct NativeLifecycleMachineV1
@@ -134,6 +157,15 @@ namespace AIBT
         private const ulong MemorySequenceTypeId = 0x5b7ceab8e6ee5d73UL;
         private const ulong MemorySelectorTypeId = 0x728850afcebac87fUL;
         private const ulong ParallelTypeId = 0xc178d10e173662cfUL;
+
+        private const byte RetainNone = 0;
+        private const byte RetainPassPending = 1;
+        private const byte RetainPassActive = 2;
+        private const byte RetainAbortEnd = 3;
+        private const byte RetainAbortTakeover = 4;
+        private const byte RetainAbortSuperseded = 5;
+        private const byte RetainRestLeaf = 1;
+        private const byte RetainRestVisit = 2;
 
         private static readonly ProfilerMarker s_TryAdvanceMarker =
             new ProfilerMarker("AIBT.Native.LifecycleTick");
@@ -158,6 +190,11 @@ namespace AIBT
         private NativeArray<byte> _cooldownInitialized;
         private NativeArray<NativeParallelBranchStateV1> _parallelBranches;
         private NativeArray<NativeLifecycleControlV1> _control;
+
+        // ADR-P10-013: 1 when the program has a retaining reactive composite. Such programs restore
+        // suspended-frame segments with the overlap-safe rotation (TryRestoreSegment); programs
+        // without one keep the original v1 restore unchanged.
+        private byte _safeSegmentRestore;
 
         internal static bool TryCreate(
             NativeArray<NativeCompiledNodeRecordV1> nodes,
@@ -277,6 +314,9 @@ namespace AIBT
             }
             for (var index = 0; index < parallelBranches.Length; index++)
                 parallelBranches[index] = new NativeParallelBranchStateV1 { CapacityOrdinal = (uint)index };
+            byte safeSegmentRestore = 0;
+            for (var index = 0; index < bindings.Length; index++)
+                if (NativeReactivePolicyV1.IsRetaining(bindings[index].Kind)) safeSegmentRestore = 1;
 
             if (!NativeOwnerIdentityV1.TryNext(out var ownerId))
             {
@@ -306,6 +346,7 @@ namespace AIBT
                 _cooldownInitialized = cooldownInitialized,
                 _parallelBranches = parallelBranches,
                 _control = control,
+                _safeSegmentRestore = safeSegmentRestore,
             };
             failure = default;
             return true;
@@ -365,7 +406,11 @@ namespace AIBT
             control.TimeMicroseconds = timeMicroseconds;
             control.UpdateOpen = 1;
             control.Waiting = 0;
-            if (!ScheduleExpiredTimeout(ref control)) ScheduleReactiveReplacement(ref control);
+            if (!PrepareUpdateStart(ref control, 0, 0))
+            {
+                failure = FrameCapacityFailure(control);
+                return false;
+            }
             _control[0] = control;
             failure = default;
             return true;
@@ -492,7 +537,38 @@ namespace AIBT
             var node = _nodes[checked((int)frame.NodeIndex)];
             var kind = _bindings[checked((int)frame.NodeIndex)].Kind;
             if (control.AbortRequested != 0 && frame.LifecycleState != NativeFrameLifecycleStateV1.Inactive)
+            {
+                if (control.RetainPhase != RetainNone && control.RetainOwnerDepth == (uint)frameIndex + 1u)
+                {
+                    // ADR-P10-013 common rule 3: an abort that reaches a retaining composite with
+                    // parked frames aborts them first, in the same deepest-first traversal and
+                    // without an extra step.
+                    if (!TryUnparkForAbort(ref control))
+                    {
+                        result = default;
+                        failure = FrameCapacityFailure(control);
+                        return false;
+                    }
+                    frameIndex = checked((int)control.Depth - 1);
+                    frame = _frames[frameIndex];
+                    node = _nodes[checked((int)frame.NodeIndex)];
+                    kind = _bindings[checked((int)frame.NodeIndex)].Kind;
+                }
                 return AdvanceAbort(frameIndex, ref frame, node, kind, ref control, out result, out failure);
+            }
+            if (control.RetainVisitRestPending != 0)
+            {
+                // A Parallel guard branch completed its visit with Running and took over; the
+                // update now continues exactly as it would have at that point.
+                control.RetainVisitRestPending = 0;
+                if (kind != NativeLifecycleNodeKindV1.Parallel)
+                {
+                    result = default;
+                    failure = LifetimeFailure(control);
+                    return false;
+                }
+                return RestAfterParallelVisit(frameIndex, ref frame, ref control, out result, out failure);
+            }
             if (frame.LifecycleState == NativeFrameLifecycleStateV1.Inactive)
             {
                 if (!TryActivate(ref frame, node, ref control, out failure)) return false;
@@ -507,6 +583,8 @@ namespace AIBT
                     }
                     WriteInt64(node, deadline);
                 }
+                // The update in which a retaining composite is entered has no guard pass.
+                if (NativeReactivePolicyV1.IsRetaining(kind)) frame.LastUpdateId = control.UpdateId;
                 _frames[frameIndex] = frame;
                 if (kind == NativeLifecycleNodeKindV1.GeneratedLeaf)
                     return PublishDispatch(ref control, frame.NodeIndex, BurstCallbackPhase.Enter, out result, out failure);
@@ -544,6 +622,7 @@ namespace AIBT
             control.AbortReason = BurstNodeAbortReason.HotReload;
             control.AbortTargetDepth = ownerDepth;
             control.ReactiveResetPending = 1;
+            control.HasAbortSource = 0;
             _control[0] = control;
             failure = default;
             return true;
@@ -570,6 +649,10 @@ namespace AIBT
             control.AbortTargetDepth = 0;
             control.ReactiveResetPending = 0;
             control.TimeoutPending = 0;
+            control.HasAbortSource = 0;
+            control.AbortSourceNode = 0;
+            if (control.RetainPhase == RetainAbortEnd || control.RetainPhase == RetainAbortTakeover)
+                control.RetainPhase = RetainAbortSuperseded;
             _control[0] = control;
             failure = default;
             return true;
@@ -628,6 +711,8 @@ namespace AIBT
             control.AbortReason = transition.Reason;
             control.AbortTargetDepth = checked((uint)ownerDepth + 1u);
             control.ReactiveResetPending = 1;
+            control.HasAbortSource = 1;
+            control.AbortSourceNode = transition.ObserverNodeIndex;
             _control[0] = control;
             failure = default;
             return true;
@@ -867,6 +952,24 @@ namespace AIBT
             {
                 if (frame.LastUpdateId == control.UpdateId)
                 {
+                    if (control.RetainPhase == RetainPassActive)
+                    {
+                        if (!TryBeginGuardTakeover(frameIndex, RetainRestLeaf, ref control, out var tookOver))
+                        {
+                            result = default;
+                            failure = FrameCapacityFailure(control);
+                            return false;
+                        }
+                        if (tookOver)
+                        {
+                            // The tick that returned Running already counted; the first abort
+                            // step of the retained branch is this step.
+                            var topIndex = checked((int)control.Depth - 1);
+                            var top = _frames[topIndex];
+                            return AdvanceAbort(topIndex, ref top, _nodes[checked((int)top.NodeIndex)],
+                                _bindings[checked((int)top.NodeIndex)].Kind, ref control, out result, out failure);
+                        }
+                    }
                     if (TrySuspendParallelBranch(frameIndex, ref control, out var ownerNode))
                     {
                         control.SemanticSteps++;
@@ -1041,6 +1144,8 @@ namespace AIBT
                     {
                         control.ParallelAbortPending = 1;
                         control.ParallelAbortOwnerDepth = checked((uint)frameIndex + 1u);
+                        control.HasAbortSource = 1;
+                        control.AbortSourceNode = frame.NodeIndex;
                         if (!TryBeginNextParallelBranchAbort(frameIndex, ref frame, ref control))
                         {
                             result = default;
@@ -1056,22 +1161,25 @@ namespace AIBT
                     return true;
                 }
                 _frames[frameIndex] = frame;
-                if (TrySuspendParallelBranch(frameIndex, ref control, out var ownerNode))
+                if (control.RetainPhase == RetainPassActive)
                 {
-                    _control[0] = control;
-                    result = new NativeLifecycleStepResultV1(
-                        NativeLifecycleStepKindV1.ParallelBranchSuspended, ownerNode);
-                    failure = default;
-                    return true;
+                    if (!TryBeginGuardTakeover(frameIndex, RetainRestVisit, ref control, out var tookOver))
+                    {
+                        result = default;
+                        failure = FrameCapacityFailure(control);
+                        return false;
+                    }
+                    if (tookOver)
+                    {
+                        _control[0] = control;
+                        result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.ChildAccepted, frame.NodeIndex);
+                        failure = default;
+                        return true;
+                    }
                 }
-                control.UpdateOpen = 0;
-                control.Waiting = 1;
-                _frames[frameIndex] = frame;
-                _control[0] = control;
-                result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.Waiting, frame.NodeIndex);
-                failure = default;
-                return true;
+                return RestAfterParallelVisit(frameIndex, ref frame, ref control, out result, out failure);
             }
+
 
             var ordinal = frame.ParallelVisitCursor++;
             var selectedIndex = checked((int)(frame.ParallelFirstBranch + ordinal));
@@ -1089,7 +1197,12 @@ namespace AIBT
                         NativeResourceKindV1.InstanceFrames);
                     return false;
                 }
-                if (!ScheduleExpiredTimeout(ref control)) ScheduleReactiveReplacement(ref control);
+                if (!PrepareUpdateStart(ref control, 0, frameIndex + 1))
+                {
+                    result = default;
+                    failure = FrameCapacityFailure(control);
+                    return false;
+                }
             }
             else if ((NativeParallelChildStateV1)selected.State == NativeParallelChildStateV1.NotStarted)
             {
@@ -1150,6 +1263,22 @@ namespace AIBT
                 result = default;
                 failure = LifetimeFailure(control);
                 return false;
+            }
+
+            if (control.RetainPhase != RetainNone && control.RetainOwnerDepth == (uint)frameIndex + 1u)
+            {
+                if (control.RetainPhase == RetainPassPending)
+                    return StartGuardPass(frameIndex, ref frame, node, ref control, out result, out failure);
+                if (control.RetainPhase != RetainPassActive)
+                {
+                    result = default;
+                    failure = LifetimeFailure(control);
+                    return false;
+                }
+                if (frame.HasPendingChildResult != 0)
+                    return AcceptGuard(frameIndex, ref frame, node, kind, ref control, out result, out failure);
+                if (ReadCursor(node) == ReadUInt32(node, 4) - 1u)
+                    return ResumeRetainedBranch(frameIndex, ref frame, node, ref control, out result, out failure);
             }
 
             if (frame.HasPendingChildResult != 0)
@@ -1467,6 +1596,12 @@ namespace AIBT
             _frames[poppedIndex] = default;
             control.Depth--;
             if (control.ReactiveResetPending != 0 && control.Depth == control.AbortTargetDepth) return;
+            if ((control.RetainPhase == RetainAbortEnd || control.RetainPhase == RetainAbortTakeover)
+                && control.Depth == control.RetainOwnerDepth)
+            {
+                CompleteRetainedAbortBoundary(ref control);
+                return;
+            }
             if (control.Depth != 0) return;
             control.AbortRequested = 0;
             control.RootAborted = 1;
@@ -1541,17 +1676,53 @@ namespace AIBT
         private bool RestoreSuspendedBranch(int ownerFrameIndex, int branchIndex, ref NativeLifecycleControlV1 control)
         {
             var branch = _parallelBranches[branchIndex];
-            if (branch.SuspendedFrameCount == 0 || branch.FirstSuspendedFrame < control.SuspendedFrameStart
-                || branch.FirstSuspendedFrame + branch.SuspendedFrameCount > _frames.Length
-                || control.Depth > branch.FirstSuspendedFrame)
+            if (!TryRestoreSegment(branch.FirstSuspendedFrame, branch.SuspendedFrameCount, ref control))
+                return false;
+            branch = _parallelBranches[branchIndex];
+            branch.FirstSuspendedFrame = 0;
+            branch.SuspendedFrameCount = 0;
+            _parallelBranches[branchIndex] = branch;
+            return true;
+        }
+
+        /// <summary>
+        /// Moves one segment of the suspended-frame region back onto the active stack and closes
+        /// the gap: segments below it move up, and every segment record (parallel branches and the
+        /// parked retaining segments) follows. In a program without retaining composites this is
+        /// the original Parallel restore, unchanged. In a program with one the move goes through an
+        /// in-place rotation: the original copy overwrites a lower segment when the frame array has
+        /// fewer free frames than the restored segment is long (P10-013 stage 2 finding, see
+        /// Planning~/Evidence/P10-013/README.md).
+        /// </summary>
+        private bool TryRestoreSegment(uint first, uint count, ref NativeLifecycleControlV1 control)
+        {
+            if (count == 0 || first < control.SuspendedFrameStart
+                || first + count > _frames.Length
+                || control.Depth > first)
                 return false;
             var destination = control.Depth;
-            for (uint offset = 0; offset < branch.SuspendedFrameCount; offset++)
-                _frames[checked((int)(destination + offset))] = _frames[checked((int)(branch.FirstSuspendedFrame + offset))];
-            var removedStart = branch.FirstSuspendedFrame;
-            var removedCount = branch.SuspendedFrameCount;
-            for (var source = checked((int)removedStart) - 1; source >= control.SuspendedFrameStart; source--)
-                _frames[source + checked((int)removedCount)] = _frames[source];
+            var removedStart = first;
+            var removedCount = count;
+            if (_safeSegmentRestore == 0)
+            {
+                for (uint offset = 0; offset < count; offset++)
+                    _frames[checked((int)(destination + offset))] = _frames[checked((int)(first + offset))];
+                for (var source = checked((int)removedStart) - 1; source >= control.SuspendedFrameStart; source--)
+                    _frames[source + checked((int)removedCount)] = _frames[source];
+            }
+            else
+            {
+                // [SuspendedFrameStart, first) holds the lower segments L, [first, first + count)
+                // the segment S. Rotate "L S" into "S L" in place, then move S down to the stack top.
+                var lowStart = checked((int)control.SuspendedFrameStart);
+                var segmentStart = checked((int)first);
+                var segmentEnd = checked((int)(first + count));
+                ReverseFrames(lowStart, segmentStart);
+                ReverseFrames(segmentStart, segmentEnd);
+                ReverseFrames(lowStart, segmentEnd);
+                for (uint offset = 0; offset < count; offset++)
+                    _frames[checked((int)(destination + offset))] = _frames[checked((int)(control.SuspendedFrameStart + offset))];
+            }
             for (var index = 0; index < _parallelBranches.Length; index++)
             {
                 var other = _parallelBranches[index];
@@ -1561,11 +1732,41 @@ namespace AIBT
                     _parallelBranches[index] = other;
                 }
             }
-            branch.FirstSuspendedFrame = 0;
-            branch.SuspendedFrameCount = 0;
-            _parallelBranches[branchIndex] = branch;
+            if (control.RetainedFrameCount != 0 && control.RetainedFirstFrame < removedStart)
+                control.RetainedFirstFrame += removedCount;
+            if (control.HeldFrameCount != 0 && control.HeldFirstFrame < removedStart)
+                control.HeldFirstFrame += removedCount;
             control.Depth += removedCount;
             control.SuspendedFrameStart += removedCount;
+            return true;
+        }
+
+        private void ReverseFrames(int start, int end)
+        {
+            for (int low = start, high = end - 1; low < high; low++, high--)
+            {
+                var swap = _frames[low];
+                _frames[low] = _frames[high];
+                _frames[high] = swap;
+            }
+        }
+
+        /// <summary>Moves the active frames from <paramref name="fromIndex"/> up into the suspended-frame region.</summary>
+        private bool TryPushSegment(int fromIndex, ref NativeLifecycleControlV1 control, out uint first, out uint count)
+        {
+            first = 0;
+            count = 0;
+            if (fromIndex < 0 || (uint)fromIndex >= control.Depth) return false;
+            count = control.Depth - (uint)fromIndex;
+            if (count > control.SuspendedFrameStart
+                || control.SuspendedFrameStart - count < (uint)fromIndex)
+                return false;
+            var start = control.SuspendedFrameStart - count;
+            for (var offset = count; offset != 0; offset--)
+                _frames[checked((int)(start + offset - 1))] = _frames[fromIndex + checked((int)offset) - 1];
+            control.Depth = (uint)fromIndex;
+            control.SuspendedFrameStart = start;
+            first = start;
             return true;
         }
 
@@ -1702,7 +1903,7 @@ namespace AIBT
                     && node.NodeTypeId != ParallelTypeId
                     && !NativeReactivePolicyV1.Matches(node.NodeTypeId, NativeLifecycleNodeKindV1.ReactiveSequence)
                     && !NativeReactivePolicyV1.Matches(node.NodeTypeId, NativeLifecycleNodeKindV1.ReactiveSelector)
-                    && !NativeReactivePolicyV1.IsUnsupportedRetaining(node.NodeTypeId)
+                    && !NativeReactivePolicyV1.IsRetainingTypeId(node.NodeTypeId)
                     && !NativeDecoratorPolicyV1.TryGetKind(node.NodeTypeId, out _);
             if (!IsDecorator(kind))
             {
@@ -1713,6 +1914,11 @@ namespace AIBT
                         && configuration.IsCreated
                         && NativeParallelPolicyEvaluatorV1.TryDecode(
                             configuration.AsReadOnly(), node.ConfigOffset, node.ConfigSize, node.ChildCount, out _);
+                if (NativeReactivePolicyV1.IsRetaining(kind))
+                    return node.InstanceMemorySize == 8u && node.InstanceMemoryAlignment == 4u
+                        && node.InstanceMemoryOffset % 4u == 0u
+                        && node.MemoryLifetime == NodeMemoryLifetime.Activation
+                        && NativeReactivePolicyV1.Matches(node.NodeTypeId, kind);
                 if (node.InstanceMemorySize != 4u || node.InstanceMemoryAlignment != 4u
                     || node.MemoryLifetime != NodeMemoryLifetime.Activation) return false;
                 if (kind == NativeLifecycleNodeKindV1.MemorySequence) return node.NodeTypeId == MemorySequenceTypeId;
@@ -1739,7 +1945,8 @@ namespace AIBT
         }
 
         private static bool IsSequence(NativeLifecycleNodeKindV1 kind)
-            => kind == NativeLifecycleNodeKindV1.MemorySequence || kind == NativeLifecycleNodeKindV1.ReactiveSequence;
+            => kind == NativeLifecycleNodeKindV1.MemorySequence || kind == NativeLifecycleNodeKindV1.ReactiveSequence
+                || kind == NativeLifecycleNodeKindV1.RetainingReactiveSequence;
 
         private static bool IsDecorator(NativeLifecycleNodeKindV1 kind)
             => kind >= NativeLifecycleNodeKindV1.Inverter && kind <= NativeLifecycleNodeKindV1.Cooldown;
@@ -1747,10 +1954,43 @@ namespace AIBT
         private static NativeDecoratorKindV1 ToDecoratorKind(NativeLifecycleNodeKindV1 kind)
             => (NativeDecoratorKindV1)((byte)kind - (byte)NativeLifecycleNodeKindV1.Inverter);
 
-        private void ScheduleReactiveReplacement(ref NativeLifecycleControlV1 control)
+        /// <summary>
+        /// Update-start processing for the active frames from <paramref name="scanStart"/>
+        /// (reference-executor-machine-v1.md, "Retaining reactive composites"): an expired
+        /// timeout, else a v1 reactive replacement, each shallowest first, but not below the
+        /// shallowest retaining composite at or after <paramref name="retainStart"/> that still
+        /// holds a running child and has not had its guard pass in this update; if neither aborts
+        /// that composite, its running branch is parked for the guard pass. Without retaining
+        /// composites this is exactly the v1 processing. Returns false only on a frame capacity
+        /// failure, which one frame per node makes unreachable.
+        /// </summary>
+        private bool PrepareUpdateStart(ref NativeLifecycleControlV1 control, int scanStart, int retainStart)
         {
-            if (control.Depth < 2 || control.AbortRequested != 0) return;
-            for (var index = 0; index < control.Depth - 1; index++)
+            if (control.Depth < 2 || control.AbortRequested != 0) return true;
+            var cut = FindRetainingCut(control, retainStart);
+            var end = cut < 0 ? checked((int)control.Depth - 1) : cut;
+            if (ScheduleExpiredTimeout(ref control, scanStart, end)) return true;
+            if (ScheduleReactiveReplacement(ref control, scanStart, end)) return true;
+            return cut < 0 || ParkRetainedBranch(cut, ref control);
+        }
+
+        private int FindRetainingCut(NativeLifecycleControlV1 control, int start)
+        {
+            for (var depth = start; depth < control.Depth - 1; depth++)
+            {
+                var frame = _frames[depth];
+                if (NativeReactivePolicyV1.IsRetaining(_bindings[checked((int)frame.NodeIndex)].Kind)
+                    && frame.LifecycleState == NativeFrameLifecycleStateV1.Running
+                    && frame.LastUpdateId != control.UpdateId)
+                    return depth;
+            }
+            return -1;
+        }
+
+        private bool ScheduleReactiveReplacement(ref NativeLifecycleControlV1 control, int start, int end)
+        {
+            if (control.Depth < 2 || control.AbortRequested != 0) return false;
+            for (var index = start; index < end && index < control.Depth - 1; index++)
             {
                 var frame = _frames[index];
                 var kind = _bindings[checked((int)frame.NodeIndex)].Kind;
@@ -1759,14 +1999,17 @@ namespace AIBT
                 control.AbortReason = BurstNodeAbortReason.Explicit;
                 control.AbortTargetDepth = (uint)index + 1u;
                 control.ReactiveResetPending = 1;
-                return;
+                control.HasAbortSource = 1;
+                control.AbortSourceNode = frame.NodeIndex;
+                return true;
             }
+            return false;
         }
 
-        private bool ScheduleExpiredTimeout(ref NativeLifecycleControlV1 control)
+        private bool ScheduleExpiredTimeout(ref NativeLifecycleControlV1 control, int start, int end)
         {
             if (control.Depth < 2 || control.AbortRequested != 0) return false;
-            for (var depth = 0; depth < control.Depth - 1; depth++)
+            for (var depth = start; depth < end && depth < control.Depth - 1; depth++)
             {
                 var frame = _frames[depth];
                 if (_bindings[checked((int)frame.NodeIndex)].Kind != NativeLifecycleNodeKindV1.Timeout
@@ -1778,9 +2021,298 @@ namespace AIBT
                 control.AbortReason = BurstNodeAbortReason.Timeout;
                 control.AbortTargetDepth = checked((uint)depth + 1u);
                 control.TimeoutPending = 1;
+                control.HasAbortSource = 1;
+                control.AbortSourceNode = frame.NodeIndex;
                 return true;
             }
             return false;
+        }
+
+        // ---- Retaining reactive composites (ADR-P10-013) -----------------------------------
+        //
+        // On the update in which it is entered the composite is a memory composite. On a later
+        // update, update-start processing parks its running branch in the suspended-frame region
+        // (ParkRetainedBranch) and the composite runs a guard pass over children 0 .. r-1 as new
+        // activations on the ordinary stack, while the parked branch receives no callback. The
+        // pass then resumes the parked branch, ends the composite after aborting it, or lets a
+        // running guard take over after aborting it (the guard branch is held in the region
+        // meanwhile). At most one composite holds parked frames at a time: a guard branch is a
+        // new activation, and a resumed branch is restored before a deeper composite parks.
+        // Activation memory: cursor at offset 0 (the guard cursor during the pass) and the
+        // retained ordinal + 1 at offset 4 while a pass holds a parked branch.
+
+        private bool ParkRetainedBranch(int ownerIndex, ref NativeLifecycleControlV1 control)
+        {
+            if (control.RetainPhase != RetainNone) return false;
+            var owner = _frames[ownerIndex];
+            if (!TryPushSegment(ownerIndex + 1, ref control, out var first, out var count)) return false;
+            control.RetainOwnerDepth = checked((uint)ownerIndex + 1u);
+            control.RetainPhase = RetainPassPending;
+            control.RetainRest = 0;
+            control.RetainedFirstFrame = first;
+            control.RetainedFrameCount = count;
+            control.HeldFirstFrame = 0;
+            control.HeldFrameCount = 0;
+            owner.LastUpdateId = control.UpdateId;
+            owner.HasPendingChildResult = 0;
+            _frames[ownerIndex] = owner;
+            return true;
+        }
+
+        private bool StartGuardPass(
+            int frameIndex,
+            ref NativeFrameStateV1 frame,
+            NativeCompiledNodeRecordV1 node,
+            ref NativeLifecycleControlV1 control,
+            out NativeLifecycleStepResultV1 result,
+            out NativeRuntimeFailureV1 failure)
+        {
+            var retained = ReadCursor(node);
+            if (control.RetainedFrameCount == 0 || retained >= node.ChildCount || control.Depth != (uint)frameIndex + 1u)
+            {
+                result = default;
+                failure = LifetimeFailure(control);
+                return false;
+            }
+            WriteUInt32(node, 4, retained + 1u);
+            WriteCursor(node, 0);
+            control.RetainPhase = RetainPassActive;
+            control.SemanticSteps++;
+            _control[0] = control;
+            result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.ChildSelected, frame.NodeIndex);
+            failure = default;
+            return true;
+        }
+
+        private bool AcceptGuard(
+            int frameIndex,
+            ref NativeFrameStateV1 frame,
+            NativeCompiledNodeRecordV1 node,
+            NativeLifecycleNodeKindV1 kind,
+            ref NativeLifecycleControlV1 control,
+            out NativeLifecycleStepResultV1 result,
+            out NativeRuntimeFailureV1 failure)
+        {
+            var cursor = ReadCursor(node);
+            var retained = ReadUInt32(node, 4) - 1u;
+            if (cursor >= retained || retained >= node.ChildCount)
+            {
+                result = default;
+                failure = LifetimeFailure(control);
+                return false;
+            }
+            control.SemanticSteps++;
+            frame.HasPendingChildResult = 0;
+            var terminal = IsSequence(kind)
+                ? frame.PendingStatus == NodeStatus.Failure
+                : frame.PendingStatus == NodeStatus.Success;
+            _frames[frameIndex] = frame;
+            if (terminal)
+            {
+                // The guard ends the composite: abort the retained branch, then record the result.
+                if (!TryRestoreSegment(control.RetainedFirstFrame, control.RetainedFrameCount, ref control))
+                {
+                    result = default;
+                    failure = FrameCapacityFailure(control);
+                    return false;
+                }
+                control.RetainedFrameCount = 0;
+                control.RetainedFirstFrame = 0;
+                control.RetainPhase = RetainAbortEnd;
+                control.RetainEndStatus = frame.PendingStatus;
+                BeginRetainedAbort(ref control, _children[checked((int)(node.ChildOffset + cursor))]);
+            }
+            else
+            {
+                WriteCursor(node, cursor + 1u);
+            }
+            _control[0] = control;
+            result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.ChildAccepted, frame.NodeIndex);
+            failure = default;
+            return true;
+        }
+
+        private bool ResumeRetainedBranch(
+            int frameIndex,
+            ref NativeFrameStateV1 frame,
+            NativeCompiledNodeRecordV1 node,
+            ref NativeLifecycleControlV1 control,
+            out NativeLifecycleStepResultV1 result,
+            out NativeRuntimeFailureV1 failure)
+        {
+            if (control.Depth != (uint)frameIndex + 1u
+                || !TryRestoreSegment(control.RetainedFirstFrame, control.RetainedFrameCount, ref control))
+            {
+                result = default;
+                failure = FrameCapacityFailure(control);
+                return false;
+            }
+            WriteUInt32(node, 4, 0u);
+            ClearRetainState(ref control);
+            control.SemanticSteps++;
+            // The resumed branch now gets the update-start processing it skipped (timeouts, v1
+            // reactive replacement, the next retaining composite's guard pass).
+            if (!PrepareUpdateStart(ref control, frameIndex + 1, frameIndex + 1))
+            {
+                result = default;
+                failure = FrameCapacityFailure(control);
+                return false;
+            }
+            _control[0] = control;
+            result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.ChildSelected, frame.NodeIndex);
+            failure = default;
+            return true;
+        }
+
+        /// <summary>
+        /// Called where a guard branch has come to rest with a running result (a leaf that already
+        /// ticked in this update, or a Parallel whose visit completed non-terminally). If no
+        /// Parallel with an active branch lies between it and the retaining composite in its guard
+        /// pass, the running guard takes over: the guard branch is held aside, the retained branch
+        /// is restored and aborted first, and the held branch comes back afterwards
+        /// (reference-executor-machine-v1.md, "Takeover").
+        /// </summary>
+        private bool TryBeginGuardTakeover(int restFrameIndex, byte rest, ref NativeLifecycleControlV1 control, out bool tookOver)
+        {
+            tookOver = false;
+            var ownerIndex = checked((int)control.RetainOwnerDepth) - 1;
+            if (ownerIndex < 0 || ownerIndex >= restFrameIndex) return true;
+            for (var index = restFrameIndex - 1; index > ownerIndex; index--)
+            {
+                var frame = _frames[index];
+                if (_bindings[checked((int)frame.NodeIndex)].Kind == NativeLifecycleNodeKindV1.Parallel
+                    && frame.ParallelActiveBranch >= 0)
+                    return true;
+            }
+            var guardNode = _frames[ownerIndex + 1].NodeIndex;
+            if (!TryPushSegment(ownerIndex + 1, ref control, out var heldFirst, out var heldCount)) return false;
+            control.HeldFirstFrame = heldFirst;
+            control.HeldFrameCount = heldCount;
+            if (!TryRestoreSegment(control.RetainedFirstFrame, control.RetainedFrameCount, ref control)) return false;
+            control.RetainedFrameCount = 0;
+            control.RetainedFirstFrame = 0;
+            control.RetainPhase = RetainAbortTakeover;
+            control.RetainRest = rest;
+            BeginRetainedAbort(ref control, guardNode);
+            tookOver = true;
+            return true;
+        }
+
+        private static void BeginRetainedAbort(ref NativeLifecycleControlV1 control, uint guardNode)
+        {
+            control.AbortRequested = 1;
+            control.AbortReason = BurstNodeAbortReason.Explicit;
+            control.AbortTargetDepth = control.RetainOwnerDepth;
+            control.ReactiveResetPending = 0;
+            control.TimeoutPending = 0;
+            control.HasAbortSource = 1;
+            control.AbortSourceNode = guardNode;
+        }
+
+        /// <summary>The last frame of the retained branch has exited after an end or a takeover.</summary>
+        private void CompleteRetainedAbortBoundary(ref NativeLifecycleControlV1 control)
+        {
+            var ownerIndex = checked((int)control.RetainOwnerDepth - 1);
+            var owner = _frames[ownerIndex];
+            var node = _nodes[checked((int)owner.NodeIndex)];
+            WriteUInt32(node, 4, 0u);
+            control.AbortRequested = 0;
+            control.AbortTargetDepth = 0;
+            control.HasAbortSource = 0;
+            if (control.RetainPhase == RetainAbortEnd)
+            {
+                owner.PendingStatus = control.RetainEndStatus;
+                owner.HasPendingChildResult = 0;
+                owner.LifecycleState = NativeFrameLifecycleStateV1.Exiting;
+                _frames[ownerIndex] = owner;
+                ClearRetainState(ref control);
+                return;
+            }
+            // Takeover: the running guard is the composite's running child now; the cursor
+            // already names it.
+            var rest = control.RetainRest;
+            if (!TryRestoreSegment(control.HeldFirstFrame, control.HeldFrameCount, ref control))
+            {
+                control.Faulted = 1;
+                control.UpdateOpen = 0;
+                return;
+            }
+            ClearRetainState(ref control);
+            if (rest == RetainRestVisit) control.RetainVisitRestPending = 1;
+        }
+
+        private bool TryUnparkForAbort(ref NativeLifecycleControlV1 control)
+        {
+            if (control.RetainedFrameCount != 0)
+            {
+                if (!TryRestoreSegment(control.RetainedFirstFrame, control.RetainedFrameCount, ref control)) return false;
+                control.RetainedFrameCount = 0;
+                control.RetainedFirstFrame = 0;
+            }
+            if (control.HeldFrameCount != 0)
+            {
+                if (!TryRestoreSegment(control.HeldFirstFrame, control.HeldFrameCount, ref control)) return false;
+                control.HeldFrameCount = 0;
+                control.HeldFirstFrame = 0;
+            }
+            ClearRetainState(ref control);
+            return true;
+        }
+
+        private static void ClearRetainState(ref NativeLifecycleControlV1 control)
+        {
+            control.RetainOwnerDepth = 0;
+            control.RetainPhase = RetainNone;
+            control.RetainRest = 0;
+            control.RetainEndStatus = default;
+            control.RetainedFirstFrame = 0;
+            control.RetainedFrameCount = 0;
+            control.HeldFirstFrame = 0;
+            control.HeldFrameCount = 0;
+        }
+
+        private bool RestAfterParallelVisit(
+            int frameIndex,
+            ref NativeFrameStateV1 frame,
+            ref NativeLifecycleControlV1 control,
+            out NativeLifecycleStepResultV1 result,
+            out NativeRuntimeFailureV1 failure)
+        {
+            if (TrySuspendParallelBranch(frameIndex, ref control, out var ownerNode))
+            {
+                _control[0] = control;
+                result = new NativeLifecycleStepResultV1(
+                    NativeLifecycleStepKindV1.ParallelBranchSuspended, ownerNode);
+                failure = default;
+                return true;
+            }
+            control.UpdateOpen = 0;
+            control.Waiting = 1;
+            _frames[frameIndex] = frame;
+            _control[0] = control;
+            result = new NativeLifecycleStepResultV1(NativeLifecycleStepKindV1.Waiting, frame.NodeIndex);
+            failure = default;
+            return true;
+        }
+
+        private uint ReadUInt32(NativeCompiledNodeRecordV1 node, uint offset)
+        {
+            if (node.InstanceMemorySize < offset + 4u) return 0u;
+            var start = checked((int)(node.InstanceMemoryOffset + offset));
+            return (uint)(_memory[start]
+                | _memory[start + 1] << 8
+                | _memory[start + 2] << 16
+                | _memory[start + 3] << 24);
+        }
+
+        private void WriteUInt32(NativeCompiledNodeRecordV1 node, uint offset, uint value)
+        {
+            if (node.InstanceMemorySize < offset + 4u) return;
+            var start = checked((int)(node.InstanceMemoryOffset + offset));
+            _memory[start] = (byte)value;
+            _memory[start + 1] = (byte)(value >> 8);
+            _memory[start + 2] = (byte)(value >> 16);
+            _memory[start + 3] = (byte)(value >> 24);
         }
 
         private long ReadInt64(NativeCompiledNodeRecordV1 node)
@@ -1804,6 +2336,13 @@ namespace AIBT
                 NativeResourceKindV1.InstanceNodeMemory,
                 ownerId: control.OwnerId,
                 generation: control.Generation);
+
+        private NativeRuntimeFailureV1 FrameCapacityFailure(NativeLifecycleControlV1 control)
+            => new NativeRuntimeFailureV1(
+                NativeRuntimeDiagnosticCodeV1.NativeInstanceCapacityExceeded,
+                NativeResourceKindV1.InstanceFrames,
+                control.Depth,
+                (uint)_frames.Length);
 
         private static NativeRuntimeFailureV1 CapacityFailure()
             => new NativeRuntimeFailureV1(

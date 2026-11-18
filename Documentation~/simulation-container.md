@@ -221,19 +221,22 @@ void OnArrived(ActionHandle action, bool reached, float distance)
   action ended, or its agent was removed or restarted), `StaleHandle` (another group's handle),
   `TypeMismatch` (not the node's completion type), `InvalidArgument` (an outcome outside
   `ActionOutcome`, NaN, an infinity, a bool above 1), `Busy`, `Disposed`.
-- **Not under a reactive composite.** A reactive sequence or selector aborts its running child at
-  every update before it re-evaluates (`execution-semantics-v1.md`, "Reactive selector").
-  - An action node anywhere below one is cancelled (`Preempted`) and started again at every think.
-  - It never reads a completion: the completion's own wake-up think aborts it first.
-  - Put long actions under memory composites. Use a reactive composite only for a node whose action
-    is fire-and-forget, or whose restart at every think is intended.
-  - `aibt.core.reactive-sequence-retaining` and `aibt.core.reactive-selector-retaining` re-check the
-    children before the running one at every think and keep the running child, so an action under
-    them is started once and reads its completion (ADR-P10-013). Every child before the running one is
-    such a guard: put multi-step work in one child, for example
-    `reactive-sequence-retaining [cond, memory-sequence [stepA, stepB]]`, not as two siblings.
-    They run on the reference executor only; the native executor and this container reject them
-    until stage 2 of ADR-P10-013.
+- **Guard actions with the retaining reactive composites.** To re-check a condition at every think
+  above a long action, use `aibt.core.reactive-sequence-retaining` or
+  `aibt.core.reactive-selector-retaining` (ADR-P10-013). They re-check the children before the running
+  one at every think and keep the running child: the action is started once, polled at every think and
+  reads its completion. A guard that ends the composite or starts running (a higher-priority branch in
+  the selector) aborts the kept branch, so its action ends with one `Cancelled` (`Preempted`); when the
+  game completes the action in the same step the guard fires, the guard runs first and preemption wins.
+  - Every child before the running one is such a guard. Put multi-step work in one child, for example
+    `reactive-sequence-retaining [cond, memory-sequence [stepA, stepB]]`: as two siblings
+    `[cond, stepA, stepB]`, a long `stepA` would be ticked again as a guard while `stepB` runs.
+  - The v1 `reactive-sequence` and `reactive-selector` abort their running child at every update
+    before they re-evaluate (`execution-semantics-v1.md`, "Reactive selector"). An action node anywhere
+    below one is cancelled (`Preempted`) and started again at every think and never reads a
+    completion (the completion's own wake-up think aborts it first). Use them only for a node whose
+    action is fire-and-forget, or whose restart at every think is intended; otherwise use a retaining
+    composite or a memory composite.
 - **Polling.** A poll before the game completed the action (`TryConsume` returns `StaleCompletion`)
   keeps the node `Running` and changes nothing else in that dispatch: anything the node did before
   the poll in the same Tick is dropped. Decide time-outs and other early exits before polling.

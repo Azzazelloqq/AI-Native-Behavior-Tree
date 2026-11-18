@@ -20,6 +20,9 @@ namespace AIBT.Tests.Runtime
         }
 
         internal List<string> Calls { get; } = new List<string>();
+
+        /// <summary>The next scripted Tick result, consumed as <see cref="Tick"/> would (P10-013 native twin).</summary>
+        internal NodeStatus NextScriptedStatus() => _statuses.Count == 0 ? NodeStatus.Running : _statuses.Dequeue();
         internal List<uint> EnterGenerations { get; } = new List<uint>();
         internal List<byte> MemoryAtEnter { get; } = new List<byte>();
         internal List<long> TimesAtTick { get; } = new List<long>();
