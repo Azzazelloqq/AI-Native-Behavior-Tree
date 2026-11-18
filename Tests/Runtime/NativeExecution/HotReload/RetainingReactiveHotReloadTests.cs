@@ -76,6 +76,45 @@ namespace AIBT.Tests.Runtime.NativeExecution.HotReload
         }
 
         [Test]
+        public void AMigrationDuringAnOpenUpdateWithNoRetainingPass_IsAllowed_AndTheGuardPassesResume()
+        {
+            // P10-014, R1 boundary: the refusal reads the retaining pass state, not the open
+            // update. Update 1 has no guard pass (nothing is retained yet); migrate right after a's
+            // terminal Tick, as NativeHotReloadStateMigrationTests does for a plain sequence.
+            var program = Tree(Retaining, reorder: false);
+            Assert.That(NativeHotReloadInstance.TryBuild(program, Allocator.Persistent, out var old, out var failure), Is.True, failure.Code.ToString());
+            var fresh = default(NativeHotReloadInstance);
+            try
+            {
+                Assert.That(old.Machine.TryBeginUpdate(1, 10, out _), Is.True);
+                var tickReached = false;
+                for (var guard = 0; guard < 32 && !tickReached; guard++)
+                {
+                    Assert.That(old.Machine.TryAdvance(out var step, out failure), Is.True, failure.Code.ToString());
+                    if (step.Kind != NativeLifecycleStepKindV1.DispatchRequired) continue;
+                    Assert.That(old.Machine.TryCompleteDispatch(step.DispatchToken, BurstContextResult.Success,
+                        step.Phase == BurstCallbackPhase.Tick ? NodeStatus.Success : NodeStatus.Running, out failure), Is.True);
+                    tickReached = step.Phase == BurstCallbackPhase.Tick;
+                }
+                Assert.That(tickReached, Is.True);
+                Assert.That(old.Control[0].UpdateOpen, Is.Not.Zero, "The update is open.");
+                Assert.That(old.Control[0].RetainOwnerDepth, Is.Zero, "No retaining pass is in progress.");
+
+                var classification = HotReloadCompatibilityClassifier.Classify(program, program);
+                Assert.That(NativeHotReloadStateMigration.TryMigrate(old, program, program, classification, NoExclusions,
+                    Allocator.Persistent, out fresh, out _, out failure), Is.True, failure.Code.ToString());
+
+                Assert.That(fresh.Machine.TryBeginUpdate(2, 20, out _), Is.True);
+                Assert.That(Drive(ref fresh.Machine, program), Is.EqualTo(new[] {
+                    "a:Exit:Success", "b:Enter", "b:Tick" }), "The pending exit of a is carried over; b becomes the retained branch.");
+                Assert.That(fresh.Machine.TryBeginUpdate(3, 30, out _), Is.True);
+                Assert.That(Drive(ref fresh.Machine, program), Is.EqualTo(new[] {
+                    "a:Enter", "a:Tick", "a:Exit:Success", "b:Tick" }), "The next update runs a guard pass and resumes b.");
+            }
+            finally { fresh.Dispose(); old.Dispose(); }
+        }
+
+        [Test]
         public void AStructuralEditUnderARetainingComposite_ResetsItsCursor_AndAbortsTheRetainedBranchWithHotReload()
         {
             var program = Tree(Retaining, reorder: false);

@@ -70,12 +70,15 @@ namespace AIBT
             if (classification == null) throw new ArgumentNullException(nameof(classification));
 
             report = default;
-            // P10-014 (review risk R1): migration copies only the active frames and no control
-            // state, so it runs between updates only. During an open update a retaining
-            // composite's guard pass may hold its running branch parked (and a Parallel its
-            // suspended branches mid-visit); copying then would drop them without Abort/Exit.
+            // P10-014 (review risk R1): migration copies the active frames and Depth only. While a
+            // retaining composite's guard pass or takeover is in progress (ADR-P10-013), its
+            // retained branch (and, during a takeover, the held guard branch) is parked in the
+            // suspended-frame region and the pass state lives in Control; copying would drop them
+            // without Abort/Exit. That state exists only inside an update, so migration in an open
+            // update with no retaining pass in progress stays allowed as before.
             var openControl = oldInstance.Control[0];
-            if (openControl.UpdateOpen != 0 || openControl.ActiveDispatchId != 0)
+            if (openControl.RetainOwnerDepth != 0 || openControl.RetainPhase != 0
+                || openControl.RetainVisitRestPending != 0)
             {
                 freshInstance = default;
                 failure = new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid);

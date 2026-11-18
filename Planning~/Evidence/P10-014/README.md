@@ -16,7 +16,7 @@ builds and no measurements were made in this task.
 | D2: restoring a suspended segment shifts frames in the wrong direction when the segment is not at the region start | Yes, 3 of 3 v1 trees: a leaf ticked twice, branches skipped | `d2-before-fix.txt` | `_safeSegmentRestore` removed; every program restores with one in-place rotation (`MoveSegmentToStackTop`, three reverses + copy down). An exhaustive test over all layouts up to 10 frames shows the rotation produces the same active and suspended frames as the old copy-then-shift wherever the old one was correct. | `NativeParallelSegmentRestoreTests` (4); the existing Parallel suites unchanged |
 | D3: `RetainVisitRestPending` survives an abort requested in the window after a Parallel guard's takeover | Yes, 3 of 3 (flag still 1 after a tree stop; an observer reset faulted) | `d3-before-fix.txt` | `TryRequestAbort` and `TryApplyObserverTransition` clear the flag: the abort replaces the rest of the visit. | `RetainingVisitRestAbortTests` (3) |
 | F-S2-2: full hot-reload restart of a v1 reactive composite with a running branch was refused | Yes (the existing `[Ignore]`d test) | the ignored test's reason | `NativeHotReloadFullRestart` requests the `HotReload` abort with `replacePendingForTreeStop: true`; `TryRequestAbort` accepts that flag for `HotReload` as well as `TreeStopped`. | `RetainingReactiveHotReloadTests` (7) |
-| R1: state migration during an open update | Not a live bug (hot reload runs between updates) — hardened | — | `NativeHotReloadStateMigration.TryMigrate` refuses with `NativeLifetimeStateInvalid` while an update is open or a dispatch is active; the old instance runs on. | `RetainingReactiveHotReloadTests.AMigrationDuringAnOpenUpdateWithAParkedRetainedBranch_IsRefused_AndTheOldInstanceRunsOn` |
+| R1: state migration while a retaining guard pass holds parked frames | Hardened. Migration may run inside an open update (pinned by `NativeHotReloadStateMigrationTests.Reorder_AfterTerminalTick_PreservesPendingExitReason`), but it copies only the active frames and `Depth`, so a parked retained branch, a held guard branch or a pending visit rest would be dropped without Abort/Exit | — | `NativeHotReloadStateMigration.TryMigrate` refuses with `NativeLifetimeStateInvalid` exactly when `Control.RetainOwnerDepth != 0 \|\| RetainPhase != 0 \|\| RetainVisitRestPending != 0`; the old instance runs on. Open updates and active dispatches are not refused (no guard existed on `3e4b09e`; the first version of this fix refused `UpdateOpen != 0 \|\| ActiveDispatchId != 0` and broke the pinned test, corrected 2026-11-19). | `RetainingReactiveHotReloadTests.AMigrationDuringAnOpenUpdateWithAParkedRetainedBranch_IsRefused_AndTheOldInstanceRunsOn`, boundary `AMigrationDuringAnOpenUpdateWithNoRetainingPass_IsAllowed_AndTheGuardPassesResume`; `NativeHotReloadStateMigrationTests` unchanged |
 | R2: no guard pass in the first update after a structural reset | Yes, but shared with the reference (its requested-reevaluation path returns before `PrepareUpdateStart`) | — | Not changed (reference behaviour is fixed by the task). Documented in the ADR hot-reload row as non-normative. | — |
 
 ## v1 behaviour changes (native only; each now matches the reference executor)
@@ -35,7 +35,9 @@ builds and no measurements were made in this task.
   the guard's visit no longer leaves that visit pending for the next update (D3).
 - A full hot-reload restart of a v1 reactive composite with a running branch now succeeds (F-S2-2):
   the old instance is aborted and the fresh one runs from the root.
-- State migration is refused (old instance kept) if it is attempted during an open update (R1).
+- State migration is refused (old instance kept) only while a retaining composite's guard pass or
+  takeover is in progress (R1); before P10-013 that state did not exist, so no earlier migration is
+  refused.
 
 ## Open questions for the owner
 
@@ -50,7 +52,13 @@ builds and no measurements were made in this task.
    bullet): "In the first update after a structural edit that resets a composite's cursor, the
    reset replaces update-start processing, so no retaining composite on the active path has a guard
    pass in that update." Not applied: the spec's meaning is not changed in this task.
-3. **Parallel step counts** (review point 4), pinned not aligned:
+3. **State migration and suspended Parallel branches (pre-existing, not changed).** A v1 Parallel
+   keeps its resting branches in the suspended-frame region between updates too, and
+   `TryMigrate` copies only the active frames, `Depth` and no `ParallelBranches` records, as on
+   `3e4b09e`. Whether migration of a Parallel with running branches loses them was not tested here;
+   the R1 guard deliberately does not refuse it, since that would change existing migrations. A
+   follow-up should check it.
+4. **Parallel step counts** (review point 4), pinned not aligned:
    `RetainingReactiveNativeCoverageTests.ParallelStepCountsDifferExactlyByLeafRestsAndParallelCompletions`.
    Native = reference + one step per branch that rests on a leaf that ticked Running (the
    `ParallelBranchSuspended` step) + one step per Parallel that completes (native accepts the last
@@ -94,7 +102,8 @@ No existing expectation was weakened, and no golden file changed.
 | `NativeParallelOuterAbortTargetTests` | 17/17 |
 | `NativeParallelSegmentRestoreTests` | 4/4 |
 | `RetainingVisitRestAbortTests` | 3/3 |
-| `RetainingReactiveHotReloadTests` | 7/7 |
+| `RetainingReactiveHotReloadTests` | 7/7, then 8/8 after the R1 correction (2026-11-19) |
+| `NativeHotReloadStateMigrationTests` (after the R1 correction) | 17/17 |
 | `RetainingReactiveNativeCoverageTests` | 9/9 |
 | `RetainingReactiveNativeEquivalenceTests` | 31/31 |
 | `NativeMatchesTheReferenceRecordForRecord` (parameterised equivalence cases) | 39/39 |

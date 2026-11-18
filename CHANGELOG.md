@@ -25,8 +25,9 @@ All notable changes to this project will be documented here. The project follows
   guard's takeover no longer leaves the rest of that visit pending into the next update. Before, the
   next update of a reused machine faulted.
 - **Hot reload.** `NativeHotReloadFullRestart.TryRestart` restarts a v1 reactive composite with a
-  running branch (P10-013 finding F-S2-2). `NativeHotReloadStateMigration.TryMigrate` refuses an
-  open update, where a guard pass may hold parked frames.
+  running branch (P10-013 finding F-S2-2). `NativeHotReloadStateMigration.TryMigrate` refuses while a
+  retaining composite's guard pass or takeover is in progress (parked frames it cannot carry);
+  migration in an open update without one is allowed as before.
 - No public API, trace format, compiled format or reference-executor change. Details and the
   remaining open questions are in `Planning~/Evidence/P10-014/README.md`.
 
