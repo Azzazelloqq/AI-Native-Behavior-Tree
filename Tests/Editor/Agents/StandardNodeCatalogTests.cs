@@ -62,11 +62,43 @@ namespace AIBT.Tests.Editor.Agents
                 Assert.That(registry.TryGet(type.TypeId, out _), Is.True, type.TypeId);
         }
 
+        /// <summary>
+        /// Every node of the package's native shard aibt.native.standard: the four P9-002 nodes and
+        /// the 20 library nodes of P11-002 stage 1 (ADR-P11-002 §5.1, groups 1-3).
+        /// </summary>
+        internal static readonly string[] StandardNativeTypeIds =
+        {
+            "aibt.native.bool-is-true",
+            "aibt.native.float-at-least",
+            "aibt.native.set-float",
+            "aibt.native.wait-microseconds",
+            "aibt.native.int-at-least",
+            "aibt.native.int-equals",
+            "aibt.native.int-keys-at-least",
+            "aibt.native.float-keys-at-least",
+            "aibt.native.float3-within-distance",
+            "aibt.native.float3-is-set",
+            "aibt.native.set-bool",
+            "aibt.native.set-int",
+            "aibt.native.set-float3",
+            "aibt.native.copy-bool",
+            "aibt.native.copy-int",
+            "aibt.native.copy-float",
+            "aibt.native.copy-float3",
+            "aibt.native.increment-int",
+            "aibt.native.increment-float",
+            "aibt.native.toggle-bool",
+            "aibt.native.float3-distance",
+            "aibt.native.succeed",
+            "aibt.native.fail",
+            "aibt.native.idle",
+        };
+
         [Test]
         public void TheProjectCatalogOffersTheStandardNativeShardAsNativeOnlyNodes()
         {
             var catalog = global::AIBT.Editor.Registry.ProjectNodeCatalog.Discover();
-            foreach (var typeId in new[] { "aibt.native.bool-is-true", "aibt.native.float-at-least", "aibt.native.set-float", "aibt.native.wait-microseconds" })
+            foreach (var typeId in StandardNativeTypeIds)
             {
                 Assert.That(catalog.Registry.TryGet(typeId, out var entry), Is.True, typeId + "; problems: " + string.Join("\n", catalog.Problems));
                 Assert.That(entry.Manifest.ExecutionDomain, Is.EqualTo(NodeExecutionDomain.Burst), typeId);

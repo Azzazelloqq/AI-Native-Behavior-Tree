@@ -75,8 +75,9 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
                 .Select(m => m.TypeId)
                 .Concat(AIBT.Authoring.BuiltInLeafManifests.All.Select(p => p.Manifest.TypeId))
                 .Concat(PackageManagedNodeTypeIds())
-                // P9-002: the package's native-only standard shard (assembly AIBT.StandardNodes).
-                .Concat(new[] { "aibt.native.bool-is-true", "aibt.native.float-at-least", "aibt.native.set-float", "aibt.native.wait-microseconds" })
+                // P9-002: the package's native-only standard shard (assembly AIBT.StandardNodes);
+                // P11-002 stage 1 added 20 library nodes to it.
+                .Concat(AIBT.Tests.Editor.Agents.StandardNodeCatalogTests.StandardNativeTypeIds)
                 .OrderBy(id => id, System.StringComparer.Ordinal)
                 .ToArray();
             Assert.That(typeIds, Is.EqualTo(expectedTypeIds),

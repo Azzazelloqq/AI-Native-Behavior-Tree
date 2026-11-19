@@ -84,10 +84,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
         public void TheGeneratedCatalogDeclaresBothShardsNodes()
         {
             var ids = Materialize(typeof(StandardNativeShard)).Nodes.Select(node => node.Manifest.TypeId).ToArray();
-            Assert.That(ids, Is.EquivalentTo(new[]
-            {
-                "aibt.native.bool-is-true", "aibt.native.float-at-least", "aibt.native.set-float", "aibt.native.wait-microseconds",
-            }));
+            // P11-002 stage 1 grew the shard from the four P9-002 nodes to 24.
+            Assert.That(ids, Is.EquivalentTo(StandardNativeLibraryIds.All));
             Assert.That(StandardNativeProbeCatalog.IsUsable, Is.True);
         }
 
