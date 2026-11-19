@@ -4,6 +4,27 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Subtrees, stage 3: graph editor (P11-001)
+
+- **Subtrees in the graph editor.** The palette lists "Subtree…" first and opens a picker over the
+  project's trees. A reference is one card with a SUBTREE badge and one row per interface key; the
+  inspector edits its key map (parent key, constant or not connected), creates a missing parent key
+  and connects same-named keys. Problems of the expansion appear on the reference card.
+- **Open Subtree** opens the subtree in its own window with a breadcrumb back to the parent (view
+  state only; the layout format is unchanged). **Extract to Subtree…** moves a node and its
+  descendants into a new tree file (written on the next Save) and leaves a reference; **Unpack
+  Subtree** replaces a reference by its expansion. All of them are single undo steps.
+- **Live debugging and trace.** A running subtree lights its reference card in the parent; a
+  subtree window opened from a reference follows that instance only and shows its live blackboard
+  values. The trace timeline labels subtree nodes "reference / node".
+- **Edits keep the subtree interface.** Graph and MCP authoring edits of a format-3 tree no longer
+  drop its `interface`, and copying a reference keeps its `subtree`.
+- **Stage-2 follow-ups.** A tree with subtrees whose only problem is node types the project catalog
+  does not know imports as `Needs registry` (was `Errors`). The tree-ID index also covers trees in
+  packages (`Packages/<name>/...`).
+- **Unchanged:** public API (only internal additions), executors, ABI v2, compiled program and
+  trace formats, layout format, `CodeGen~`, `MCP/**`, package version. MCP/CLI support is stage 4.
+
 ### Subtrees, stage 2: native path, import, baking (P11-001)
 
 - **Generated bindings may name expanded keys (owner decision 9).** A node's `bindings` value now

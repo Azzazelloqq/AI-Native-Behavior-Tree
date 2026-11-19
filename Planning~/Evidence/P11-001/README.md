@@ -128,7 +128,7 @@ Runs (raw output in `runs/` of the acceptance folder):
 | Regression of touched areas (`regression-1.txt`) | `ReferenceCompilerTests` 18/18, `TreeValidatorTests` 39/39, `DiagnosticCodeAndCatalogTests` 17/17, `ManagedAgentLayerTests` 24/24, `ManagedParameterValidationTests` 17/17, `BehaviorTreeAgentComponentTests` 5/5, `SemanticSliceCompilationTests` 15/15, `SemanticSliceBehaviorTests` 16/16, `McpTestingToolDispatcherTests` 8/8, `McpVerificationToolDispatcherTests` 23/23, `DocumentMigratorTests` 7/7, `BlackboardSchemaTests` 13/13, `TreeScopeSlotNeverWrittenValidatorTests` 5/5, `HotReloadStateMigrationTests` 21/21, `GeneratedArtifactContractTests` 4/6 |
 | ABI (`abi-1.txt`) | `AIBT.CodeGen.ContractTests` 6/6 |
 | dotnet harness outside Unity (`dotnet-harness/dotnet-test.txt`) | 64/64 (`SubtreeTestKit` + Format, Validator, Expander, HotReload tests compiled without `UNITY_EDITOR` against the Unity-built `AIBT.Runtime`/`AIBT.Authoring`, NUnit 3.14, .NET 8 roll-forward, `AIBT_PACKAGE_ROOT` set) |
-| `Tools~/Verification/Verify-Static.ps1` (`verify-static-1.txt`) | passed (7 schemas, 181 work items) |
+| `Tools~/Verification/Verify-Static.ps1` (`verify-static-1.txt`; `verify-static-2.txt` after these docs) | passed (7 schemas, 181 work items) |
 
 The two `GeneratedArtifactContractTests` failures are the known pre-existing host-layout failures
 (`PackageInfo.FindForAssembly` returns null because AIBT lives under `Assets/`; recorded in P7-018,
@@ -491,3 +491,190 @@ full; the changes to existing code are additive overloads and one hidden seriali
 Stage 2 is accepted. Open questions 1 (import status of a subtree parent whose node types are not
 in the project catalog) and 2 (tree-ID index covers `Assets/` only) go to the owner with the
 stage-3 go-ahead; stages 3 and 4 are not started.
+
+## Stage 3 — graph editor (2026-11-19)
+
+Base: `feature/aibt-consumer-workflow` at `d8b34a8`, clean working tree. Editor 6000.6.9f1 (port
+7810). Tests run with the async `Tools/Unity/Invoke-UnityTests.ps1` after
+`Invoke-UnityRecompile.ps1`, touched classes only. Raw outputs and visual evidence:
+`C:\UnityProjects\_aibt_acceptance\P11-001\stage3\` (`runs/` for test output).
+
+### Step 0 — the two approved stage-2 follow-ups (`8fce1aa`)
+
+1. **Import status `Needs registry`** (open question 1 of stage 2). A tree with subtrees whose only
+   expansion errors are unknown node types (`AIBT2021`) now imports with status `Needs registry`,
+   like a tree without subtrees; any other expansion error keeps `Errors`
+   (`TreeCatalogEntry.OnlyUnknownNodeTypes`, internal). The source still keeps the raw JSON in both
+   cases.
+2. **Tree-ID index covers `Packages/`** (open question 2). `ProjectTreeIndex.Roots()` is `Assets/`
+   plus every registered package with a folder on disk (`Packages/<name>/...` asset paths, read from
+   the package's resolved folder); the same skips apply (hidden, `~` and `cvs` folders). Files of
+   immutable packages (registry, git, built-in) are listed once per resolved folder; embedded and
+   local packages are read on every scan. A tree ID declared in `Assets/` and in a package gives
+   `AIBT3021` like any other duplicate.
+
+### What was done (stage 3, ADR §4.7 and §7)
+
+All of it is Editor code (`Editor/Graph/**`, `Editor/Trace/TraceTimelineWindow.cs`, two style
+sheets); nothing outside the Editor assembly changed. Every edit goes through the window's one edit
+history (`ApplyEdit`, one Unity undo step each).
+
+1. **Palette and picker.** The node palette (`NodeSearchProvider`) lists a "Subtree…" entry first
+   when the window asks for it (not when inserting into an edge). Choosing it opens a tree picker
+   (`SubtreePickerProvider`) over the project's trees from the tree catalog, without the open tree.
+   A canvas context-menu item "Add Subtree…" does the same.
+2. **Reference node.** A reference is one card (`BehaviorTreeNode`) with a SUBTREE badge, the
+   subtree's tree ID and name, and one row per interface key (`key → parent key`, `key = constant`
+   or `key: not connected`). It accepts no children. Double-click opens the subtree.
+3. **New references** get a short ID from the subtree's name (no `:`), and same-named parent keys of
+   the same type are connected at once. Adding a reference to a format-1/2 tree raises it to format 3.
+4. **Inspector for a reference**: subtree path, interface version, the expansion's problems for this
+   reference, the key map (per interface key: a parent Tree key of the same type, a constant for
+   Bool/Int32/Int64/Float32/Float64, or not connected), "Create parent key" for a missing key
+   (adds the key and connects it in one undo step), "Connect same-named keys", Open Subtree, Unpack.
+5. **Diagnostics on the reference card.** The open tree is validated through the expansion (as at
+   import). A problem inside a subtree, or an `r:n` node, is shown on the outermost reference that
+   uses it; the problems list appends "(in <document>)" for problems located in a subtree file.
+6. **Open Subtree** opens the subtree in its own graph window (reused for the same file and
+   instance) with a breadcrumb back to the parent (`Boss Fight › Strike (instance left)`). The
+   breadcrumb and the instance prefix are local view state of the window; the layout format is
+   unchanged and the reference is an ordinary node in the parent's layout.
+7. **Extract to Subtree…** (context menu on a non-root node): asks for a new file, moves the node and
+   its descendants into a new tree (tree ID `<parent tree ID>.<slug>`, interface = the Tree keys
+   they use) and puts a reference with the node's label in their place. The new file is kept pending
+   in the window and written by the next Save, before the parent; Undo therefore leaves no file
+   behind. An undone extraction's file name can be used again.
+8. **Unpack Subtree** replaces a reference by its expansion (nodes `r:n` with labels
+   "reference / inner", private keys `r:key` and constants added as Tree keys); one undo step. A
+   name collision with an existing node or key is refused with `AIBT3027`.
+9. **Live debugging.** `MatchesProgram` compares the running program with the graph's expansion
+   (the window's own subtree resolver). In the parent, every `r:n` program node lights the reference
+   card `r` (running wins, otherwise the strongest flash). A subtree window opened from a reference
+   gets that instance's prefix, attaches to the parent's agent and lights only its own instance's
+   nodes; its blackboard panel shows the instance's live values (interface keys through the
+   binding, private keys as `r:key`).
+10. **Trace timeline**: runtime nodes map to cards the same way, and node labels come from the
+    program's debug map, so a subtree node reads "Left strike / Hit". A line "Active: …" lists the
+    active nodes at the scrubbed step; the diagnostics list names the node by label.
+11. **Edits keep the subtree interface** (`d6f073f`): `GraphDocumentEdits.Rebuild` and
+    `SemanticEditOperations` rebuilt a document without its `interface`, and `Copy` dropped a
+    reference's `subtree`; both are kept now (see deviation 1).
+
+Demo trees for the evidence: `Tests/Editor/Graph/Fixtures/SubtreeDemo/` (`boss-fight.aibt` uses
+`strike.aibt` twice; checked by `DemoFixtures_BossFightExpandsToTwoStrikeInstances`). The Play Mode
+agent was created by an Editor eval in Play Mode only; no scene or other project file was changed.
+
+### New tests (stage 3 acceptance items of ADR §7)
+
+| ADR §7 stage 3 item | Test |
+|---|---|
+| Step 0: `Needs registry` | `SubtreeImportAndBakeTests.SubtreeWithNodeTypesTheProjectCatalogDoesNotKnow_ImportsAsNeedsRegistry`, `RealExpansionErrorsNextToUnknownNodeTypes_StayErrors`, `OnlyUnknownNodeTypes_IsTrueOnlyWhenEveryErrorIsAIBT2021` |
+| Step 0: `Packages/` in the index | `ProjectTreeIndexPackageTests` (4: package asset paths and skips, `AIBT3021` across `Assets/` and a package, immutable folders listed once, default roots) |
+| Palette entry and picker | `SubtreeGraphEditorTests.Palette_ListsSubtreeFirstOnlyWhenAsked`, `Picker_ListsProjectTreesWithoutTheOpenTree` |
+| Reference card | `ReferenceCard_ShowsSubtreeNameBadgeAndOneRowPerInterfaceKey` |
+| Add reference, key map, create parent key (with undo/redo) | `AddReference_UsesAShortIdConnectsSameNamedKeysAndUndoes`, `KeyMap_ConstantAndDisconnectEditsAreUndoable`, `CreateMissingParentKey_AddsTheKeyAndConnectsItInOneStep` |
+| Extract and Unpack (with undo/redo) | `Extract_ReplacesTheNodesByAReference_UndoLeavesNoFile_SaveWritesTheSubtree`, `Unpack_ReplacesTheReferenceByItsExpansion_AndUndoes` |
+| Diagnostics on the reference | `ReferenceProblems_AreBadgedOnTheReferenceCard` |
+| Open Subtree and breadcrumb | `OpenSubtree_OpensItsOwnWindowWithABreadcrumbBack` |
+| Live debugger: reference in the parent, one instance per subtree window | `LiveDebugger_HighlightsTheReferenceInTheParentAndOneInstanceInEachSubtreeWindow` |
+| Trace timeline labels | `TraceTimeline_MapsExpandedNodesToTheReferenceAndShowsTwoPartLabels` |
+| Demo fixtures | `DemoFixtures_BossFightExpandsToTwoStrikeInstances` |
+
+### Visual evidence
+
+In `stage3/` of the acceptance folder; every image and still was looked at.
+
+| File | Shows |
+|---|---|
+| `01-parent-subtree-used-twice.png` | Boss Fight with two references to Strike (Left strike, Right strike), each with its key row `hits → hits` |
+| `02-inspector-key-map.png` | Left strike selected: subtree path, interface version, key map `hits` → "Parent key hits", Open Subtree / Unpack |
+| `03-subtree-window-breadcrumb.png` | Strike opened from Left strike in its own window; breadcrumb `Boss Fight › Strike (instance left)` |
+| `04-reference-diagnostic.png` | `hits` of Right strike disconnected: `AIBT3025` badge on the card, in the inspector and in the problems list (undone afterwards) |
+| `05a-before-extract.png`, `05b-after-extract.png` | Finisher and its two children replaced by the reference "Finisher" to the pending `finisher.aibt` ("written on Save"); undone, never saved |
+| `06a-before-unpack.png`, `06b-after-unpack.png` | Right strike unpacked into `Right strike / Combo` and its four children, private key `right:swings` added; undone |
+| `07-live-parent.mp4` (+ `.stills/`, every 0.5 s) | Play Mode, parent window: the reference card lights while its instance runs (e.g. stills `t004.5s`: Right strike), the live `hits` value grows |
+| `08-live-left-instance.mp4`, `09-live-right-instance.mp4` (+ stills) | The two Strike windows: each lights only its own instance's nodes; `swings` shows each instance's own value |
+| `10-live-simultaneous-samples.txt` | 24 samples of the running nodes of all three windows at the same instant: while the parent runs `left`, only the left window has running nodes, and the same for `right` |
+
+The clips are separate recordings (one window each, no video tool to compose them); the samples
+file is the simultaneous evidence.
+
+### Changed expectations of existing tests
+
+None. The test diff from `d8b34a8` only adds files and test methods (`SubtreeImportAndBakeTests`
+gains three tests and two constants).
+
+### Added public API
+
+None. Every new member is internal (`SubtreeGraphEdits`, the window's subtree commands,
+`TreeCatalogEntry.OnlyUnknownNodeTypes`, `ProjectTreeIndex.ScanRoot`, …). The generated
+`api-reference-editor.md` was regenerated: only two summaries changed (the importer's, for
+`Needs registry`, and `BehaviorTreeNode`'s, for the reference card). `ExpectedPublicAbiV2.txt`,
+`package.json`, the specifications and the protected runtime folders are unchanged.
+
+### Runs (stage 3)
+
+Raw output in `stage3/runs/`.
+
+| Run | Result |
+|---|---|
+| Step 0 (`step0-1.txt`) | `SubtreeImportAndBakeTests` 6/6, `ProjectTreeIndexPackageTests` 4/4 |
+| Development runs (`dev-01` … `dev-03`) | failing early runs of `SubtreeGraphEditorTests` (fixture JSON, absolute subtree source IDs `AIBT3010`), fixed; `dev-03` 12/12 |
+| Affected classes (`dev-04-affected.txt`) | 29 classes, all passed except `McpDocumentationGeneratorsTests` 11/13 (stale generated reference, a new public property), fixed in `dev-05` |
+| After regenerating the reference (`dev-05-docs-regen.txt`) | `McpDocumentationGeneratorsTests` 13/13, `SubtreeGraphEditorTests` 12/12, `BehaviorTreeGraphAdapterTests` 15/15 |
+| Extract label, demo fixtures, path reuse (`dev-06`, `dev-07`) | `SubtreeGraphEditorTests` 13/13, `BehaviorTreeGraphAdapterTests` 15/15, `GraphEditorWorkflowTests` 15/15 |
+| Final, code at `c40a6ab` (`final-1.txt`) | `SubtreeGraphEditorTests` 13/13, `GraphEditorWorkflowTests` 15/15, `GraphConsumerWorkflowTests` 4/4, `SubtreeImportAndBakeTests` 6/6, `ProductionTreeAssetStalenessTests` 6/6, `McpDocumentationGeneratorsTests` 13/13, `ProjectTreeIndexPackageTests` 4/4, `BehaviorTreeGraphAdapterTests` 15/15, `GraphEditSessionTests` 6/6, `SemanticEditOperationsTests` 4/4, `TraceTimelineWindowTests` 4/4, `SubtreeExpanderTests` 26/26, `McpAuthoringToolDispatcherTests` 20/20 |
+| `Tools~/Verification/Verify-Static.ps1` (`verify-static-1.txt`; `verify-static-2.txt` after these docs) | passed (7 schemas, 181 work items) |
+
+`dev-04-affected.txt` in full: `SubtreeGraphEditorTests` 12/12, `GraphEditorWorkflowTests` 15/15,
+`GraphConsumerWorkflowTests` 4/4, `SubtreeImportAndBakeTests` 6/6,
+`ProductionTreeAssetStalenessTests` 6/6, `ProjectTreeIndexPackageTests` 4/4,
+`BehaviorTreeGraphAdapterTests` 15/15, `GraphEditSessionTests` 6/6, `SemanticEditOperationsTests`
+4/4, `SemanticEditTransactionTests` 3/3, `SemanticPatchTransactionTests` 4/4,
+`TraceTimelineWindowTests` 4/4, `BehaviorTreePreviewWindowTests` 2/2,
+`DiagnosticGraphPresentationTests` 3/3, `LayoutSemanticIsolationTests` 2/2,
+`LargeGraphPerformanceTests` 1/1, `ReferencePreviewParityTests` 2/2, `McpAuthoringJsonTests` 2/2,
+`McpAuthoringToolDispatcherTests` 20/20, `McpMigrationToolDispatcherTests` 4/4,
+`McpVerificationToolDispatcherTests` 23/23, `McpPermissionEnforcerTests` 17/17,
+`McpCustomToolsToolDispatcherTests` 7/7, `CustomMcpToolProviderDiscoveryTests` 4/4,
+`AgentConsumerToolsTests` 14/14, `ProjectManifestQueryTests` 3/3, `SubtreeManagedTests` 4/4,
+`SubtreeExpanderTests` 26/26, `McpDocumentationGeneratorsTests` 11/13.
+
+The Editor recompiled without errors after every change; the parent repository's `git status --short`
+is the same before and after (`runs/parent_status_before.txt`, `runs/parent_status_after.txt`); the Console has no compiler warning from
+the touched files and no new error (only the pre-existing `Release of invalid GC handle` /
+`Failed to load VirtualArtifacts` errors, stage-2 open question 5).
+
+### Not run / not covered (stage 3)
+
+- Full run of all nine assemblies (left to acceptance) and PlayMode tests (no PlayMode code changed).
+- Native agents in a subtree window: the code path is shared (`ShowLive(NativeTreeAgent)` uses the
+  same mapping), but only the managed agent was exercised (test and clip).
+- Real packages: the `Packages/` index was tested with package roots mapped to temporary folders
+  (adding a package would change the project's manifest and lock file); no installed package with
+  trees was used, and a parent re-import after a package update was not tried.
+- MCP and CLI (stage 4, not started).
+
+### Deviations and open questions
+
+1. **Interface kept by edits, also for MCP.** Before, any graph or MCP authoring edit of a format-3
+   tree (`SemanticEditOperations`, `GraphDocumentEdits.Rebuild`) dropped its `interface`, and
+   copying a reference dropped its `subtree`. The fix is in shared Editor code, so MCP authoring edits
+   of format-3 trees now keep the interface too (no `MCP/**` file changed; MCP tests pass).
+2. **Extract writes the new file on Save.** The subtree file is pending in the window until Save
+   (written first, then imported, then the parent), so Undo/Redo never leave or need a file on disk;
+   closing the window without saving discards it. The alternative (write at once) would leave an
+   orphan file after Undo. Owner's choice if the other behaviour is wanted.
+3. **Unpack keeps the format version** (a tree stays format 3 after its last reference is unpacked).
+4. **An unknown node type in the parent masks reference errors at import**: parent validation fails
+   first, so the import shows `Needs registry` with `AIBT2021` only (found in step 0; left as is).
+5. **Tree picker and `Tests/`.** The picker lists the tree catalog, which leaves out `Tests/`, so the
+   demo trees under `Tests/` cannot be picked (they resolve and open normally).
+6. **Layout after Undo** (pre-existing, not changed): in a tree with a saved layout, Undo of an edit
+   that placed new nodes leaves the layout marked changed (the window offers to save positions only).
+   This happens for any added node (checked with a plain node), not only for Unpack/Extract.
+7. **Running highlight on a reference card** is the same glow as on other cards, but the card's teal
+   subtree border makes it less prominent; the active edge to it is clear.
+8. **Test windows leak when a coroutine test fails** before its `finally` (the pattern of
+   `GraphEditorWorkflowTests`); nine leaked windows from the failing development runs were closed by
+   hand. Passing runs leave none.

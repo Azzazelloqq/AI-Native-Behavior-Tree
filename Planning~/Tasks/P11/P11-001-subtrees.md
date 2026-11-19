@@ -9,7 +9,10 @@ item 9). Stage 2 implemented 2026-11-19 (local commits on `feature/aibt-consumer
 the "Stage 2" section of `Planning~/Evidence/P11-001/README.md`), accepted after the full run of all
 nine assemblies on `c02b42b`. Stage 3
 (graph editor) approved 2026-11-19 together with two stage-2 follow-ups (import status `Needs registry`;
-tree-ID index also covers `Packages/`). Stage 4 needs the owner's go-ahead.
+tree-ID index also covers `Packages/`). Stage 3 and both follow-ups implemented 2026-11-19 (local
+commits on `feature/aibt-consumer-workflow`; evidence, screenshots and Play Mode clips in the "Stage 3"
+section of `Planning~/Evidence/P11-001/README.md`), awaiting acceptance. Stage 4 needs the owner's
+go-ahead.
 
 ## Objective
 
@@ -106,5 +109,9 @@ Save-UnityWindow.ps1 / Save-UnityClip.ps1 for stages 3–4
   tree with subtrees whose nodes come only from a test or Editor assembly imports as `Errors`
   (`AIBT2021`) with its raw JSON, where a tree without subtrees shows `Needs registry`. The tree-ID
   index scans `Assets/` only (not `Packages/`). See the evidence README for the open questions.
+- Stage 3 (2026-11-19): Editor code only, no public API added. Graph and MCP authoring edits of a
+  format-3 tree now keep its `interface` (they dropped it before). Extract writes the new subtree
+  file on the next Save (Undo leaves no file); Unpack keeps format 3. Demo trees for the evidence are
+  in `Tests/Editor/Graph/Fixtures/SubtreeDemo/`. Open questions in the evidence README.
 - ADR §9 lists three unrelated findings (duplicate `AIBT2042/2043` definitions, last-wins identity
   map, stale ADR-P7-042 importer sentence) for separate follow-up.
