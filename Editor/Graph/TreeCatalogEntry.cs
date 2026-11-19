@@ -17,10 +17,23 @@ namespace AIBT.Editor.Graph
         public string Details { get; private set; }
         public int NodeCount { get; private set; }
 
+        /// <summary>
+        /// The subtree expansion of a tree with references or an interface (ADR-P11-001); null for
+        /// every other tree. On success the status and node count describe the expanded tree.
+        /// </summary>
+        internal SubtreeExpansion Expansion { get; private set; }
+
         public static TreeCatalogEntry Read(string path)
             => Read(path, NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry);
 
         internal static TreeCatalogEntry Read(string path, NodeRegistry registry)
+            => Read(path, registry, null);
+
+        /// <param name="expansion">
+        /// The expansion to describe for a tree that uses subtrees; when null it is expanded here
+        /// against the project's trees with <paramref name="registry"/>.
+        /// </param>
+        internal static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion)
         {
             var entry = new TreeCatalogEntry { Path = path, Name = System.IO.Path.GetFileName(path), TreeId = "", Status = "Errors" };
             try
@@ -33,6 +46,17 @@ namespace AIBT.Editor.Graph
                 entry.TreeId = document.TreeId.Value;
                 entry.Tags = document.Tags.Values.ToArray();
                 entry.NodeCount = document.Nodes.Count;
+                if (SubtreeExpander.RequiresExpansion(document))
+                {
+                    entry.Expansion = expansion ?? ProjectTreeIndex.Expand(path, document, registry, null, ProjectTreeIndex.Scan());
+                    if (!entry.Expansion.Success)
+                    {
+                        entry.Details = string.Join("\n", entry.Expansion.Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
+                        return entry;
+                    }
+                    document = entry.Expansion.Document;
+                    entry.NodeCount = document.Nodes.Count;
+                }
                 var unresolved = document.Nodes.Where(n => !registry.TryGet(n.TypeId, out _))
                     .Select(n => n.TypeId).Distinct().ToArray();
                 if (unresolved.Length != 0)

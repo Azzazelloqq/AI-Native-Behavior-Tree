@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using AIBT.Authoring;
 using AIBT.Editor.Registry;
 using UnityEditor;
@@ -13,16 +15,37 @@ namespace AIBT.Editor.Graph
     /// Imports an <c>.aibt</c> tree. The main object is a Player-loadable
     /// <see cref="BehaviorTreeSource"/> that a <see cref="BehaviorTreeAgent"/> runs directly; the
     /// Editor-only <see cref="BehaviorTreeAsset"/> summary is kept as a sub-object.
+    /// <para>
+    /// A tree that uses subtrees (ADR-P11-001) is expanded against the project's trees (every
+    /// <c>.aibt</c> and <c>.aibt.json</c> file under <c>Assets/</c>) and the source holds the
+    /// expanded tree. Such an import
+    /// depends on every subtree file it read, on the tree-ID index entry of every tree ID it looked
+    /// up (so a new, removed or duplicate file with that ID re-imports it) and on the project node
+    /// registry. Version 3: version-2 imports never expanded.
+    /// </para>
     /// </summary>
-    [ScriptedImporter(2, "aibt")]
+    [ScriptedImporter(3, "aibt")]
     public sealed class BehaviorTreeImporter : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext context)
         {
-            var entry = TreeCatalogEntry.Read(context.assetPath);
+            var path = context.assetPath;
+            var json = File.ReadAllText(path);
+            var expansion = ExpandSubtrees(context, path);
+            var entry = expansion == null
+                ? TreeCatalogEntry.Read(path)
+                : TreeCatalogEntry.Read(path, NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry, expansion);
             var source = ScriptableObject.CreateInstance<BehaviorTreeSource>();
-            source.SetContent(File.ReadAllText(context.assetPath), context.assetPath, entry.TreeId, entry.Name,
-                entry.NodeCount, entry.Status, entry.Details);
+            if (expansion != null && expansion.Success)
+            {
+                var expanded = CanonicalTreeJson.Serialize(expansion.Document);
+                source.SetContent(expanded.Success ? Encoding.UTF8.GetString(expanded.Utf8) : json, path, entry.TreeId, entry.Name,
+                    entry.NodeCount, entry.Status, entry.Details, expanded.Success ? expansion.NodeSourceIds : null);
+            }
+            else
+            {
+                source.SetContent(json, path, entry.TreeId, entry.Name, entry.NodeCount, entry.Status, entry.Details);
+            }
             context.AddObjectToAsset("source", source, EditorGUIUtility.IconContent("TextAsset Icon").image as Texture2D);
             context.SetMainObject(source);
 
@@ -31,6 +54,26 @@ namespace AIBT.Editor.Graph
             asset.hideFlags = HideFlags.HideInHierarchy;
             asset.Initialize(entry);
             context.AddObjectToAsset("tree", asset);
+        }
+
+        // Null for a tree without references and interface (imported exactly as before).
+        private static SubtreeExpansion ExpandSubtrees(AssetImportContext context, string path)
+        {
+            TreeJsonReadResult parsed;
+            try { parsed = CanonicalTreeJson.Parse(File.ReadAllBytes(path), path); }
+            catch (IOException) { return null; }
+            if (!parsed.Success || !SubtreeExpander.RequiresExpansion(parsed.Document)) return null;
+            var recorder = new RecordingSubtreeResolver(ProjectTreeIndex.Scan());
+            var catalog = ProjectNodeCatalog.Discover();
+            var expansion = ProjectTreeIndex.Expand(path, parsed.Document, catalog.Registry, catalog.RegisteredTypes, recorder);
+            // The expansion stops at the first failing level; the walk also names the files a later
+            // fix would make it read, so editing any of them re-imports this tree.
+            recorder.Walk(parsed.Document);
+            foreach (var treeId in recorder.Requested) context.DependsOnCustomDependency(ProjectTreeIndex.DependencyName(treeId));
+            foreach (var source in recorder.Sources)
+                if (!string.Equals(source, path, StringComparison.Ordinal)) context.DependsOnSourceAsset(source);
+            context.DependsOnCustomDependency(ProjectTreeIndex.RegistryDependencyName);
+            return expansion;
         }
 
         [OnOpenAsset(0)]

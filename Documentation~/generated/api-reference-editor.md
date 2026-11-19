@@ -122,7 +122,7 @@ Hosts an authoring graph over an AIBT tree document. One toolbar, one Save for t
 
 ### `AIBT.Editor.Graph.BehaviorTreeImporter`
 
-Imports an <c>.aibt</c> tree. The main object is a Player-loadable <see cref="BehaviorTreeSource"/> that a <see cref="BehaviorTreeAgent"/> runs directly; the Editor-only <see cref="BehaviorTreeAsset"/> summary is kept as a sub-object.
+Imports an <c>.aibt</c> tree. The main object is a Player-loadable <see cref="BehaviorTreeSource"/> that a <see cref="BehaviorTreeAgent"/> runs directly; the Editor-only <see cref="BehaviorTreeAsset"/> summary is kept as a sub-object. <para> A tree that uses subtrees (ADR-P11-001) is expanded against the project's trees (every <c>.aibt</c> and <c>.aibt.json</c> file under <c>Assets/</c>) and the source holds the expanded tree. Such an import depends on every subtree file it read, on the tree-ID index entry of every tree ID it looked up (so a new, removed or duplicate file with that ID re-imports it) and on the project node registry. Version 3: version-2 imports never expanded. </para>
 
 - `METHOD System.Void .ctor()`
 - `METHOD System.Void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext)`
@@ -145,6 +145,7 @@ A node card: kind accent and tag, readable title, one-line parameter summary, a 
 
 ### `AIBT.Editor.Graph.ProductionTreeAssetBaker`
 
+- `METHOD AIBT.ProductionTreeAsset Create(AIBT.Authoring.TreeDocument,System.String,System.Type,AIBT.Authoring.ISubtreeResolver,AIBT.DiagnosticCollection&)`
 - `METHOD AIBT.ProductionTreeAsset Create(AIBT.Authoring.TreeDocument,System.String,System.Type,AIBT.DiagnosticCollection&)`
 
 ---

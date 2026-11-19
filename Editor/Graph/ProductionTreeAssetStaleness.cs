@@ -14,7 +14,10 @@ namespace AIBT.Editor.Graph
     {
         /// <summary>Source bytes and catalog fingerprint match the snapshot.</summary>
         Current = 0,
-        /// <summary>The source was edited after preparation.</summary>
+        /// <summary>
+        /// The source was edited after preparation, or one of its subtrees was edited, removed or
+        /// became ambiguous (ADR-P11-001).
+        /// </summary>
         SourceChanged = 1,
         /// <summary>The generated catalog changed (nodes added, removed or edited).</summary>
         CatalogChanged = 2,
@@ -82,7 +85,12 @@ namespace AIBT.Editor.Graph
             var type = Type.GetType(asset.CatalogTypeName, false);
             if (type == null || !TryCurrentFingerprint(type, out var fingerprint)) return ProductionTreeAssetState.CatalogMissing;
             if (fingerprint != asset.CatalogFingerprint) return ProductionTreeAssetState.CatalogChanged;
-            if (StableHash.Sha256Hex(File.ReadAllBytes(path)) != asset.SourceContentHash) return ProductionTreeAssetState.SourceChanged;
+            // ADR-P11-001 §4.5: an asset prepared from subtrees hashes the source and every subtree
+            // file as the project resolves them now; an unresolvable subtree is a change.
+            var current = asset.SubtreeSourceGuids.Length == 0
+                ? StableHash.Sha256Hex(File.ReadAllBytes(path))
+                : ProductionTreeAssetBaker.CurrentSourceHash(path);
+            if (current != asset.SourceContentHash) return ProductionTreeAssetState.SourceChanged;
             return ProductionTreeAssetState.Current;
         }
 
@@ -146,9 +154,16 @@ namespace AIBT.Editor.Graph
 
         /// <summary>
         /// Re-prepares every stale linked runtime asset, or only those prepared from
-        /// <paramref name="sourceGuids"/>. Returns how many were rebuilt.
+        /// <paramref name="sourceGuids"/> (as their source or one of their subtrees). Returns how many
+        /// were rebuilt.
         /// </summary>
-        public static int RefreshAll(ICollection<string> sourceGuids)
+        public static int RefreshAll(ICollection<string> sourceGuids) => RefreshAll(sourceGuids, false);
+
+        /// <param name="includeSubtreeDependants">
+        /// Also evaluates every asset prepared from subtrees: a new, moved or removed tree file can
+        /// change how its tree IDs resolve.
+        /// </param>
+        internal static int RefreshAll(ICollection<string> sourceGuids, bool includeSubtreeDependants)
         {
             var rebuilt = 0;
             foreach (var guid in AssetDatabase.FindAssets("t:" + nameof(ProductionTreeAsset)))
@@ -156,7 +171,9 @@ namespace AIBT.Editor.Graph
                 var assetPath = AssetDatabase.GUIDToAssetPath(guid);
                 var asset = AssetDatabase.LoadAssetAtPath<ProductionTreeAsset>(assetPath);
                 if (asset == null || string.IsNullOrEmpty(asset.SourceGuid)) continue;
-                if (sourceGuids != null && !sourceGuids.Contains(asset.SourceGuid)) continue;
+                if (sourceGuids != null && !sourceGuids.Contains(asset.SourceGuid)
+                    && !(includeSubtreeDependants && asset.SubtreeSourceGuids.Length != 0)
+                    && !asset.SubtreeSourceGuids.Any(sourceGuids.Contains)) continue;
                 var state = Evaluate(asset);
                 if (state != ProductionTreeAssetState.SourceChanged && state != ProductionTreeAssetState.CatalogChanged) continue;
                 if (TryPrepareAgain(asset, out var error))
@@ -183,10 +200,11 @@ namespace AIBT.Editor.Graph
             {
                 var guids = new HashSet<string>(imported.Where(TreeSourcePaths.IsTree).Select(AssetDatabase.AssetPathToGUID)
                     .Where(guid => !string.IsNullOrEmpty(guid)), StringComparer.Ordinal);
-                if (guids.Count == 0) return;
+                var treeFilesChanged = guids.Count != 0 || deleted.Concat(moved).Concat(movedFrom).Any(TreeSourcePaths.IsTree);
+                if (!treeFilesChanged) return;
                 // Synchronous on purpose: rewriting another asset here is allowed (Unity runs one more
                 // postprocess round for it) and does not depend on Editor ticks.
-                RefreshAll(guids);
+                RefreshAll(guids, includeSubtreeDependants: true);
             }
         }
     }

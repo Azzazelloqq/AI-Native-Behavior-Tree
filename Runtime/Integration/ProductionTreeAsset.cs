@@ -18,6 +18,7 @@ namespace AIBT
         [SerializeField, HideInInspector] private string _sourceGuid;
         [SerializeField, HideInInspector] private string _sourceContentHash;
         [SerializeField, HideInInspector] private string _catalogTypeName;
+        [SerializeField, HideInInspector] private string[] _subtreeSourceGuids;
 
         public string SourceId => _sourceId;
         /// <summary>Asset GUID of the authored tree this snapshot was prepared from; empty for assets prepared before P9-004.</summary>
@@ -35,6 +36,19 @@ namespace AIBT
             _sourceGuid = sourceGuid ?? string.Empty;
             _sourceContentHash = sourceContentHash ?? string.Empty;
             _catalogTypeName = catalogTypeName ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Asset GUIDs of the subtree files the snapshot was prepared from (ADR-P11-001), ordered by
+        /// tree ID; empty for a tree without subtrees. When non-empty, the source content hash covers
+        /// the source and every one of these files.
+        /// </summary>
+        internal string[] SubtreeSourceGuids => _subtreeSourceGuids ?? Array.Empty<string>();
+
+        /// <summary>Records the subtree files of a snapshot prepared from a tree that uses subtrees.</summary>
+        internal void RecordSubtreeSources(string[] subtreeSourceGuids)
+        {
+            _subtreeSourceGuids = subtreeSourceGuids == null || subtreeSourceGuids.Length == 0 ? null : (string[])subtreeSourceGuids.Clone();
         }
 
         /// <summary>The fingerprint text format used by <see cref="CatalogFingerprint"/>.</summary>
