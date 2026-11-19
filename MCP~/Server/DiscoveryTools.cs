@@ -11,7 +11,7 @@ namespace AibtMcpServer;
 public static class DiscoveryTools
 {
     [McpServerTool(Name = "aibt_get_project_manifest")]
-    [Description("Project capabilities, policy summary, and tree/revision listing for the open AIBT Unity project.")]
+    [Description("Project capabilities, policy summary, and tree/revision listing for the open AIBT Unity project; each tree lists its subtree interface and the tree IDs it references.")]
     public static string GetProjectManifest()
         => BridgeClient.SendRequest("get_project_manifest", new JsonObject());
 
@@ -28,4 +28,10 @@ public static class DiscoveryTools
     public static string GetNodeContract(
         [Description("The exact canonical node type ID, e.g. 'aibt.core.inverter'.")] string typeId)
         => BridgeClient.SendRequest("get_node_contract", new JsonObject { ["typeId"] = typeId });
+
+    [McpServerTool(Name = "aibt_find_subtree_usages")]
+    [Description("List every subtree reference node in the project's trees that uses a tree ID (tree, file, node ID, key map), and the files that declare that tree ID. Read-only.")]
+    public static string FindSubtreeUsages(
+        [Description("The subtree's tree ID.")] string treeId)
+        => BridgeClient.SendRequest("find_subtree_usages", new JsonObject { ["treeId"] = treeId });
 }

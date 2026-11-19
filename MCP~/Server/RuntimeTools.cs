@@ -16,8 +16,13 @@ public static class RuntimeTools
     public static string GetOperationSchema(string operation) => BridgeClient.SendRequest("get_operation_schema", new JsonObject { ["operation"] = operation });
 
     [McpServerTool(Name = "aibt_inspect_tree")]
-    [Description("Read an authored tree and current contentHash before editing/preparing. Reports reference backend availability.")]
-    public static string InspectTree(string treeId) => BridgeClient.SendRequest("inspect_tree", new JsonObject { ["treeId"] = treeId });
+    [Description("Read an authored tree and current contentHash before editing/preparing. Reports reference backend availability. expanded=true adds the subtree expansion the compiler sees.")]
+    public static string InspectTree(string treeId, bool expanded = false)
+    {
+        var args = new JsonObject { ["treeId"] = treeId };
+        if (expanded) args["expanded"] = true;
+        return BridgeClient.SendRequest("inspect_tree", args);
+    }
 
     [McpServerTool(Name = "aibt_runtime_catalogs")]
     [Description("List Player generated catalog identities for native runtime preparation.")]

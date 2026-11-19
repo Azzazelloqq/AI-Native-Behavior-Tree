@@ -46,6 +46,11 @@ try
             tree compile <treeId>        Compile through existing MCP reference backend
             tree inspect <treeId>        Read source and current contentHash
             tree prepare <treeId>        Prepare native runtime asset (Compilation)
+            tree expand <treeId>         Source plus its subtree expansion (Read)
+            tree usages <treeId>         Trees whose reference nodes use a tree ID (Read)
+            tree extract <treeId> <nodeId> <newTreeId> <path>  Move a branch into a new subtree file (SemanticEdit)
+            tree unpack <treeId> <nodeId>                     Replace a reference by a plain copy (SemanticEdit)
+            tree keys <treeId> <nodeId> <key>=<parentKey>|<key>:=<json>|<key>= ...  Rebind interface keys (SemanticEdit)
             runtime catalogs             List native generated catalogs
             runtime hosts                List live hosts and their program identities
             trace read <instanceId>      Read native trace (Read)
@@ -123,6 +128,39 @@ try
         else if (arguments.SequenceEqual(new[] { "project", "manifest" })) operation = "get_project_manifest";
         else if (arguments.Count == 3 && arguments[0] == "tree" && arguments[1] is "validate" or "compile" or "inspect" or "prepare")
         { operation = arguments[1] == "inspect" ? "inspect_tree" : arguments[1] == "prepare" ? "prepare_runtime" : arguments[1]; payload["treeId"] = arguments[2]; }
+        else if (arguments.Count == 3 && arguments[0] == "tree" && arguments[1] is "expand" or "usages")
+        {
+            operation = arguments[1] == "expand" ? "inspect_tree" : "find_subtree_usages";
+            payload["treeId"] = arguments[2];
+            if (arguments[1] == "expand") payload["expanded"] = true;
+        }
+        else if (arguments.Count == 6 && arguments[0] == "tree" && arguments[1] == "extract")
+        {
+            operation = "extract_to_subtree";
+            payload["treeId"] = arguments[2];
+            payload["nodeId"] = arguments[3];
+            payload["newTreeId"] = arguments[4];
+            payload["path"] = arguments[5];
+        }
+        else if (arguments.Count == 4 && arguments[0] == "tree" && arguments[1] == "unpack")
+        { operation = "unpack_subtree"; payload["treeId"] = arguments[2]; payload["nodeId"] = arguments[3]; }
+        else if (arguments.Count >= 5 && arguments[0] == "tree" && arguments[1] == "keys")
+        {
+            // key=parentKey connects, key:=<json> binds a constant, key= disconnects.
+            operation = "set_subtree_keys";
+            payload["treeId"] = arguments[2];
+            payload["nodeId"] = arguments[3];
+            var keys = new JsonObject();
+            foreach (var assignment in arguments.Skip(4))
+            {
+                var constant = assignment.IndexOf(":=", StringComparison.Ordinal);
+                var equals = assignment.IndexOf('=');
+                if (constant > 0) keys[assignment[..constant]] = new JsonObject { ["value"] = JsonNode.Parse(assignment[(constant + 2)..]) };
+                else if (equals > 0) keys[assignment[..equals]] = equals == assignment.Length - 1 ? null : JsonValue.Create(assignment[(equals + 1)..]);
+                else throw new ArgumentException("Expected key=parentKey, key:=<json constant> or key= (not connected): " + assignment);
+            }
+            payload["keys"] = keys;
+        }
         else if (arguments.Count == 2 && arguments[0] == "call") operation = arguments[1].StartsWith("aibt_", StringComparison.Ordinal) ? arguments[1][5..] : arguments[1];
         else throw new ArgumentException("Unknown command. Use --help.");
         result = client.Call(operation, payload);

@@ -52,14 +52,16 @@ public static class AuthoringTools
         [Description("Target tree ID.")] string treeId,
         [Description(ExpectedHashDescription)] string expectedHash,
         [Description("Existing parent node's ID.")] string parentId,
-        [Description("New node definition JSON: {id, typeId, typeVersion, parameters?, displayName?, description?, tags?}.")] string nodeJson,
+        [Description("New node definition JSON: {id, typeId, typeVersion, parameters?, displayName?, description?, tags?}, or a subtree reference {id?, subtree: {treeId, interfaceVersion?, keys?: {interfaceKey: parentKey | {value: constant} | null}}, displayName?} (raises the tree to format 3).")] string nodeJson,
         [Description("Child insertion index; -1 appends.")] int insertIndex = -1,
-        [Description("If true, validates and reports the result without persisting it.")] bool dryRun = false)
+        [Description("If true, validates and reports the result without persisting it.")] bool dryRun = false,
+        [Description("Subtree references only: connect interface keys the node does not mention to same-named parent keys of the same type.")] bool connectSameNamedKeys = true)
     {
         var args = BaseArgs(treeId, expectedHash, dryRun);
         args["parentId"] = parentId;
         args["node"] = JsonNode.Parse(nodeJson);
         if (insertIndex >= 0) args["insertIndex"] = insertIndex;
+        if (!connectSameNamedKeys) args["connectSameNamedKeys"] = false;
         return BridgeClient.SendRequest("add_node", args);
     }
 
@@ -197,6 +199,61 @@ public static class AuthoringTools
         var args = new JsonObject { ["treeId"] = treeId, ["dryRun"] = dryRun };
         if (expectedHash.Length > 0) args["expectedHash"] = expectedHash;
         return BridgeClient.SendRequest("request_layout", args);
+    }
+
+    // P11-001 stage 4 (ADR-P11-001): subtree references. Unrelated to aibt_extract_subtree /
+    // aibt_inline_subtree above, which move node payloads and create no reference.
+    [McpServerTool(Name = "aibt_set_subtree_keys")]
+    [Description("Rebinds interface keys of a subtree reference node: each key maps to a parent Tree key, a constant, or not connected. Rejected (nothing changed) if the tree no longer expands and compiles.")]
+    public static string SetSubtreeKeys(
+        [Description("Target tree ID.")] string treeId,
+        [Description(ExpectedHashDescription)] string expectedHash,
+        [Description("The subtree reference node's ID.")] string nodeId,
+        [Description("Key map JSON: {interfaceKey: \"parentKey\" | {\"value\": constant} | null}. Keys not listed keep their binding; null disconnects.")] string keysJson,
+        [Description("New interfaceVersion the reference is written for; 0 keeps the current one.")] int interfaceVersion = 0,
+        [Description("Also connect every still unconnected interface key to a same-named parent key of the same type.")] bool connectSameNamedKeys = false,
+        [Description("If true, validates and reports the result without persisting it.")] bool dryRun = false)
+    {
+        var args = BaseArgs(treeId, expectedHash, dryRun);
+        args["nodeId"] = nodeId;
+        args["keys"] = JsonNode.Parse(keysJson);
+        if (interfaceVersion > 0) args["interfaceVersion"] = interfaceVersion;
+        if (connectSameNamedKeys) args["connectSameNamedKeys"] = true;
+        return BridgeClient.SendRequest("set_subtree_keys", args);
+    }
+
+    [McpServerTool(Name = "aibt_extract_to_subtree")]
+    [Description("Moves a node and its descendants into a new tree file and puts one subtree reference node in their place, in one transaction: nothing is written unless both trees are valid, and no orphan file is left on failure.")]
+    public static string ExtractToSubtree(
+        [Description("Target (parent) tree ID.")] string treeId,
+        [Description(ExpectedHashDescription)] string expectedHash,
+        [Description("Top node of the branch to move (not the root).")] string nodeId,
+        [Description("Tree ID of the new subtree; must not exist yet.")] string newTreeId,
+        [Description("Relative path of the new file under the project's Assets folder, ending in '.aibt' or '.aibt.json'. Must not already exist.")] string path,
+        [Description("Optional name of the new tree; default newTreeId.")] string name = "",
+        [Description("Optional description of the new tree (needed when the project policy requires tree descriptions).")] string description = "",
+        [Description("If true, validates and reports the result without writing either file.")] bool dryRun = false)
+    {
+        var args = BaseArgs(treeId, expectedHash, dryRun);
+        args["nodeId"] = nodeId;
+        args["newTreeId"] = newTreeId;
+        args["path"] = path;
+        if (name.Length > 0) args["name"] = name;
+        if (description.Length > 0) args["description"] = description;
+        return BridgeClient.SendRequest("extract_to_subtree", args);
+    }
+
+    [McpServerTool(Name = "aibt_unpack_subtree")]
+    [Description("Replaces a subtree reference node by a plain copy of its expansion (inner nodes r:n, private keys r:key). Rejected (nothing changed) on a name collision or if the result does not compile.")]
+    public static string UnpackSubtree(
+        [Description("Target tree ID.")] string treeId,
+        [Description(ExpectedHashDescription)] string expectedHash,
+        [Description("The subtree reference node's ID.")] string nodeId,
+        [Description("If true, validates and reports the result without persisting it.")] bool dryRun = false)
+    {
+        var args = BaseArgs(treeId, expectedHash, dryRun);
+        args["nodeId"] = nodeId;
+        return BridgeClient.SendRequest("unpack_subtree", args);
     }
 
     private const string ExpectedHashDescription =
