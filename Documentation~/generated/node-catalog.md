@@ -2,7 +2,7 @@
 
 Source: the real AIBT node registry, via `AIBT.Authoring.NodeCatalogQuery` (P6-003). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
-91 registered node type(s).
+95 registered node type(s).
 
 ---
 
@@ -1280,6 +1280,67 @@ Full contract (verbatim `get_node_contract` output):
 
 ---
 
+### `aibt.native.deadline-passed` (v1)
+
+- **Summary:** Succeeds once host time has reached the deadline stored in an Int64 blackboard key (now >= key), else fails. A key never set (0) has passed.
+- **Category:** Native/Timing
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree to gate an ability on a cooldown started by aibt.native.set-deadline; wrap it in aibt.core.inverter for "still cooling down".
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-cooldown-ready there. It reads time, so it is not an observer condition: re-check it as the first child of a reactive composite.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.deadline-passed",
+  "version": 1,
+  "summary": "Succeeds once host time has reached the deadline stored in an Int64 blackboard key (now >= key), else fails. A key never set (0) has passed.",
+  "category": "Native/Timing",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree to gate an ability on a cooldown started by aibt.native.set-deadline; wrap it in aibt.core.inverter for \"still cooling down\".",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-cooldown-ready there. It reads time, so it is not an observer condition: re-check it as the first child of a reactive composite.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 4,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-deadline-passed",
+      "parameters": {},
+      "expectedBehavior": "Succeeds once host time has reached the deadline stored in an Int64 blackboard key (now >= key), else fails. A key never set (0) has passed."
+    }
+  ]
+}
+```
+
+---
+
 ### `aibt.native.fail` (v1)
 
 - **Summary:** Fails immediately.
@@ -2177,6 +2238,79 @@ Full contract (verbatim `get_node_contract` output):
 
 ---
 
+### `aibt.native.set-deadline` (v1)
+
+- **Summary:** Writes now + a duration (microseconds of host time) to an Int64 blackboard key and succeeds. Pair it with aibt.native.deadline-passed.
+- **Category:** Native/Timing
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to start a cooldown that several branches, or gameplay code, share through one key.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.start-cooldown there. For a cooldown private to one branch use the aibt.core.cooldown decorator.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.set-deadline",
+  "version": 1,
+  "summary": "Writes now + a duration (microseconds of host time) to an Int64 blackboard key and succeeds. Pair it with aibt.native.deadline-passed.",
+  "category": "Native/Timing",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to start a cooldown that several branches, or gameplay code, share through one key.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.start-cooldown there. For a cooldown private to one branch use the aibt.core.cooldown decorator.",
+  "parameters": {
+    "duration-microseconds": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-set-deadline",
+      "parameters": {
+        "duration-microseconds": 0
+      },
+      "expectedBehavior": "Writes now + a duration (microseconds of host time) to an Int64 blackboard key and succeeds. Pair it with aibt.native.deadline-passed."
+    }
+  ]
+}
+```
+
+---
+
 ### `aibt.native.set-float` (v1)
 
 - **Summary:** Writes a constant to a float blackboard key and succeeds.
@@ -2416,6 +2550,79 @@ Full contract (verbatim `get_node_contract` output):
 
 ---
 
+### `aibt.native.signal` (v1)
+
+- **Summary:** Emits a code (0 to 2147483647) as an Int32 effect on the package channel aibt.native.signal and succeeds; a larger code fails and emits nothing.
+- **Category:** Native/Signals
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to tell gameplay code to do something: handle it with NativeTreeAgent.OnEffect("aibt.native.signal", (int code) => ...), or read CommandChannel<int>.Create("aibt.native.signal") in TreeSimulation.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.raise-event there. For a typed payload (a float or a position) write your own node with its own command binding.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.signal",
+  "version": 1,
+  "summary": "Emits a code (0 to 2147483647) as an Int32 effect on the package channel aibt.native.signal and succeeds; a larger code fails and emits nothing.",
+  "category": "Native/Signals",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to tell gameplay code to do something: handle it with NativeTreeAgent.OnEffect(\"aibt.native.signal\", (int code) => ...), or read CommandChannel<int>.Create(\"aibt.native.signal\") in TreeSimulation.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.raise-event there. For a typed payload (a float or a position) write your own node with its own command binding.",
+  "parameters": {
+    "code": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-signal",
+      "parameters": {
+        "code": 0
+      },
+      "expectedBehavior": "Emits a code (0 to 2147483647) as an Int32 effect on the package channel aibt.native.signal and succeeds; a larger code fails and emits nothing."
+    }
+  ]
+}
+```
+
+---
+
 ### `aibt.native.succeed` (v1)
 
 - **Summary:** Succeeds immediately.
@@ -2604,6 +2811,80 @@ Full contract (verbatim `get_node_contract` output):
         "duration-microseconds": 0
       },
       "expectedBehavior": "Stays running until a duration of host time has passed since it started, then succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.wait-until-true` (v1)
+
+- **Summary:** Stays running until a bool blackboard value is true, then succeeds; with a timeout (microseconds, 0 = none) it fails once that much host time has passed since it started.
+- **Category:** Native/Timing
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to pause a sequence until gameplay code (SetFact) or another branch sets a flag, such as 'door-open'.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.wait-until there. To cancel running work when a flag changes, guard the branch with aibt.native.bool-is-true as the first child of a reactive composite instead.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.wait-until-true",
+  "version": 1,
+  "summary": "Stays running until a bool blackboard value is true, then succeeds; with a timeout (microseconds, 0 = none) it fails once that much host time has passed since it started.",
+  "category": "Native/Timing",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to pause a sequence until gameplay code (SetFact) or another branch sets a flag, such as 'door-open'.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.wait-until there. To cancel running work when a flag changes, guard the branch with aibt.native.bool-is-true as the first child of a reactive composite instead.",
+  "parameters": {
+    "timeout-microseconds": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "running",
+    "success"
+  ],
+  "memory": {
+    "size": 8,
+    "alignment": 8,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-wait-until-true",
+      "parameters": {
+        "timeout-microseconds": 0
+      },
+      "expectedBehavior": "Stays running until a bool blackboard value is true, then succeeds; with a timeout (microseconds, 0 = none) it fails once that much host time has passed since it started."
     }
   ]
 }
