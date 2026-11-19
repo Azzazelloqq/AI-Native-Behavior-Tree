@@ -931,3 +931,60 @@ MCP/CLI in a project with a naming policy.
 
 Stage 4 is accepted. Open question 1 (naming policy against expanded private keys, `AIBT2038`) goes
 to the owner; it needs a change in `Authoring/Validation/TreeValidator.cs` and is not started.
+
+## Naming policy against expanded private keys (2026-11-19, after stage 4)
+
+The owner approved the fix of stage 4's open question 1 on 2026-11-19. Done by the orchestrator in
+`34e80f0`.
+
+- **Change** (`Authoring/Validation/TreeValidator.cs`, `ValidateNames`): the project
+  `blackboardNaming` policy checks the part of a blackboard key name after the last `:`. The
+  qualifier of an expanded private key `r:key` is made of reference node IDs, which the key naming
+  policy does not govern. A name without `:` is checked whole, as before. Nothing else changed: the
+  policy file format, `ReferenceCompilationPolicy` and its hash, the expander, both executors.
+- **Side effect to know**: a hand-written key named `a:b` (the authoring ID grammar always allowed
+  `:`) is now checked by its part `b` only; before, any policy except `any` rejected it.
+- **Tests**: `TreeValidatorTests.Validate_NamingPolicy_AppliesToThePartOfAKeyNameAfterTheLastColon`
+  (three cases: `snake_case`, `camelCase`, `PascalCase`; plain, `r:key` and `r1:r2:key` names, good
+  and bad) and
+  `McpSubtreeToolsTests.ValidateCompileAndEdits_UnderANamingPolicy_AcceptExpandedPrivateKeys_AndStillCheckTheKeysOwnName`
+  (validate, compile and a constant rebinding pass under `snake_case`; a subtree key named
+  `SwingCount` still reports `AIBT2038`). No existing test expectation changed.
+- **Touched classes** (`C:\UnityProjects\_aibt_acceptance\P11-001\naming-fix\`): `TreeValidatorTests` 42/42, `McpSubtreeToolsTests` 24/24,
+  `McpVerificationToolDispatcherTests` 23/23, `ReferenceCompilerTests` 18/18,
+  `McpAuthoringToolDispatcherTests` 20/20.
+- **Live CLI** (`C:\UnityProjects\_aibt_acceptance\P11-001\naming-fix\live`, `transcript-b-after-fix.txt`): stage 4's session B (the one that
+  failed with `AIBT2038`; a subtree with the private key `swings`, project policy `snake_case`) run
+  again against the Editor "Modules": extract accepted, `hits:=5` accepted (private key
+  `right:hits`), `tree validate` valid with `policyApplied: true`, `tree compile` success; the
+  permission negative (`AIBT9012`), `AIBT3025` and `AIBT3020` as before. The scratch folder under
+  `Assets/` was removed.
+- **Documentation**: the limit in `Documentation~/subtrees.md` is replaced by the rule; changelog
+  entry.
+
+Full run of all nine assemblies on `34e80f0`, clean working tree, 20:18–20:29; Editor-log counters
+did not move (`No command named` 0, main-thread timeouts 1). Raw output:
+`C:\UnityProjects\_aibt_acceptance\P11-001\naming-fix\full-run-34e80f0.txt`.
+
+| Assembly | `6b7e141` | `34e80f0` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 240/240 | 240/240 | — |
+| `AIBT.Editor.Tests` | 785/786 | 789/790 | three cases in `TreeValidatorTests`, one in `McpSubtreeToolsTests` |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`.
+
+Not done: the new tests were not run against the old validator (the failing state is stage 4's
+transcript B and the test of the old behaviour is the live session above); the fix was written and
+accepted by the same session, without a second reader.
+
+All four stages of ADR §7 are accepted and the open question is closed. Still open from the stage
+notes, none blocking: MCP resolves subtrees under `Assets/` only (import and the graph editor also
+under `Packages/`); the MCP server tools were not called from an MCP client; `prepare_runtime` with
+references was run only as a dry run; native agents in a subtree window were not exercised.

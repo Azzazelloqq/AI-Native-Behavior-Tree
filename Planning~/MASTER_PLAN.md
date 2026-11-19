@@ -1202,8 +1202,8 @@ this section). `P10-014` (fixes from the P10-013 code review) passed the full ru
 assemblies on `c68df77`; its follow-ups `P10-015` and `P10-016` are `Ready`. Phase 11 is the
 post-container feature list; its first item, `P11-001` (subtrees), has an accepted ADR
 (`Documentation~/decisions/ADR-P11-001-subtrees.md`, `AIBT-049`) and stages 1–4 accepted
-(`6b7e141`); one open question (naming policy against expanded private keys, `AIBT2038`) needs the
-owner's decision.
+(`6b7e141`), with the naming-policy fix for expanded private keys accepted on `34e80f0`; the item is
+in `Review`.
 
 ### Review follow-up scopes (2026-09-04)
 
