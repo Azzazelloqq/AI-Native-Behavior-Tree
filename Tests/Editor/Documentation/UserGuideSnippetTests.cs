@@ -140,6 +140,34 @@ namespace AIBT.Tests.Editor.Documentation
             Assert.That(blocks.Count, Is.EqualTo(5), "Every C# block in README.md is either a guide region or a First Agent quote.");
         }
 
+        // P11-002 stage 2: the "Native node library" page quotes its C# from Samples~/NativeGuard, and
+        // its JSON nodes that share an id with the sample tree have the sample's node type.
+        [Test]
+        public void NativeLibraryGuideSnippetsAreQuotedFromTheNativeGuardSample()
+        {
+            var guide = Normalize(File.ReadAllText(Path.Combine(PackageRoot(), "Documentation~", "native-node-library.md")));
+            var blocks = Regex.Matches(guide, "```csharp\n(?<body>.*?)```", RegexOptions.Singleline)
+                .Cast<Match>().Select(match => match.Groups["body"].Value).ToList();
+            var sample = Path.Combine("Samples~", "NativeGuard");
+            AssertQuoted(blocks, Path.Combine(sample, "Catalog", "NativeGuardCatalog.cs"), "AibtCatalogSet");
+            AssertQuoted(blocks, Path.Combine(sample, "Runtime", "NativeGuard.cs"), "OnEffect");
+            AssertQuoted(blocks, Path.Combine(sample, "Runtime", "NativeGuard.cs"), "SetFact");
+            Assert.That(blocks.Count, Is.EqualTo(3), "Every C# block in native-node-library.md quotes the Native Guard sample.");
+
+            var tree = Normalize(File.ReadAllText(Path.Combine(PackageRoot(), sample, "native-guard.aibt.json")));
+            var sampleTypes = Regex.Matches(tree, "\"(?<id>[a-z-]+)\": \\{\\s*\"type\": \"(?<type>[a-z.-]+)\"")
+                .Cast<Match>().ToDictionary(match => match.Groups["id"].Value, match => match.Groups["type"].Value);
+            var jsonBlocks = Regex.Matches(guide, "```json\n(?<body>.*?)```", RegexOptions.Singleline).Cast<Match>().Select(match => match.Groups["body"].Value);
+            var shared = 0;
+            foreach (Match node in Regex.Matches(string.Join("\n", jsonBlocks), "\"(?<id>[a-z-]+)\": \\{ \"type\": \"(?<type>[a-z.-]+)\""))
+            {
+                if (!sampleTypes.TryGetValue(node.Groups["id"].Value, out var type)) continue;
+                shared++;
+                Assert.That(node.Groups["type"].Value, Is.EqualTo(type), "Guide node '" + node.Groups["id"].Value + "' differs from the sample tree.");
+            }
+            Assert.That(shared, Is.GreaterThanOrEqualTo(4), "The shared-cooldown recipe quotes the sample tree.");
+        }
+
         private static void AssertQuoted(IReadOnlyList<string> blocks, string relativePath, string marker)
         {
             var block = blocks.FirstOrDefault(candidate => candidate.Contains(marker) && !candidate.Contains("guide:"));
