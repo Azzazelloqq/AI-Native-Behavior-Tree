@@ -107,13 +107,17 @@ namespace AIBT.Editor.Graph
             }
 
             output[index] = new NodeDocument(id, source.TypeId, source.TypeVersion, children, source.Parameters, source.Observer,
-                source.DisplayName, source.Description, source.Tags, source.Bindings);
+                source.DisplayName, source.Description, source.Tags, source.Bindings, source.Subtree);
             return id;
         }
 
-        private static TreeDocument Rebuild(TreeDocument source, IEnumerable<NodeDocument> nodes)
-            => new TreeDocument(source.Format, source.FormatVersion, source.TreeId, source.Name, source.Root, nodes,
-                source.Blackboard, source.Description, source.Tags, source.Metadata, new Revision(source.Revision.Value + 1),
-                source.AgentContract, source.SharedContract);
+        internal static TreeDocument Rebuild(TreeDocument source, IEnumerable<NodeDocument> nodes)
+            => Rebuild(source, nodes, source.Blackboard, source.FormatVersion);
+
+        /// <summary>A new revision of <paramref name="source"/> with other nodes, keys or format version; everything else (including a subtree interface) is kept.</summary>
+        internal static TreeDocument Rebuild(TreeDocument source, IEnumerable<NodeDocument> nodes, IEnumerable<BlackboardKeyDefinition> blackboard, int formatVersion)
+            => new TreeDocument(source.Format, formatVersion, source.TreeId, source.Name, source.Root, nodes,
+                blackboard, source.Description, source.Tags, source.Metadata, new Revision(source.Revision.Value + 1),
+                source.AgentContract, source.SharedContract, source.Interface);
     }
 }

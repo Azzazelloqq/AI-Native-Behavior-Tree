@@ -194,7 +194,7 @@ namespace AIBT.Editor.Editing
                     : node);
             return new TreeDocument(document.Format, document.FormatVersion, document.TreeId, document.Name,
                 nodeId, nodes, document.Blackboard, document.Description, document.Tags, document.Metadata,
-                new Revision(document.Revision.Value + 1), document.AgentContract, document.SharedContract);
+                new Revision(document.Revision.Value + 1), document.AgentContract, document.SharedContract, document.Interface);
         }
 
         private static void ReplaceInList(List<NodeDocument> nodes, NodeDocument updated)
@@ -264,7 +264,8 @@ namespace AIBT.Editor.Editing
                 source.Metadata,
                 new Revision(source.Revision.Value + 1),
                 source.AgentContract,
-                source.SharedContract);
+                source.SharedContract,
+                source.Interface);
         }
     }
 }
