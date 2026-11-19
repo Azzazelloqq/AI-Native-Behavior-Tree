@@ -52,7 +52,7 @@ namespace AIBT.Editor.Graph
             if (missing.Length != 0)
             {
                 diagnostics = new DiagnosticCollection(missing.Select(node => new Diagnostic(ReferenceCompilerDiagnosticCodes.UnsupportedCapability,
-                    DiagnosticSeverity.Error, "Selected native catalog does not declare node '" + node.TypeId + "'.",
+                    DiagnosticSeverity.Error, MissingNodeMessage(node.TypeId),
                     new DiagnosticLocation(treeId: document.TreeId, nodeId: node.Id))));
                 return null;
             }
@@ -70,6 +70,31 @@ namespace AIBT.Editor.Graph
             asset.RecordPreparation(guid, hash, catalogType.FullName + ", " + catalogType.Assembly.GetName().Name);
             asset.RecordSubtreeSources(subtrees.Select(pair => AssetDatabase.AssetPathToGUID(pair.Value)).ToArray());
             return asset;
+        }
+
+        private const string StandardNativeShardTypeName = "AIBT.StandardNodes.StandardNativeShard, AIBT.StandardNodes";
+        private static HashSet<string> _standardNativeTypeIds;
+
+        // ADR-P11-002 §4.2: the package's native library is opt-in, so a tree that uses one of its
+        // nodes with a catalog set that does not list the shard gets the fix in the message.
+        internal static string MissingNodeMessage(string typeId)
+        {
+            var message = "Selected native catalog does not declare node '" + typeId + "'.";
+            return StandardNativeTypeIds().Contains(typeId)
+                ? message + " It is a package node of shard aibt.native.standard: add typeof(AIBT.StandardNodes.StandardNativeShard) to your catalog set ([AibtCatalogSet])."
+                : message;
+        }
+
+        private static HashSet<string> StandardNativeTypeIds()
+        {
+            if (_standardNativeTypeIds != null) return _standardNativeTypeIds;
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var shard = Type.GetType(StandardNativeShardTypeName, false);
+            if (shard != null
+                && GeneratedNodeReflectionHarness.TryReflectMetadata(shard, out var metadata, out _)
+                && GeneratedNodeReflectionHarness.TryMaterializeArtifact(metadata, out var artifact, out _))
+                foreach (var node in artifact.Nodes) ids.Add(node.Manifest.TypeId);
+            return _standardNativeTypeIds = ids;
         }
 
         /// <summary>
