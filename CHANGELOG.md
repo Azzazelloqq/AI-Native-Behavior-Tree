@@ -4,6 +4,27 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Native node library, stage 2: timing and signal nodes (P11-002)
+
+- **4 new native nodes** in the package shard `aibt.native.standard` (node version 1, Tree-scope
+  keys, deterministic, native-only, opt-in as in stage 1). "Now" is the update time point the host
+  or `TreeSimulation` gives (microseconds).
+  - `Native/Timing`: `wait-until-true` (running until a Bool key is true; `timeout-microseconds`,
+    0 = none, fails it, counted from each start), `set-deadline` (Int64 key := now +
+    `duration-microseconds`; past `long.MaxValue` fails without writing), `deadline-passed`
+    (now >= Int64 key). A deadline in a key is a cooldown that several branches and game code share.
+  - `Native/Signals`: `signal` emits `code` as an Int32 on the package effect channel
+    `aibt.native.signal`, handled with `NativeTreeAgent.OnEffect("aibt.native.signal", (int code) => ...)`
+    or read as `CommandChannel<int>` in `TreeSimulation`. A code above 2147483647 fails and emits
+    nothing.
+- **Prepared assets are re-prepared once again.** The catalog fingerprint of every catalog set that
+  lists `StandardNativeShard` changes with these nodes, so runtime assets prepared against such a
+  set are prepared again (automatic after the next domain reload; make sure it has happened before
+  building a Player). Trees that do not use `signal` behave as before.
+- **Guide and sample:** `Documentation~/native-node-library.md` (opt-in, managed → native mapping
+  of all 28 nodes, recipes) and the **Native Guard** sample (a tree built only from package nodes,
+  menu **AIBT > Samples > Native Guard > Create Demo**).
+
 ### Native node library, stage 1: blackboard and flow nodes (P11-002)
 
 - **20 new native nodes** in the package shard `aibt.native.standard` (assembly `AIBT.StandardNodes`;

@@ -278,11 +278,16 @@ The full, generated reference with every parameter, default and status is
 | Debug (1) | `log` |
 | Native/Blackboard (20) | `aibt.native.bool-is-true`, `float-at-least`, `int-at-least`, `int-equals`, `int-keys-at-least`, `float-keys-at-least`, `float3-within-distance`, `float3-is-set`, `set-bool`, `set-int`, `set-float`, `set-float3`, `copy-bool`, `copy-int`, `copy-float`, `copy-float3`, `increment-int`, `increment-float`, `toggle-bool`, `float3-distance` (native layer only) |
 | Native/Flow (4) | `aibt.native.succeed`, `fail`, `idle`, `wait-microseconds` (native layer only) |
+| Native/Timing (3) | `aibt.native.wait-until-true`, `set-deadline`, `deadline-passed` (native layer only) |
+| Native/Signals (1) | `aibt.native.signal`: an Int32 code on the effect channel `aibt.native.signal` (native layer only) |
 | Built-in leaves | `aibt.stdlib.wait`, `aibt.stdlib.random-condition` (both layers) |
 
 `aibt.unity.*` nodes run only in `BehaviorTreeAgent`; `aibt.native.*` nodes only in
 `NativeTreeAgent`. The `aibt.native.*` nodes are opt-in: list `typeof(StandardNativeShard)` in your
-`[AibtCatalogSet]`; each node's "when not to use" names its `aibt.unity.*` counterpart. Negations
+`[AibtCatalogSet]`; each node's "when not to use" names its `aibt.unity.*` counterpart. The
+[Native node library](Documentation~/native-node-library.md) guide maps every managed node to its
+native counterpart and has recipes (negation, a cooldown shared by key, signals, guards); the
+**Native Guard** sample builds a tree from package nodes only. Negations
 and "below" are an `aibt.core.inverter` over an "at least" node; the per-node contracts are in
 [the node catalog](Documentation~/generated/node-catalog.md). Native hosts do not run observer
 re-evaluation today, so an `observer` block on an `aibt.native.*` condition changes nothing. To
@@ -350,6 +355,8 @@ assets and read a running host's trace through the same Editor operations. See
 - [Visual editor and layout](Documentation~/editor-and-layout.md)
 - [Subtrees](Documentation~/subtrees.md): one tree used as a node of another; interface keys,
   graph editor, MCP and CLI.
+- [Native node library](Documentation~/native-node-library.md): the 28 ready-made `aibt.native.*`
+  nodes, how to opt in, the managed → native mapping and recipes.
 - [Burst node authoring](Documentation~/burst-node-authoring.md)
 - [Production tree host](Documentation~/production-host.md)
 - [Execution and scheduling](Documentation~/execution-and-scheduling.md)
