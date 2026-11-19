@@ -66,6 +66,12 @@ namespace AIBT.Authoring
 
         private const int MaximumIdLength = 128;
 
+        /// <summary>
+        /// Format version of every expansion (ADR-P11-001 §4.4): always version 2, independent of
+        /// <see cref="TreeDocument.LatestFormatVersion"/>, so expanded programs keep their hashes.
+        /// </summary>
+        internal const int ExpandedFormatVersion = 2;
+
         /// <summary>True when <paramref name="document"/> has a reference node or an interface.</summary>
         public static bool RequiresExpansion(TreeDocument document)
             => document != null && document.UsesSubtreeFeatures;
@@ -101,7 +107,7 @@ namespace AIBT.Authoring
 
             var expanded = new TreeDocument(
                 TreeDocument.CurrentFormat,
-                TreeDocument.LatestFormatVersion,
+                ExpandedFormatVersion,
                 document.TreeId,
                 document.Name,
                 document.Root,

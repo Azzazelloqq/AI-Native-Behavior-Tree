@@ -111,8 +111,10 @@ Runs a behavior tree on this GameObject. Assign a tree and press Play: no genera
 A behavior tree as a Unity asset. Importing an <c>.aibt</c> file produces one; assign it to a <see cref="BehaviorTreeAgent"/>. The <c>.aibt</c> file stays the source of truth: this asset only carries its text into the Player.
 
 - `METHOD AIBT.BehaviorTreeSource FromJson(System.String,System.String)`
+- `METHOD AIBT.BehaviorTreeSource FromJson(System.String,System.String,AIBT.Authoring.ISubtreeResolver)`
 - `METHOD System.Void .ctor()`
 - `METHOD System.Void SetContent(System.String,System.String,System.String,System.String,System.Int32,System.String,System.String)`
+- `METHOD System.Void SetContent(System.String,System.String,System.String,System.String,System.Int32,System.String,System.String,System.Collections.Generic.IReadOnlyDictionary`2<AIBT.NodeId,System.String>)`
 - `PROPERTY System.Int32 NodeCount`
 - `PROPERTY System.String Details`
 - `PROPERTY System.String Json`

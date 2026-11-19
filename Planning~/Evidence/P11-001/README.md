@@ -156,3 +156,54 @@ P7-033, P7-041); the file is not touched by this change.
 6. The behaviour-case runner indexes the whole directory of the case tree, so the subtree golden
    trees live in their own `Trees/Subtrees/` directory.
 7. `BehaviorTreeImporter` is not wired (stage 2).
+
+### Rework after the acceptance run (2026-11-19)
+
+The orchestrator's full run on `d1e76ff` (raw output:
+`C:\UnityProjects\_aibt_acceptance\P11-001\stage1-acceptance\full-run-d1e76ff.txt`) results:
+
+- Runtime 815/815, Integration 229/229, BehaviorCases 65/65, NativeBurstDispatch 79/79,
+  NativeTreeAgentBlackboard 33/33, NativeSharedBlackboard 36/36, CodeGen.ContractTests 6/6,
+  PlayMode 2/2.
+- Editor 715/718. Besides the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`, two
+  new failures:
+  - `McpDocumentationGeneratorsTests.CommittedGeneratedFilesMatchAFreshRegeneration`:
+    `Documentation~/generated/api-reference-authoring.md` was stale (118 public types; a fresh
+    generation gives 129).
+  - `McpDocumentationGeneratorsTests.GeneratedApiReferenceCoversEveryPublicMemberInAllFourAssemblies`:
+    57 new public members of `AIBT.Authoring` were missing.
+
+Stage 1 should have regenerated the API reference; the touched-classes runs did not include
+`McpDocumentationGeneratorsTests`.
+
+Fixes:
+
+1. **Generated documentation.**
+   - Regenerated with the package's own `AIBT/MCP/Regenerate Documentation` menu command, invoked
+     through `EditorApplication.ExecuteMenuItem`; it writes to `Assets/AIBT-Documentation`. The
+     generator and MCP code are unchanged.
+   - Copied only the files that differed from `Documentation~/generated`, as in P10-011:
+     - `api-reference-authoring.md` (118 → 129 public types; additions only, plus the header
+       count);
+     - `api-reference-agents.md` (two lines: `BehaviorTreeSource.FromJson(…, ISubtreeResolver)`
+       and the 8-argument `SetContent`).
+   - Identical, not touched: `api-reference-runtime/editor/mcp.md`, `anti-patterns.md`,
+     `migrations.md`, `recipes.md`, `workflow-guide.md`.
+   - Not copied: `node-catalog.md`. It differs only by the host project's sample nodes, since the
+     menu command uses the project registry and the test uses the package registry; no node type
+     was added.
+   - The temporary `Assets/AIBT-Documentation` folder was removed.
+2. **Expansion format version.** `SubtreeExpander.Expand` now builds the expanded document with a
+   new `internal const int ExpandedFormatVersion = 2` instead of
+   `TreeDocument.LatestFormatVersion`. The expansion stays format 2 even if the latest version for
+   new trees changes. The value is the same (2), so bytes and hashes do not change:
+   `SubtreeGoldenEquivalenceTests` still finds the expansion byte-equal to the hand-written
+   format-2 copies.
+
+Runs after the fixes (`stage1-acceptance/fix-tests.txt`):
+
+| Class | Result |
+|---|---|
+| `McpDocumentationGeneratorsTests` | 13/13 |
+| `SubtreeExpanderTests` | 26/26 |
+| `SubtreeGoldenEquivalenceTests` | 3/3 |

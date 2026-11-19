@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Authoring`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-118 public type(s).
+129 public type(s).
 
 ---
 
@@ -289,6 +289,15 @@ A type's own summary line is shown where an XML-doc `<summary>` exists in source
 - `PROPERTY AIBT.Authoring.DiagnosticPayloadContract Contract`
 - `PROPERTY System.Boolean IsRequired`
 - `PROPERTY System.String Name`
+
+---
+
+### `AIBT.Authoring.DirectorySubtreeResolver`
+
+Resolves subtree references against every <c>.aibt</c> / <c>.aibt.json</c> file under one directory (recursively). The directory is indexed by tree ID on the first lookup. A file's source ID is <c>sourceIdPrefix/relative/path</c> with forward slashes; files that cannot be read are skipped and named in a not-found diagnostic.
+
+- `METHOD AIBT.Authoring.SubtreeResolution Resolve(AIBT.TreeId)`
+- `METHOD System.Void .ctor(System.String,System.String)`
 
 ---
 
@@ -617,6 +626,25 @@ Provides a project leaf contract and creates independent reference behaviors.
 
 ---
 
+### `AIBT.Authoring.ISubtreeResolver`
+
+Finds the document a subtree reference names (ADR-P11-001 §3(a) "Assets"): tree ID → document and its logical source ID. A resolver never picks one of several documents with the same tree ID; it reports them as ambiguous (<c>AIBT3021</c>).
+
+- `METHOD AIBT.Authoring.SubtreeResolution Resolve(AIBT.TreeId)`
+
+---
+
+### `AIBT.Authoring.InMemorySubtreeResolver`
+
+Resolves subtree references against documents already in memory (tests, tools, trees built at runtime). Two documents with the same tree ID make that ID ambiguous.
+
+- `METHOD AIBT.Authoring.InMemorySubtreeResolver Add(AIBT.Authoring.TreeDocument,System.String)`
+- `METHOD AIBT.Authoring.SubtreeResolution Resolve(AIBT.TreeId)`
+- `METHOD System.Void .ctor()`
+- `METHOD System.Void .ctor(System.Collections.Generic.IEnumerable`1<System.Collections.Generic.KeyValuePair`2<System.String,AIBT.Authoring.TreeDocument>>)`
+
+---
+
 ### `AIBT.Authoring.Migration.DocumentMigrator`
 
 Applies <see cref="NodeMigrationRule"/>s to a <see cref="TreeDocument"/> in memory, per <c>ADR-P7-005</c>: never mutates the source document or any file on disk, never touches the Burst-compiled node's own execution contract, and never skips a hop in a rule chain. A node with no rule for its exact version gap is left completely untouched -- the caller's own downstream validation (<see cref="TreeValidator"/>) reports it exactly as it does today, never silently guessed or partially migrated.
@@ -790,23 +818,28 @@ Declarative migration for one node type from <see cref="SourceVersion"/> to <see
 
 ### `AIBT.Authoring.NodeDocument`
 
+- `METHOD AIBT.Authoring.NodeDocument CreateSubtreeReference(AIBT.NodeId,AIBT.Authoring.SubtreeReference,System.String,System.String,AIBT.Authoring.TagSet)`
 - `METHOD AIBT.Authoring.NodeDocument CreateVersion2(AIBT.NodeId,System.String,System.Int32,AIBT.Authoring.NodeBindingMap,System.Collections.Generic.IEnumerable`1<AIBT.NodeId>,AIBT.Authoring.SemanticObject,AIBT.Authoring.NodeObserver,System.String,System.String,AIBT.Authoring.TagSet)`
 - `METHOD AIBT.Authoring.NodeDocument WithBindings(AIBT.Authoring.NodeBindingMap)`
 - `METHOD AIBT.Authoring.NodeDocument WithChildren(System.Collections.Generic.IEnumerable`1<AIBT.NodeId>)`
 - `METHOD AIBT.Authoring.NodeDocument WithDetails(System.String,System.String,AIBT.Authoring.TagSet)`
 - `METHOD AIBT.Authoring.NodeDocument WithObserver(AIBT.Authoring.NodeObserver)`
 - `METHOD AIBT.Authoring.NodeDocument WithParameters(AIBT.Authoring.SemanticObject)`
+- `METHOD AIBT.Authoring.NodeDocument WithSubtree(AIBT.Authoring.SubtreeReference)`
 - `METHOD AIBT.Authoring.NodeDocument WithType(System.String,System.Int32)`
 - `METHOD System.Boolean Equals(AIBT.Authoring.NodeDocument)`
 - `METHOD System.Boolean Equals(System.Object)`
 - `METHOD System.Int32 GetHashCode()`
 - `METHOD System.Void .ctor(AIBT.NodeId,System.String,System.Int32,System.Collections.Generic.IEnumerable`1<AIBT.NodeId>,AIBT.Authoring.SemanticObject,AIBT.Authoring.NodeObserver,System.String,System.String,AIBT.Authoring.TagSet)`
 - `METHOD System.Void .ctor(AIBT.NodeId,System.String,System.Int32,System.Collections.Generic.IEnumerable`1<AIBT.NodeId>,AIBT.Authoring.SemanticObject,AIBT.Authoring.NodeObserver,System.String,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.NodeBindingMap)`
+- `METHOD System.Void .ctor(AIBT.NodeId,System.String,System.Int32,System.Collections.Generic.IEnumerable`1<AIBT.NodeId>,AIBT.Authoring.SemanticObject,AIBT.Authoring.NodeObserver,System.String,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.NodeBindingMap,AIBT.Authoring.SubtreeReference)`
 - `PROPERTY AIBT.Authoring.NodeBindingMap Bindings`
 - `PROPERTY AIBT.Authoring.NodeObserver Observer`
 - `PROPERTY AIBT.Authoring.SemanticObject Parameters`
+- `PROPERTY AIBT.Authoring.SubtreeReference Subtree`
 - `PROPERTY AIBT.Authoring.TagSet Tags`
 - `PROPERTY AIBT.NodeId Id`
+- `PROPERTY System.Boolean IsSubtreeReference`
 - `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.NodeId> Children`
 - `PROPERTY System.Int32 TypeVersion`
 - `PROPERTY System.String Description`
@@ -1066,7 +1099,9 @@ Declarative migration for one node type from <see cref="SourceVersion"/> to <see
 
 - `FIELD System.UInt32 CompiledFormatVersion`
 - `FIELD System.UInt32 ExecutionSemanticsVersion`
+- `METHOD AIBT.Authoring.ReferenceCompilationResult Compile(AIBT.Authoring.SubtreeExpansion,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ReferenceCompilerOptions)`
 - `METHOD AIBT.Authoring.ReferenceCompilationResult Compile(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ReferenceCompilerOptions)`
+- `METHOD AIBT.Authoring.ReferenceCompilationResult Compile(AIBT.Authoring.TreeDocument,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ReferenceCompilerOptions,AIBT.Authoring.ISubtreeResolver)`
 
 ---
 
@@ -1288,6 +1323,113 @@ Mirrors <c>ReferenceTraceEventKind</c> (internal, Runtime) across the assembly b
 
 ---
 
+### `AIBT.Authoring.SubtreeExpander`
+
+Authoring-time subtree expansion (ADR-P11-001, decision AIBT-049): every subtree reference node <c>r</c> is replaced by a renamed copy of the referenced tree — inner node <c>n</c> becomes <c>r:n</c>, private Tree keys become per-instance <c>r:key</c>, interface keys are connected to parent Tree keys or constants, Agent/Shared keys are shared by identical scope contract. Executors, the compiled program format and the trace format never see a reference.
+
+- `FIELD System.Int32 MaximumNestingDepth`
+- `METHOD AIBT.Authoring.SubtreeExpansion Expand(AIBT.Authoring.TreeDocument,AIBT.Authoring.ISubtreeResolver,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ValidationOptions)`
+- `METHOD System.Boolean RequiresExpansion(AIBT.Authoring.TreeDocument)`
+
+---
+
+### `AIBT.Authoring.SubtreeExpansion`
+
+The result of <see cref="SubtreeExpander.Expand"/>: the expanded document the compiler sees (ADR-P11-001 §4.4) and, for every node that came from a subtree, that subtree's source ID.
+
+- `PROPERTY AIBT.Authoring.TreeDocument Document`
+- `PROPERTY AIBT.Authoring.TreeDocument SourceDocument`
+- `PROPERTY AIBT.DiagnosticCollection Diagnostics`
+- `PROPERTY System.Boolean IsIdentity`
+- `PROPERTY System.Boolean Success`
+- `PROPERTY System.Collections.Generic.IReadOnlyDictionary`2<AIBT.NodeId,System.String> NodeSourceIds`
+
+---
+
+### `AIBT.Authoring.SubtreeExpansionDiagnosticCodes`
+
+ADR-P11-001 §4.6: the subtree expansion rules that need the referenced document (compiler range). Every code is an error and is registered in the reference compiler's catalog.
+
+- `FIELD AIBT.DiagnosticCode SubtreeAmbiguous`
+- `FIELD AIBT.DiagnosticCode SubtreeCycle`
+- `FIELD AIBT.DiagnosticCode SubtreeDepth`
+- `FIELD AIBT.DiagnosticCode SubtreeInterfaceVersion`
+- `FIELD AIBT.DiagnosticCode SubtreeKeySet`
+- `FIELD AIBT.DiagnosticCode SubtreeKeyType`
+- `FIELD AIBT.DiagnosticCode SubtreeNotFound`
+- `FIELD AIBT.DiagnosticCode SubtreeQualifiedIdentity`
+- `FIELD AIBT.DiagnosticCode SubtreeScopeContract`
+
+---
+
+### `AIBT.Authoring.SubtreeInterface`
+
+The top-level <c>interface</c> of a tree format version 3 document (ADR-P11-001 §4.3): the Tree-scope keys every caller of this tree as a subtree must connect, and the interface version a reference states. Keys are held in ordinal order; duplicates are kept so the validator can report them (<c>AIBT2050</c>).
+
+- `METHOD System.Boolean Equals(AIBT.Authoring.SubtreeInterface)`
+- `METHOD System.Boolean Equals(System.Object)`
+- `METHOD System.Int32 GetHashCode()`
+- `METHOD System.Void .ctor(System.UInt32,System.Collections.Generic.IEnumerable`1<System.String>)`
+- `PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> Keys`
+- `PROPERTY System.UInt32 Version`
+
+---
+
+### `AIBT.Authoring.SubtreeKeyBinding`
+
+One entry of a reference's <c>keys</c> map: the subtree interface key and either the parent Tree-scope key it connects to (written as a string) or a constant (written as <c>{ "value": v }</c>). A constant keeps its JSON form; it is checked against the interface key's type when the reference is expanded.
+
+- `METHOD AIBT.Authoring.SubtreeKeyBinding ToConstant(System.String,AIBT.Authoring.SemanticValue)`
+- `METHOD AIBT.Authoring.SubtreeKeyBinding ToParentKey(System.String,System.String)`
+- `METHOD System.Boolean Equals(AIBT.Authoring.SubtreeKeyBinding)`
+- `METHOD System.Boolean Equals(System.Object)`
+- `METHOD System.Int32 GetHashCode()`
+- `PROPERTY AIBT.Authoring.SemanticValue Constant`
+- `PROPERTY System.Boolean IsConstant`
+- `PROPERTY System.String InterfaceKey`
+- `PROPERTY System.String ParentKey`
+
+---
+
+### `AIBT.Authoring.SubtreeReference`
+
+The node-level <c>subtree</c> object of a tree format version 3 document (ADR-P11-001 §4.1): "put the tree <see cref="TreeId"/> here", written for interface version <see cref="InterfaceVersion"/>, with one binding per interface key. Bindings are held in ordinal order of their interface key; an interface key may be bound once.
+
+- `METHOD System.Boolean Equals(AIBT.Authoring.SubtreeReference)`
+- `METHOD System.Boolean Equals(System.Object)`
+- `METHOD System.Boolean TryGetBinding(System.String,AIBT.Authoring.SubtreeKeyBinding&)`
+- `METHOD System.Int32 GetHashCode()`
+- `METHOD System.Void .ctor(AIBT.TreeId,System.UInt32,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.SubtreeKeyBinding>)`
+- `PROPERTY AIBT.TreeId TreeId`
+- `PROPERTY System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.SubtreeKeyBinding> Keys`
+- `PROPERTY System.UInt32 InterfaceVersion`
+
+---
+
+### `AIBT.Authoring.SubtreeResolution`
+
+The outcome of one <see cref="ISubtreeResolver.Resolve"/> call.
+
+- `METHOD AIBT.Authoring.SubtreeResolution Ambiguous(System.Collections.Generic.IEnumerable`1<System.String>)`
+- `METHOD AIBT.Authoring.SubtreeResolution Found(AIBT.Authoring.TreeDocument,System.String)`
+- `METHOD AIBT.Authoring.SubtreeResolution NotFound(System.String)`
+- `PROPERTY AIBT.Authoring.SubtreeResolutionStatus Status`
+- `PROPERTY AIBT.Authoring.TreeDocument Document`
+- `PROPERTY System.Collections.Generic.IReadOnlyList`1<System.String> CandidateSourceIds`
+- `PROPERTY System.String Detail`
+- `PROPERTY System.String SourceId`
+
+---
+
+### `AIBT.Authoring.SubtreeResolutionStatus`
+
+- `FIELD AIBT.Authoring.SubtreeResolutionStatus Ambiguous`
+- `FIELD AIBT.Authoring.SubtreeResolutionStatus Found`
+- `FIELD AIBT.Authoring.SubtreeResolutionStatus NotFound`
+- `FIELD System.Byte value__`
+
+---
+
 ### `AIBT.Authoring.SuggestedDiagnosticOperation`
 
 - `METHOD System.Boolean Equals(AIBT.Authoring.SuggestedDiagnosticOperation)`
@@ -1317,6 +1459,7 @@ Mirrors <c>ReferenceTraceEventKind</c> (internal, Runtime) across the assembly b
 
 - `FIELD System.Int32 CurrentFormatVersion`
 - `FIELD System.Int32 LatestFormatVersion`
+- `FIELD System.Int32 SubtreeFormatVersion`
 - `FIELD System.String CurrentFormat`
 - `METHOD AIBT.Authoring.TreeDocument CreateVersion2(AIBT.TreeId,System.String,AIBT.NodeId,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeDocument>,AIBT.Authoring.BlackboardScopeContract,AIBT.Authoring.BlackboardScopeContract,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.SemanticObject,AIBT.Revision)`
 - `METHOD System.Boolean RemoveNodeAt(System.Int32)`
@@ -1325,16 +1468,19 @@ Mirrors <c>ReferenceTraceEventKind</c> (internal, Runtime) across the assembly b
 - `METHOD System.Boolean SetDescription(System.String)`
 - `METHOD System.Boolean SetFormat(System.String,System.Int32)`
 - `METHOD System.Boolean SetIdentity(AIBT.TreeId)`
+- `METHOD System.Boolean SetInterface(AIBT.Authoring.SubtreeInterface)`
 - `METHOD System.Boolean SetMetadata(AIBT.Authoring.SemanticObject)`
 - `METHOD System.Boolean SetName(System.String)`
 - `METHOD System.Boolean SetRoot(AIBT.NodeId)`
 - `METHOD System.Boolean SetTags(AIBT.Authoring.TagSet)`
 - `METHOD System.Void .ctor(System.String,System.Int32,AIBT.TreeId,System.String,AIBT.NodeId,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeDocument>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.SemanticObject,AIBT.Revision)`
 - `METHOD System.Void .ctor(System.String,System.Int32,AIBT.TreeId,System.String,AIBT.NodeId,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeDocument>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.SemanticObject,AIBT.Revision,AIBT.Authoring.BlackboardScopeContract,AIBT.Authoring.BlackboardScopeContract)`
+- `METHOD System.Void .ctor(System.String,System.Int32,AIBT.TreeId,System.String,AIBT.NodeId,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.NodeDocument>,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.BlackboardKeyDefinition>,System.String,AIBT.Authoring.TagSet,AIBT.Authoring.SemanticObject,AIBT.Revision,AIBT.Authoring.BlackboardScopeContract,AIBT.Authoring.BlackboardScopeContract,AIBT.Authoring.SubtreeInterface)`
 - `METHOD System.Void AddNode(AIBT.Authoring.NodeDocument)`
 - `PROPERTY AIBT.Authoring.BlackboardScopeContract AgentContract`
 - `PROPERTY AIBT.Authoring.BlackboardScopeContract SharedContract`
 - `PROPERTY AIBT.Authoring.SemanticObject Metadata`
+- `PROPERTY AIBT.Authoring.SubtreeInterface Interface`
 - `PROPERTY AIBT.Authoring.TagSet Tags`
 - `PROPERTY AIBT.NodeId Root`
 - `PROPERTY AIBT.Revision Revision`
@@ -1424,6 +1570,10 @@ Source-container names only; both extensions contain the same canonical JSON.
 - `FIELD AIBT.DiagnosticCode ParameterConstraint`
 - `FIELD AIBT.DiagnosticCode ParameterType`
 - `FIELD AIBT.DiagnosticCode PolicyViolation`
+- `FIELD AIBT.DiagnosticCode SubtreeInterface`
+- `FIELD AIBT.DiagnosticCode SubtreeKeyTarget`
+- `FIELD AIBT.DiagnosticCode SubtreeReferenceRoot`
+- `FIELD AIBT.DiagnosticCode SubtreeReferenceShape`
 - `FIELD AIBT.DiagnosticCode TreeScopeSlotNeverWritten`
 - `FIELD AIBT.DiagnosticCode UnknownNodeType`
 - `FIELD AIBT.DiagnosticCode UnknownParameter`
