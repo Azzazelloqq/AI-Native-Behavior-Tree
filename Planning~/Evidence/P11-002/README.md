@@ -1,8 +1,9 @@
 # P11-002 evidence: native node library
 
 Decision: `Documentation~/decisions/ADR-P11-002-native-node-library.md` (owner decision of 2026-11-19,
-AIBT-050, every §8 recommendation). Stage 1 of ADR §7 is implemented (section below) and awaits
-the owner's review. Stages 2–4 are not started.
+AIBT-050, every §8 recommendation). Stage 1 of ADR §7 is implemented (section below) and was
+accepted by the orchestrator on `4af5571` ("Acceptance run" at the end). Stages 2–4 are not started;
+each needs the owner's go-ahead.
 
 ## Stage 1 — blackboard and flow nodes (2026-11-19)
 
@@ -339,3 +340,42 @@ The public API diff from `ccde239` is additive: no public member was removed (`g
   `Stop()`. Seen in the parity test, which therefore creates a fresh agent per step. The root cause
   is not confirmed.
 - The managed agent faults with AIBT4002 on any tree with an observer block (fact (b) above).
+
+### Acceptance run (orchestrator, 2026-11-19, stage 1)
+
+Read by the orchestrator on `4af5571` (clean working tree): the whole diff `ccde239..4af5571`, the
+three node sources, the changed existing files and the new tests.
+
+- **Protected paths.** Under `Runtime/` only the allowed line of
+  `GeneratedTreeDispatchAdapterV2.cs` changed. Nothing changed in `CodeGen~`,
+  `Tests/Editor/CodeGen/Contracts/ExpectedPublicAbiV2.txt`, `Documentation~/specifications/`,
+  `package.json`, `Schemas~`, `Samples~`, `Authoring/Validation`, `Authoring/Compilation` or
+  `Agents`.
+- **Existing tests.** The only changed expectations are the three node lists in the table above
+  (4 IDs → 24).
+- **Full run of all nine assemblies**, 22:37–22:52; Editor-log counters did not move (`No command
+  named` 0, main-thread timeouts 1). Raw output: `C:\UnityProjects\_aibt_acceptance\P11-002\stage1-acceptance\full-run-4af5571.txt`.
+
+| Assembly | `34e80f0` | `4af5571` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 240/240 | 314/314 | `NativeLibraryNodeTests` 55, `NativeLibraryReactiveGuardTests` 9, `GeneratedDispatchFieldOrdinalRegressionTests` 7, `NativeLibraryParityTests` 2, `NativeLibrarySimulationTests` 1 |
+| `AIBT.Editor.Tests` | 789/790 | 791/792 | `NativeLibraryBakeMessageTests` 1, one case in `McpDocumentationGeneratorsTests` |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` (the project
+"Modules" registers five sample nodes: 96 found, 91 expected).
+
+Not done by the orchestrator: the regression test was not run again on the old line (the red state
+is the session's `runs/04`, 1/7); the field-ordinal audit and the managed-observer probe were read,
+not repeated; no Player or IL2CPP build; no performance measurement.
+
+Open for the owner (neither blocks stage 2): the two questions above (observer re-evaluation on
+native hosts against `execution-semantics-v1.md:225`; AIBT2043 not counting writes through native
+bindings). The stage 1 line of ADR §7 "observer conditions guard a memory composite natively" is
+met through a reactive composite at the next update, not through observer re-evaluation.

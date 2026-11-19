@@ -1,7 +1,8 @@
 # P11-002 — Library of ready-made native nodes (feature F4)
 
 Status: `In Progress` — ADR accepted 2026-11-19 (AIBT-050) with all six recommendations of its §8;
-stage 1 (blackboard and flow nodes) approved the same day. Stages 2–4 each need the owner's go-ahead.
+stage 1 (blackboard and flow nodes) approved the same day and accepted after the full run of all
+nine assemblies on `4af5571`. Stages 2–4 each need the owner's go-ahead.
 
 ## Objective
 
@@ -101,7 +102,7 @@ Save-UnityWindow.ps1 (palette), Save-UnityClip.ps1 (demo tree) for stages 1–3
   configuration-field array with a case-local ordinal, which broke handles that are not field 0. The
   owner allowed the one-line fix on 2026-11-19 (ADR "Owner decisions" item 7). It is the only host-code
   change in stage 1, and `GeneratedDispatchFieldOrdinalRegressionTests` covers it.
-- Stage 1 is implemented and awaits the owner's review; evidence in
+- Stage 1 is implemented and accepted by the orchestrator (2026-11-19, `4af5571`); evidence in
   `Planning~/Evidence/P11-002/README.md` ("Stage 1"), raw runs and screenshots in
   `C:\UnityProjects\_aibt_acceptance\P11-002\stage1\`. Deviation from ADR §7 stage 1: native hosts do
   not run observer re-evaluation, so the guard over a memory composite is tested as a library

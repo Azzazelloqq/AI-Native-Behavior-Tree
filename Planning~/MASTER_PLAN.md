@@ -1207,8 +1207,8 @@ in `Review`. The second item, `P11-002` (a library of ready-made native nodes; F
 `ADR-P10-008-simulation-container.md:733-734`), grows the existing `aibt.native.standard` shard
 (P9-002, four nodes) so that native trees need no project Burst nodes for common work. Its ADR
 (`Documentation~/decisions/ADR-P11-002-native-node-library.md`, `AIBT-050`) was accepted
-2026-11-19 with all six recommendations of its §8; stage 1 is approved, stages 2–4 each need the
-owner's go-ahead.
+2026-11-19 with all six recommendations of its §8; stage 1 (20 blackboard and flow nodes) is accepted
+(`4af5571`), stages 2–4 each need the owner's go-ahead.
 
 ### Review follow-up scopes (2026-09-04)
 
