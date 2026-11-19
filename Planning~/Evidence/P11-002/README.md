@@ -5,7 +5,8 @@ AIBT-050, every §8 recommendation). Stage 1 of ADR §7 is implemented (section 
 accepted by the orchestrator on `4af5571` ("Acceptance run" at the end of its section). Stage 2 was
 approved by the owner on 2026-11-19, is implemented (section "Stage 2" after the stage 1 material)
 and was accepted by the orchestrator on `bad2892`. Stage 3 (random nodes; hosts seed random streams)
-was approved by the owner on 2026-11-20. Stage 4 is not started; it needs the owner's go-ahead.
+was approved by the owner on 2026-11-20, is implemented (section "Stage 3") and was accepted by the
+orchestrator on `e944c5c`. Stage 4 is not started; it needs the owner's go-ahead.
 
 ## Stage 1 — blackboard and flow nodes (2026-11-19)
 
@@ -1017,3 +1018,55 @@ Both stay untracked in the parent repository, as in stage 2. Nothing in the pack
   assembly, the Editor and contract assemblies only).
 - The Package Manager import itself: the sample was copied into `Assets/Samples/AIBT/Native Guard/`
   by hand.
+
+### Acceptance run (orchestrator, 2026-11-20, stage 3)
+
+Read by the orchestrator on `e944c5c` (clean working tree): the whole `Runtime/` diff
+`d1218b1..e944c5c` line by line, the node source, the diffs of every existing test file, the ADR
+diff, this section, the screenshots and the clip stills.
+
+- **`Runtime/`.** Six files, +82/−7, in two commits. Seeding (`ba7c944`): the new
+  `ProductionTreeHost.TryBootstrap` overload calls `SeedRandomStreams` after `TryBootstrapGenerated`;
+  the old overload passes seed 0; `ProductionTreeProgram.TryBootstrap` and `NativeTreeAgent` pass the
+  seed on. `DispatchSlot.SeedRandomStream` returns at once for a slot without a stream word, so a
+  tree without random nodes is not written to. Group commit (`04ba623`): the lines of the diff the
+  owner allowed (decision 8), internal methods only. Nothing else under `Runtime/` changed.
+- **Other protected paths.** Nothing changed in `CodeGen~`, `Schemas~`, `Authoring/Validation`,
+  `Authoring/Compilation`, `Agents`, `Documentation~/specifications/`, `package.json` or
+  `ExpectedPublicAbiV2.txt`.
+- **Existing tests.** The changed expectations are those in the table above: the pin test replaced,
+  the node lists 28 → 33 and the category check. `SimulationTestPrograms.cs` gained two trees and a
+  comment; no existing tree changed.
+- **Identity dumps.** The SHA-256 of the four dumps in `before/`, `after-seeding/`, `after-nodes/` and
+  `after-group-fix/` were computed again by the orchestrator: all equal. The dumps were not
+  generated again. They cover forced BatchedJobsSameFrame; forced PipelinedJobs is covered only by
+  the existing test classes of run `18`.
+- **The sample copy** in the parent project is identical to `Samples~/NativeGuard` (`diff -r`).
+- **Clips.** The 27 s stills of `seed7-a` and `seed7-b` show the same picks (A A B+w B C, 5 patrols,
+  1 whistle, tree instance 4); `seed0-a` shows A A+w B A A.
+- **Full run of all nine assemblies**, 01:35–01:48; Editor-log counters did not move during the run
+  (`No command named` 0, main-thread timeouts 3 at the start and at the end). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-002\stage3-acceptance\full-run-e944c5c.txt`.
+
+| Assembly | `bad2892` | `e944c5c` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 349/349 | 403/403 | `NativeLibraryRandomTests` 34, `HostRandomSeedingTests` 12, `NativeTreeAgentRandomSeedTests` 8 |
+| `AIBT.Editor.Tests` | 792/793 | 792/793 | — |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` (105 found,
+100 expected).
+
+Not done by the orchestrator: the group-fix tests were not run again on the code without the fix
+(the red state is the session's run `16`); the clips were not recorded again; no Player or IL2CPP
+build; no performance measurement of the new nodes or of the group commit.
+
+To know: with host seeding, `aibt.stdlib.random-condition` runs on hosts too (it declares a stream);
+a host's tree instance id is a process-wide counter, so one seed repeats a sequence only when the
+hosts start in the same order after a domain reload (open question 3).
