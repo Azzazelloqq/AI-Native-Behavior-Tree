@@ -215,6 +215,18 @@
     opacity: 0;
 }
 
+/* A reference card's own 2px teal border sits where the glow ring is drawn on other cards, so the
+   running pulse blended into it (P11-001 stage 3, deviation 7). On a reference card the ring is
+   thicker and drawn further out, with a dark gap between it and the teal border. */
+.aibt-node--subtree > .aibt-node__glow {
+    left: -11px;
+    right: -11px;
+    top: -11px;
+    bottom: -11px;
+    border-width: 5px;
+    border-radius: 15px;
+}
+
 /* ---------- Ports ---------- */
 
 .aibt-node__ports {
