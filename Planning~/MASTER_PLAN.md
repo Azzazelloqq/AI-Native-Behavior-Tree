@@ -1201,8 +1201,9 @@ Status on 2026-11-19 (Phases 8–10 are tracked in `work-items.json` and their t
 this section). `P10-014` (fixes from the P10-013 code review) passed the full run of all nine test
 assemblies on `c68df77`; its follow-ups `P10-015` and `P10-016` are `Ready`. Phase 11 is the
 post-container feature list; its first item, `P11-001` (subtrees), has an accepted ADR
-(`Documentation~/decisions/ADR-P11-001-subtrees.md`, `AIBT-049`) and stages 1–3 accepted
-(`7794cb0`); stage 4 (MCP, CLI, user guide) was approved 2026-11-19.
+(`Documentation~/decisions/ADR-P11-001-subtrees.md`, `AIBT-049`) and stages 1–4 accepted
+(`6b7e141`); one open question (naming policy against expanded private keys, `AIBT2038`) needs the
+owner's decision.
 
 ### Review follow-up scopes (2026-09-04)
 

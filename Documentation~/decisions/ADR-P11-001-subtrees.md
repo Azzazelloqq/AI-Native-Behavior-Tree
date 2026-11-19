@@ -679,7 +679,9 @@ Stage 2 was approved on 2026-11-19 and accepted the same day (`c02b42b`). Stage 
 in the project catalog imports with the status `Needs registry` (as a tree without subtrees does),
 and the Editor's tree-ID index also covers trees under `Packages/`. Stage 3 was accepted the same
 day (`7794cb0`). Stage 4 (MCP, CLI, user guide) was approved on 2026-11-19; with it the stage may
-change `MCP/**`, `MCP~/Server/**`, `MCP~/Cli/**` and the user documentation.
+change `MCP/**`, `MCP~/Server/**`, `MCP~/Cli/**` and the user documentation. Stage 4 was accepted
+the same day (`6b7e141`). Open after stage 4: a project `blackboardNaming` policy rejects expanded
+private keys `r:key` (`AIBT2038`) in MCP validate and compile; not decided.
 
 ## 9. Noticed while reading (not part of F1)
 

@@ -14,7 +14,9 @@ commits on `feature/aibt-consumer-workflow`; evidence, screenshots and Play Mode
 section of `Planning~/Evidence/P11-001/README.md`), accepted after the full run of all nine assemblies
 on `7794cb0`. Stage 4 (MCP, CLI, user guide) approved 2026-11-19 and implemented the same day (local
 commits on `feature/aibt-consumer-workflow`; evidence in the "Stage 4" section of
-`Planning~/Evidence/P11-001/README.md`).
+`Planning~/Evidence/P11-001/README.md`), accepted after the full run of all nine assemblies on
+`6b7e141`. Open: a project `blackboardNaming` policy rejects expanded private keys `r:key`
+(`AIBT2038`) in MCP validate/compile; the fix is in the validator and needs the owner's go-ahead.
 
 ## Objective
 

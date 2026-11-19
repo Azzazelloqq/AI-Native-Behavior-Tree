@@ -887,3 +887,47 @@ low point of the pulse. `before-window.png`, `after-window.png`: window screensh
   bridge operations.
 - `prepare_runtime` with references was tested as a dry run (test), not persisted to an asset in the
   live session.
+
+### Acceptance run (orchestrator, 2026-11-19, stage 4)
+
+Full run of all nine assemblies on `6b7e141`, clean working tree, 19:57–20:09; the Editor-log
+counters did not move during the run (`No command named` 0, main-thread timeouts 1, before and
+after). Raw output:
+`C:\UnityProjects\_aibt_acceptance\P11-001\stage4-acceptance\full-run-6b7e141.txt`.
+
+| Assembly | Stage 3 (`7794cb0`) | `6b7e141` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 240/240 | 240/240 | — |
+| `AIBT.Editor.Tests` | 761/762 | 785/786 | `McpSubtreeToolsTests` 23, one in `McpSimulationToolsTests` |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is `McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`
+(the host project registers five sample nodes; 76 instead of 71). Every added test is accounted
+for (24 in Editor).
+
+Protected paths (`ExpectedPublicAbiV2.txt`, `package.json`, `Documentation~/specifications`,
+`Schemas~`, `Runtime/**`, `Authoring/**`, `Agents/**`, `CodeGen~`) have no change from `6caf728` to
+`6b7e141`. Outside `MCP/**` and `MCP~/**` the code diff is `AibtGraph.uss` (12 lines), the optional
+`documentId` of `SubtreeGraphEdits.Unpack` and the internal resolver overload of
+`ProjectNodeCatalog.ValidateAuthoring`. Read in full: `McpAuthoringToolDispatcher.Subtrees.cs`,
+`McpSubtrees.cs`, and the diffs of the catalog, dispatcher, authoring, verification and runtime
+tools and of the CLI; `McpAuthoringJson.cs`, the server tool wrappers and the test file were not
+read line by line. The hash comparison was recomputed from `hashes-mcp-{before,after}.txt`: 390
+lines each, 13 differ, all of them `validate`/`compile`/`prepare_runtime` of the three parents with
+references. The glow stills and transcript C were looked at and show what the section above says.
+
+Open question 1 was confirmed in code: `SubtreeExpander` gives an expanded private key the name
+`r:key` (name = ID), and `TreeValidator.ValidateNames` checks that name against the project
+`blackboardNaming`; only the MCP tools apply `.aibt/policy.json`, so import, the graph editor,
+baking and execution are not affected. Transcript C passes because its subtree has no private key;
+the stage-3 demo (`strike` with the private key `swings`) cannot be validated or compiled through
+MCP/CLI in a project with a naming policy.
+
+Stage 4 is accepted. Open question 1 (naming policy against expanded private keys, `AIBT2038`) goes
+to the owner; it needs a change in `Authoring/Validation/TreeValidator.cs` and is not started.
