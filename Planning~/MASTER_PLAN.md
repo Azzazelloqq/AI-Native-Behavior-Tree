@@ -1197,6 +1197,13 @@ fixes, filed after `P7-018`) alongside this queue, not yet sequenced ahead of it
 `P7-025` (editor/showcase cards) last. `1.0.0` itself remains the owner's own separate release
 decision.
 
+Status on 2026-11-19 (Phases 8–10 are tracked in `work-items.json` and their task cards, not in
+this section). `P10-014` (fixes from the P10-013 code review) passed the full run of all nine test
+assemblies on `c68df77`; its follow-ups `P10-015` and `P10-016` are `Ready`. Phase 11 is the
+post-container feature list; its first item, `P11-001` (subtrees), has an accepted ADR
+(`Documentation~/decisions/ADR-P11-001-subtrees.md`, `AIBT-049`) and stage 1 in progress; stages
+2–4 each need the owner's go-ahead.
+
 ### Review follow-up scopes (2026-09-04)
 
 The owner requested a fresh validation of eleven review findings and scoped cards, not code fixes.

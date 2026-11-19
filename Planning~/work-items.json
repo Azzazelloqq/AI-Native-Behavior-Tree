@@ -4,6 +4,24 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P11-001", "phase": 11, "title": "Subtrees: reuse one tree inside another (feature F1): ADR accepted (AIBT-049); stage 1 (model, validator, expander, managed path) in progress; stages 2-4 each need the owner's go-ahead", "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P11/P11-001-subtrees.md",
+      "dependsOn": ["P10-014"],
+      "owns": ["Documentation~/decisions/ADR-P11-001-subtrees.md", "Planning~/Evidence/P11-001/", "Authoring/Compilation/Subtrees/"]
+    },
+    {
+      "id": "P10-016", "phase": 10, "title": "Native state migration of a Parallel with suspended branches: test whether resting branches survive (P10-014 open question 3)", "status": "ready", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-016-migration-suspended-parallel-branches.md",
+      "dependsOn": ["P10-014"],
+      "owns": ["Planning~/Evidence/P10-016/"]
+    },
+    {
+      "id": "P10-015", "phase": 10, "title": "Reference executor: a tree stop that replaces an abort in progress inside a Parallel must win, as in native and the specification (P10-014 open question 1)", "status": "ready", "kind": "implementation",
+      "card": "Planning~/Tasks/P10/P10-015-reference-stop-replaces-parallel-abort.md",
+      "dependsOn": ["P10-014"],
+      "owns": ["Planning~/Evidence/P10-015/"]
+    },
+    {
       "id": "P10-014", "phase": 10, "title": "Fixes from the P10-013 code review: native Parallel abort target (D1), segment restore (D2), visit-rest flag (D3), F-S2-2, coverage, docs (part C, the v1 loop-tree slowdown, removed by the owner)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P10/P10-014-review-fixes.md",
       "dependsOn": ["P10-013"],

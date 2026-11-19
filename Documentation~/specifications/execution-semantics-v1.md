@@ -167,8 +167,10 @@ the same update. An empty retaining reactive selector fails.
 - *Root completion* is unchanged: a retaining composite as root that ends because of a guard exposes
   its result after the retained branch was aborted and exited and the composite exited.
 - *Hot reload* runs between updates, so no guard pass is ever in progress. A retaining composite is
-  a composite for the hot-reload cursor-reset rule. Changing a node between a v1 reactive composite
-  and a retaining one is a type change.
+  a composite for the hot-reload cursor-reset rule. In the first update after a structural edit that
+  resets a composite's cursor, the reset replaces update-start processing, so no retaining
+  composite on the active path has a guard pass in that update. Changing a node between a v1
+  reactive composite and a retaining one is a type change.
 
 **Several multi-update children in one retaining sequence (informative).** Every child before the
 running one is a guard. In `RetainingReactiveSequence [cond, stepA, stepB]` with multi-update

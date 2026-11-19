@@ -1,6 +1,6 @@
 # P10-014 — Fixes from the P10-013 code review
 
-Status: `Review` — part A (defects) and part B (coverage, docs) done 2026-11-19, touched tests pass (evidence `Planning~/Evidence/P10-014/README.md`); the full run of all nine assemblies on `c68df77` passed at acceptance on 2026-11-19 (same evidence, "Acceptance run"); the owner kept the F-S2-2 fix the same day; four open questions remain with the owner. Part C
+Status: `Review` — part A (defects) and part B (coverage, docs) done 2026-11-19, touched tests pass (evidence `Planning~/Evidence/P10-014/README.md`); the full run of all nine assemblies on `c68df77` passed at acceptance on 2026-11-19 (same evidence, "Acceptance run"); the owner kept the F-S2-2 fix and answered the four open questions the same day (evidence, "Owner decisions on the open questions"; follow-ups P10-015 and P10-016). Part C
 (the IL2CPP slowdown of v1 loop trees) was removed from this task by the owner on 2026-11-18; the
 performance check and any fix become a separate task.
 

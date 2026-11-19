@@ -141,4 +141,14 @@ An earlier full run the same night (01:30) had 31 failures, every one an `Unhand
 caused by another session's `unity status` polling loop, which logs an error in every open Editor.
 All 31 pass in the clean run.
 
-**Owner's decision, 2026-11-19: the F-S2-2 fix stays.** Open questions 1–4 above are still open.
+**Owner's decision, 2026-11-19: the F-S2-2 fix stays.**
+
+## Owner decisions on the open questions (2026-11-19)
+
+1. Tree stop replacing an abort in progress inside a Parallel: the native behaviour stays (the stop
+   runs to the root). The reference executor's divergence is fixed in a separate task, P10-015.
+2. R2: the proposed sentence is added to `execution-semantics-v1.md` (the hot-reload bullet of the
+   retaining-composites section), done with this record.
+3. State migration and suspended Parallel branches: separate small task with a test, P10-016.
+4. Parallel step counts: left as they are, pinned by
+   `RetainingReactiveNativeCoverageTests.ParallelStepCountsDifferExactlyByLeafRestsAndParallelCompletions`.

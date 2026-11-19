@@ -1,8 +1,9 @@
 # ADR P11-001: Subtrees (reusing one tree inside another)
 
-- Status: Proposed (2026-11-19). Awaiting the owner's answers to §8. No code is written before the
-  owner accepts this ADR; each stage of §7 then needs its own go-ahead as usual.
-- Decision ID: to be assigned on acceptance (next free `AIBT-0xx` in `Documentation~/decisions.md`)
+- Status: Accepted (2026-11-19). Proposed the same day; the owner accepted it with all eight
+  recommendations of §8 (see "Owner decisions" below) and approved stage 1 of §7, including the
+  specification edits of §4.8. Stages 2–4 each need their own go-ahead.
+- Decision ID: AIBT-049
 - Task: `Planning~/Tasks/P11/P11-001-subtrees.md`
 - Origin: feature F1 of the post-container feature list
   (`Documentation~/decisions/ADR-P10-008-simulation-container.md:733-734`), and the long-standing
@@ -648,6 +649,25 @@ inside a subtree shows two-part labels.
    *Recommendation: approve.*
 8. **Interface keys bind only to parent Tree keys**, not Agent/Shared keys (those are shared by
    contract identity instead). *Recommendation: approve; revisit if needed.*
+
+## Owner decisions (2026-11-19)
+
+The owner accepted every recommendation of §8:
+
+1. Tree format version 3, additive over version 2; version 1 and 2 files are read as before.
+2. A reference names its subtree by tree ID; duplicate tree IDs are an error (`AIBT3021`).
+3. A caller passes values only through interface keys (a parent key or a constant). Templated node
+   parameters are not part of this decision.
+4. A subtree may not use itself, directly or indirectly (`AIBT3022`); nesting depth is at most 8
+   (`AIBT3023`), a fixed constant and not a policy field.
+5. A tree loaded from raw JSON at runtime reports `AIBT3020` unless the caller passes a resolver
+   through a new overload; imported `.aibt` assets hold the expanded tree.
+6. The editor opens a subtree in its own window with a breadcrumb (stage 3); in-place expansion is
+   not part of this decision.
+7. Private subtree keys are per instance.
+8. Interface keys bind only to the parent's Tree-scope keys.
+
+Stage 1 of §7 is approved. Stages 2, 3 and 4 are not started without the owner's go-ahead.
 
 ## 9. Noticed while reading (not part of F1)
 

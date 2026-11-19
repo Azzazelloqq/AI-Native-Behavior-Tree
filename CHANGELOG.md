@@ -4,6 +4,20 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Subtrees: decision accepted (ADR-P11-001, AIBT-049)
+
+- **Decision only, no package code yet.** A tree will be usable as a node of other trees through a
+  reference node that is replaced, before compilation, by a renamed copy of the referenced tree
+  (tree format version 3, additive). Executors, ABI v2, the compiled program format and the trace
+  format do not change. See `Documentation~/decisions/ADR-P11-001-subtrees.md`.
+
+### Specification: first update after a structural hot-reload reset
+
+- `execution-semantics-v1.md` now states that in the first update after a structural edit that
+  resets a composite's cursor, the reset replaces update-start processing, so no retaining
+  composite on the active path has a guard pass in that update. Both executors already behave this
+  way (P10-014 finding R2); no code changed.
+
 ### Native fixes from the P10-013 code review (P10-014)
 
 - **Abort through a Parallel (D1, native, pre-existing).** Suppose an abort whose target lies above

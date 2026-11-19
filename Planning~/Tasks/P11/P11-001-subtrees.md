@@ -1,7 +1,7 @@
 # P11-001 — Subtrees: reuse one tree inside another (feature F1)
 
-Status: `Blocked` — ADR proposed 2026-11-19, awaiting the owner's acceptance and answers to its §8.
-No code is written before that.
+Status: `In Progress` — ADR accepted 2026-11-19 (AIBT-049) with all eight recommendations of its §8;
+stage 1 approved the same day. Stages 2, 3 and 4 each need the owner's go-ahead.
 
 ## Objective
 
@@ -12,7 +12,8 @@ simulation container. Existing trees, compiled programs, ABI v2 and the trace fo
 
 ## Decision record
 
-`Documentation~/decisions/ADR-P11-001-subtrees.md` (Proposed). Recommended: authoring-time
+`Documentation~/decisions/ADR-P11-001-subtrees.md` (Accepted 2026-11-19, AIBT-049; the owner's
+answers are in its "Owner decisions" section). Decided: authoring-time
 expansion — a reference node is replaced by a renamed copy of the subtree before compilation
 (inner node `n` at reference `r` becomes `r:n`); keys connect through a declared subtree interface;
 tree format version 3 (additive). Rejected: runtime call node (changes compiled and trace formats),
@@ -20,9 +21,8 @@ copy-on-insert templates (no "edit once").
 
 ## Depends on
 
-- Owner's answers to ADR §8, in particular Q1 (tree format version 3) and Q2 (reference by tree ID).
-- P10-014 finished or not touching `Authoring/`, `Agents/`, `Editor/Graph/`, `MCP/` (this feature
-  does not touch `Runtime/Execution/**`).
+- Owner's answers to ADR §8 (given 2026-11-19, all as recommended).
+- P10-014 (accepted 2026-11-19, `c68df77`; this feature does not touch `Runtime/Execution/**`).
 
 ## Required reading
 
