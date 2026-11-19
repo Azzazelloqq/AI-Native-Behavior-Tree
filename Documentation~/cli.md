@@ -128,6 +128,34 @@ active nodes may be stale because their exits were lost. Root status is reported
 from the current host. Busy writers return `available=false, retryable=true`; no job is forced
 to complete. Disposed owners are not retryable. No compare-trace operation is exposed.
 
+## Subtrees
+
+Commands for subtree references ([Subtrees](subtrees.md), `ADR-P11-001`). Writes need
+`SemanticEdit` and the tree's current `contentHash`; `tree expand` and `tree usages` need `Read`.
+
+```powershell
+aibt --project "<UnityProject>" --json tree expand game.boss-fight
+aibt --project "<UnityProject>" --json tree usages game.strike
+aibt --project "<UnityProject>" --permissions SemanticEdit --json tree extract game.boss-fight finisher game.finisher Trees/finisher.aibt --expected-hash "<contentHash>" --args-file extract.json
+aibt --project "<UnityProject>" --permissions SemanticEdit --json tree keys game.boss-fight right hits=bonus_hits --expected-hash "<contentHash>"
+aibt --project "<UnityProject>" --permissions SemanticEdit --json tree unpack game.boss-fight right --expected-hash "<contentHash>"
+```
+
+| Command | Operation |
+|---|---|
+| `tree expand <treeId>` | `inspect_tree` with `expanded: true`: the source plus `expansion` (the tree the compiler sees, node sources, diagnostics) |
+| `tree usages <treeId>` | `find_subtree_usages`: every reference node that uses the tree ID, and the files that declare it |
+| `tree extract <treeId> <nodeId> <newTreeId> <path>` | `extract_to_subtree`: moves the branch into a new file (path under Assets) and leaves a reference; `name` and `description` of the new tree go in `--args-file` |
+| `tree keys <treeId> <nodeId> <assignment>...` | `set_subtree_keys`: `key=parentKey` connects, `key:=<json>` binds a constant, `key=` disconnects |
+| `tree unpack <treeId> <nodeId>` | `unpack_subtree`: replaces the reference by a plain copy of its expansion |
+
+`--dry-run` previews any of the writes. A reference is added with `call add_node --args-file`
+and a node `{"id": "left", "subtree": {"treeId": "game.strike"}}`. An edit that would leave the
+tree unable to expand or compile is rejected with its diagnostics (for example `AIBT3025` for a
+not connected interface key) and nothing is written. `tree validate`, `tree compile` and
+`tree prepare` resolve references through the trees under `Assets` and report a missing,
+duplicate or recursive subtree as `AIBT3020`–`AIBT3022`.
+
 ## Native node behavior cases
 
 `generate_node_tests_and_manifest` writes source-controlled case data under UNITY_EDITOR;

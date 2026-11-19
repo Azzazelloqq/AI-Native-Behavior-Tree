@@ -340,6 +340,8 @@ assets and read a running host's trace through the same Editor operations. See
 
 - [First production agent](Documentation~/consumer-quickstart.md): native layer step by step.
 - [Visual editor and layout](Documentation~/editor-and-layout.md)
+- [Subtrees](Documentation~/subtrees.md): one tree used as a node of another; interface keys,
+  graph editor, MCP and CLI.
 - [Burst node authoring](Documentation~/burst-node-authoring.md)
 - [Production tree host](Documentation~/production-host.md)
 - [Execution and scheduling](Documentation~/execution-and-scheduling.md)

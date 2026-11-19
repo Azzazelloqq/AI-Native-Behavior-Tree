@@ -48,13 +48,17 @@ The manifest is generated from the same metadata used by code generation, editor
 - create tree;
 - add, remove, move, replace, and configure nodes;
 - declare and change blackboard keys;
-- extract or inline subtrees;
+- extract or inline subtrees (node payloads, `extract_subtree` / `inline_subtree`);
+- subtree references (`ADR-P11-001`): `add_node` with a `subtree` object, `set_subtree_keys`,
+  `extract_to_subtree`, `unpack_subtree`, `find_subtree_usages`, and `inspect_tree` with
+  `expanded`; see [Subtrees](subtrees.md);
 - apply a domain patch transaction;
 - request layout of the affected region.
 
 ### Verification
 
-- validate and compile;
+- validate and compile (a tree with subtree references is checked and compiled as expanded, and a
+  missing, duplicate or recursive subtree is a diagnostic);
 - simulate a behavior case;
 - run focused tests;
 - inspect or explain diagnostics;
