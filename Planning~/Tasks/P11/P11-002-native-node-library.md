@@ -101,5 +101,23 @@ Save-UnityWindow.ps1 (palette), Save-UnityClip.ps1 (demo tree) for stages 1–3
   configuration-field array with a case-local ordinal, which broke handles that are not field 0. The
   owner allowed the one-line fix on 2026-11-19 (ADR "Owner decisions" item 7). It is the only host-code
   change in stage 1, and `GeneratedDispatchFieldOrdinalRegressionTests` covers it.
+- Stage 1 is implemented and awaits the owner's review; evidence in
+  `Planning~/Evidence/P11-002/README.md` ("Stage 1"), raw runs and screenshots in
+  `C:\UnityProjects\_aibt_acceptance\P11-002\stage1\`. Deviation from ADR §7 stage 1: native hosts do
+  not run observer re-evaluation, so the guard over a memory composite is tested as a library
+  condition under a reactive composite, which aborts the memory composite at the next update
+  after the key changes (`NativeLibraryReactiveGuardTests`). ADR §7 is unchanged.
+- Open question 1 for the owner: native hosts (`ProductionTreeHost`, `NativeTreeAgent`,
+  `ProductionTreeScheduler`, `TreeSimulation`) never queue or re-evaluate observers
+  (`NativeObserverQueueV1` has no caller in `Runtime/`), unlike `execution-semantics-v1.md:225`, and
+  the managed `BehaviorTreeAgent` faults with AIBT4002 on any observer block. This is existing
+  behaviour, not caused by P11-002; a possible follow-up work item (not created). Documented in
+  `production-host.md` and the README.
+- Open question 2: AIBT2043 ("no node in this tree writes it") ignores writes through generated
+  native `bindings`, so it shows for keys that native nodes write. It is an Info note only and
+  existed before P11-002.
+- Stage 1 changed three node-list expectations (`StandardNativeShardTests`,
+  `StandardNodeCatalogTests`, `McpToolDispatcherTests`: 4 native IDs → 24). No other existing
+  expectation changed. Demo tree: `Tests/Fixtures/P11-002/native-library-demo.aibt.json`.
 - ADR §9 lists four unrelated findings (stale Swarm Arena comment, `UInt32` blackboard key in the Public
   Burst Nodes sample, untested managed nodes, unseeded `System.Random` in the stdlib reference twin).

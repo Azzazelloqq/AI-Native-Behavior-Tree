@@ -1,0 +1,341 @@
+# P11-002 evidence: native node library
+
+Decision: `Documentation~/decisions/ADR-P11-002-native-node-library.md` (owner decision of 2026-11-19,
+AIBT-050, every §8 recommendation). Stage 1 of ADR §7 is implemented (section below) and awaits
+the owner's review. Stages 2–4 are not started.
+
+## Stage 1 — blackboard and flow nodes (2026-11-19)
+
+Base: `feature/aibt-consumer-workflow` at `ccde239`. Editor 6000.6.9f1, project "Modules"
+(Pipeline port 7810). Tests ran with the async `Tools/Unity/Invoke-UnityTests.ps1` after
+`Invoke-UnityRecompile.ps1`, touched classes only, one runner at a time. Raw outputs, dumps,
+screenshots and the scripts that made them are in `C:\UnityProjects\_aibt_acceptance\P11-002\stage1\`
+(outside the repository).
+
+Commits (submodule only):
+
+| Commit | Content |
+|---|---|
+| `442d9aa` | the 20 nodes |
+| `760a1b3` | host fix allowed by the owner (ADR "Owner decisions" item 7) and its regression test, with the library test kit |
+| the commits after `760a1b3` | catalog document, bake message, tests, demo fixture, docs, CHANGELOG, this file |
+
+### The 20 nodes
+
+All are in shard `aibt.native.standard` (assembly `AIBT.StandardNodes`). The shard version stays 1.
+Each node has node version 1, Tree scope only, `deterministic: true`, cost `Trivial`, and an
+`[AibtNodeDocumentation]` whose "when not to use" names the `aibt.unity.*` counterpart. Sources:
+`Authoring/Registry/Generated/StandardNative/StandardNativeConditions.cs`, `StandardNativeActions.cs`
+and `StandardNativeFlowNodes.cs`.
+
+| Node | Kind | Parameters | Bindings | Statuses |
+|---|---|---|---|---|
+| `int-at-least` | observer condition | `threshold` UInt32 | `key` Int32 read | S/F |
+| `int-equals` | observer condition | `value` UInt32 | `key` Int32 read | S/F |
+| `int-keys-at-least` | observer condition | — | `left`, `right` Int32 read | S/F |
+| `float-keys-at-least` | observer condition | — | `left`, `right` Float32 read | S/F |
+| `float3-within-distance` | observer condition | `distance` Float32, `flat` Bool | `a`, `b` Float3 read | S/F |
+| `float3-is-set` | observer condition | — | `key` Float3 read | S/F |
+| `set-bool` | action | `value` Bool | `key` Bool write | S/F |
+| `set-int` | action | `value` UInt32 | `key` Int32 write | S/F |
+| `set-float3` | action | `x`, `y`, `z` Float32 | `key` Float3 write | S/F |
+| `copy-bool` / `copy-int` / `copy-float` / `copy-float3` | action | — | `from` read, `to` write | S/F |
+| `increment-int` | action | `amount` UInt32 | `key` Int32 read-write | S/F |
+| `increment-float` | action | `amount` Float32 | `key` Float32 read-write | S/F |
+| `toggle-bool` | action | — | `key` Bool read-write | S/F |
+| `float3-distance` | action | `flat` Bool | `a`, `b` Float3 read, `result` Float32 write | S/F |
+| `succeed` | action | — | — | S |
+| `fail` | action | — | — | F |
+| `idle` | action | — | — | R |
+
+Native/Blackboard: the 17 blackboard nodes. Native/Flow: `succeed`, `fail`, `idle`.
+
+### Contract choices (made in stage 1, not fixed by the ADR)
+
+1. **A failed read gives Failure.** No write happens after it.
+2. **`int-at-least` / `int-equals` compare as `long`.** The `UInt32` parameter is compared with the
+   `Int32` value as 64-bit numbers, so a threshold or value above 2147483647 never matches.
+   Parameters cannot be negative (generator types: Bool, UInt32, UInt64, Float32). For a negative
+   bound, compare two keys with `int-keys-at-least`.
+3. **`set-int` with a value above 2147483647 fails without writing.** A negative value is written
+   with `copy-int` from a key.
+4. **`increment-int` wraps.** `unchecked(value + amount)`; an amount of 4294967295 subtracts one.
+5. **Non-finite results fail without writing.** This covers `increment-float` (sum overflows to
+   ±∞), `float3-distance` (squared length not finite) and `set-float3` (non-finite parameter). The
+   runtime refuses a non-finite Float32 write with `InvalidEncoding` and latches a frame failure, so
+   each node checks first.
+6. **Distance comparisons use squared lengths.** `float3-within-distance` succeeds when
+   `|a−b|² ≤ distance²`. A negative distance never succeeds; the managed `is-within-distance`
+   squares it and would succeed. `flat` sets Y to 0 on both points.
+7. **`float3-is-set` means "not (0, 0, 0)"** (−0 counts as 0), like the managed `is-vector3-set`.
+8. **Flow nodes are actions with `AbortOnly` cancellation**, with status masks Success only,
+   Failure only and Running only. `idle` runs until something aborts it.
+9. **Observer conditions declare only `Tick` and `Evaluate`.** They have no Enter, Abort or Exit.
+10. **Names.** Bindings are `key`, `left`/`right`, `a`/`b`, `from`/`to`, `result`. Parameters are
+    `threshold`, `value`, `amount`, `distance`, `flat`, `x`/`y`/`z`. A shared internal
+    `StandardNativeMath` holds the finiteness and distance helpers.
+
+### Host fix (owner decision 7)
+
+`Runtime/Integration/GeneratedDispatch/GeneratedTreeDispatchAdapterV2.cs:840` (`DispatchSlot.TryCreate`,
+since P7-037) looked up a blackboard handle's configuration field as
+`catalog.ConfigurationFields[ConfigurationFieldOrdinal]`. The ordinal is local to the node's
+dispatch case, but the array holds the fields of every case. Every other site uses
+`dispatchCase.FirstConfigurationField + ordinal`. A handle that is field 0 of its node always
+worked. A handle at local field 1 or higher worked only when the global field with the same index
+happened to sit at the same offset. That holds for the first case of a catalog (cases are ordered by
+type ID), which is why Swarm Arena `steer`/`within-radius` and the samples ran. Ten of the new
+nodes have such handles. With the shard in a catalog they failed loudly:
+
+- a parameter at the wrong offset (`increment-int`, `increment-float`: `amount` sorts before `key`)
+  failed bootstrap with `NativeCapacityPlanInvalid`, or `InvalidArgument` from
+  `TreeSimulation.TryAddGroup`;
+- a second handle at the wrong offset (`copy-*`, `*-keys-at-least`, `float3-within-distance`,
+  `float3-distance`) bound two handles to one slot. `NativeBurstDispatchBindingValidationV2` refused
+  that at the first update with `NativeLifetimeStateInvalid`.
+
+The owner allowed the one-line fix on 2026-11-19 ("Да, чинить"; ADR "Owner decisions" item 7):
+
+```csharp
+var field = catalog.ConfigurationFields[(int)(dispatchCase.FirstConfigurationField + catalogBinding.ConfigurationFieldOrdinal)];
+```
+
+Nothing else under `Runtime/**` changed. No other site had the defect: the binding validation
+searches within the case's own field range.
+
+**Regression test.** `Tests/Integration/NativeRuntime/GeneratedDispatchFieldOrdinalRegressionTests.cs`
+has 7 cases:
+- a precondition: the test catalog has handles whose global field of the same index sits elsewhere;
+- on `ProductionTreeHost`: a handle after a parameter (`increment-int` 5 + 3 → 8), a second
+  handle (`copy-int`), two read handles (`int-keys-at-least` 1 ≥ 2 → Failure), and a third handle
+  after a parameter (`float3-distance` (0,0,0)–(3,4,0) → 5);
+- `TreeSimulation` in place and with Jobs.
+
+On the old line 1/7 pass (`runs/04-regression-RED-old-line.txt`, only the precondition). With the fix
+7/7 pass (`runs/05-after-fix-library-and-regression.txt`).
+
+**Audit: can a tree that passes today read a wrong key silently?** No, in no catalog set of the
+package. The script is `scripts/AuditFieldOrdinals.cs` and its output is
+`scripts/audit-field-ordinals.txt`. It covers all 14 `[AibtCatalogSet]`s loaded in the Editor and
+compares, for every binding at local field 1 or higher, the correct offset with the one the old
+line read.
+- Wrong offset: the 10 new nodes, in the 6 sets that list the shard. Also
+  `aibt.tests.external-tree-effect` (`target`, field 1) in `StandardNativeProbeCatalog`,
+  `JobsEquivalenceCatalog` and `NativeLibraryCatalog`. It read offset 0, which holds 0, and its
+  access ordinal is 0 too. The value matches for every tree, so the node behaved correctly.
+- The same offset by position: `aibt.tests.generated-node`, `external-tree-effect` in
+  `ExternalTreeWriteFixtureCatalog`, and Swarm Arena `steer` (fields 2, 4) and `within-radius`
+  (fields 1, 2).
+- Read from source, not loaded: `Samples~/BurstNodes` `async-write-action` is the first case, so it
+  matches. `Benchmarks~` PerfCatalog has no binding at field 1 or higher in the nodes its trees use.
+
+For the 10 new nodes, offset 0 holds either the first handle (refused loudly, as above) or the
+`amount` parameter. A non-zero amount fails bootstrap; an amount of 0 matches by accident. A silent
+wrong read needs two misread bindings pointing at each other's handles. No catalog in the package
+has that.
+
+**Existing tests whose result changes with the fix:** none written before P11-002. Where the
+offsets coincide, the read is the same, and `external-tree-effect` reads the same 0.
+`JobsPolicyEquivalenceTests` gave 28/28 before the fix (`runs/03`) and after it (`runs/08`). Only the
+new stage 1 tests and the regression test went from red to green. No expectation of an existing test
+changed with the fix.
+
+### Observers on the native path
+
+ADR §7 stage 1 lists "Observer conditions guard a memory composite (abort on key change) natively".
+Stage 1 found that native hosts do not run observer re-evaluation. `NativeObserverQueueV1` and
+`NativeLifecycleMachineV1.TryApplyObserverTransition` have no caller under `Runtime/`. The host
+trace of an observed tree has no observer event: `scripts/DiagnoseObserver.cs` →
+`scripts/diagnose-observer.txt`, where the compiled program has 1 observer with mode Self and one
+watched key, and update 0 runs the memory sequence to `idle` with no abort. The native golden adapter
+(`Tests/Integration/NativeRuntime/NativeBehaviorCaseAdapter.cs:339-379`) simulates observers in
+test code. This is existing behaviour, not caused by P11-002. Per the orchestrator's instruction
+there was no runtime change.
+
+**Deviation from ADR §7 stage 1 (ADR §7 not edited).** The guard is tested as what actually
+happens. `Tests/Integration/NativeRuntime/NativeLibraryReactiveGuardTests.cs` (9 cases) checks that a
+library condition as the first child of `aibt.core.reactive-sequence` aborts the memory sequence
+under it at the next update after its key changes:
+- by a node write (`increment-int` spends `fuel` 2 → 0 inside update 1, so update 1 ends Running
+  with `done` = true, and update 2 gives Failure);
+- by an external fact write (`float3-is-set` on `target`; `Fact(target, 0)` makes the next update
+  Failure).
+
+Each case runs with and without an `observer` block, and the results are identical. The two
+observer cases first written in `NativeLibraryNodeTests` assumed an abort inside the update and
+failed. They were removed. `[AibtObserverCondition]` stays on the six library conditions, and
+`observer` JSON still compiles; no validation was added.
+
+**Facts established.**
+- (a) `TreeSimulation` behaves like the hosts. The abort comes at tick 2, in place and with Jobs, with
+  or without the observer block (`TreeSimulation_AReactiveGuardAbortsTheMemorySequenceOnTheNextTick`,
+  4 cases).
+- (b) The managed side does not run it either. `Agents/Runtime/ManagedTreeInstance.cs:127` builds
+  the reference executor with `ReferenceObserverConditionRegistry.Empty`. A `BehaviorTreeAgent`
+  running the same tree with `aibt.unity.*` nodes and an observer block stops at the first queued
+  re-evaluation with AIBT4002 "No explicit observer condition evaluator is bound for the compiled node
+  type and version". There, fuel is 1 and `done` is false (`scripts/ProbeManagedObserver.cs` →
+  `scripts/probe-managed-observer.txt`). Without the block the agent matches native: tick 1 fuel 0,
+  `done` true, running; tick 2 Failure. The reference executor implements the specified queue only
+  when it is given evaluators, as the golden cases do.
+- (c) A native tree with an observer block on a memory composite and no reactive parent is not
+  silently ignored. Validation refuses it with AIBT2034 `InvalidObserverContext` ("Observer must be a
+  condition child of one reactive composite…"), tested by
+  `AnObserverBlockOutsideAReactiveCompositeIsRefusedAtCompile`. The silent case is a valid observer
+  under a reactive composite: it compiles, runs and changes nothing. The reactive composite's own
+  re-tick then gives the guard at the next update.
+
+**The specifications say otherwise** (not edited):
+
+- `Documentation~/specifications/execution-semantics-v1.md:225`: "When a watched slot version changes
+  during Execute, the observer is queued once. The queue is drained at the observer reevaluation
+  point after the current atomic node step and before selecting the next ordinary frame transition."
+- `Documentation~/specifications/update-phases-v1.md:8`: "After each atomic node step, queued
+  blackboard observers are reevaluated in stable order before the next ordinary frame transition."
+
+**Docs.** One paragraph in `Documentation~/production-host.md` (section "Clock, budget and
+completion") and three sentences in the README "Standard nodes" section. They say that native hosts
+do not run observer re-evaluation today and that a reactive composite is the native way to guard.
+
+### Other changes
+
+- `MCP/Documentation/McpNodeCatalogDocumentGenerator.cs` builds the package registry with
+  `StandardNativeShard`. `Documentation~/generated/node-catalog.md` was regenerated with the
+  generator, not edited by hand: 91 node types, every `aibt.native.*` node with its contract.
+  `MCP/AIBT.Mcp.asmdef` references `AIBT.StandardNodes`.
+- `Editor/Graph/ProductionTreeAssetBaker.cs`: same diagnostic code and conditions. For a type ID of
+  the package shard the message adds "It is a package node of shard aibt.native.standard: add
+  typeof(AIBT.StandardNodes.StandardNativeShard) to your catalog set ([AibtCatalogSet])."
+- `README.md`: native node count and table rows (Native/Blackboard 20, Native/Flow 4), plus an
+  opt-in paragraph.
+- `Tests/Integration/AIBT.Integration.Tests.asmdef` references `AIBT.Agents` (the parity test).
+
+### Tests
+
+| Class | Cases | What it checks |
+|---|---|---|
+| `Tests/Integration/NativeRuntime/StandardNativeShardTests` (existing, one expectation changed) | 3 | The generator takes the grown shard: it is `IsUsable` in a catalog set next to a project shard and runs natively; both shards' nodes are declared |
+| `Tests/Integration/NativeRuntime/NativeLibraryNodeTests` | 55 | One behaviour test or more per node on `ProductionTreeHost`, including the ADR edge cases: `set-int` above 2³¹−1, `increment-int` wrap, `flat` distance, zero vector, non-finite results, failed reads. Plus one tree with all 20 nodes |
+| `Tests/Integration/Simulation/NativeLibrarySimulationTests` | 1 | Every library tree of `NativeLibraryCases` as a `TreeSimulation` group with mixed think schedules, in place and with Jobs. The per-tick digests are identical, and the root results equal the host's |
+| `Tests/Integration/NativeRuntime/NativeLibraryParityTests` | 2 | Managed `aibt.unity.*` on `BehaviorTreeAgent` vs `aibt.native.*` on `ProductionTreeHost` over a scripted fact sequence: the same root results and key values (floats within a stated relative tolerance with an absolute floor; `determinism-v1.md:12`), plus `idle` under a reactive selector |
+| `Tests/Integration/NativeRuntime/NativeLibraryReactiveGuardTests` | 9 | The native guard over a memory composite (section above) |
+| `Tests/Integration/NativeRuntime/GeneratedDispatchFieldOrdinalRegressionTests` | 7 | The host fix (section above) |
+| `Tests/Editor/Consumer/NativeLibraryBakeMessageTests` | 1 | The bake message names the shard to add; another shard's node keeps the old message |
+| `Tests/Editor/Documentation/McpDocumentationGeneratorsTests` | +1 | `node-catalog.md` lists every `aibt.native.*` node with its contract, and the managed nodes are still listed |
+
+`Tests/Integration/NativeRuntime/NativeLibraryTestKit.cs` and `NativeLibraryCases.cs` are shared
+helpers (catalog set `NativeLibraryCatalog`: the shard and the four test leaves).
+
+### Changed expectations of existing tests (old → new)
+
+Only the node-list tests changed:
+
+| Test | Old | New |
+|---|---|---|
+| `StandardNativeShardTests.TheGeneratedCatalogDeclaresBothShardsNodes` | the 4 P9-002 IDs | `StandardNativeLibraryIds.All` (24) |
+| `StandardNodeCatalogTests.TheProjectCatalogOffersTheStandardNativeShardAsNativeOnlyNodes` | the 4 IDs | `StandardNodeCatalogTests.StandardNativeTypeIds` (24) |
+| `McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` | built-ins + 4 native IDs | built-ins + the 24 |
+
+`McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` fails in the host
+project "Modules" before and after. It finds 96 nodes instead of 91 because the 5 Swarm Arena sample
+nodes are in the project, a known failure unrelated to P11-002. The other 7 cases of the class
+pass.
+
+### The four existing nodes are unchanged
+
+`existing-nodes-unchanged.txt`: the manifest and descriptor JSON SHA-256 of `bool-is-true`,
+`float-at-least`, `set-float` and `wait-microseconds` are identical before (`ccde239`) and after
+(node count 4 → 24, "ALL FOUR UNCHANGED: True"). The dumps are in `before/`, `after-nodes/` (after
+`442d9aa`) and `after-final/` (after the fix and tests; identical to `after-nodes/`).
+
+### Fingerprints before and after
+
+| | Before (`ccde239`) | After |
+|---|---|---|
+| shard `aibt.native.standard` version | 1 | 1 |
+| shard NodeRegistryHash | `b91422c3980bf4f9…` | `f582da57173a960c…` |
+| shard DescriptorHash | `9b984c00561de9e0…` | `c998e1fc2370ba28…` |
+| `StandardNativeProbeCatalog` | `ccaa001780ece657…` | `a89c927f3c3e279d…` |
+| `JobsEquivalenceCatalog` | `5546760e5cf50d64…` | `b6bf793584d32bd8…` |
+| `SimulationTestCatalog` | `11e741e4fafa49b2…` | `c5aa1cd1915ab1d2…` |
+| `SimulationIoCatalog` | `dfaa0aaedcab4a23…` | `82ba9dc6c0f56080…` |
+| `SimulationActionCatalog` | `fa865ce86e1ae682…` | `e92c76d3b7248d32…` |
+| `NativeLibraryCatalog` (new) | — | `52b44879e8593ecf…` |
+
+The full values are in `before/catalog-sets.txt` and `after-final/catalog-sets.txt`.
+
+### What has to be prepared again
+
+- In the package, only test catalog sets list the shard. Their trees are compiled in the tests, and
+  no baked fixture asset depends on them.
+- `Benchmarks~` Phase 10 PerfCatalog lists the shard. Its runtime assets need preparing again in
+  the benchmark's own project.
+- Nothing in the parent project "Modules" was prepared or changed. Swarm Arena does not list the
+  shard.
+
+### Palette and demo tree
+
+- `palette-conditions-native-blackboard.png`, `palette-actions-native-blackboard.png`,
+  `palette-actions-native-flow.png`: the AIBT Graph node palette ("Create Node") opened in each Native
+  group. The popup was opened and navigated through the window's own code by an Editor script
+  (`scripts/OpenPalette.cs`, `scripts/NavigatePalette.cs`) and captured with `capture_window`
+  (screen method). The search field still shows the text `native` from the first capture
+  (`palette-search-native.png`). The listed group is not filtered by it.
+- `palette-tree.txt`: the palette tree as text from `NodeSearchProvider.BuildTree` with the
+  window's registry: 8 conditions in Native/Blackboard, 12 actions in Native/Blackboard and 4 in
+  Native/Flow, each with its type ID. Titles that a managed node shares get the type ID in brackets.
+- `demo-tree-graph.png`: `Tests/Fixtures/P11-002/native-library-demo.aibt.json`, built only from
+  `aibt.core.*` and `aibt.native.*` nodes (11 of the library nodes), opened in the AIBT Graph
+  (`Save-UnityWindow.ps1 -OpenAsset`). The graph shows it Valid. A reactive selector chooses between
+  a guarded chase (`float3-is-set` → memory sequence of `float3-distance`, `float3-within-distance`,
+  `set-bool`, `idle`) and a patrol (`increment-int`, inverter over `int-keys-at-least`, `copy-bool`,
+  `succeed`). The windows were closed afterwards. No layout or scratch file was left.
+
+### Runs
+
+All in `runs/`, through `Tools/Unity/Invoke-UnityTests.ps1` unless stated.
+
+| Run | Result |
+|---|---|
+| `01-library-integration-first` | NativeLibraryNodeTests 26/59 (test kit ambiguity and the host defect) |
+| `02-library-node-tests-after-kit-fix` | 28/59; all 31 failures are nodes with a handle at local field 1 or higher |
+| `03-regression-and-jobs-before-fix` | regression 1/5, JobsPolicyEquivalence 28/28, parity 0/2 |
+| `04-regression-RED-old-line` | regression 1/7 on the old line |
+| `05-after-fix-library-and-regression` | regression 7/7, node 56/59, simulation 1/1, parity 1/2 (wrong expectations in my tests) |
+| `06`, `07` | node 57/59, parity 1/2 → 2/2 |
+| `08-touched-classes-after-fix` | 19 classes, all green except the known McpToolDispatcher case (7/8): StandardNativeShard 3/3, StandardNodeCatalog 6/6, McpDocumentationGenerators 14/14, NativeLibraryBakeMessage 1/1, JobsPolicyEquivalence 28/28, TreeSimulation 13/13, HostEquivalence 4/4, Io 20/20, Action 46/46, Debug 15/15, GeneratedDispatchLifecycleProof 14/14, ExternalTreeBlackboardWrite 9/9, ProductionTreeWorldEffect 6/6, NativeTreeAgent 16/16, SubtreeNative 7/7, GeneratedCatalogDispatchCanary 2/2, regression 7/7, NativeLibrarySimulation 1/1 |
+| `09-guard-node-parity` | ReactiveGuard 9/9, node 55/55 (observer cases removed), parity 2/2 |
+| `10-codegen-contract-tests` | `AIBT.CodeGen.ContractTests` 6/6 (ABI v2 unchanged) |
+| `11-verify-static` | `Tools~/Verification/Verify-Static.ps1`: 7 schemas, 182 work items, passed |
+| `12-final-touched-classes` | after the docs, CHANGELOG and demo fixture: StandardNativeShard 3/3, StandardNodeCatalog 6/6, McpToolDispatcher 7/8 (the known case), McpDocumentationGenerators 14/14, NativeLibraryBakeMessage 1/1, NativeLibraryNode 55/55, NativeLibraryParity 2/2, NativeLibraryReactiveGuard 9/9, NativeLibrarySimulation 1/1, regression 7/7, SubtreeExpander 26/26 (scans every package tree, the demo fixture included), UserGuideSnippet 3/3 |
+| `13-verify-static-final` | `Verify-Static.ps1` again after the evidence and task card edits: 7 schemas, 182 work items, passed |
+
+The public API diff from `ccde239` is additive: no public member was removed (`git diff` outside
+`Tests/`).
+
+### Open questions for the owner
+
+1. **Observer re-evaluation on native hosts** (section above). This is existing behaviour, not
+   caused by P11-002, and it differs from `execution-semantics-v1.md:225` and
+   `update-phases-v1.md:8`. A possible follow-up work item (not created): implement the queue on
+   native hosts, or change the specification and the observer contract of native conditions.
+   Until then the docs say to guard with a reactive composite.
+2. **AIBT2043 on native writers.** The graph shows "Input key '…': no node in this tree writes it"
+   (Info) for keys that native nodes write through generated `bindings` (in the demo tree: `alert`,
+   `caught`, `distance`, `steps`). `TreeValidator.ValidateBlackboardWriteCoverage` counts only
+   manifest accesses and `BlackboardKey` parameters as writes, so this applies to the four P9-002
+   nodes too (`set-float`). It is only a note and blocks nothing. Not changed.
+
+### Not covered by stage 1
+
+- Stages 2–4 (timing, signal and random nodes, host seeding, user guide page, demo scene and clip).
+- A Player build and IL2CPP with the grown shard.
+- Performance of the new nodes.
+- A full nine-assembly test run (touched classes only, as briefed).
+
+### Observations (not changed)
+
+- `BehaviorTreeAgent.Restart(true)` on a tree still running `idle` faults with AIBT4001, even after
+  `Stop()`. Seen in the parity test, which therefore creates a fresh agent per step. The root cause
+  is not confirmed.
+- The managed agent faults with AIBT4002 on any tree with an observer block (fact (b) above).
