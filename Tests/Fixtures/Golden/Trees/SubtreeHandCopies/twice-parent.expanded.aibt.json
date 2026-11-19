@@ -1,0 +1,59 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "tree.golden.subtree.twice-parent",
+  "name": "Same Subtree Twice",
+  "root": "root",
+  "blackboard": {
+    "alert": {
+      "type": "Bool",
+      "default": false
+    },
+    "first:armed": {
+      "type": "Bool",
+      "description": "Private per-instance key.",
+      "default": false
+    },
+    "second:armed": {
+      "type": "Bool",
+      "description": "Private per-instance key.",
+      "default": false
+    }
+  },
+  "nodes": {
+    "first:check": {
+      "type": "aibt.test.alert-condition",
+      "typeVersion": 1,
+      "displayName": "First Check / check"
+    },
+    "first:main": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "displayName": "First Check / main",
+      "children": [
+        "first:check"
+      ]
+    },
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "first:main",
+        "second:main"
+      ]
+    },
+    "second:check": {
+      "type": "aibt.test.alert-condition",
+      "typeVersion": 1,
+      "displayName": "Second Check / check"
+    },
+    "second:main": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "displayName": "Second Check / main",
+      "children": [
+        "second:check"
+      ]
+    }
+  }
+}

@@ -4,6 +4,7 @@
   "references": [
     "AIBT.Runtime",
     "AIBT.Agents",
+    "AIBT.Authoring",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],

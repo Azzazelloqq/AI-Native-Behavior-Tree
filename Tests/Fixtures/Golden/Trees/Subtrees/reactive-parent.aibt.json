@@ -1,0 +1,43 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 3,
+  "treeId": "tree.golden.subtree.reactive-parent",
+  "name": "Subtree Under Reactive Selector",
+  "root": "root",
+  "blackboard": {
+    "alert": {
+      "type": "Bool",
+      "default": false
+    }
+  },
+  "nodes": {
+    "condition": {
+      "type": "aibt.test.alert-condition",
+      "typeVersion": 1,
+      "observer": {
+        "mode": "lower-priority",
+        "watchedKeys": [
+          "alert"
+        ]
+      }
+    },
+    "root": {
+      "type": "aibt.core.reactive-selector",
+      "typeVersion": 1,
+      "children": [
+        "condition",
+        "work"
+      ]
+    },
+    "work": {
+      "displayName": "Raise Work",
+      "subtree": {
+        "treeId": "tree.golden.subtree.alert-raise",
+        "interfaceVersion": 1,
+        "keys": {
+          "alert": "alert"
+        }
+      }
+    }
+  }
+}

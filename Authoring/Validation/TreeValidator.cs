@@ -35,6 +35,7 @@ namespace AIBT.Authoring
             var blackboard = ValidateBlackboard(document, options, registeredTypes, diagnostics);
             var graph = BuildGraph(document, options, diagnostics);
             ValidateGraph(document, graph, options, diagnostics);
+            ValidateSubtreeFeatures(document, graph, blackboard, options, diagnostics);
 
             if (registry == null)
             {
@@ -66,7 +67,8 @@ namespace AIBT.Authoring
             }
 
             if (document.FormatVersion != TreeDocument.CurrentFormatVersion
-                && document.FormatVersion != TreeDocument.LatestFormatVersion)
+                && document.FormatVersion != TreeDocument.LatestFormatVersion
+                && document.FormatVersion != TreeDocument.SubtreeFormatVersion)
             {
                 diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.UnsupportedFormatVersion,
                     "Tree format version is unsupported.", "/formatVersion", document.TreeId));
@@ -475,6 +477,13 @@ namespace AIBT.Authoring
             for (var index = 0; index < graph.OrderedNodes.Count; index++)
             {
                 var node = graph.OrderedNodes[index];
+                if (node.Subtree != null)
+                {
+                    // ADR-P11-001: a reference node has no type; its shape is AIBT2047's, and its
+                    // contents are validated in the subtree's own document by the expander.
+                    continue;
+                }
+
                 if (!registry.TryGet(node.TypeId, out var entry))
                 {
                     ValidateObserver(document, node, graph, blackboard, null, options, diagnostics);
@@ -901,13 +910,122 @@ namespace AIBT.Authoring
                 return true;
             }
 
-            if (document.FormatVersion != TreeDocument.LatestFormatVersion)
+            if (document.FormatVersion < TreeDocument.LatestFormatVersion)
             {
                 return false;
             }
 
             return scope == BlackboardScope.Agent && document.AgentContract != null
                 || scope == BlackboardScope.Shared && document.SharedContract != null;
+        }
+
+        /// <summary>
+        /// ADR-P11-001 §4.6, the single-document subtree rules: reference-node shape (AIBT2047),
+        /// key-map targets in this document (AIBT2048), no reference root (AIBT2049) and the
+        /// interface declaration (AIBT2050). Rules that need the referenced document belong to the
+        /// expander (AIBT3020-AIBT3028).
+        /// </summary>
+        private static void ValidateSubtreeFeatures(
+            TreeDocument document,
+            Graph graph,
+            IReadOnlyDictionary<string, BlackboardKeyDefinition> blackboard,
+            ValidationOptions options,
+            ICollection<Diagnostic> diagnostics)
+        {
+            var version3 = document.FormatVersion == TreeDocument.SubtreeFormatVersion;
+            for (var index = 0; index < graph.OrderedNodes.Count; index++)
+            {
+                var node = graph.OrderedNodes[index];
+                var subtree = node.Subtree;
+                if (subtree == null) continue;
+                var pointer = NodePointer(node.Id);
+                if (!version3)
+                {
+                    diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeReferenceShape,
+                        "Subtree references require tree format version 3.", pointer + "/subtree", document.TreeId, node.Id));
+                }
+
+                if (node.TypeId != null || node.TypeVersion != 0
+                    || node.Parameters != null && node.Parameters.Properties.Count > 0
+                    || node.Bindings != null || node.Observer != null || node.Children.Count > 0)
+                {
+                    diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeReferenceShape,
+                        "A subtree reference node has no type, typeVersion, parameters, bindings, observer or children.",
+                        pointer, document.TreeId, node.Id));
+                }
+
+                if (node.Id.Value.IndexOf(':') >= 0)
+                {
+                    diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeReferenceShape,
+                        "A subtree reference node ID cannot contain ':' (expanded IDs are '<reference>:<inner>').",
+                        pointer, document.TreeId, node.Id));
+                }
+
+                if (!subtree.TreeId.IsValid)
+                {
+                    diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeReferenceShape,
+                        "Subtree reference treeId is not a valid tree ID.", pointer + "/subtree/treeId", document.TreeId, node.Id));
+                }
+
+                if (subtree.InterfaceVersion < 1)
+                {
+                    diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeReferenceShape,
+                        "Subtree reference interfaceVersion must be at least 1.", pointer + "/subtree/interfaceVersion",
+                        document.TreeId, node.Id));
+                }
+
+                for (var keyIndex = 0; keyIndex < subtree.Keys.Count; keyIndex++)
+                {
+                    var binding = subtree.Keys[keyIndex];
+                    if (binding.IsConstant) continue;
+                    if (!blackboard.TryGetValue(binding.ParentKey, out var target) || target.Scope != BlackboardScope.Tree)
+                    {
+                        diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeKeyTarget,
+                            "Subtree key '" + binding.InterfaceKey + "' must name a declared Tree-scope key of this tree; '"
+                            + binding.ParentKey + "' is not one.",
+                            pointer + "/subtree/keys/" + Escape(binding.InterfaceKey), document.TreeId, node.Id));
+                    }
+                }
+            }
+
+            if (document.Root.IsValid && graph.Nodes.TryGetValue(document.Root, out var root) && root.Subtree != null)
+            {
+                diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeReferenceRoot,
+                    "The tree root cannot be a subtree reference; put the reference under a composite or decorator.",
+                    "/root", document.TreeId, root.Id));
+            }
+
+            var subtreeInterface = document.Interface;
+            if (subtreeInterface == null) return;
+            if (!version3)
+            {
+                diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeInterface,
+                    "A subtree interface requires tree format version 3.", "/interface", document.TreeId));
+            }
+
+            if (subtreeInterface.Version < 1)
+            {
+                diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeInterface,
+                    "Subtree interface version must be at least 1.", "/interface/version", document.TreeId));
+            }
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < subtreeInterface.Keys.Count; index++)
+            {
+                var key = subtreeInterface.Keys[index];
+                var keyPointer = "/interface/keys/" + index;
+                if (!seen.Add(key))
+                {
+                    diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeInterface,
+                        "Subtree interface key '" + key + "' is listed more than once.", keyPointer, document.TreeId));
+                }
+                else if (!blackboard.TryGetValue(key, out var declared) || declared.Scope != BlackboardScope.Tree)
+                {
+                    diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.SubtreeInterface,
+                        "Subtree interface key '" + key + "' must be a declared Tree-scope key of this tree.",
+                        keyPointer, document.TreeId));
+                }
+            }
         }
 
         private static void ValidateNodeCapabilities(

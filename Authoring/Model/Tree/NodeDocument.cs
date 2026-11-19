@@ -33,6 +33,27 @@ namespace AIBT.Authoring
             string description,
             TagSet tags,
             NodeBindingMap bindings)
+            : this(id, typeId, typeVersion, children, parameters, observer, displayName, description, tags, bindings, null)
+        {
+        }
+
+        /// <summary>
+        /// Full constructor including a tree format version 3 subtree reference (ADR-P11-001). A
+        /// well-formed reference node has no type, type version, parameters, bindings, observer or
+        /// children; the model keeps any combination so the validator can report it (AIBT2047).
+        /// </summary>
+        public NodeDocument(
+            NodeId id,
+            string typeId,
+            int typeVersion,
+            IEnumerable<NodeId> children,
+            SemanticObject parameters,
+            NodeObserver observer,
+            string displayName,
+            string description,
+            TagSet tags,
+            NodeBindingMap bindings,
+            SubtreeReference subtree)
         {
             Id = id;
             TypeId = typeId;
@@ -44,6 +65,19 @@ namespace AIBT.Authoring
             DisplayName = displayName;
             Description = description;
             Tags = tags;
+            Subtree = subtree;
+        }
+
+        /// <summary>Creates a subtree reference node (tree format version 3, ADR-P11-001).</summary>
+        public static NodeDocument CreateSubtreeReference(
+            NodeId id,
+            SubtreeReference subtree,
+            string displayName = null,
+            string description = null,
+            TagSet tags = null)
+        {
+            if (subtree == null) throw new ArgumentNullException(nameof(subtree));
+            return new NodeDocument(id, null, 0, null, SemanticObject.Empty, null, displayName, description, tags ?? TagSet.Empty, null, subtree);
         }
 
         public NodeId Id { get; }
@@ -66,19 +100,24 @@ namespace AIBT.Authoring
 
         public TagSet Tags { get; }
 
+        /// <summary>The subtree this node stands for; null for an ordinary node.</summary>
+        public SubtreeReference Subtree { get; }
+
+        public bool IsSubtreeReference => Subtree != null;
+
         public NodeDocument WithChildren(IEnumerable<NodeId> children)
         {
-            return new NodeDocument(Id, TypeId, TypeVersion, children, Parameters, Observer, DisplayName, Description, Tags, Bindings);
+            return new NodeDocument(Id, TypeId, TypeVersion, children, Parameters, Observer, DisplayName, Description, Tags, Bindings, Subtree);
         }
 
         public NodeDocument WithParameters(SemanticObject parameters)
         {
-            return new NodeDocument(Id, TypeId, TypeVersion, _children, parameters, Observer, DisplayName, Description, Tags, Bindings);
+            return new NodeDocument(Id, TypeId, TypeVersion, _children, parameters, Observer, DisplayName, Description, Tags, Bindings, Subtree);
         }
 
         public NodeDocument WithBindings(NodeBindingMap bindings)
         {
-            return new NodeDocument(Id, TypeId, TypeVersion, _children, Parameters, Observer, DisplayName, Description, Tags, bindings);
+            return new NodeDocument(Id, TypeId, TypeVersion, _children, Parameters, Observer, DisplayName, Description, Tags, bindings, Subtree);
         }
 
         public static NodeDocument CreateVersion2(
@@ -98,17 +137,22 @@ namespace AIBT.Authoring
 
         public NodeDocument WithObserver(NodeObserver observer)
         {
-            return new NodeDocument(Id, TypeId, TypeVersion, _children, Parameters, observer, DisplayName, Description, Tags, Bindings);
+            return new NodeDocument(Id, TypeId, TypeVersion, _children, Parameters, observer, DisplayName, Description, Tags, Bindings, Subtree);
         }
 
         public NodeDocument WithDetails(string displayName, string description, TagSet tags)
         {
-            return new NodeDocument(Id, TypeId, TypeVersion, _children, Parameters, Observer, displayName, description, tags, Bindings);
+            return new NodeDocument(Id, TypeId, TypeVersion, _children, Parameters, Observer, displayName, description, tags, Bindings, Subtree);
+        }
+
+        public NodeDocument WithSubtree(SubtreeReference subtree)
+        {
+            return new NodeDocument(Id, TypeId, TypeVersion, _children, Parameters, Observer, DisplayName, Description, Tags, Bindings, subtree);
         }
 
         public NodeDocument WithType(string typeId, int typeVersion)
         {
-            return new NodeDocument(Id, typeId, typeVersion, _children, Parameters, Observer, DisplayName, Description, Tags, Bindings);
+            return new NodeDocument(Id, typeId, typeVersion, _children, Parameters, Observer, DisplayName, Description, Tags, Bindings, Subtree);
         }
 
         public bool Equals(NodeDocument other)
@@ -128,6 +172,7 @@ namespace AIBT.Authoring
                 || !Equals(Bindings, other.Bindings)
                 || !Equals(Observer, other.Observer)
                 || !Equals(Tags, other.Tags)
+                || !Equals(Subtree, other.Subtree)
                 || _children.Count != other._children.Count)
             {
                 return false;

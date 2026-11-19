@@ -53,6 +53,25 @@ namespace AIBT.Authoring
         /// validates successfully; this is a review heads-up, never a blocking failure.
         /// </summary>
         public static readonly DiagnosticCode TreeScopeSlotNeverWritten = new DiagnosticCode("AIBT2043");
+
+        /// <summary>
+        /// P11-001 (ADR-P11-001 §4.6): a node with <c>subtree</c> also has a type, type version,
+        /// parameters, bindings, observer or children; its ID contains ':'; its tree ID is invalid;
+        /// its interface version is below 1; or the document is not format version 3.
+        /// </summary>
+        public static readonly DiagnosticCode SubtreeReferenceShape = new DiagnosticCode("AIBT2047");
+
+        /// <summary>P11-001: a string entry of <c>subtree.keys</c> does not name a declared Tree-scope key of the parent.</summary>
+        public static readonly DiagnosticCode SubtreeKeyTarget = new DiagnosticCode("AIBT2048");
+
+        /// <summary>P11-001: the tree root is a subtree reference.</summary>
+        public static readonly DiagnosticCode SubtreeReferenceRoot = new DiagnosticCode("AIBT2049");
+
+        /// <summary>
+        /// P11-001: an <c>interface</c> key is not a declared Tree-scope key or is listed twice, the
+        /// interface version is below 1, or the document is not format version 3.
+        /// </summary>
+        public static readonly DiagnosticCode SubtreeInterface = new DiagnosticCode("AIBT2050");
     }
 
     public static class TreeValidationDiagnosticCatalog
@@ -99,6 +118,10 @@ namespace AIBT.Authoring
             TreeValidationDiagnosticCodes.MultipleParents,
             TreeValidationDiagnosticCodes.MigrationApplied,
             TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten,
+            TreeValidationDiagnosticCodes.SubtreeReferenceShape,
+            TreeValidationDiagnosticCodes.SubtreeKeyTarget,
+            TreeValidationDiagnosticCodes.SubtreeReferenceRoot,
+            TreeValidationDiagnosticCodes.SubtreeInterface,
         };
 
         public static DiagnosticCatalog Catalog { get; } = CreateCatalog();

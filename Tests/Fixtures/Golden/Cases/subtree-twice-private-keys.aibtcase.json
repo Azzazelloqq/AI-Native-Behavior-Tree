@@ -1,0 +1,144 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "the same subtree used twice keeps its private keys apart",
+  "description": "ADR-P11-001: references 'first' and 'second' expand the same subtree; its private key 'armed' becomes first:armed and second:armed (separate slots), while interface key 'alert' is bound to the one parent key.",
+  "tree": "Trees/Subtrees/twice-parent.aibt.json",
+  "treeInstanceId": 12,
+  "rootSeed": 0,
+  "initialBlackboard": {
+    "first:armed": {
+      "type": "Bool",
+      "value": true
+    }
+  },
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "success",
+        "blackboard": [
+          {
+            "key": "alert",
+            "value": {
+              "type": "Bool",
+              "value": false
+            },
+            "version": 0
+          },
+          {
+            "key": "first:armed",
+            "value": {
+              "type": "Bool",
+              "value": true
+            },
+            "version": 0
+          },
+          {
+            "key": "second:armed",
+            "value": {
+              "type": "Bool",
+              "value": false
+            },
+            "version": 0
+          }
+        ],
+        "trace": [
+          {
+            "event": "update-started"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 0
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 1
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 2
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 2,
+            "status": "failure"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 2,
+            "exitReason": "failure"
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 1,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 1,
+            "exitReason": "success"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 3
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 4
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 4,
+            "status": "failure"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 4,
+            "exitReason": "failure"
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 3,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 3,
+            "exitReason": "success"
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 0,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 0,
+            "exitReason": "success"
+          },
+          {
+            "event": "update-completed"
+          }
+        ],
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-error-diagnostics"
+          },
+          {
+            "kind": "terminal-root-has-no-active-nodes"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "blackboard",
+    "subtree"
+  ]
+}

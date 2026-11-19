@@ -1,0 +1,43 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 3,
+  "treeId": "tree.golden.subtree.twice-parent",
+  "name": "Same Subtree Twice",
+  "root": "root",
+  "blackboard": {
+    "alert": {
+      "type": "Bool",
+      "default": false
+    }
+  },
+  "nodes": {
+    "first": {
+      "displayName": "First Check",
+      "subtree": {
+        "treeId": "tree.golden.subtree.inverted-check",
+        "interfaceVersion": 1,
+        "keys": {
+          "alert": "alert"
+        }
+      }
+    },
+    "root": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "first",
+        "second"
+      ]
+    },
+    "second": {
+      "displayName": "Second Check",
+      "subtree": {
+        "treeId": "tree.golden.subtree.inverted-check",
+        "interfaceVersion": 1,
+        "keys": {
+          "alert": "alert"
+        }
+      }
+    }
+  }
+}

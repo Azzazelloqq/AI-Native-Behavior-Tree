@@ -10,6 +10,13 @@ namespace AIBT.Authoring
         public const int CurrentFormatVersion = 1;
         public const int LatestFormatVersion = 2;
 
+        /// <summary>
+        /// Tree format version 3 (ADR-P11-001): version 2 plus the optional top-level
+        /// <see cref="Interface"/> and node-level <see cref="NodeDocument.Subtree"/>.
+        /// <see cref="LatestFormatVersion"/> keeps meaning version 2, which existing callers rely on.
+        /// </summary>
+        public const int SubtreeFormatVersion = 3;
+
         private List<BlackboardKeyDefinition> _blackboard;
         private ReadOnlyCollection<BlackboardKeyDefinition> _blackboardView;
         private List<NodeDocument> _nodes;
@@ -45,6 +52,26 @@ namespace AIBT.Authoring
             Revision revision,
             BlackboardScopeContract agentContract,
             BlackboardScopeContract sharedContract)
+            : this(format, formatVersion, treeId, name, root, nodes, blackboard, description, tags, metadata, revision, agentContract, sharedContract, null)
+        {
+        }
+
+        /// <summary>Full constructor including the tree format version 3 subtree interface (ADR-P11-001).</summary>
+        public TreeDocument(
+            string format,
+            int formatVersion,
+            TreeId treeId,
+            string name,
+            NodeId root,
+            IEnumerable<NodeDocument> nodes,
+            IEnumerable<BlackboardKeyDefinition> blackboard,
+            string description,
+            TagSet tags,
+            SemanticObject metadata,
+            Revision revision,
+            BlackboardScopeContract agentContract,
+            BlackboardScopeContract sharedContract,
+            SubtreeInterface subtreeInterface)
         {
             if (nodes == null)
             {
@@ -61,6 +88,7 @@ namespace AIBT.Authoring
             Metadata = metadata;
             AgentContract = agentContract;
             SharedContract = sharedContract;
+            Interface = subtreeInterface;
             _nodes = new List<NodeDocument>(nodes);
             _nodesView = _nodes.AsReadOnly();
             _blackboard = new List<BlackboardKeyDefinition>(blackboard ?? Array.Empty<BlackboardKeyDefinition>());
@@ -109,6 +137,21 @@ namespace AIBT.Authoring
         public BlackboardScopeContract SharedContract { get; private set; }
 
         public Revision Revision { get; private set; }
+
+        /// <summary>The blackboard interface callers connect when this tree is used as a subtree; null when absent.</summary>
+        public SubtreeInterface Interface { get; private set; }
+
+        /// <summary>True when the document has an <see cref="Interface"/> or at least one subtree reference node.</summary>
+        internal bool UsesSubtreeFeatures
+        {
+            get
+            {
+                if (Interface != null) return true;
+                for (var index = 0; index < _nodes.Count; index++)
+                    if (_nodes[index] != null && _nodes[index].Subtree != null) return true;
+                return false;
+            }
+        }
 
         public bool SetFormat(string format, int formatVersion)
         {
@@ -166,6 +209,17 @@ namespace AIBT.Authoring
             }
 
             Mutate(() => Root = root);
+            return true;
+        }
+
+        public bool SetInterface(SubtreeInterface subtreeInterface)
+        {
+            if (Equals(Interface, subtreeInterface))
+            {
+                return false;
+            }
+
+            Mutate(() => Interface = subtreeInterface);
             return true;
         }
 

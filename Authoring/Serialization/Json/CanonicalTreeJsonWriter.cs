@@ -37,7 +37,9 @@ namespace AIBT.Authoring
             if (!_semanticOnly && document.Description != null)
                 Property(ref first, "description", () => String(document.Description));
             Property(ref first, "root", () => String(document.Root.Value));
-            if (document.FormatVersion == TreeDocument.LatestFormatVersion
+            if (document.Interface != null)
+                Property(ref first, "interface", () => WriteInterface(document.Interface));
+            if (document.FormatVersion >= TreeDocument.LatestFormatVersion
                 && (document.AgentContract != null || document.SharedContract != null))
                 Property(ref first, "blackboardContracts", () => WriteScopeContracts(document));
             if (document.Blackboard.Count > 0)
@@ -66,7 +68,7 @@ namespace AIBT.Authoring
             BeginObject();
             var first = true;
             Property(ref first, "type", () => String(key.Type.CanonicalTypeId));
-            if (_formatVersion == TreeDocument.LatestFormatVersion
+            if (_formatVersion >= TreeDocument.LatestFormatVersion
                 && key.Scope != BlackboardScope.Tree && key.Type.RuntimeDescriptor.Version != 0
                 && key.Type.IsValid)
                 Property(ref first, "typeVersion", () => Integer(key.Type.RuntimeDescriptor.Version));
@@ -98,12 +100,17 @@ namespace AIBT.Authoring
         {
             BeginObject();
             var first = true;
-            Property(ref first, "type", () => String(node.TypeId));
-            Property(ref first, "typeVersion", () => Integer(node.TypeVersion));
+            if (node.Subtree == null)
+            {
+                Property(ref first, "type", () => String(node.TypeId));
+                Property(ref first, "typeVersion", () => Integer(node.TypeVersion));
+            }
             if (!_semanticOnly && node.DisplayName != null)
                 Property(ref first, "displayName", () => String(node.DisplayName));
             if (!_semanticOnly && node.Description != null)
                 Property(ref first, "description", () => String(node.Description));
+            if (node.Subtree != null)
+                Property(ref first, "subtree", () => WriteSubtreeReference(node.Subtree));
             if (node.Parameters.Properties.Count > 0)
                 Property(ref first, "parameters", () => WriteSemanticObject(node.Parameters));
             if (node.Bindings != null)
@@ -114,6 +121,50 @@ namespace AIBT.Authoring
                 Property(ref first, "children", () => WriteIds(node.Children));
             if (!_semanticOnly && node.Tags.Values.Count > 0)
                 Property(ref first, "tags", () => WriteSortedStrings(node.Tags.Values));
+            EndObject(first);
+        }
+
+        private void WriteInterface(SubtreeInterface value)
+        {
+            BeginObject();
+            var first = true;
+            Property(ref first, "version", () => Integer(value.Version));
+            Property(ref first, "keys", () => WriteSortedStrings(value.Keys));
+            EndObject(first);
+        }
+
+        private void WriteSubtreeReference(SubtreeReference value)
+        {
+            BeginObject();
+            var first = true;
+            Property(ref first, "treeId", () => String(value.TreeId.Value));
+            Property(ref first, "interfaceVersion", () => Integer(value.InterfaceVersion));
+            Property(ref first, "keys", () => WriteSubtreeKeys(value.Keys));
+            EndObject(first);
+        }
+
+        private void WriteSubtreeKeys(IReadOnlyList<SubtreeKeyBinding> keys)
+        {
+            var ordered = new List<SubtreeKeyBinding>(keys);
+            ordered.Sort((left, right) => Utf8OrdinalComparer.Instance.Compare(left.InterfaceKey, right.InterfaceKey));
+            BeginObject();
+            var first = true;
+            foreach (var binding in ordered)
+            {
+                Property(ref first, binding.InterfaceKey, () =>
+                {
+                    if (!binding.IsConstant)
+                    {
+                        String(binding.ParentKey);
+                        return;
+                    }
+
+                    BeginObject();
+                    var constantFirst = true;
+                    Property(ref constantFirst, "value", () => WriteSemanticValue(binding.Constant));
+                    EndObject(constantFirst);
+                });
+            }
             EndObject(first);
         }
 

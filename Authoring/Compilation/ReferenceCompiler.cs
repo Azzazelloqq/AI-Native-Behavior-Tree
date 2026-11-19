@@ -12,6 +12,18 @@ namespace AIBT.Authoring
             TreeDocument document,
             NodeRegistry registry,
             ReferenceCompilerOptions options)
+            => Compile(document, registry, options, (ISubtreeResolver)null);
+
+        /// <summary>
+        /// Compiles <paramref name="document"/>, first expanding its subtree references through
+        /// <paramref name="resolver"/> (ADR-P11-001). A document with no reference node and no
+        /// interface compiles exactly as through the overload without a resolver.
+        /// </summary>
+        public static ReferenceCompilationResult Compile(
+            TreeDocument document,
+            NodeRegistry registry,
+            ReferenceCompilerOptions options,
+            ISubtreeResolver resolver)
         {
             var diagnostics = new List<Diagnostic>();
             ValidateInputs(document, registry, options, diagnostics);
@@ -20,6 +32,89 @@ namespace AIBT.Authoring
                 return Failure(diagnostics);
             }
 
+            if (!SubtreeExpander.RequiresExpansion(document))
+            {
+                return CompileValidatedInputs(document, registry, options, null, diagnostics);
+            }
+
+            var expansion = SubtreeExpander.Expand(
+                document,
+                resolver,
+                registry,
+                options.Policy.CreateValidationOptions(options.SourceId));
+            return CompileExpansion(expansion, registry, options, diagnostics);
+        }
+
+        /// <summary>
+        /// Compiles the result of <see cref="SubtreeExpander.Expand"/>: the expanded document, with the
+        /// debug-map source path of every node that came from a subtree set to that subtree's source ID.
+        /// A failed expansion returns its diagnostics.
+        /// </summary>
+        public static ReferenceCompilationResult Compile(
+            SubtreeExpansion expansion,
+            NodeRegistry registry,
+            ReferenceCompilerOptions options)
+        {
+            var diagnostics = new List<Diagnostic>();
+            if (expansion == null)
+            {
+                diagnostics.Add(ReferenceCompilerDiagnostics.Create(
+                    ReferenceCompilerDiagnosticCodes.InvalidOptions,
+                    "A subtree expansion is required."));
+                return Failure(diagnostics);
+            }
+
+            ValidateInputs(expansion.SourceDocument, registry, options, diagnostics);
+            if (ContainsError(diagnostics))
+            {
+                return Failure(diagnostics);
+            }
+
+            return CompileExpansion(expansion, registry, options, diagnostics);
+        }
+
+        private static ReferenceCompilationResult CompileExpansion(
+            SubtreeExpansion expansion,
+            NodeRegistry registry,
+            ReferenceCompilerOptions options,
+            List<Diagnostic> diagnostics)
+        {
+            if (!expansion.Success)
+            {
+                AddRange(diagnostics, expansion.Diagnostics);
+                return Failure(diagnostics);
+            }
+
+            foreach (var pair in expansion.NodeSourceIds)
+            {
+                if (IsCanonicalLogicalSourceId(pair.Value))
+                {
+                    continue;
+                }
+
+                diagnostics.Add(ReferenceCompilerDiagnostics.Create(
+                    ReferenceCompilerDiagnosticCodes.InvalidOptions,
+                    "Subtree source ID '" + pair.Value + "' of node '" + pair.Key.Value
+                    + "' must be a non-empty relative logical path using forward slashes, no ':' and no '.' or '..' segments.",
+                    SafeDocumentId(options.SourceId),
+                    treeId: expansion.SourceDocument.TreeId));
+            }
+
+            if (ContainsError(diagnostics))
+            {
+                return Failure(diagnostics);
+            }
+
+            return CompileValidatedInputs(expansion.Document, registry, options, expansion.NodeSourceIds, diagnostics);
+        }
+
+        private static ReferenceCompilationResult CompileValidatedInputs(
+            TreeDocument document,
+            NodeRegistry registry,
+            ReferenceCompilerOptions options,
+            IReadOnlyDictionary<NodeId, string> nodeSourceIds,
+            List<Diagnostic> diagnostics)
+        {
             AddRange(diagnostics, TreeValidator.Validate(
                 document,
                 registry,
@@ -53,7 +148,7 @@ namespace AIBT.Authoring
 
             try
             {
-                var builder = new Builder(document, registry, options, ToCompiledHash(serialization.SemanticHash), registryHash);
+                var builder = new Builder(document, registry, options, ToCompiledHash(serialization.SemanticHash), registryHash, nodeSourceIds);
                 var program = builder.Build();
                 return new ReferenceCompilationResult(program, new DiagnosticCollection(diagnostics));
             }
@@ -219,14 +314,17 @@ namespace AIBT.Authoring
             private readonly List<NodeDocument> _nodes;
             private readonly Dictionary<NodeId, uint> _nodeIndices;
             private readonly Dictionary<NodeId, NodeRegistryEntry> _entries;
+            private readonly IReadOnlyDictionary<NodeId, string> _nodeSourceIds;
 
             internal Builder(
                 TreeDocument document,
                 NodeRegistry registry,
                 ReferenceCompilerOptions options,
                 CompiledHash semanticHash,
-                CompiledHash registryHash)
+                CompiledHash registryHash,
+                IReadOnlyDictionary<NodeId, string> nodeSourceIds = null)
             {
+                _nodeSourceIds = nodeSourceIds;
                 _document = document;
                 _registry = registry;
                 _options = options;
@@ -672,7 +770,9 @@ namespace AIBT.Authoring
                     result.Add(new CompiledDebugMapEntry(
                         (uint)index,
                         node.Id,
-                        _options.SourceId,
+                        _nodeSourceIds != null && _nodeSourceIds.TryGetValue(node.Id, out var subtreeSourceId)
+                            ? subtreeSourceId
+                            : _options.SourceId,
                         _options.StripDisplayMetadata ? null : node.DisplayName));
                 }
 

@@ -50,6 +50,16 @@ namespace AIBT.Agents
             ManagedNodeSet nodes,
             out ManagedTreeProgram program,
             out DiagnosticCollection diagnostics)
+            => TryCompile(json, sourceId, nodes, null, out program, out diagnostics);
+
+        /// <param name="resolver">Resolves subtree references (ADR-P11-001); null when the tree has none.</param>
+        internal static bool TryCompile(
+            string json,
+            string sourceId,
+            ManagedNodeSet nodes,
+            ISubtreeResolver resolver,
+            out ManagedTreeProgram program,
+            out DiagnosticCollection diagnostics)
         {
             program = null;
             if (string.IsNullOrEmpty(json))
@@ -65,7 +75,7 @@ namespace AIBT.Agents
                 return false;
             }
 
-            return TryCompile(read.Document, sourceId, nodes, out program, out diagnostics);
+            return TryCompile(read.Document, sourceId, nodes, resolver, out program, out diagnostics);
         }
 
         internal static bool TryCompile(
@@ -74,11 +84,93 @@ namespace AIBT.Agents
             ManagedNodeSet nodes,
             out ManagedTreeProgram program,
             out DiagnosticCollection diagnostics)
+            => TryCompile(document, sourceId, nodes, null, out program, out diagnostics);
+
+        /// <summary>
+        /// Compiles <paramref name="document"/>, expanding its subtree references through
+        /// <paramref name="resolver"/>; <see cref="Document"/> of the result is the expanded document
+        /// (the same object when the tree has no reference and no interface).
+        /// </summary>
+        internal static bool TryCompile(
+            TreeDocument document,
+            string sourceId,
+            ManagedNodeSet nodes,
+            ISubtreeResolver resolver,
+            out ManagedTreeProgram program,
+            out DiagnosticCollection diagnostics)
         {
             program = null;
             if (document == null) throw new ArgumentNullException(nameof(document));
             nodes = nodes ?? ManagedNodeCatalog.Default;
-            var compilation = ReferenceCompiler.Compile(document, nodes.Registry, CreateOptions(sourceId));
+            var options = CreateOptions(sourceId);
+            ReferenceCompilationResult compilation;
+            if (SubtreeExpander.RequiresExpansion(document))
+            {
+                var expansion = SubtreeExpander.Expand(
+                    document,
+                    resolver,
+                    nodes.Registry,
+                    options.Policy.CreateValidationOptions(options.SourceId));
+                compilation = ReferenceCompiler.Compile(expansion, nodes.Registry, options);
+                if (compilation.Success) document = expansion.Document;
+            }
+            else
+            {
+                compilation = ReferenceCompiler.Compile(document, nodes.Registry, options);
+            }
+
+            return Bind(document, compilation, nodes, out program, out diagnostics);
+        }
+
+        /// <summary>
+        /// Compiles content that was expanded ahead of time (an importer stores the expanded
+        /// canonical JSON, because subtree files are not available in a Player):
+        /// <paramref name="subtreeNodeSourceIds"/> gives the subtree source ID of every node that came
+        /// from a subtree, so the debug map is the same as when the tree is expanded here.
+        /// </summary>
+        internal static bool TryCompileExpanded(
+            string json,
+            string sourceId,
+            ManagedNodeSet nodes,
+            IDictionary<NodeId, string> subtreeNodeSourceIds,
+            out ManagedTreeProgram program,
+            out DiagnosticCollection diagnostics)
+        {
+            program = null;
+            if (string.IsNullOrEmpty(json))
+            {
+                diagnostics = Failure("The tree source is empty.");
+                return false;
+            }
+
+            var read = CanonicalTreeJson.Parse(Encoding.UTF8.GetBytes(json), NormalizeSourceId(sourceId));
+            if (read.Document == null || HasError(read.Diagnostics))
+            {
+                diagnostics = read.Diagnostics;
+                return false;
+            }
+
+            var document = read.Document;
+            if (SubtreeExpander.RequiresExpansion(document))
+            {
+                diagnostics = Failure("Expanded tree content still contains a subtree reference or an interface.");
+                return false;
+            }
+
+            nodes = nodes ?? ManagedNodeCatalog.Default;
+            var expansion = new SubtreeExpansion(document, document, subtreeNodeSourceIds, null);
+            var compilation = ReferenceCompiler.Compile(expansion, nodes.Registry, CreateOptions(sourceId));
+            return Bind(document, compilation, nodes, out program, out diagnostics);
+        }
+
+        private static bool Bind(
+            TreeDocument document,
+            ReferenceCompilationResult compilation,
+            ManagedNodeSet nodes,
+            out ManagedTreeProgram program,
+            out DiagnosticCollection diagnostics)
+        {
+            program = null;
             diagnostics = compilation.Diagnostics;
             if (!compilation.Success) return false;
 

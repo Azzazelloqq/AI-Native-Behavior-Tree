@@ -154,17 +154,23 @@ namespace AIBT.Authoring
 
         private static TreeDocument ReadDocument(JObject root, string documentId, RegisteredBlackboardTypeCatalog registeredTypes)
         {
+            var declaredVersion = root["formatVersion"] as JValue;
+            var subtreeVersion = declaredVersion != null && declaredVersion.Type == JTokenType.Integer
+                && Equals(declaredVersion.Value, (long)TreeDocument.SubtreeFormatVersion);
             RequireProperties(root, "", documentId,
                 new[] { "format", "formatVersion", "treeId", "name", "root", "nodes" },
-                new[] { "description", "blackboardContracts", "blackboard", "tags", "metadata" });
+                subtreeVersion
+                    ? new[] { "description", "interface", "blackboardContracts", "blackboard", "tags", "metadata" }
+                    : new[] { "description", "blackboardContracts", "blackboard", "tags", "metadata" });
 
             var format = StringValue(root["format"], "/format", documentId, false);
             if (!string.Equals(format, TreeDocument.CurrentFormat, StringComparison.Ordinal))
                 throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "The format must be 'aibt.tree'.", root["format"], documentId, "/format");
 
             var version = Int32Value(root["formatVersion"], "/formatVersion", documentId);
-            if (version != TreeDocument.CurrentFormatVersion && version != TreeDocument.LatestFormatVersion)
-                throw Error(TreeJsonDiagnosticCodes.UnsupportedVersion, "Only tree format versions 1 and 2 are supported.", root["formatVersion"], documentId, "/formatVersion");
+            if (version != TreeDocument.CurrentFormatVersion && version != TreeDocument.LatestFormatVersion
+                && version != TreeDocument.SubtreeFormatVersion)
+                throw Error(TreeJsonDiagnosticCodes.UnsupportedVersion, "Only tree format versions 1, 2 and 3 are supported.", root["formatVersion"], documentId, "/formatVersion");
             if (version == TreeDocument.CurrentFormatVersion && root["blackboardContracts"] != null)
                 throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "blackboardContracts requires tree format version 2.", root["blackboardContracts"], documentId, "/blackboardContracts");
 
@@ -177,7 +183,8 @@ namespace AIBT.Authoring
             var contracts = ReadScopeContracts(root["blackboardContracts"], version, documentId);
             var blackboard = ReadBlackboard(root["blackboard"], version, documentId, registeredTypes);
             var nodes = ReadNodes(root["nodes"], version, documentId);
-            if (version == TreeDocument.LatestFormatVersion)
+            var subtreeInterface = root["interface"] == null ? null : ReadInterface(root["interface"], documentId);
+            if (version >= TreeDocument.LatestFormatVersion)
                 ValidateScopeContractPresence(blackboard, contracts.Agent, contracts.Shared, root["blackboardContracts"], documentId);
             var tags = ReadTags(root["tags"], "/tags", documentId);
             var metadata = root["metadata"] == null
@@ -197,7 +204,8 @@ namespace AIBT.Authoring
                 metadata,
                 default,
                 contracts.Agent,
-                contracts.Shared);
+                contracts.Shared,
+                subtreeInterface);
         }
 
         private static List<BlackboardKeyDefinition> ReadBlackboard(JToken token, int formatVersion, string documentId, RegisteredBlackboardTypeCatalog registeredTypes)
@@ -211,7 +219,7 @@ namespace AIBT.Authoring
                     throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Blackboard map keys must be valid AIBT IDs.", property.Value, documentId, "/blackboard/" + Escape(property.Name));
                 var pointer = "/blackboard/" + Escape(property.Name);
                 var entry = RequireObject(property.Value, pointer, documentId);
-                RequireProperties(entry, pointer, documentId, new[] { "type" }, formatVersion == 2
+                RequireProperties(entry, pointer, documentId, new[] { "type" }, formatVersion >= 2
                     ? new[] { "typeVersion", "enumContract", "scope", "reduction", "description", "default" }
                     : new[] { "enumContract", "scope", "description", "default" });
                 var typeName = StringValue(entry["type"], pointer + "/type", documentId, false);
@@ -253,7 +261,7 @@ namespace AIBT.Authoring
                             "Registered blackboard type/version is absent from the accepted catalog.", entry["type"], documentId, pointer + "/type");
                     type = BlackboardTypeReference.Registered(typeName, registered.Descriptor);
                 }
-                if (formatVersion == 2 && scope != BlackboardScope.Tree)
+                if (formatVersion >= 2 && scope != BlackboardScope.Tree)
                 {
                     if (entry["typeVersion"] == null || entry["default"] == null)
                         throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Agent/Shared entries require typeVersion, scope, and default.", entry, documentId, pointer);
@@ -274,7 +282,7 @@ namespace AIBT.Authoring
                     }
                     else defaultValue = ReadDefault(entry["default"], type.ValueType, pointer + "/default", documentId);
                 }
-                var reduction = formatVersion == 2
+                var reduction = formatVersion >= 2
                     ? ReadReduction(entry["reduction"], scope, pointer + "/reduction", documentId)
                     : BlackboardReductionKind.None;
                 result.Add(new BlackboardKeyDefinition(
@@ -301,9 +309,15 @@ namespace AIBT.Authoring
                 if (!IsId(property.Name))
                     throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Node map keys must be valid AIBT IDs.", property.Value, documentId, pointer);
                 var node = RequireObject(property.Value, pointer, documentId);
+                if (formatVersion == TreeDocument.SubtreeFormatVersion && node["subtree"] != null)
+                {
+                    result.Add(ReadSubtreeReferenceNode(node, property.Name, pointer, documentId));
+                    continue;
+                }
+
                 RequireProperties(node, pointer, documentId,
                     new[] { "type", "typeVersion" },
-                    formatVersion == 2
+                    formatVersion >= 2
                         ? new[] { "displayName", "description", "parameters", "bindings", "observer", "children", "tags" }
                         : new[] { "displayName", "description", "parameters", "observer", "children", "tags" });
                 var type = StringValue(node["type"], pointer + "/type", documentId, false);
@@ -317,7 +331,7 @@ namespace AIBT.Authoring
                     : ReadSemanticObject(RequireObject(node["parameters"], pointer + "/parameters", documentId), pointer + "/parameters", documentId);
                 var observer = node["observer"] == null ? null : ReadObserver(node["observer"], pointer + "/observer", documentId);
                 var children = ReadIds(node["children"], pointer + "/children", documentId, false);
-                var bindings = formatVersion == 2 && node["bindings"] != null
+                var bindings = formatVersion >= 2 && node["bindings"] != null
                     ? ReadBindings(node["bindings"], pointer + "/bindings", documentId)
                     : null;
                 result.Add(new NodeDocument(
@@ -328,6 +342,61 @@ namespace AIBT.Authoring
                     bindings));
             }
             return result;
+        }
+
+        // ADR-P11-001: a reference node carries `subtree` and none of type, typeVersion,
+        // parameters, bindings, observer or children (schema shape, AIBT1004).
+        private static NodeDocument ReadSubtreeReferenceNode(JObject node, string id, string pointer, string documentId)
+        {
+            RequireProperties(node, pointer, documentId,
+                new[] { "subtree" },
+                new[] { "displayName", "description", "tags" });
+            return new NodeDocument(
+                new NodeId(id), null, 0, null, SemanticObject.Empty, null,
+                OptionalString(node["displayName"], pointer + "/displayName", documentId),
+                OptionalString(node["description"], pointer + "/description", documentId),
+                ReadTags(node["tags"], pointer + "/tags", documentId),
+                null,
+                ReadSubtreeReference(node["subtree"], pointer + "/subtree", documentId));
+        }
+
+        private static SubtreeReference ReadSubtreeReference(JToken token, string pointer, string documentId)
+        {
+            var value = RequireObject(token, pointer, documentId);
+            RequireProperties(value, pointer, documentId, new[] { "treeId", "interfaceVersion", "keys" }, Array.Empty<string>());
+            var treeId = IdValue(value["treeId"], pointer + "/treeId", documentId);
+            var interfaceVersion = UInt32Value(value["interfaceVersion"], pointer + "/interfaceVersion", documentId);
+            var keys = RequireObject(value["keys"], pointer + "/keys", documentId);
+            var bindings = new List<SubtreeKeyBinding>();
+            foreach (var property in keys.Properties())
+            {
+                var keyPointer = pointer + "/keys/" + Escape(property.Name);
+                if (!IsId(property.Name))
+                    throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Subtree key map keys must be valid AIBT IDs.", property.Value, documentId, keyPointer);
+                if (property.Value.Type == JTokenType.String)
+                {
+                    bindings.Add(SubtreeKeyBinding.ToParentKey(property.Name, IdValue(property.Value, keyPointer, documentId)));
+                    continue;
+                }
+
+                var constant = RequireObject(property.Value, keyPointer, documentId);
+                RequireProperties(constant, keyPointer, documentId, new[] { "value" }, Array.Empty<string>());
+                bindings.Add(SubtreeKeyBinding.ToConstant(property.Name, ReadSemanticValue(constant["value"], keyPointer + "/value", documentId)));
+            }
+
+            return new SubtreeReference(new TreeId(treeId), interfaceVersion, bindings);
+        }
+
+        private static SubtreeInterface ReadInterface(JToken token, string documentId)
+        {
+            var value = RequireObject(token, "/interface", documentId);
+            RequireProperties(value, "/interface", documentId, new[] { "version", "keys" }, Array.Empty<string>());
+            var version = UInt32Value(value["version"], "/interface/version", documentId);
+            var keys = ReadStringArray(value["keys"], "/interface/keys", documentId, false, true);
+            for (var index = 0; index < keys.Count; index++)
+                if (!IsId(keys[index]))
+                    throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Interface keys must be valid AIBT IDs.", value["keys"], documentId, "/interface/keys/" + index);
+            return new SubtreeInterface(version, keys);
         }
 
         private static NodeObserver ReadObserver(JToken token, string pointer, string documentId)
@@ -344,7 +413,7 @@ namespace AIBT.Authoring
         private static ScopeContracts ReadScopeContracts(JToken token, int formatVersion, string documentId)
         {
             if (token == null) return new ScopeContracts(null, null);
-            if (formatVersion != TreeDocument.LatestFormatVersion)
+            if (formatVersion < TreeDocument.LatestFormatVersion)
                 throw Error(TreeJsonDiagnosticCodes.SchemaViolation, "Scope contracts require tree format version 2.", token, documentId, "/blackboardContracts");
             var value = RequireObject(token, "/blackboardContracts", documentId);
             RequireProperties(value, "/blackboardContracts", documentId, Array.Empty<string>(), new[] { "agent", "shared" });
@@ -512,9 +581,19 @@ namespace AIBT.Authoring
             var diagnostics = new List<Diagnostic>();
             void Add(string message, string pointer = null, DiagnosticCode? code = null) => diagnostics.Add(TreeJsonDiagnostics.Create(code ?? TreeJsonDiagnosticCodes.UnrepresentableDocument, message, pointer: pointer));
             if (document.Format != TreeDocument.CurrentFormat) Add("Tree format must be 'aibt.tree'.", "/format");
-            if (document.FormatVersion != TreeDocument.CurrentFormatVersion && document.FormatVersion != TreeDocument.LatestFormatVersion)
-                Add("Only tree format versions 1 and 2 can be serialized.", "/formatVersion", TreeJsonDiagnosticCodes.UnsupportedVersion);
-            var version2 = document.FormatVersion == TreeDocument.LatestFormatVersion;
+            if (document.FormatVersion != TreeDocument.CurrentFormatVersion && document.FormatVersion != TreeDocument.LatestFormatVersion
+                && document.FormatVersion != TreeDocument.SubtreeFormatVersion)
+                Add("Only tree format versions 1, 2 and 3 can be serialized.", "/formatVersion", TreeJsonDiagnosticCodes.UnsupportedVersion);
+            var version2 = document.FormatVersion >= TreeDocument.LatestFormatVersion;
+            var version3 = document.FormatVersion == TreeDocument.SubtreeFormatVersion;
+            if (document.Interface != null)
+            {
+                if (!version3) Add("A subtree interface requires tree format version 3.", "/interface");
+                if (document.Interface.Version == 0) Add("Subtree interface version must be at least 1.", "/interface/version");
+                var interfaceKeys = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var key in document.Interface.Keys)
+                    if (!IsId(key) || !interfaceKeys.Add(key)) Add("Subtree interface keys must be unique valid IDs.", "/interface/keys");
+            }
             if (!document.TreeId.IsValid) Add("Tree ID is invalid.", "/treeId");
             if (string.IsNullOrEmpty(document.Name)) Add("Tree name is required.", "/name");
             if (!document.Root.IsValid) Add("Root node ID is invalid.", "/root");
@@ -570,6 +649,15 @@ namespace AIBT.Authoring
                 var pointer = "/nodes/" + Escape(node?.Id.Value ?? string.Empty);
                 if (node == null) { Add("Nodes cannot be null.", "/nodes"); continue; }
                 if (!node.Id.IsValid || !nodeIds.Add(node.Id.Value)) Add("Node IDs must be valid and unique.", pointer);
+                if (node.Subtree != null)
+                {
+                    ValidateRepresentableReference(node, pointer, version3, Add);
+                    ValidateText(node.DisplayName, pointer + "/displayName", Add);
+                    ValidateText(node.Description, pointer + "/description", Add);
+                    ValidateTags(node.Tags, pointer + "/tags", Add);
+                    continue;
+                }
+
                 if (string.IsNullOrEmpty(node.TypeId)) Add("Node type is required.", pointer + "/type");
                 if (node.TypeVersion < 1) Add("Node typeVersion must be at least 1.", pointer + "/typeVersion");
                 ValidateText(node.TypeId, pointer + "/type", Add);
@@ -589,6 +677,88 @@ namespace AIBT.Authoring
                 }
             }
             return new DiagnosticCollection(diagnostics);
+        }
+
+        private static void ValidateRepresentableReference(NodeDocument node, string pointer, bool version3, Action<string, string, DiagnosticCode?> add)
+        {
+            var subtree = node.Subtree;
+            if (!version3) add("A subtree reference requires tree format version 3.", pointer + "/subtree", null);
+            if (node.TypeId != null || node.TypeVersion != 0 || (node.Parameters != null && node.Parameters.Properties.Count > 0)
+                || node.Bindings != null || node.Observer != null || node.Children.Count > 0)
+                add("A subtree reference node has no type, typeVersion, parameters, bindings, observer or children.", pointer, null);
+            if (!subtree.TreeId.IsValid) add("Subtree reference treeId is invalid.", pointer + "/subtree/treeId", null);
+            if (subtree.InterfaceVersion == 0) add("Subtree reference interfaceVersion must be at least 1.", pointer + "/subtree/interfaceVersion", null);
+            foreach (var binding in subtree.Keys)
+            {
+                var keyPointer = pointer + "/subtree/keys/" + Escape(binding.InterfaceKey);
+                if (!IsId(binding.InterfaceKey)) add("Subtree key map keys must be valid IDs.", keyPointer, null);
+                if (binding.IsConstant) ValidateSemanticValue(binding.Constant, keyPointer + "/value", add);
+                else if (!IsId(binding.ParentKey)) add("Subtree key bindings must name a valid blackboard key ID.", keyPointer, null);
+            }
+        }
+
+        /// <summary>
+        /// ADR-P11-001 §4.3: converts a reference's constant <c>{ "value": v }</c> into a canonical
+        /// typed default of the interface key's built-in type, with the same rules as a blackboard
+        /// <c>default</c>. Registered types have no constant form in this version.
+        /// </summary>
+        internal static bool TryConvertConstant(
+            SemanticValue value,
+            BlackboardTypeReference type,
+            out BlackboardDefaultValue result,
+            out string message)
+        {
+            result = null;
+            if (value == null) throw new ArgumentNullException(nameof(value));
+            if (!type.IsValid || type.IsRegistered)
+            {
+                message = "Constants are supported only for built-in blackboard types.";
+                return false;
+            }
+
+            try
+            {
+                result = ReadDefault(ToToken(value), type.ValueType, "/value", null);
+                if (type.ValueType == BlackboardValueType.Enum32
+                    && !string.Equals(result.EnumContract, type.EnumContract, StringComparison.Ordinal))
+                {
+                    result = null;
+                    message = "Enum32 constant contract does not match the interface key's enum contract.";
+                    return false;
+                }
+
+                message = null;
+                return true;
+            }
+            catch (TreeJsonReadException exception)
+            {
+                message = exception.Diagnostic.Message;
+                return false;
+            }
+        }
+
+        private static JToken ToToken(SemanticValue value)
+        {
+            switch (value.Kind)
+            {
+                case SemanticValueKind.Null: return JValue.CreateNull();
+                case SemanticValueKind.Boolean: value.TryGetBoolean(out var boolean); return new JValue(boolean);
+                case SemanticValueKind.SignedInteger: value.TryGetInt64(out var signed); return new JValue(signed);
+                case SemanticValueKind.UnsignedInteger: value.TryGetUInt64(out var unsigned); return new JValue(unsigned);
+                case SemanticValueKind.Number: value.TryGetNumber(out var number); return new JValue(number);
+                case SemanticValueKind.String: value.TryGetString(out var text); return new JValue(text);
+                case SemanticValueKind.Array:
+                    value.TryGetArray(out var items);
+                    var array = new JArray();
+                    for (var index = 0; index < items.Count; index++) array.Add(ToToken(items[index]));
+                    return array;
+                case SemanticValueKind.Object:
+                    value.TryGetObject(out var semanticObject);
+                    var result = new JObject();
+                    foreach (var property in semanticObject.Properties) result.Add(property.Name, ToToken(property.Value));
+                    return result;
+                default: throw new InvalidOperationException("Unknown semantic value kind.");
+            }
         }
 
         private static bool BytesEqual(byte[] left, byte[] right)

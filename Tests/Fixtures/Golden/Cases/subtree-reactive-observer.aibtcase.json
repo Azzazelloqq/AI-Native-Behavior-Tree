@@ -1,0 +1,143 @@
+{
+  "format": "aibt.case",
+  "formatVersion": 1,
+  "name": "subtree under a reactive selector is aborted by an observer above the reference",
+  "description": "ADR-P11-001: reference 'work' expands to work:main -> work:raise; the lower-priority observer on 'condition' (owned by the parent tree) aborts the expanded branch when the subtree writes the bound key.",
+  "tree": "Trees/Subtrees/reactive-parent.aibt.json",
+  "treeInstanceId": 11,
+  "rootSeed": 0,
+  "steps": [
+    {
+      "operation": "update",
+      "updateId": 1,
+      "snapshotRevision": 1,
+      "timeMicroseconds": 0,
+      "expect": {
+        "progress": "completed",
+        "rootStatus": "success",
+        "blackboard": [
+          {
+            "key": "alert",
+            "value": {
+              "type": "Bool",
+              "value": true
+            },
+            "version": 1
+          }
+        ],
+        "trace": [
+          {
+            "event": "update-started"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 0
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 1
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 1,
+            "status": "failure"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 1,
+            "exitReason": "failure"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 2
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 3
+          },
+          {
+            "event": "blackboard-changed",
+            "nodeIndex": 3
+          },
+          {
+            "event": "observer-queued",
+            "nodeIndex": 1
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 3,
+            "status": "running"
+          },
+          {
+            "event": "observer-evaluated",
+            "nodeIndex": 1,
+            "status": "success"
+          },
+          {
+            "event": "node-abort-started",
+            "nodeIndex": 3,
+            "abortReason": "observer-lower-priority",
+            "sourceNodeIndex": 1
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 3,
+            "exitReason": "aborted"
+          },
+          {
+            "event": "node-abort-started",
+            "nodeIndex": 2,
+            "abortReason": "observer-lower-priority",
+            "sourceNodeIndex": 1
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 2,
+            "exitReason": "aborted"
+          },
+          {
+            "event": "node-entered",
+            "nodeIndex": 1
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 1,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 1,
+            "exitReason": "success"
+          },
+          {
+            "event": "node-ticked",
+            "nodeIndex": 0,
+            "status": "success"
+          },
+          {
+            "event": "node-exited",
+            "nodeIndex": 0,
+            "exitReason": "success"
+          },
+          {
+            "event": "update-completed"
+          }
+        ],
+        "diagnostics": [],
+        "invariants": [
+          {
+            "kind": "no-error-diagnostics"
+          },
+          {
+            "kind": "terminal-root-has-no-active-nodes"
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "observer",
+    "reactive",
+    "subtree"
+  ]
+}

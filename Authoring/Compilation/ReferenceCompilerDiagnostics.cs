@@ -46,6 +46,15 @@ namespace AIBT.Authoring
             Descriptor(ReferenceCompilerDiagnosticCodes.SharedReductionMissing),
             Descriptor(ReferenceCompilerDiagnosticCodes.InvalidReduction),
             Descriptor(ReferenceCompilerDiagnosticCodes.UnsupportedReduction),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeNotFound),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeAmbiguous),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeCycle),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeDepth),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeInterfaceVersion),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeKeySet),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeKeyType),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeQualifiedIdentity),
+            Descriptor(SubtreeExpansionDiagnosticCodes.SubtreeScopeContract),
         });
 
         internal static Diagnostic Create(

@@ -20,6 +20,9 @@ namespace AIBT.Tests.Integration.SemanticSlice
         [TestCase("retaining-takeover.aibtcase.json")]
         [TestCase("retaining-pitfall.aibtcase.json")]
         [TestCase("retaining-timeout.aibtcase.json")]
+        // ADR-P11-001 (subtrees): reference-executor golden cases only; native equivalence is Stage 2.
+        [TestCase("subtree-reactive-observer.aibtcase.json")]
+        [TestCase("subtree-twice-private-keys.aibtcase.json")]
         public void GoldenBehaviorCase_PassesReferenceExecutor(string fileName)
         {
             var run = RunCase(fileName);

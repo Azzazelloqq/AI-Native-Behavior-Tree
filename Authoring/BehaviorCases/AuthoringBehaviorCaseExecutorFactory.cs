@@ -36,19 +36,31 @@ namespace AIBT.Authoring.BehaviorCases
             var read = CanonicalTreeJson.Parse(File.ReadAllBytes(treePath), configuration.Tree);
             var registry = ReferencePreviewFixtureEnvironment.CreateNodeRegistry();
             if (!read.Success) throw new InvalidOperationException(Diagnostics(read.Diagnostics));
-            var validation = TreeValidator.Validate(read.Document, registry);
+            // ADR-P11-001: subtree references resolve against the case tree's own directory.
+            var sourceId = NormalizeSourceId(configuration.Tree);
+            var document = read.Document;
+            SubtreeExpansion expansion = null;
+            if (SubtreeExpander.RequiresExpansion(document))
+            {
+                expansion = SubtreeExpander.Expand(
+                    document,
+                    new DirectorySubtreeResolver(Path.GetDirectoryName(treePath), SourceDirectory(sourceId)),
+                    registry,
+                    ReferenceCompilationPolicy.Phase1.CreateValidationOptions(sourceId));
+                if (!expansion.Success) throw new InvalidOperationException(Diagnostics(expansion.Diagnostics));
+                document = expansion.Document;
+            }
+
+            var validation = TreeValidator.Validate(document, registry);
             if (validation.Any(item => item.Severity == DiagnosticSeverity.Error))
                 throw new InvalidOperationException(Diagnostics(validation));
-            var compilation = ReferenceCompiler.Compile(
-                read.Document,
-                registry,
-                new ReferenceCompilerOptions(
-                    NormalizeSourceId(configuration.Tree),
-                    ReferenceCompilationPolicy.Phase1,
-                    CompilerVersion));
+            var options = new ReferenceCompilerOptions(sourceId, ReferenceCompilationPolicy.Phase1, CompilerVersion);
+            var compilation = expansion == null
+                ? ReferenceCompiler.Compile(document, registry, options)
+                : ReferenceCompiler.Compile(expansion, registry, options);
             if (!compilation.Success) throw new InvalidOperationException(Diagnostics(compilation.Diagnostics));
 
-            var keyMetadata = read.Document.Blackboard.ToDictionary(
+            var keyMetadata = document.Blackboard.ToDictionary(
                 key => StableHash.Fnv1A64(key.Id),
                 key => new SourceBlackboardKey(key.Id, key.Type.EnumContract));
             var initialValues = CreateInitialValues(configuration.InitialBlackboard);
@@ -98,6 +110,12 @@ namespace AIBT.Authoring.BehaviorCases
         }
 
         private static string NormalizeSourceId(string path) => path.Replace('\\', '/');
+
+        private static string SourceDirectory(string sourceId)
+        {
+            var slash = sourceId.LastIndexOf('/');
+            return slash <= 0 ? null : sourceId.Substring(0, slash);
+        }
 
         private static string Diagnostics(DiagnosticCollection diagnostics)
             => string.Join(" | ", diagnostics.Select(item => item.Code + " "

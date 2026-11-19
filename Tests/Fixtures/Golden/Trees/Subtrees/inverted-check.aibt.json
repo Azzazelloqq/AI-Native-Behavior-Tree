@@ -1,0 +1,37 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 3,
+  "treeId": "tree.golden.subtree.inverted-check",
+  "name": "Inverted Check Subtree",
+  "root": "main",
+  "interface": {
+    "version": 1,
+    "keys": [
+      "alert"
+    ]
+  },
+  "blackboard": {
+    "alert": {
+      "type": "Bool",
+      "default": false
+    },
+    "armed": {
+      "type": "Bool",
+      "description": "Private per-instance key.",
+      "default": false
+    }
+  },
+  "nodes": {
+    "check": {
+      "type": "aibt.test.alert-condition",
+      "typeVersion": 1
+    },
+    "main": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "children": [
+        "check"
+      ]
+    }
+  }
+}

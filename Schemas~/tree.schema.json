@@ -7,11 +7,12 @@
   "required": ["format", "formatVersion", "treeId", "name", "root", "nodes"],
   "properties": {
     "format": { "const": "aibt.tree" },
-    "formatVersion": { "type": "integer", "enum": [1, 2] },
+    "formatVersion": { "type": "integer", "enum": [1, 2, 3] },
     "treeId": { "$ref": "#/$defs/id" },
     "name": { "type": "string", "minLength": 1 },
     "description": { "type": "string" },
     "root": { "$ref": "#/$defs/id" },
+    "interface": { "$ref": "#/$defs/subtreeInterface" },
     "blackboardContracts": {
       "type": "object",
       "additionalProperties": false,
@@ -27,8 +28,7 @@
     },
     "nodes": {
       "type": "object",
-      "minProperties": 1,
-      "additionalProperties": { "$ref": "#/$defs/node" }
+      "minProperties": 1
     },
     "tags": {
       "type": "array",
@@ -47,6 +47,32 @@
           "nodes": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/nodeV1" } }
         }
       }
+    },
+    {
+      "if": { "properties": { "formatVersion": { "const": 2 } }, "required": ["formatVersion"] },
+      "then": {
+        "properties": {
+          "nodes": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/node" } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "formatVersion": { "const": 3 } }, "required": ["formatVersion"] },
+      "then": {
+        "properties": {
+          "nodes": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "oneOf": [
+                { "$ref": "#/$defs/node" },
+                { "$ref": "#/$defs/subtreeReferenceNode" }
+              ]
+            }
+          }
+        }
+      },
+      "else": { "properties": { "interface": false } }
     }
   ],
   "$defs": {
@@ -165,6 +191,54 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true
+        }
+      }
+    },
+    "subtreeInterface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "keys"],
+      "properties": {
+        "version": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "keys": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true }
+      }
+    },
+    "subtreeReferenceNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subtree"],
+      "properties": {
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "subtree": { "$ref": "#/$defs/subtreeReference" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "subtreeReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["treeId", "interfaceVersion", "keys"],
+      "properties": {
+        "treeId": { "$ref": "#/$defs/id" },
+        "interfaceVersion": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "keys": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/id" },
+          "additionalProperties": {
+            "oneOf": [
+              { "$ref": "#/$defs/id" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["value"],
+                "properties": { "value": { "$ref": "#/$defs/semanticValue" } }
+              }
+            ]
+          }
         }
       }
     },
