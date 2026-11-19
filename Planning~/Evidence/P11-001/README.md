@@ -128,7 +128,7 @@ Runs (raw output in `runs/` of the acceptance folder):
 | Regression of touched areas (`regression-1.txt`) | `ReferenceCompilerTests` 18/18, `TreeValidatorTests` 39/39, `DiagnosticCodeAndCatalogTests` 17/17, `ManagedAgentLayerTests` 24/24, `ManagedParameterValidationTests` 17/17, `BehaviorTreeAgentComponentTests` 5/5, `SemanticSliceCompilationTests` 15/15, `SemanticSliceBehaviorTests` 16/16, `McpTestingToolDispatcherTests` 8/8, `McpVerificationToolDispatcherTests` 23/23, `DocumentMigratorTests` 7/7, `BlackboardSchemaTests` 13/13, `TreeScopeSlotNeverWrittenValidatorTests` 5/5, `HotReloadStateMigrationTests` 21/21, `GeneratedArtifactContractTests` 4/6 |
 | ABI (`abi-1.txt`) | `AIBT.CodeGen.ContractTests` 6/6 |
 | dotnet harness outside Unity (`dotnet-harness/dotnet-test.txt`) | 64/64 (`SubtreeTestKit` + Format, Validator, Expander, HotReload tests compiled without `UNITY_EDITOR` against the Unity-built `AIBT.Runtime`/`AIBT.Authoring`, NUnit 3.14, .NET 8 roll-forward, `AIBT_PACKAGE_ROOT` set) |
-| `Tools~/Verification/Verify-Static.ps1` (`verify-static-1.txt`; `verify-static-2.txt` after these docs) | passed (7 schemas, 181 work items) |
+| `Tools~/Verification/Verify-Static.ps1` (`verify-static-1.txt`) | passed (7 schemas, 181 work items) |
 
 The two `GeneratedArtifactContractTests` failures are the known pre-existing host-layout failures
 (`PackageInfo.FindForAssembly` returns null because AIBT lives under `Assets/`; recorded in P7-018,
