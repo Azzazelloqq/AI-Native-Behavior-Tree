@@ -4,7 +4,8 @@ Decision: `Documentation~/decisions/ADR-P11-002-native-node-library.md` (owner d
 AIBT-050, every §8 recommendation). Stage 1 of ADR §7 is implemented (section below) and was
 accepted by the orchestrator on `4af5571` ("Acceptance run" at the end of its section). Stage 2 was
 approved by the owner on 2026-11-19, is implemented (section "Stage 2" after the stage 1 material)
-and was accepted by the orchestrator on `bad2892`. Stages 3–4 are not started; each needs the owner's go-ahead.
+and was accepted by the orchestrator on `bad2892`. Stage 3 (random nodes; hosts seed random streams)
+was approved by the owner on 2026-11-20. Stage 4 is not started; it needs the owner's go-ahead.
 
 ## Stage 1 — blackboard and flow nodes (2026-11-19)
 
