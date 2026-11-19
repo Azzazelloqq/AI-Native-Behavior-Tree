@@ -135,6 +135,36 @@ namespace AIBT.Tests.Integration.Simulation
   }
 }";
 
+        // P11-002 stage 3: the five library random nodes in one loop. Each cycle waits a random time
+        // (20 000-120 000 us, so 1-4 ticks of TickMicroseconds), then picks an Int32, a Float32, a flat
+        // and a 3D point around 'home', and rolls a 25 % chance into 'lucky'.
+        internal const string RandomLibraryTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p11002.random-library"", ""name"": ""P11-002 random library"",
+  ""root"": ""loop"",
+  ""blackboard"": {
+    ""choice"": { ""type"": ""Int32"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": -1 },
+    ""speed"": { ""type"": ""Float32"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": 0.0 },
+    ""home"": { ""type"": ""Float3"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": { ""x"": 10.0, ""y"": 1.0, ""z"": -4.0 } },
+    ""target"": { ""type"": ""Float3"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": { ""x"": 0.0, ""y"": 0.0, ""z"": 0.0 } },
+    ""jump"": { ""type"": ""Float3"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": { ""x"": 0.0, ""y"": 0.0, ""z"": 0.0 } },
+    ""lucky"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": false }
+  },
+  ""nodes"": {
+    ""loop"": { ""type"": ""aibt.core.repeater"", ""typeVersion"": 1, ""children"": [""cycle""], ""parameters"": { ""count"": 4000000000, ""stopOnFailure"": false } },
+    ""cycle"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""pause"", ""pick"", ""pace"", ""spot"", ""leap"", ""coin""] },
+    ""pause"": { ""type"": ""aibt.native.wait-random-microseconds"", ""typeVersion"": 1, ""parameters"": { ""min-microseconds"": 20000, ""max-microseconds"": 120000 } },
+    ""pick"": { ""type"": ""aibt.native.random-int"", ""typeVersion"": 1, ""parameters"": { ""min"": 0, ""max"": 3 }, ""bindings"": { ""key"": ""choice"" } },
+    ""pace"": { ""type"": ""aibt.native.random-float"", ""typeVersion"": 1, ""parameters"": { ""min"": 0.5, ""max"": 2.0 }, ""bindings"": { ""key"": ""speed"" } },
+    ""spot"": { ""type"": ""aibt.native.random-float3-in-radius"", ""typeVersion"": 1, ""parameters"": { ""min-radius"": 1.0, ""radius"": 5.0, ""flat"": true }, ""bindings"": { ""center"": ""home"", ""result"": ""target"" } },
+    ""leap"": { ""type"": ""aibt.native.random-float3-in-radius"", ""typeVersion"": 1, ""parameters"": { ""min-radius"": 0.0, ""radius"": 2.0, ""flat"": false }, ""bindings"": { ""center"": ""home"", ""result"": ""jump"" } },
+    ""coin"": { ""type"": ""aibt.core.memory-selector"", ""typeVersion"": 1, ""children"": [""win"", ""lose""] },
+    ""win"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""roll"", ""mark-win""] },
+    ""roll"": { ""type"": ""aibt.native.random-chance"", ""typeVersion"": 1, ""parameters"": { ""chance"": 0.25 } },
+    ""mark-win"": { ""type"": ""aibt.native.set-bool"", ""typeVersion"": 1, ""parameters"": { ""value"": true }, ""bindings"": { ""key"": ""lucky"" } },
+    ""lose"": { ""type"": ""aibt.native.set-bool"", ""typeVersion"": 1, ""parameters"": { ""value"": false }, ""bindings"": { ""key"": ""lucky"" } }
+  }
+}";
+
         internal static ProductionTreeAsset PrepareAsset(string json)
         {
             var standard = Materialize(typeof(StandardNativeShard));

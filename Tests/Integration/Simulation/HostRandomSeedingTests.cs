@@ -269,9 +269,78 @@ namespace AIBT.Tests.Integration.Simulation
         [TestCase(true)]
         public void AHostAndAContainerAgentWithTheSameDerivationInputs_GiveTheSameResults(bool useJobs)
         {
+            foreach (var json in new[] { RollerTree, ErrandTree }) AssertHostMatchesContainer(json, useJobs);
+        }
+
+        /// <summary>
+        /// P11-002 stage 3 Part C: the same for the five library random nodes (aibt.native.random-*,
+        /// wait-random-microseconds) in one loop.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void AHostAndAContainerAgent_RunTheFiveLibraryRandomNodesAlike(bool useJobs)
+            => AssertHostMatchesContainer(RandomLibraryTree, useJobs);
+
+        /// <summary>
+        /// P11-002 stage 3 Part C: TreeSimulation runs the five library random nodes in place and with
+        /// Jobs with the same per-tick digest (every agent's state, Tree bytes, root completions, faults
+        /// and every stream word), for 16 agents of one seed over 240 ticks; every agent draws.
+        /// </summary>
+        [Test]
+        public void TheFiveLibraryRandomNodes_GiveTheSamePerTickDigestsInPlaceAndWithJobs()
+        {
+            const ulong Seed = 0x11B7UL;
+            const int Agents = 16;
+            const uint Ticks = 240;
+            var program = Program(RandomLibraryTree);
+            var runs = new List<ulong>[2];
+            var path = new List<uint>();
+            for (var run = 0; run < 2; run++)
+            {
+                var settings = TreeSimulationSettings.Default(TickMicroseconds);
+                settings.RandomSeed = Seed;
+                settings.UseJobs = run == 1;
+                settings.MinimumJobBatch = 1;
+                runs[run] = new List<ulong>();
+                using (var simulation = new TreeSimulation(settings))
+                {
+                    Assert.That(simulation.TryAddGroup(program, TreeGroupSettings.Default(Agents), out var group), Is.EqualTo(SimulationResult.Success));
+                    for (var agent = 0; agent < Agents; agent++)
+                        Assert.That(group.TryAdd(ThinkSchedule.Every(1, 0), out _), Is.EqualTo(SimulationResult.Success));
+                    for (uint tick = 1; tick <= Ticks; tick++)
+                    {
+                        Assert.That(simulation.Step(tick), Is.EqualTo(SimulationResult.Success));
+                        Assert.That(group.GetFaults().Length, Is.Zero, "tick " + tick);
+                        var digest = Fnv.Create();
+                        AppendDigest(group, ref digest, path);
+                        for (var agent = 0; agent < Agents; agent++)
+                        {
+                            var adapter = group.CoreForTests(agent).GeneratedDispatch;
+                            foreach (var node in RandomNodes(program, adapter))
+                            {
+                                Assert.That(adapter.TryReadRandomStream(node, out var state, out var increment), Is.True);
+                                digest.Add(state);
+                                digest.Add(increment);
+                            }
+                        }
+                        runs[run].Add(digest.Value);
+                    }
+                    for (var agent = 0; agent < Agents; agent++)
+                    {
+                        var core = group.CoreForTests(agent);
+                        foreach (var node in RandomNodes(program, core.GeneratedDispatch))
+                            Assert.That(DrawsSinceDerivation(program, core.GeneratedDispatch, Seed, core.InstanceId, node), Is.GreaterThan(5),
+                                "run " + run + ", agent " + agent + ", node " + node + " drew on its own derived stream");
+                    }
+                }
+            }
+            Assert.That(runs[1], Is.EqualTo(runs[0]), "In place and with Jobs: the same per-tick digests.");
+        }
+
+        private void AssertHostMatchesContainer(string json, bool useJobs)
+        {
             const ulong Seed = 0xD1CEUL;
             var path = new List<uint>();
-            foreach (var json in new[] { RollerTree, ErrandTree })
             {
                 var program = Program(json);
                 long now = 0;
