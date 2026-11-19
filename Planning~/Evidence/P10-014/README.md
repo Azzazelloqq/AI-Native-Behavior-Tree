@@ -111,5 +111,34 @@ No existing expectation was weakened, and no golden file changed.
 | `NativeParallelAndDecoratorPolicyTests` | 19/19 |
 | `AStepLimitInsideAGuardPass` (Integration, both job modes) | 2/2 |
 
-Not run here: the full EditMode/PlayMode suites of all assemblies (left to the orchestrator at
-acceptance), Player builds (part C removed).
+Not run by the task session: the full EditMode/PlayMode suites of all assemblies (see the
+acceptance run below), Player builds (part C removed).
+
+## Acceptance run (orchestrator, 2026-11-19)
+
+Full run of all nine assemblies on `c68df77`, clean working tree, Editor 6000.6.9f1, 12:52–13:05.
+No extraneous log entries arrived during the run (the Editor log held no `No command named` error
+before or after it). Raw output and summary: `C:\UnityProjects\_aibt_acceptance\P10-014\`
+(`full-run-clean-20261119-1300.txt`, `acceptance-20261119.txt`).
+
+| Assembly | Baseline `3e4b09e` | `c68df77` |
+|---|---|---|
+| `AIBT.Runtime.Tests` | 778/780 (2 ignored: F-S2-1, F-S2-2) | 815/815 |
+| `AIBT.Integration.Tests` | 221/222 (1 GC-dependent Inconclusive) | 224/224 |
+| `AIBT.Editor.Tests` | 649/650 | 649/650 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 |
+| `AIBT.PlayMode.Tests` (PlayMode) | 1/1 | 1/1 |
+
+The one failure in `AIBT.Editor.Tests` is the same on both commits and predates this task:
+`McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` (the host project's
+five sample nodes appear in the catalog).
+
+An earlier full run the same night (01:30) had 31 failures, every one an `Unhandled log message`
+caused by another session's `unity status` polling loop, which logs an error in every open Editor.
+All 31 pass in the clean run.
+
+**Owner's decision, 2026-11-19: the F-S2-2 fix stays.** Open questions 1–4 above are still open.

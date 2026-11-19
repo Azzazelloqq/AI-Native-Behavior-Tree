@@ -1,6 +1,6 @@
 # P10-014 — Fixes from the P10-013 code review
 
-Status: `Review` — part A (defects) and part B (coverage, docs) done 2026-11-19, touched tests pass (evidence `Planning~/Evidence/P10-014/README.md`); the full run of all assemblies is left to acceptance. Part C
+Status: `Review` — part A (defects) and part B (coverage, docs) done 2026-11-19, touched tests pass (evidence `Planning~/Evidence/P10-014/README.md`); the full run of all nine assemblies on `c68df77` passed at acceptance on 2026-11-19 (same evidence, "Acceptance run"); the owner kept the F-S2-2 fix the same day; four open questions remain with the owner. Part C
 (the IL2CPP slowdown of v1 loop trees) was removed from this task by the owner on 2026-11-18; the
 performance check and any fix become a separate task.
 
@@ -18,6 +18,9 @@ bug that diverges from the reference executor and the normative specifications; 
 tests; fix the docs; part C removed later the same day. No ADR: no normative choice is made; every
 behaviour change aligns native with the reference executor, except the open question about a tree
 stop that replaces an abort in progress (evidence §D1).
+
+Owner's decision 2026-11-19: the F-S2-2 fix (full hot-reload restart of a v1 reactive composite
+with a running branch), made in this task without prior approval, stays.
 
 ## Depends on
 
