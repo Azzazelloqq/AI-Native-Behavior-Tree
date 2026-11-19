@@ -1206,8 +1206,9 @@ post-container feature list; its first item, `P11-001` (subtrees), has an accept
 in `Review`. The second item, `P11-002` (a library of ready-made native nodes; F4 in
 `ADR-P10-008-simulation-container.md:733-734`), grows the existing `aibt.native.standard` shard
 (P9-002, four nodes) so that native trees need no project Burst nodes for common work. Its ADR
-(`Documentation~/decisions/ADR-P11-002-native-node-library.md`, decision ID `AIBT-050` reserved) is
-`Proposed` and awaits the owner's answers to its §8; nothing is implemented before them.
+(`Documentation~/decisions/ADR-P11-002-native-node-library.md`, `AIBT-050`) was accepted
+2026-11-19 with all six recommendations of its §8; stage 1 is approved, stages 2–4 each need the
+owner's go-ahead.
 
 ### Review follow-up scopes (2026-09-04)
 

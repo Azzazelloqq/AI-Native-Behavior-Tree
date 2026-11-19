@@ -1,7 +1,7 @@
 # P11-002 — Library of ready-made native nodes (feature F4)
 
-Status: `Blocked` — ADR proposed 2026-11-19 (decision ID `AIBT-050` reserved), awaiting the owner's
-acceptance and answers to its §8. No code is written before that.
+Status: `In Progress` — ADR accepted 2026-11-19 (AIBT-050) with all six recommendations of its §8;
+stage 1 (blackboard and flow nodes) approved the same day. Stages 2–4 each need the owner's go-ahead.
 
 ## Objective
 
@@ -14,19 +14,20 @@ trace format do not change.
 
 ## Decision record
 
-`Documentation~/decisions/ADR-P11-002-native-node-library.md` (Proposed 2026-11-19). Recommended:
+`Documentation~/decisions/ADR-P11-002-native-node-library.md` (Accepted 2026-11-19, AIBT-050; the owner's answers
+are in its "Owner decisions" section). Decided:
 native-only nodes under `aibt.native.*` (P9-004 naming rule), added to the existing shard
 `aibt.native.standard` in `AIBT.StandardNodes`, opt-in through the project's `[AibtCatalogSet]` as
 today; one node per value type; blackboard keys, time, random and one package effect channel
 `aibt.native.signal` only (no scene access). First set: 20 blackboard and flow nodes (stage 1), 4
-timing and signal nodes (stage 2), 5 random nodes (stage 3, only if hosts may seed random streams).
+timing and signal nodes (stage 2), 5 random nodes (stage 3; the owner allowed hosts to seed random streams).
 Rejected: dual-path `aibt.stdlib.*` nodes as the default (the reference executor and managed agent have
 no binding, time or random support for leaves — P7-028 wall 1 still stands), an importable sample,
 an always-on shard.
 
 ## Depends on
 
-- Owner's answers to ADR §8 (six questions).
+- Owner's answers to ADR §8 (given 2026-11-19, all as recommended).
 - P9-002 (the shard this grows). No dependency on P11-001.
 
 ## Required reading

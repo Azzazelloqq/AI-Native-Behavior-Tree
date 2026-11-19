@@ -1,9 +1,9 @@
 # ADR P11-002: A library of ready-made native nodes
 
-- Status: Proposed (2026-11-19). Awaiting the owner's answers to §8. No code is written before the
-  owner accepts this ADR; each stage of §7 then needs its own go-ahead as usual.
-- Decision ID: `AIBT-050` (the next free number, reserved here). As with `AIBT-049`, the row in
-  `Documentation~/decisions.md` is added on acceptance; that file records accepted direction only.
+- Status: Accepted (2026-11-19). Proposed the same day; the owner accepted it with all six
+  recommendations of §8 (see "Owner decisions" below) and approved stage 1 of §7. Stages 2–4 each
+  need their own go-ahead.
+- Decision ID: `AIBT-050`
 - Task: `Planning~/Tasks/P11/P11-002-native-node-library.md`
 - Origin: item 2 of the Phase 11 feature list; "F4 native node library" in
   `Documentation~/decisions/ADR-P10-008-simulation-container.md:733-734`.
@@ -524,6 +524,25 @@ mention; MCP recipes for building a native tree from library nodes.
    default (`AIBT2040`), as `aibt.stdlib.random-condition` is.
 6. **One package effect channel `aibt.native.signal` with an Int32 code** for "tell the game to do X".
    *Recommendation: yes.* Other answer: no signal node; every project writes its own effect node.
+
+## Owner decisions (2026-11-19)
+
+The owner accepted every recommendation of §8:
+
+1. The library is native-only (`aibt.native.*`); dual-path `aibt.stdlib.*` twins are not part of
+   this decision.
+2. The existing shard `aibt.native.standard` grows; projects whose catalog set lists it re-prepare
+   their baked assets once per stage.
+3. The first set is justified by an existing managed counterpart; the P7-036 two-tree rule stays for
+   promoting sample nodes.
+4. `ProductionTreeHost` and `NativeTreeAgent` may seed the random streams of nodes that declare one,
+   as stage 3. This is the one permitted change of host behaviour; trees without random nodes must
+   behave byte-identically, and the pin test
+   `Hosts_HaveZeroedRandomStreams_AndARandomNodeCannotRun` is replaced in that stage.
+5. Random library nodes are declared deterministic.
+6. One package effect channel `aibt.native.signal` with an `Int32` code.
+
+Stage 1 of §7 was approved on 2026-11-19. Stages 2–4 are not started without the owner's go-ahead.
 
 ## 9. Noticed while reading (not part of this feature)
 
