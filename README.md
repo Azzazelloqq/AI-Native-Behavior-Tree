@@ -292,7 +292,9 @@ and "below" are an `aibt.core.inverter` over an "at least" node; the per-node co
 [the node catalog](Documentation~/generated/node-catalog.md). Native hosts do not run observer
 re-evaluation today, so an `observer` block on an `aibt.native.*` condition changes nothing. To
 guard a branch natively, put the condition first under a `reactive-sequence`: the branch is
-aborted at the next update after the key changes. See
+aborted at the next update after the key changes. Above waits and multi-step branches use
+`reactive-sequence-retaining` / `reactive-selector-retaining`: a plain reactive composite re-enters
+its running child at every update, so a wait under it never runs out. See
 [Production tree host](Documentation~/production-host.md#clock-budget-and-completion). Nodes that
 need an optional Unity module are compiled only when the module is enabled.
 
