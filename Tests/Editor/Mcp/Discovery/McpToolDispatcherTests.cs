@@ -76,7 +76,7 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
                 .Concat(AIBT.Authoring.BuiltInLeafManifests.All.Select(p => p.Manifest.TypeId))
                 .Concat(PackageManagedNodeTypeIds())
                 // P9-002: the package's native-only standard shard (assembly AIBT.StandardNodes);
-                // P11-002 stage 1 added 20 library nodes to it.
+                // P11-002 stage 1 added 20 library nodes to it, stage 2 four timing and signal nodes.
                 .Concat(AIBT.Tests.Editor.Agents.StandardNodeCatalogTests.StandardNativeTypeIds)
                 .OrderBy(id => id, System.StringComparer.Ordinal)
                 .ToArray();

@@ -53,7 +53,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             foreach (var node in NativeLibraryKit.Materialize(typeof(StandardNativeShard)).Nodes)
             {
                 Assert.That(node.Manifest.Deterministic, Is.True, node.Manifest.TypeId);
-                Assert.That(node.Manifest.Category, Is.EqualTo("Native/Blackboard").Or.EqualTo("Native/Flow"), node.Manifest.TypeId);
+                Assert.That(node.Manifest.Category, Is.EqualTo("Native/Blackboard").Or.EqualTo("Native/Flow")
+                    .Or.EqualTo("Native/Timing").Or.EqualTo("Native/Signals"), node.Manifest.TypeId);
                 Assert.That(node.Manifest.Version, Is.EqualTo(1u), node.Manifest.TypeId);
             }
 

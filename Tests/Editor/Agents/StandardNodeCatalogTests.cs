@@ -64,7 +64,7 @@ namespace AIBT.Tests.Editor.Agents
 
         /// <summary>
         /// Every node of the package's native shard aibt.native.standard: the four P9-002 nodes and
-        /// the 20 library nodes of P11-002 stage 1 (ADR-P11-002 §5.1, groups 1-3).
+        /// the 24 library nodes of P11-002 stages 1-2 (ADR-P11-002 §5.1, groups 1-4).
         /// </summary>
         internal static readonly string[] StandardNativeTypeIds =
         {
@@ -92,6 +92,10 @@ namespace AIBT.Tests.Editor.Agents
             "aibt.native.succeed",
             "aibt.native.fail",
             "aibt.native.idle",
+            "aibt.native.wait-until-true",
+            "aibt.native.set-deadline",
+            "aibt.native.deadline-passed",
+            "aibt.native.signal",
         };
 
         [Test]

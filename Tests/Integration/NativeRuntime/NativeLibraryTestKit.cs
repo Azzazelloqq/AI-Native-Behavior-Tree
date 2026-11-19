@@ -19,7 +19,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
     [AibtCatalogSet("aibt.tests.p11002.native-library", 1u, typeof(BuiltInLeafShard), typeof(StandardNativeShard), typeof(ExternalTreeWriteFixtureShard))]
     public static partial class NativeLibraryCatalog { }
 
-    /// <summary>Every node of the package shard aibt.native.standard after P11-002 stage 1.</summary>
+    /// <summary>Every node of the package shard aibt.native.standard after P11-002 stage 2.</summary>
     internal static class StandardNativeLibraryIds
     {
         /// <summary>The four P9-002 nodes.</summary>
@@ -39,7 +39,13 @@ namespace AIBT.Tests.Integration.NativeRuntime
             "aibt.native.succeed", "aibt.native.fail", "aibt.native.idle",
         };
 
-        internal static readonly string[] All = Seed.Concat(Stage1).ToArray();
+        /// <summary>The 4 timing and signal nodes of ADR-P11-002 §5.1 group 4.</summary>
+        internal static readonly string[] Stage2 =
+        {
+            "aibt.native.wait-until-true", "aibt.native.set-deadline", "aibt.native.deadline-passed", "aibt.native.signal",
+        };
+
+        internal static readonly string[] All = Seed.Concat(Stage1).Concat(Stage2).ToArray();
     }
 
     /// <summary>JSON builders for the library test trees (canonical aibt.tree, format 2, Tree-scope keys only).</summary>
@@ -54,6 +60,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
         internal static string Int(string name, int value = 0) => Key(name, "Int32", value.ToString(CultureInfo.InvariantCulture));
 
         internal static string Float(string name, float value = 0f) => Key(name, "Float32", Number(value));
+
+        internal static string Long(string name, long value = 0L) => Key(name, "Int64", value.ToString(CultureInfo.InvariantCulture));
 
         internal static string Float3(string name, float x = 0f, float y = 0f, float z = 0f)
             => Key(name, "Float3", "{ \"x\": " + Number(x) + ", \"y\": " + Number(y) + ", \"z\": " + Number(z) + " }");
@@ -156,12 +164,13 @@ namespace AIBT.Tests.Integration.NativeRuntime
             };
         }
 
-        internal LibraryHost Start(Prepared prepared, Func<long> clock = null)
+        /// <summary>Starts a host; <paramref name="effectCapacity"/> above 0 enables its committed-effect queue (stage 2 signals).</summary>
+        internal LibraryHost Start(Prepared prepared, Func<long> clock = null, int effectCapacity = 0)
         {
             var gameObject = new GameObject("AIBT.Tests.P11002.LibraryHost");
             _hosts.Add(gameObject);
             var host = gameObject.AddComponent<ProductionTreeHost>();
-            Assert.That(prepared.Program.TryBootstrap(host, out var failure, clock: clock ?? (() => 0L)), Is.True, failure.Code.ToString());
+            Assert.That(prepared.Program.TryBootstrap(host, out var failure, effectCapacity, clock ?? (() => 0L)), Is.True, failure.Code.ToString());
             return new LibraryHost(host, prepared.Slots);
         }
 
@@ -214,6 +223,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
 
         internal void Fact(string key, Float3Value value) => Write(key, value, BuiltInBlackboardTypes.Float3);
 
+        internal void Fact(string key, long value) => Write(key, value, BuiltInBlackboardTypes.Int64);
+
         private void Write<T>(string key, T value, BlackboardTypeDescriptor type) where T : unmanaged
         {
             Assert.That(Host.TryResolveExternalTreeWrite<T>(key, NativeBlackboardTypeIdV2.BuiltIn(type), out var handle, out var failure),
@@ -226,6 +237,27 @@ namespace AIBT.Tests.Integration.NativeRuntime
         internal int ReadInt(string key) => BitConverter.ToInt32(Bytes(key, 4), 0);
 
         internal float ReadFloat(string key) => BitConverter.ToSingle(Bytes(key, 4), 0);
+
+        internal long ReadLong(string key) => BitConverter.ToInt64(Bytes(key, 8), 0);
+
+        /// <summary>Drains the host's committed effects (enabled by an effect capacity at start) as (stable id, Int32 value).</summary>
+        internal List<(ulong Id, int Value)> DrainEffects()
+        {
+            var receiver = new EffectRecorder();
+            Assert.That(Host.TryDrainEffects(receiver, out var failure), Is.True, failure.Code.ToString());
+            return receiver.Effects;
+        }
+
+        private sealed class EffectRecorder : IProductionTreeEffectReceiver
+        {
+            internal readonly List<(ulong Id, int Value)> Effects = new List<(ulong Id, int Value)>();
+
+            public void Receive(in ProductionTreeEffect effect)
+            {
+                Assert.That(effect.TryGetInt32(out var value), Is.True, "Library signals are Int32 effects.");
+                Effects.Add((effect.StableId, value));
+            }
+        }
 
         internal Float3Value ReadFloat3(string key)
         {
