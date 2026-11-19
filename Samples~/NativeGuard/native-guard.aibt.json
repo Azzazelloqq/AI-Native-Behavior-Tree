@@ -1,0 +1,153 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "samples.native-guard",
+  "name": "Native Guard",
+  "root": "guard",
+  "blackboard": {
+    "intruder-close": { "type": "Bool", "typeVersion": 1, "scope": "tree", "default": false },
+    "intruder-seen": { "type": "Bool", "typeVersion": 1, "scope": "tree", "default": false },
+    "gate-open": { "type": "Bool", "typeVersion": 1, "scope": "tree", "default": false },
+    "weapon-ready-at": { "type": "Int64", "typeVersion": 1, "scope": "tree", "default": 0 }
+  },
+  "nodes": {
+    "guard": {
+      "type": "aibt.core.reactive-selector-retaining",
+      "typeVersion": 1,
+      "displayName": "Guard: zap, flare, watch or patrol",
+      "children": ["zap", "flare", "watch", "patrol"]
+    },
+    "zap": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "displayName": "Intruder close: zap",
+      "children": ["is-close", "zap-ready", "zap-fire"]
+    },
+    "is-close": {
+      "type": "aibt.native.bool-is-true",
+      "typeVersion": 1,
+      "displayName": "Intruder close?",
+      "bindings": { "key": "intruder-close" }
+    },
+    "zap-ready": {
+      "type": "aibt.native.deadline-passed",
+      "typeVersion": 1,
+      "displayName": "Weapon ready?",
+      "bindings": { "key": "weapon-ready-at" }
+    },
+    "zap-fire": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "displayName": "Fire zap",
+      "children": ["zap-cooldown", "zap-signal", "zap-hold"]
+    },
+    "zap-cooldown": {
+      "type": "aibt.native.set-deadline",
+      "typeVersion": 1,
+      "displayName": "Weapon cooldown 1.5 s",
+      "parameters": { "duration-microseconds": 1500000 },
+      "bindings": { "key": "weapon-ready-at" }
+    },
+    "zap-signal": {
+      "type": "aibt.native.signal",
+      "typeVersion": 1,
+      "displayName": "Signal 1: zap",
+      "parameters": { "code": 1 }
+    },
+    "zap-hold": {
+      "type": "aibt.native.idle",
+      "typeVersion": 1,
+      "displayName": "Hold"
+    },
+    "flare": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "displayName": "Intruder seen: flare",
+      "children": ["is-seen", "flare-ready", "flare-fire"]
+    },
+    "is-seen": {
+      "type": "aibt.native.bool-is-true",
+      "typeVersion": 1,
+      "displayName": "Intruder seen?",
+      "bindings": { "key": "intruder-seen" }
+    },
+    "flare-ready": {
+      "type": "aibt.native.deadline-passed",
+      "typeVersion": 1,
+      "displayName": "Weapon ready?",
+      "bindings": { "key": "weapon-ready-at" }
+    },
+    "flare-fire": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "displayName": "Fire flare",
+      "children": ["flare-cooldown", "flare-signal", "flare-hold"]
+    },
+    "flare-cooldown": {
+      "type": "aibt.native.set-deadline",
+      "typeVersion": 1,
+      "displayName": "Weapon cooldown 1.5 s",
+      "parameters": { "duration-microseconds": 1500000 },
+      "bindings": { "key": "weapon-ready-at" }
+    },
+    "flare-signal": {
+      "type": "aibt.native.signal",
+      "typeVersion": 1,
+      "displayName": "Signal 2: flare",
+      "parameters": { "code": 2 }
+    },
+    "flare-hold": {
+      "type": "aibt.native.idle",
+      "typeVersion": 1,
+      "displayName": "Hold"
+    },
+    "watch": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "displayName": "Intruder seen, weapon cooling: watch",
+      "children": ["still-seen", "watch-hold"]
+    },
+    "still-seen": {
+      "type": "aibt.native.bool-is-true",
+      "typeVersion": 1,
+      "displayName": "Intruder seen?",
+      "bindings": { "key": "intruder-seen" }
+    },
+    "watch-hold": {
+      "type": "aibt.native.idle",
+      "typeVersion": 1,
+      "displayName": "Watch"
+    },
+    "patrol": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "displayName": "Nobody near: patrol",
+      "children": ["open-gate", "wait-gate", "sweep", "rest"]
+    },
+    "open-gate": {
+      "type": "aibt.native.signal",
+      "typeVersion": 1,
+      "displayName": "Signal 3: open the gate",
+      "parameters": { "code": 3 }
+    },
+    "wait-gate": {
+      "type": "aibt.native.wait-until-true",
+      "typeVersion": 1,
+      "displayName": "Wait until the gate is open (3 s)",
+      "parameters": { "timeout-microseconds": 3000000 },
+      "bindings": { "key": "gate-open" }
+    },
+    "sweep": {
+      "type": "aibt.native.signal",
+      "typeVersion": 1,
+      "displayName": "Signal 4: sweep and close",
+      "parameters": { "code": 4 }
+    },
+    "rest": {
+      "type": "aibt.native.wait-microseconds",
+      "typeVersion": 1,
+      "displayName": "Rest 2 s",
+      "parameters": { "duration-microseconds": 2000000 }
+    }
+  }
+}

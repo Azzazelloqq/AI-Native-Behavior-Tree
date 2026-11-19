@@ -28,6 +28,11 @@
       "path": "Samples~/FirstAgent"
     },
     {
+      "displayName": "Native Guard",
+      "description": "NativeTreeAgent running a tree built only from package nodes (aibt.core and the aibt.native library): a reactive guard on facts, a shared cooldown, waiting for the game and signals to the game.",
+      "path": "Samples~/NativeGuard"
+    },
+    {
       "displayName": "Public Burst Nodes",
       "description": "Condition and asynchronous Action nodes using only the public generated Burst API.",
       "path": "Samples~/BurstNodes"

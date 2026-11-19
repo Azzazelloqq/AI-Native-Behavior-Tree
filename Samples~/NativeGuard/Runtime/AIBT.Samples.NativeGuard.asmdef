@@ -1,0 +1,5 @@
+{
+  "name": "AIBT.Samples.NativeGuard",
+  "references": ["AIBT.Runtime"],
+  "autoReferenced": false
+}

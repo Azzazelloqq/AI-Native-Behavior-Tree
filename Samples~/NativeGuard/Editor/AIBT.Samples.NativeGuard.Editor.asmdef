@@ -1,0 +1,6 @@
+{
+  "name": "AIBT.Samples.NativeGuard.Editor",
+  "references": ["AIBT.Runtime", "AIBT.Authoring", "AIBT.Editor", "AIBT.Samples.NativeGuard", "AIBT.Samples.NativeGuard.Catalog"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}
