@@ -16,8 +16,8 @@ namespace AIBT.Authoring
             {
                 if (!GeneratedIdentityRules.IsValidMemberId(pair.Key))
                     throw new ArgumentException("Binding IDs must use the canonical member identity grammar.", nameof(values));
-                if (!GeneratedIdentityRules.IsValidMemberId(pair.Value))
-                    throw new ArgumentException("Blackboard key IDs must use the canonical member identity grammar.", nameof(values));
+                if (!IsValidKeyId(pair.Value))
+                    throw new ArgumentException("Blackboard key IDs must use the blackboard key ID grammar or the canonical member identity grammar.", nameof(values));
                 if (copy.ContainsKey(pair.Key))
                     throw new ArgumentException("Binding IDs must be unique.", nameof(values));
                 copy.Add(pair.Key, pair.Value);
@@ -26,6 +26,12 @@ namespace AIBT.Authoring
         }
 
         public IReadOnlyDictionary<string, string> Values => _values;
+
+        // ADR-P11-001 owner decision 9: a binding value names a blackboard key, so it may use the
+        // authoring ID grammar of blackboard keys (an expanded private key is "r:key"). Every value
+        // the member identity grammar accepted stays valid; binding IDs keep the member grammar.
+        private static bool IsValidKeyId(string value)
+            => AuthoringId.IsValid(value) || GeneratedIdentityRules.IsValidMemberId(value);
 
         public bool Equals(NodeBindingMap other)
         {

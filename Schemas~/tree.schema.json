@@ -180,7 +180,7 @@
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/semanticValue" }
         },
-        "bindings": { "type": "object", "propertyNames": { "$ref": "#/$defs/bindingId" }, "additionalProperties": { "$ref": "#/$defs/bindingId" } },
+        "bindings": { "type": "object", "propertyNames": { "$ref": "#/$defs/bindingId" }, "additionalProperties": { "anyOf": [{ "$ref": "#/$defs/id" }, { "$ref": "#/$defs/bindingId" }] } },
         "observer": { "$ref": "#/$defs/observer" },
         "children": {
           "type": "array",

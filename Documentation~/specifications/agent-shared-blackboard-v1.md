@@ -29,8 +29,11 @@ only to Agent and Shared entries.
 Format version 2 also permits an optional node `bindings` object immediately
 after `parameters` in canonical property order. Each property maps one
 canonical generated blackboard `bindingId` to one existing blackboard `keyId`.
-Both strings use the accepted canonical field/binding identity grammar and
-object properties are ordered by unsigned UTF-8 `bindingId`. This object only
+The `bindingId` uses the accepted canonical field/binding identity grammar; the
+`keyId` uses the blackboard key ID grammar (`identity-and-hashing-v1.md`), so it
+can name an expanded subtree key `r:key` (ADR-P11-001, owner decision 9), and
+every value the canonical member grammar accepts remains valid. Object
+properties are ordered by unsigned UTF-8 `bindingId`. This object only
 parameterizes generated blackboard handle fields; it does not extend, merge,
 or reinterpret the Phase-1 manifest `reads` or `writes` arrays. The generated
 shard descriptor remains authoritative for binding kind, scope, access,

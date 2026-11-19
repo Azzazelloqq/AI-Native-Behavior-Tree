@@ -469,20 +469,6 @@ namespace AIBT.Authoring
                         }
                     }
 
-                    if (node.Bindings != null)
-                    {
-                        foreach (var pair in node.Bindings.Values)
-                        {
-                            if (!keyMap.TryGetValue(pair.Value, out var mapped) || GeneratedIdentityRules.IsValidMemberId(mapped)) continue;
-                            Add(SubtreeExpansionDiagnosticCodes.SubtreeKeyType,
-                                "Generated binding '" + pair.Key + "' of node '" + node.Id.Value + "' in subtree '" + subtreeName
-                                + "' targets key '" + pair.Value + "', which becomes '" + mapped + "' in instance '" + reference.Id.Value
-                                + "'; a generated binding target cannot contain ':'. Connect interface key '" + pair.Value
-                                + "' to a parent Tree key.",
-                                nodeLocation, outer, referenceLocation);
-                        }
-                    }
-
                     var nodeId = Qualify(prefix, node.Id.Value, "node", referenceLocation, outer);
                     if (nodeId == null) continue;
                     var children = new List<NodeId>(node.Children.Count);
