@@ -6,7 +6,8 @@ stage 1 approved the same day and implemented the same day (local commits on
 full run of all nine assemblies on `7e614b8`). Stage 2 approved 2026-11-19 together with the owner's
 decision that generated `bindings` values may name expanded keys `r:key` (ADR "Owner decisions",
 item 9). Stage 2 implemented 2026-11-19 (local commits on `feature/aibt-consumer-workflow`; evidence in
-the "Stage 2" section of `Planning~/Evidence/P11-001/README.md`), awaiting the acceptance run. Stages
+the "Stage 2" section of `Planning~/Evidence/P11-001/README.md`), accepted after the full run of all
+nine assemblies on `c02b42b`. Stages
 3 and 4 each need the owner's go-ahead.
 
 ## Objective

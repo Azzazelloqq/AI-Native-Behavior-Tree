@@ -456,3 +456,38 @@ difference).
 5. The Editor console shows `Release of invalid GC handle` / `Failed to load VirtualArtifacts`
    errors from the URP global settings re-import; they predate this work (1520 earlier occurrences
    in `Logs/Editor.log`) and are not from AIBT.
+
+### Acceptance run (orchestrator, 2026-11-19, stage 2)
+
+Full run of all nine assemblies on `c02b42b`, clean working tree, 15:45–15:58; the Editor-log
+counters did not move during the run (`No command named` 0; main-thread timeouts 9 before and
+after). Raw output:
+`C:\UnityProjects\_aibt_acceptance\P11-001\stage2-acceptance\full-run-c02b42b.txt`.
+
+| Assembly | Stage 1 (`7e614b8`) | `c02b42b` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 229/229 | 240/240 | `SubtreeNativeTests` 7, two native golden cases, two `TreeSimulationActionTests` subtree cases |
+| `AIBT.Editor.Tests` | 717/718 | 741/742 | `SubtreeBindingGrammarTests` 19, `SubtreeNativeHotReloadTests` 2, `SubtreeImportAndBakeTests` 3 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is `McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`,
+which predates this task. Every added test is accounted for (11 in Integration, 24 in Editor).
+
+The hash comparison was recomputed from the raw dumps in `stage2/`: the 451-line and 63-line dumps
+are byte-identical before the stage, after step 0, after stage 2, and to the stage-1 "after"
+dumps; the generated-V2 dump (126 lines) differs in exactly the 8 failure-code lines listed above,
+and its 14 OK lines are unchanged. Protected paths (`ExpectedPublicAbiV2.txt`, `package.json`,
+`Runtime/Execution`, `Runtime/Compiled`, `Runtime/HotReload`, `Runtime/Simulation`, `Runtime/Trace`,
+`CodeGen~`, `MCP`, `MCP~`, `ProductionTreeHost.cs`, `NativeTreeAgent.cs`,
+`ProductionTreeScheduler.cs`) have no change from `1073d07` to `c02b42b`. The diff was read in
+full; the changes to existing code are additive overloads and one hidden serialized field.
+
+Stage 2 is accepted. Open questions 1 (import status of a subtree parent whose node types are not
+in the project catalog) and 2 (tree-ID index covers `Assets/` only) go to the owner with the
+stage-3 go-ahead; stages 3 and 4 are not started.
