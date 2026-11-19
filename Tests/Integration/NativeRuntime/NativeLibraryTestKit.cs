@@ -116,6 +116,14 @@ namespace AIBT.Tests.Integration.NativeRuntime
 
         internal static GeneratedCompiledProgramV2 Compile(string json)
         {
+            var result = CompileResult(json);
+            Assert.That(result.Success, Is.True, string.Join("\n", result.Diagnostics.Select(d => d.Code.Value + ": " + d.Message)) + "\n" + json);
+            return result.Program;
+        }
+
+        /// <summary>Compiles without asserting success (for trees the compiler must refuse).</summary>
+        internal static GeneratedCompiledProgramV2Result CompileResult(string json)
+        {
             var standard = Materialize(typeof(StandardNativeShard));
             var nodes = Materialize(typeof(BuiltInLeafShard)).Nodes
                 .Concat(standard.Nodes)
@@ -125,10 +133,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             var parsed = CanonicalTreeJson.Parse(json, sourceId);
             Assert.That(parsed.Success, Is.True, string.Join("\n", parsed.Diagnostics.Select(d => d.Code.Value + ": " + d.Message)) + "\n" + json);
             // The default Phase1 policy: every library node is declared deterministic.
-            var result = GeneratedCompiledProgramV2Compiler.Compile(parsed.Document, nodes, standard.RegisteredTypes,
+            return GeneratedCompiledProgramV2Compiler.Compile(parsed.Document, nodes, standard.RegisteredTypes,
                 new ReferenceCompilerOptions(sourceId, ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 6)));
-            Assert.That(result.Success, Is.True, string.Join("\n", result.Diagnostics.Select(d => d.Code.Value + ": " + d.Message)) + "\n" + json);
-            return result.Program;
         }
 
         internal Prepared Prepare(string json)
