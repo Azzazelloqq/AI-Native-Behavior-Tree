@@ -13,7 +13,7 @@ It has two runtime layers that share one tree format and one editor:
 | Tree asset | the `.aibt` file itself | a prepared `ProductionTreeAsset` (made from the `.aibt` file) |
 | Custom node | a class deriving from `BtAction` / `BtCondition` | a `partial struct` with `[AibtAction]` / `[AibtCondition]`, compiled by a source generator to Burst |
 | Node touches the scene | directly (Transform, components, other objects) | never; it reads facts and emits effects |
-| Standard nodes | 52 `aibt.unity.*` nodes (movement, navigation, animation, ...) | 24 `aibt.native.*` nodes (blackboard, Float3 distance, flow), plus the core composites and decorators |
+| Standard nodes | 52 `aibt.unity.*` nodes (movement, navigation, animation, ...) | 33 `aibt.native.*` nodes (blackboard, Float3 distance, flow, timing, signals, random), plus the core composites and decorators |
 | Live debugging in the graph | every node, live blackboard values | active path, just-finished nodes, root result |
 | Main-thread cost, IL2CPP Player ([measured](Documentation~/performance.md)) | ≈1.2 µs per agent-tick for a 15-node tree, 0 B allocated | ≈3.8 µs per agent-update waiting in one leaf, ≈8 µs for a looping 16-node tree, 0 B while the tree runs; each restart allocates |
 | Best for | gameplay AI, fast iteration; about 800 agents ticking every frame in 1 ms of main thread, thousands with `Interval` ticking | zero GC while running, deterministic Burst execution, a simulation kept off the scene |
@@ -280,13 +280,14 @@ The full, generated reference with every parameter, default and status is
 | Native/Flow (4) | `aibt.native.succeed`, `fail`, `idle`, `wait-microseconds` (native layer only) |
 | Native/Timing (3) | `aibt.native.wait-until-true`, `set-deadline`, `deadline-passed` (native layer only) |
 | Native/Signals (1) | `aibt.native.signal`: an Int32 code on the effect channel `aibt.native.signal` (native layer only) |
+| Native/Random (5) | `aibt.native.random-chance`, `random-float`, `random-int`, `wait-random-microseconds`, `random-float3-in-radius`: seeded per tree instance from `NativeTreeAgent.RandomSeed` (native layer only) |
 | Built-in leaves | `aibt.stdlib.wait`, `aibt.stdlib.random-condition` (both layers) |
 
 `aibt.unity.*` nodes run only in `BehaviorTreeAgent`; `aibt.native.*` nodes only in
 `NativeTreeAgent`. The `aibt.native.*` nodes are opt-in: list `typeof(StandardNativeShard)` in your
 `[AibtCatalogSet]`; each node's "when not to use" names its `aibt.unity.*` counterpart. The
 [Native node library](Documentation~/native-node-library.md) guide maps every managed node to its
-native counterpart and has recipes (negation, a cooldown shared by key, signals, guards); the
+native counterpart and has recipes (negation, a cooldown shared by key, signals, guards, randomness); the
 **Native Guard** sample builds a tree from package nodes only. Negations
 and "below" are an `aibt.core.inverter` over an "at least" node; the per-node contracts are in
 [the node catalog](Documentation~/generated/node-catalog.md). Native hosts do not run observer
@@ -357,7 +358,7 @@ assets and read a running host's trace through the same Editor operations. See
 - [Visual editor and layout](Documentation~/editor-and-layout.md)
 - [Subtrees](Documentation~/subtrees.md): one tree used as a node of another; interface keys,
   graph editor, MCP and CLI.
-- [Native node library](Documentation~/native-node-library.md): the 28 ready-made `aibt.native.*`
+- [Native node library](Documentation~/native-node-library.md): the 33 ready-made `aibt.native.*`
   nodes, how to opt in, the managed → native mapping and recipes.
 - [Burst node authoring](Documentation~/burst-node-authoring.md)
 - [Production tree host](Documentation~/production-host.md)

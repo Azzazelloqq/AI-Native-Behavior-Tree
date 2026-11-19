@@ -2,7 +2,8 @@
 
 The package ships ready-made native (Burst) leaves under `aibt.native.*`, so a tree for
 `NativeTreeAgent`, `ProductionTreeHost` or `TreeSimulation` needs no Burst code for blackboard
-logic, flags, counters, distances, timers, shared cooldowns or signals to the game. Together with
+logic, flags, counters, distances, timers, shared cooldowns, signals to the game or seeded random
+choices. Together with
 the `aibt.core.*` composites and decorators they cover what most guard, patrol and cooldown trees
 do. The decision record is `decisions/ADR-P11-002-native-node-library.md`; the full contract of
 each node (parameters, keys, statuses) is in the [node catalog](generated/node-catalog.md).
@@ -15,7 +16,7 @@ managed counterpart.
 
 The nodes live in the package shard `aibt.native.standard` (assembly `AIBT.StandardNodes`, which
 is referenced automatically). The palette and MCP `search_nodes` list them in every project, under
-`Native/Blackboard`, `Native/Flow`, `Native/Timing` and `Native/Signals`. A native tree can use
+`Native/Blackboard`, `Native/Flow`, `Native/Timing`, `Native/Signals` and `Native/Random`. A native tree can use
 them once your project's catalog set lists the shard. From the **Native Guard** sample
 (`Catalog/NativeGuardCatalog.cs`):
 
@@ -34,8 +35,9 @@ Player built before that reload would carry stale assets (bootstrap fails with `
 
 ## What a library node may do
 
-Library nodes read and write **Tree-scope** blackboard keys, read the **update time point**, and
-emit on **one package effect channel**, `aibt.native.signal`, with an `Int32` code. They never touch
+Library nodes read and write **Tree-scope** blackboard keys, read the **update time point**, draw
+from **their own seeded random stream** (the `Native/Random` nodes), and emit on **one package effect
+channel**, `aibt.native.signal`, with an `Int32` code. They never touch
 the scene: the game writes facts in (`NativeTreeAgent.SetFact`) and reacts to signals
 (`NativeTreeAgent.OnEffect`). Anything that moves, animates or queries physics stays game code.
 
@@ -79,11 +81,15 @@ makes the node fail without writing. A key that cannot be read makes the node fa
 | `aibt.unity.start-cooldown` | `set-deadline` | Native/Timing | Int64 key := now + `duration-microseconds` |
 | `aibt.unity.is-cooldown-ready` | `deadline-passed` | Native/Timing | now >= Int64 key; a key never set (0) has passed |
 | `aibt.unity.raise-event` | `signal` | Native/Signals | `code` 0 to 2147483647 on `aibt.native.signal` |
+| `aibt.unity.random-chance` | `random-chance` | Native/Random | succeeds when a draw in [0, 1) is below `chance`; `chance` outside 0 to 1 fails |
+| `aibt.unity.random-float` | `random-float` | Native/Random | Float32 key := uniform in [`min`, `max`); `min` > `max` fails (the managed node swaps them) |
+| `aibt.unity.random-int` | `random-int` | Native/Random | Int32 key := uniform in [`min`, `max`], both included; `UInt32` bounds up to 2147483647 |
+| `aibt.unity.wait-random` | `wait-random-microseconds` | Native/Random | duration in [`min-microseconds`, `max-microseconds`] of host time, drawn once at start |
+| `aibt.unity.random-point` | `random-float3-in-radius` | Native/Random | Float3 `result` := `center` key + offset with `min-radius` <= distance <= `radius`; `flat` keeps Y; the centre is a key, not the transform |
 
-These 28 nodes are the whole library today. Managed nodes with no native counterpart: random values
-and waits (`random-*`, `wait-random`), `wait-frames` (use `aibt.stdlib.wait`), `time-since-changed`,
-and everything that touches the scene (movement, navigation, animation, audio, GameObject,
-`line-of-sight`, `log`).
+These 33 nodes are the whole library today. Managed nodes with no native counterpart:
+`wait-frames` (use `aibt.stdlib.wait`), `time-since-changed`, and everything that touches the scene
+(movement, navigation, animation, audio, GameObject, `line-of-sight`, `log`).
 
 ## Recipes
 
@@ -171,6 +177,58 @@ open, sweep, rest) keeps its progress until one of them takes over.
 
 `deadline-passed` reads time as well as a key, so it is not an observer condition. Use it as a
 reactive guard as above.
+
+### Randomness
+
+The five `Native/Random` nodes draw from a random stream of their own. The host derives each
+node's stream from a **root seed**, the tree's semantic hash, the **tree instance id** and the
+node's index, as `TreeSimulation` does (`specifications/time-and-random-v1.md`). The nodes are
+declared deterministic, so they pass the default `Phase1` policy: one seed, one instance id and one
+sequence of updates and facts give one sequence of results.
+
+```text
+reactive-selector-retaining
+  ...guards...
+  memory-sequence  "wander"
+    random-float3-in-radius  center = home, result = target, min-radius 2, radius 8, flat
+    signal                   code 1   (the game walks to 'target')
+    wait-random-microseconds 1 000 000 .. 3 000 000
+```
+
+Where the seed lives and what it means:
+
+- **`NativeTreeAgent.RandomSeed`** (Inspector: *Random Seed*, serialized, default `0`). It is read
+  when a run starts (enable, `Restart`, an automatic restart); a change applies from the next run.
+- **`ProductionTreeHost`**: `ProductionTreeProgram.TryBootstrap(host, randomSeed, out failure, ...)`
+  or the generated `ProductionTreeHost.TryBootstrap(..., randomSeed, out failure)`. The overloads
+  without a seed use `ProductionTreeHost.DefaultRandomSeed` (`0`); `host.RandomSeed` reports it.
+- **`TreeSimulation`**: `TreeSimulationSettings.RandomSeed` (default `0`), as before.
+
+Every run of a `NativeTreeAgent` is a new host with a new tree instance id, so a restart draws a
+new sequence, and two agents with one seed draw different sequences. Host instance ids are
+process-wide and given in start order from 1 after a domain reload: entering Play Mode with domain
+reload and starting the same agents in the same order repeats the results; without a domain reload
+(Enter Play Mode Options), or in another start order, the ids and so the sequences differ. For a
+replay that never depends on start order use `TreeSimulation`, whose instance ids are local to the
+container.
+
+Each node's draws per tick are fixed, so tuning a range does not shift later draws: one draw for
+`random-chance`, `random-float` and `random-int` (a bounded draw repeats only on the spec's
+rejection), two for a flat `random-float3-in-radius` and three otherwise, and one for
+`wait-random-microseconds` when it starts (none while it waits or when it is aborted). An invalid
+configuration (`min` > `max`, `chance` outside 0 to 1, a negative radius, `max` above 2147483647
+for `random-int`) fails without writing and without drawing.
+
+Not covered today: a scheduling profile that **forces** `BatchedJobsSameFrame` or `PipelinedJobs`
+groups two or more agents of one catalog into one job wave, and that path does not keep a random
+node's advanced stream, so every draw repeats the first value (no error is reported). Random nodes
+work under the default profiles, under `Immediate` and `JobsAgentFrame`, on a lone
+`ProductionTreeHost`, and in `TreeSimulation` (in place and with Jobs). This is an open question
+for the next stage (`Planning~/Evidence/P11-002/README.md`).
+
+`aibt.stdlib.random-condition` (a whole-percent chance) is a built-in leaf declared
+non-deterministic: the default `Phase1` policy refuses it (AIBT2040). Use `random-chance` in native
+trees.
 
 ## See also
 

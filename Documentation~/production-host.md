@@ -88,6 +88,17 @@ typed effects. The host's bounded queue is drained by `TryDrainEffects`; effect 
 post-commit public boundary, not a license to inspect generated dispatch storage. Pipelined hosts
 may deliver and accept new facts at their next idle barrier, never into an in-flight native wave.
 
+The generated bootstrap seeds the random stream of every node that declares one
+(`[AibtRandomStream]`, for example the `Native/Random` library nodes) from a root seed, the
+program's semantic hash, the host's `InstanceId` and the node index, as `TreeSimulation` does
+(`time-and-random-v1.md`). The seed is an argument of the
+`TryBootstrap(..., randomSeed, out failure)` overloads (default `DefaultRandomSeed`, 0) and is
+reported by `RandomSeed`; `NativeTreeAgent.RandomSeed` passes it for every run. A tree without such
+nodes has no stream and is not affected. Instance ids are process-wide, so two hosts with one seed
+draw different sequences. A profile that forces `BatchedJobsSameFrame` or `PipelinedJobs` does not
+keep the advanced stream today (each draw repeats the first value); see the Randomness recipe in
+[Native node library](native-node-library.md#randomness).
+
 `NativeTreeAgent` is a ready-made world participant built only from these public pieces: it
 creates a hidden host per run, restarts it by `NativeTreeRestartMode`, flushes `SetFact` values at
 the same safe boundary and routes effects to handlers registered by command name (see
