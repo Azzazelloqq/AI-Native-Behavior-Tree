@@ -2,8 +2,9 @@
 
 Status: `In Progress` — ADR accepted 2026-11-19 (AIBT-050) with all six recommendations of its §8;
 stage 1 (blackboard and flow nodes) approved the same day and accepted after the full run of all
-nine assemblies on `4af5571`. Stage 2 (timing and signal nodes) approved by the owner 2026-11-19.
-Stages 3–4 each need the owner's go-ahead.
+nine assemblies on `4af5571`. Stage 2 (timing and signal nodes) approved by the owner 2026-11-19,
+implemented the same day and awaiting the orchestrator's acceptance. Stages 3–4 each need the owner's
+go-ahead.
 
 ## Objective
 
@@ -121,5 +122,17 @@ Save-UnityWindow.ps1 (palette), Save-UnityClip.ps1 (demo tree) for stages 1–3
 - Stage 1 changed three node-list expectations (`StandardNativeShardTests`,
   `StandardNodeCatalogTests`, `McpToolDispatcherTests`: 4 native IDs → 24). No other existing
   expectation changed. Demo tree: `Tests/Fixtures/P11-002/native-library-demo.aibt.json`.
+- Stage 2 (timing and signal nodes) is implemented on `feature/aibt-consumer-workflow` after `82eb8ea`
+  and awaits the orchestrator's acceptance; evidence in `Planning~/Evidence/P11-002/README.md`
+  ("Stage 2"), raw runs, dumps, screenshots and the clip in
+  `C:\UnityProjects\_aibt_acceptance\P11-002\stage2\`. Four nodes (`wait-until-true`, `set-deadline`,
+  `deadline-passed`, `signal`), the guide page `Documentation~/native-node-library.md` and the
+  **Native Guard** sample (`Samples~/NativeGuard`, listed in `package.json` `samples`). No runtime
+  change. Changed existing expectations: the node lists (24 → 28) and the category check in
+  `NativeLibraryNodeTests.TheGeneratorAcceptsTheShardNextToAProjectShard_AndOneTreeDispatchesEveryLibraryNode`.
+- Found in stage 2: v1 reactive composites abort and re-enter their running child at every update
+  (`reference-executor-machine-v1.md`, "Reactive replacement"), so a `wait-until-true` or
+  `wait-microseconds` directly under one never times out. The guide says to use the retaining
+  reactive composites above waits. Existing behaviour, not changed.
 - ADR §9 lists four unrelated findings (stale Swarm Arena comment, `UInt32` blackboard key in the Public
   Burst Nodes sample, untested managed nodes, unseeded `System.Random` in the stdlib reference twin).

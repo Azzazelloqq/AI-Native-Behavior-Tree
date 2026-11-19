@@ -2,8 +2,9 @@
 
 Decision: `Documentation~/decisions/ADR-P11-002-native-node-library.md` (owner decision of 2026-11-19,
 AIBT-050, every §8 recommendation). Stage 1 of ADR §7 is implemented (section below) and was
-accepted by the orchestrator on `4af5571` ("Acceptance run" at the end). Stage 2 was approved by the
-owner on 2026-11-19. Stages 3–4 are not started; each needs the owner's go-ahead.
+accepted by the orchestrator on `4af5571` ("Acceptance run" at the end of its section). Stage 2 was
+approved by the owner on 2026-11-19, is implemented (section "Stage 2" after the stage 1 material)
+and awaits the orchestrator's acceptance. Stages 3–4 are not started; each needs the owner's go-ahead.
 
 ## Stage 1 — blackboard and flow nodes (2026-11-19)
 
@@ -379,3 +380,243 @@ Open for the owner (neither blocks stage 2): the two questions above (observer r
 native hosts against `execution-semantics-v1.md:225`; AIBT2043 not counting writes through native
 bindings). The stage 1 line of ADR §7 "observer conditions guard a memory composite natively" is
 met through a reactive composite at the next update, not through observer re-evaluation.
+
+## Stage 2 — timing and signal nodes (2026-11-19)
+
+Base: `feature/aibt-consumer-workflow` at `82eb8ea`. Editor 6000.6.9f1, project "Modules"
+(Pipeline port 7810). Tests ran with the async `Tools/Unity/Invoke-UnityTests.ps1` after
+`Invoke-UnityRecompile.ps1`: touched classes and classes whose catalog sets list the shard, one
+runner at a time. Raw outputs, dumps, screenshots, the clip and the scripts that made them are in
+`C:\UnityProjects\_aibt_acceptance\P11-002\stage2\` (outside the repository). Nothing changed under
+`Runtime/`, `CodeGen~`, `Schemas~`, `Authoring/Validation`, `Authoring/Compilation`, `Agents`,
+`Documentation~/specifications/` or in `Tests/Editor/CodeGen/Contracts/ExpectedPublicAbiV2.txt`
+(`public-api-diff.txt`).
+
+Commits (submodule only):
+
+| Commit | Content |
+|---|---|
+| `3d6f0a7` | the 4 nodes |
+| `c055691` | tests, test kit additions, the changed node-list expectations |
+| `00e6045` | `node-catalog.md` regenerated with the generator (91 → 95 node types) |
+| the commits after `00e6045` | guide page and its snippet test, Native Guard sample, README, CHANGELOG, this file and the task card |
+
+### Fact checks before the node code
+
+All three passed, so the nodes follow the ADR:
+
+1. **Int64 Tree keys end to end.** An Int64 key with `BlackboardWriteHandle<long>` /
+   `BlackboardReadHandle<long>` compiles, bakes and runs on `ProductionTreeHost`, takes a
+   `NativeTreeAgent.SetFact<long>` fact and runs in `TreeSimulation`
+   (`NativeLibraryAgentTests.AnInt64DeadlineFact_ReachesDeadlinePassed` and the deadline cases
+   beyond the Int32 range).
+2. **The shard's effect channel arrives on all three paths:** `NativeTreeAgent.OnEffect`
+   (`NativeLibraryAgentTests`), `ProductionTreeHost.TryDrainEffects` with the stable id
+   FNV-1a-64(`aibt.native.signal`) = `0x382b261d75afa998` (`NativeLibraryTimingTests`) and
+   `CommandChannel<int>` in `TreeSimulation` (`NativeLibraryTimingSimulationTests`).
+3. **Declaring the channel changes nothing for trees without `signal`.** The simulation builds its
+   channel map per program from the nodes the program uses. A group whose tree has no `signal`
+   answers `UnknownChannel` for `aibt.native.signal`, as before. Every existing test whose catalog
+   set lists the shard passed unchanged (run `02`). The only changed expectations are the node lists
+   below.
+
+### The 4 nodes
+
+Shard `aibt.native.standard` (assembly `AIBT.StandardNodes`), shard version 1. Each node has node
+version 1, Tree scope only, `deterministic: true`, cost `Trivial` and an `[AibtNodeDocumentation]`
+whose "when not to use" names the `aibt.unity.*` counterpart. Source:
+`Authoring/Registry/Generated/StandardNative/StandardNativeTimingNodes.cs`.
+
+| Type ID | Kind | Category | Parameters | Keys / channel | Result |
+|---|---|---|---|---|---|
+| `aibt.native.wait-until-true` | Action (AbortOnly) | Native/Timing | `timeout-microseconds` UInt32 (0 = none) | `key` Bool read | Success when the key is true; Failure when the timeout has passed since Enter; otherwise Running |
+| `aibt.native.set-deadline` | Action | Native/Timing | `duration-microseconds` UInt32 | `key` Int64 write | writes now + duration, Success; past `long.MaxValue` Failure without writing |
+| `aibt.native.deadline-passed` | Condition (not an observer) | Native/Timing | — | `key` Int64 read | Success when now >= key |
+| `aibt.native.signal` | Action | Native/Signals | `code` UInt32 | channel `aibt.native.signal`, Int32 | emits `code`, Success; above 2147483647 Failure and nothing emitted |
+
+### Contract choices (made in stage 2, not fixed by the ADR)
+
+- `wait-until-true`: the key wins over a timeout reached in the same update. The timeout counts from
+  Enter (memory `started-at`), so each new start after an abort or a root restart counts again.
+  Timeout 0 means no timeout. A key that cannot be read fails the node, as in stage 1. The check is
+  `now >= start && now - start >= timeout` (`StandardNativeTime.HasReached`, no overflow).
+- `set-deadline` writes nothing and fails when now + duration would pass `long.MaxValue`. Exactly
+  `long.MaxValue` is written.
+- `deadline-passed` reads time, so it is not an observer condition. A key never set (0) has passed.
+- `signal`: the configuration field is `code` and the command field `signal`; the binding id is the
+  channel name `aibt.native.signal`. It is an action (AbortOnly like the other library actions) and
+  emits once per tick of the node.
+- **Host behaviour, not a node contract:** `ProductionTreeHost` refuses a negative or
+  non-monotonic clock (`ProductionTreeAgentCore.TryBeginUpdateAt`, `NativeLifetimeStateInvalid`),
+  so a negative "now" never reaches a node. That case was removed from the tests (run `01`).
+- `NativeTreeAgent` reads `Time.timeAsDouble` and takes no clock from outside. The controlled-clock
+  cases (before / at / after, exactly at the timeout) therefore run on `ProductionTreeHost` with a
+  clock passed to `ProductionTreeProgram.TryBootstrap`. The agent tests check facts, signals and one
+  time point per update.
+
+### Found: v1 reactive composites restart waits
+
+`aibt.core.reactive-sequence` / `reactive-selector` (v1) abort and re-enter their running child at
+every update (`reference-executor-machine-v1.md`, "Reactive replacement"). A `wait-until-true` (or
+`wait-microseconds`) directly under one starts again at every update and never times out. The case
+"under a v1 reactive selector it restarts every update and never times out" pins this. The guide
+tells authors to use `reactive-*-retaining` above waits, and the Native Guard tree does. Existing
+behaviour, not changed.
+
+### Tests
+
+| Class | Cases | What it checks |
+|---|---|---|
+| `Tests/Integration/NativeRuntime/NativeLibraryTimingTests` | 30 | 29 step-by-step cases on `ProductionTreeHost` with a controlled clock and effect capacity 8: root status, key values and drained signals after each step, and a second drain is empty. `wait-until-true`: true at start; no timeout + fact write; timeout 1000 (Running at 999 after start, Failure exactly at 1000); the key wins at the timeout; the maximum timeout; the key set by a node write (parallel with a writer); aborted by a retaining reactive selector and restarted (the timeout counts from the new start); under a v1 reactive selector. `set-deadline`: now + duration; 0; beyond Int32; exactly `long.MaxValue`; overflow fails and the key keeps 7. `deadline-passed`: before / exactly at / after; never set; Int64 before / at; written as a fact; under an inverter. `signal`: 7, 0 and 2147483647 once each with the stable id; 2147483648 and 4294967295 fail and emit nothing; two signals in order; a signal after a fact. A cooldown shared by two branches through one key. Plus `EveryStage2NodeHasBehaviourCases`: each of the 28 library nodes has stage 1 or stage 2 cases |
+| `Tests/Integration/NativeRuntime/NativeLibraryAgentTests` | 4 | `NativeTreeAgent` with the scheduler: signals reach `OnEffect` exactly once per emission after a fact write; a code above Int32 fails and nothing arrives; an Int64 fact reaches `deadline-passed`; `set-deadline` and `deadline-passed` in one update see the same time point |
+| `Tests/Integration/Simulation/NativeLibraryTimingSimulationTests` | 1 | Seven timing and signal trees as `TreeSimulation` groups of three agents thinking every 1, 2 and 3 ticks, in place and with Jobs: identical per-tick digests including the commands; signal ticks and wait completions match the tick time (`tick * 33333` µs); signal bounds (0, max, too large); a tree without `signal` answers `UnknownChannel` |
+| `Tests/Editor/Documentation/UserGuideSnippetTests` | +1 | `NativeLibraryGuideSnippetsAreQuotedFromTheNativeGuardSample`: the guide's 3 C# blocks are quoted from the sample, and the JSON nodes it shares with the sample tree (at least 4) have the sample's types |
+
+`NativeLibraryTestKit.cs` gained `StandardNativeLibraryIds.Stage2`, Int64 keys, an optional clock
+and effect capacity, `LibraryHost.Fact(string, long)`, `ReadLong` and `DrainEffects`.
+`NativeLibraryTimingCases.cs` holds the cases.
+
+### Changed expectations of existing tests (old → new)
+
+Only the node lists and one category check:
+
+| Test | Old | New |
+|---|---|---|
+| `StandardNativeShardTests.TheGeneratedCatalogDeclaresBothShardsNodes` | `StandardNativeLibraryIds.All` (24) | `StandardNativeLibraryIds.All` (28) |
+| `StandardNodeCatalogTests.StandardNativeTypeIds` (used by `TheProjectCatalogOffersTheStandardNativeShardAsNativeOnlyNodes` and `McpToolDispatcherTests`) | 24 IDs | 28 IDs |
+| `McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` | built-ins + 24 | built-ins + 28 (only a comment changed; the list comes from `StandardNativeTypeIds`) |
+| `NativeLibraryNodeTests.TheGeneratorAcceptsTheShardNextToAProjectShard_AndOneTreeDispatchesEveryLibraryNode` | category Native/Blackboard or Native/Flow; 24 IDs | also Native/Timing and Native/Signals; 28 IDs |
+
+The known failure `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` now finds 100 nodes
+instead of 95 (the five Swarm Arena sample nodes in the project), as before.
+
+### The 24 existing nodes are unchanged
+
+`all24-unchanged.txt` and `all24-unchanged-final.txt`: the manifest and descriptor JSON SHA-256 of
+each of the 24 stage 1 nodes are identical before (`82eb8ea`) and after (node count 24 → 28,
+"ALL 24 EXISTING NODES UNCHANGED: True"). `existing-nodes-unchanged.txt` repeats the check for the
+four P9-002 nodes. Dumps: `before/`, `after-nodes/` (after `3d6f0a7`) and `after-final/` (after the
+sample and docs; byte-identical to `after-nodes/`).
+
+### Fingerprints before and after
+
+| | Before (`82eb8ea`) | After |
+|---|---|---|
+| shard `aibt.native.standard` version | 1 | 1 |
+| shard NodeRegistryHash | `f582da57173a960c…` | `3887345debad49ac…` |
+| shard DescriptorHash | `c998e1fc2370ba28…` | `d9242278d7667e39…` |
+| `StandardNativeProbeCatalog` | `a89c927f3c3e279d…` | `db139644a75736e5…` |
+| `JobsEquivalenceCatalog` | `b6bf793584d32bd8…` | `19ddbb52f52a810a…` |
+| `SimulationTestCatalog` | `c5aa1cd1915ab1d2…` | `5649dde12fb4fac8…` |
+| `SimulationIoCatalog` | `82ba9dc6c0f56080…` | `de1a2fb16fdfe9f9…` |
+| `SimulationActionCatalog` | `e92c76d3b7248d32…` | `d639b822606503ac…` |
+| `NativeLibraryCatalog` | `52b44879e8593ecf…` | `8ff74edb8c740a14…` |
+
+All sets are `IsUsable` after. Full values: `before/catalog-sets.txt`, `after-final/catalog-sets.txt`.
+
+### What has to be prepared again
+
+- Every runtime asset prepared against a catalog set that lists `StandardNativeShard`. In the
+  package these are only test sets (compiled in the tests; no baked fixture depends on them) and the
+  `Benchmarks~` Phase 10 PerfCatalog (in the benchmark's own project). The CHANGELOG says so.
+- Swarm Arena and First Agent do not list the shard and are not affected.
+- In the parent project only the scratch demo asset below, which was prepared after the nodes.
+
+### Guide, README, CHANGELOG, sample
+
+- `Documentation~/native-node-library.md` (new): opting in (quoted from the sample's catalog set),
+  what a library node may do, a managed → native table of all 28 nodes, and recipes: "is false" and
+  "below" with `aibt.core.inverter`, a shared cooldown, signals, waiting for the game, and guarding a
+  branch with v1 or retaining reactive composites. It says plainly that native hosts do not
+  re-evaluate observers. Linked from the README.
+- `README.md`: Native/Timing (3) and Native/Signals (1) rows and links to the guide. No new C#
+  block (`UserGuideSnippetTests` still counts 5).
+- `CHANGELOG.md`: the 4 nodes, the fingerprint change and preparing again, the guide and the sample.
+- **Native Guard** sample, `Samples~/NativeGuard`: the tree `native-guard.aibt.json` (only
+  `aibt.core.*` and `aibt.native.*`), `Catalog/NativeGuardCatalog.cs` (the whole opt-in),
+  `Runtime/NativeGuard.cs` (facts with `SetFact`, signals with `OnEffect`, the visuals),
+  `Editor/NativeGuardSetup.cs` (menu **AIBT > Samples > Native Guard > Create Demo**: prepares the
+  runtime asset and builds the scene) and a README. Listed in `Samples~/README.md` and in the
+  `samples` array of `package.json` (a new entry; the package version is unchanged, open question 1).
+
+The tree: a retaining reactive selector `guard` over `zap` (reactive sequence: `bool-is-true`
+`intruder-close`, `deadline-passed` `weapon-ready-at`, then a memory sequence of `set-deadline`
+1.5 s, `signal` 1, `idle`), `flare` (the same on `intruder-seen` with `signal` 2), `watch`
+(`intruder-seen`, `idle`) and `patrol` (memory sequence: `signal` 3, `wait-until-true` `gate-open`
+with a 3 s timeout, `signal` 4, `wait-microseconds` 2 s). Zap and flare share the cooldown key.
+
+### Screenshots and clip
+
+- `palette-actions-native-timing.png` (Set Deadline, Wait Until True),
+  `palette-conditions-native-timing.png` (Deadline Passed) and `palette-actions-native-signals.png`
+  (Signal): the AIBT Graph "Create Node" palette opened and navigated by `scripts/OpenPalette.cs` and
+  `NavigatePalette.cs`, captured with `capture_window`. `palette-tree.txt` lists them with their type
+  IDs.
+- `graph-edit.png`: the sample tree in the AIBT Graph, Valid, with 4 AIBT2043 notes (open question 4).
+- `graph-live-1.png`, `graph-live-2.png`: Play Mode with the tower selected, "Live: Guard Tower
+  (native) — running". Run 1 highlights guard → patrol → "Rest 2 s"; run 2, two seconds later,
+  guard → watch → "Watch". The blackboard panel shows "live: —" for the keys of the native agent.
+- `guard-edit.png`: the scene before Play.
+- `clip/native-guard.mp4` (30 s of the Game view with the on-screen log; `Save-UnityClip.ps1 -Scene
+  Assets/AibtNativeGuardDemo/NativeGuard.unity -Play -Seconds 30 -StillsEvery 3 -Source window
+  -Window GameView -Method screen`) and `clip/stills/`, one every 3 s. The stills show:
+  - 0 s: the first patrol is done (log "4 sweep + close, 3 open gate"), the tower cyan from the
+    sweep, the intruder far left, all facts false.
+  - 3 s: the intruder at the tower, seen and close true; the log shows two flares.
+  - 6 s: the intruder was zapped and sent away to the left, the facts are false, and the patrol ran
+    again ("4 sweep + close, 3 open gate" after "1 zap").
+  - 12 s: the intruder seen again (seen true, close false) and the gate standing open (gate-open
+    true): the flare branch took over from the patrol while it waited.
+  - 21 s: the intruder away again; a new "3 open gate" heads the log.
+  - 27 s: the tower red right after a zap, the gate open.
+- The first recording showed the intruder stuck at the tower (a zap pushed it back, but it kept
+  walking in) and the raised gate hiding the tower. The sample was changed (a zap also turns the
+  intruder around; the gate stands to the side) and recorded again. Only the second clip is kept.
+- The Console shows no message from the demo.
+
+### Runs
+
+All in `runs/`, through `Tools/Unity/Invoke-UnityTests.ps1` unless stated.
+
+| Run | Result |
+|---|---|
+| `01-stage2-classes-first` | NativeLibraryTimingTests 30/31 (the negative-clock case: the host refuses the clock, see above; the case was removed), NativeLibraryAgentTests 4/4, NativeLibraryTimingSimulationTests 1/1 |
+| `02-stage2-and-shard-users` | NativeLibraryTimingTests 30/30, NativeLibraryAgentTests 4/4, NativeLibraryTimingSimulationTests 1/1, StandardNativeShard 3/3, StandardNodeCatalog 6/6, McpToolDispatcher 7/8 (the known case), McpDocumentationGenerators 14/14, NativeLibraryNode 55/55, NativeLibraryParity 2/2, NativeLibraryReactiveGuard 9/9, NativeLibrarySimulation 1/1, GeneratedDispatchFieldOrdinalRegression 7/7, JobsPolicyEquivalence 28/28, TreeSimulation* 102/102, NativeLibraryBakeMessage 1/1 |
+| `03-docs-sample-contract` | after the guide, sample and README: UserGuideSnippet 4/4, SubtreeExpander 26/26, ProjectTreeIndex 4/4, McpDocumentationGenerators 14/14, NativeLibraryTimingTests 30/30, NativeLibraryAgentTests 4/4; `AIBT.CodeGen.ContractTests` 6/6 (ABI v2 unchanged) |
+| `04-verify-static` | `Tools~/Verification/Verify-Static.ps1` after the evidence and task card edits: 7 schemas, 182 work items, passed |
+
+The public API diff from `82eb8ea` is additive (`public-api-diff.txt`): no line was removed from any
+`.cs` file outside `Tests/`. The new public members are the node structs of the 4 nodes.
+
+### Parent-project files (scratch, not committed)
+
+- `Assets/Samples/AIBT/Native Guard/` and `Assets/Samples/AIBT/Native Guard.meta`: a copy of
+  `Samples~/NativeGuard` where a Package Manager import would put it, with the `.meta` files Unity
+  generated. (`Assets/Samples/AIBT.meta`, `First Agent` and `Simple Agent` next to it were already
+  there, untracked.)
+- `Assets/AibtNativeGuardDemo/` and its `.meta`: `NativeGuard.runtime.asset`, `NativeGuard.unity`,
+  `Gate.mat`, `Ground.mat`, `Intruder.mat` and their `.meta` files, made by Create Demo.
+
+They can be deleted. Nothing in the package refers to them.
+
+### Open questions for the owner
+
+1. **`package.json` `samples` entry.** The brief forbids changing the package version. The sample
+   needs a `samples` entry to be importable from the Package Manager, so the entry was added and the
+   version was not changed. If `package.json` must stay untouched, the entry can be dropped (the
+   sample then stays in `Samples~` without being importable).
+2. **v1 reactive composites and waits.** The README advice "put the condition first under a
+   reactive-sequence" is right for conditions, but a wait directly under a v1 reactive composite
+   never times out (section above). The guide explains it; the README was not changed.
+3. **Observers on native hosts** (stage 1, question 1) are still not re-evaluated. The guide says so.
+4. **AIBT2043** (stage 1, question 2) now also shows for `weapon-ready-at` in the sample, which
+   `set-deadline` writes through native bindings.
+
+### Not covered by stage 2
+
+- Stages 3–4 (random nodes and host seeding, quickstart, MCP recipes).
+- A controlled clock on `NativeTreeAgent` (it has none); those cases run on `ProductionTreeHost`.
+- Observer re-evaluation, the AIBT2043 hint, performance, a Player or IL2CPP build.
+- A full nine-assembly run (touched classes and classes whose sets list the shard only).
+- The Package Manager import itself: the sample was copied into `Assets/Samples/AIBT/Native Guard/`
+  by hand.
