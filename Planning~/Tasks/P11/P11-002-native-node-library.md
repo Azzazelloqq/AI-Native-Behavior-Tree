@@ -3,7 +3,7 @@
 Status: `In Progress` — ADR accepted 2026-11-19 (AIBT-050) with all six recommendations of its §8;
 stage 1 (blackboard and flow nodes) approved the same day and accepted after the full run of all
 nine assemblies on `4af5571`. Stage 2 (timing and signal nodes) approved by the owner 2026-11-19,
-implemented the same day and awaiting the orchestrator's acceptance. Stages 3–4 each need the owner's
+implemented the same day and accepted on `bad2892`. Stages 3–4 each need the owner's
 go-ahead.
 
 ## Objective

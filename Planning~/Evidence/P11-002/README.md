@@ -4,7 +4,7 @@ Decision: `Documentation~/decisions/ADR-P11-002-native-node-library.md` (owner d
 AIBT-050, every §8 recommendation). Stage 1 of ADR §7 is implemented (section below) and was
 accepted by the orchestrator on `4af5571` ("Acceptance run" at the end of its section). Stage 2 was
 approved by the owner on 2026-11-19, is implemented (section "Stage 2" after the stage 1 material)
-and awaits the orchestrator's acceptance. Stages 3–4 are not started; each needs the owner's go-ahead.
+and was accepted by the orchestrator on `bad2892`. Stages 3–4 are not started; each needs the owner's go-ahead.
 
 ## Stage 1 — blackboard and flow nodes (2026-11-19)
 
@@ -620,3 +620,48 @@ They can be deleted. Nothing in the package refers to them.
 - A full nine-assembly run (touched classes and classes whose sets list the shard only).
 - The Package Manager import itself: the sample was copied into `Assets/Samples/AIBT/Native Guard/`
   by hand.
+
+### Acceptance run (orchestrator, 2026-11-19, stage 2)
+
+Read by the orchestrator on `bad2892` (clean working tree): the diff `82eb8ea..bad2892`, the node
+source, the sample, the guide page, the changed existing files, the test classes, the screenshots
+and the clip stills.
+
+- **Protected paths.** Nothing changed under `Runtime/`, `CodeGen~`, `Schemas~`,
+  `Authoring/Validation`, `Authoring/Compilation`, `Agents`, `Documentation~/specifications/` or in
+  `ExpectedPublicAbiV2.txt`. `package.json` gained one `samples` entry (Native Guard), as the other
+  samples have; the version is unchanged.
+- **Existing tests.** The only changed expectations are the node lists and the category check in
+  the table above (24 IDs → 28).
+- **The sample copy** in the parent project (`Assets/Samples/AIBT/Native Guard/`) is identical to
+  `Samples~/NativeGuard` (`diff -r`, `.meta` files aside).
+- **README** (after the run, `README.md` only): the guard advice now says to use the retaining
+  reactive composites above waits and multi-step branches, as the guide does (open question 2).
+  `UserGuideSnippetTests` 4/4 after the edit.
+- **Full run of all nine assemblies**, 23:44–23:55; Editor-log counters did not move (`No command
+  named` 0, main-thread timeouts 1). Raw output: `C:\UnityProjects\_aibt_acceptance\P11-002\stage2-acceptance\full-run-bad2892.txt`.
+
+| Assembly | `4af5571` | `bad2892` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 314/314 | 349/349 | `NativeLibraryTimingTests` 30, `NativeLibraryAgentTests` 4, `NativeLibraryTimingSimulationTests` 1 |
+| `AIBT.Editor.Tests` | 791/792 | 792/793 | one case in `UserGuideSnippetTests` |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` (100 found,
+95 expected: the five sample nodes registered in the project "Modules").
+
+Not done by the orchestrator: the sample was not imported through the Package Manager (the copy in
+`Assets/Samples` was made by hand by the stage session); the clip was not recorded again (its stills
+were read); no Player or IL2CPP build; no performance measurement.
+
+Seen in the live screenshots and not part of this stage: the blackboard panel of the graph shows
+`live: —` for the keys of a native agent, and the tree list marks Native Guard "Needs native
+compile" while its prepared asset is running.
+
+Open for the owner (none blocks stage 3): the questions above.
