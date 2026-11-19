@@ -763,3 +763,257 @@ there would never advance.
 
 Taken twice at `d1218b1` (runs `05`, `06`): the two dumps are byte-identical, so the dump itself is
 deterministic. Kept in `stage3\before\`.
+
+Correction to the list above: `hosts.txt` holds the **52** stage 1 library cases (`## library`
+headers in the dump), not 70; the dump itself is unchanged.
+
+### Part A: what changed under `Runtime/` (commit `ba7c944`)
+
+Only the plan's lines:
+
+- `Runtime/Integration/ProductionTreeHost.cs:98-112` — `DefaultRandomSeed` (0) and the read-only
+  `RandomSeed`; `:247-262` — the existing generated `TryBootstrap` calls a new overload with
+  `ulong randomSeed`; `:274-276` — after `TryBootstrapGenerated` succeeds, before the first update:
+  `_core.GeneratedDispatch.SeedRandomStreams(randomSeed, semantic hash)`, then `RandomSeed = randomSeed`.
+- `Runtime/Integration/ProductionTreeProgram.cs:27-34` — the overload with `randomSeed`; `:40` passes it on.
+- `Runtime/Integration/NativeTreeAgent.cs:43-44` — the serialized `_randomSeed` (default 0, with a
+  tooltip); `:76-84` — `RandomSeed`; `:246` — `StartHost` passes it.
+- `Runtime/Integration/GeneratedDispatch/GeneratedTreeDispatchAdapterV2.cs:591-593` — the
+  `SeedRandomStreams` comment only ("Hosts never call this" became who calls it).
+
+`9808498` regenerated `Documentation~/api-reference-runtime.md` for the six new public members
+(`McpDocumentationGeneratorsTests` failed on the stale file in run `14`).
+
+### Identity proof: trees without random nodes
+
+The dumps described above, taken again after each step, compared by SHA-256 with `before/`:
+
+| Dump | After seeding (`ba7c944`) | After the nodes (`bb059c4`) | After the group fix (`04ba623`) |
+|---|---|---|---|
+| `hosts.txt` | identical | identical | identical |
+| `host-lifecycle-proof.txt` | identical | identical | identical |
+| `agents-jobs-policy.txt` (default, Immediate, forced BatchedJobsSameFrame, JobsAgentFrame) | identical | identical | identical |
+| `simulation.txt` | identical | identical | identical |
+
+Folders `after-seeding/`, `after-nodes/`, `after-group-fix/`; runs `09`, `13`, `19` (the compare
+is `runs/19-dump-after-group-fix-compare.txt`). Nothing under `Runtime/` changed after `04ba623`.
+
+### Group-commit fix (owner decision 8, 2026-11-20)
+
+**Defect.** With the streams seeded, a random node in a group wave did not advance. Group waves are
+the scheduler's grouped dispatch: a profile that forces `BatchedJobsSameFrame` or `PipelinedJobs`,
+two or more adjacent hosts of one catalog (`ProductionTreeScheduler.DriveForcedJobsGroup`). Default
+profiles never take that path. The executor and the workspace copied each participant's stream word
+into the batch, but the commit (`TryCommitGroupParticipant` → `DispatchSlot.TryCommitFromGroup`)
+wrote back only memory, binding values and tree values. Every update rolled the first value of the
+stream again. Reported before any change (`P11-002-stage3-blocker-group-dispatch-random.md`,
+`proposed-group-commit-random-fix.diff`); the owner answered «Да, чинить» with exactly that scope.
+
+**Change** (`04ba623`, `applied-group-commit-random-fix.diff`, 3 files, +24/−3, all `internal`):
+
+- `GeneratedTreeDispatchAdapterV2.cs:452-474` — `TryCommitGroupParticipant` takes
+  `(hasRandomState, committedRandomState)` and passes them on; `:1127-1155` —
+  `DispatchSlot.TryCommitFromGroup` refuses (`InvalidHandle`) when `hasRandomState` does not match
+  whether the slot has a stream word, and writes `_randomStates[0] = committedRandomState` when it has one.
+- `GeneratedDispatchGroupExecutorV2.cs:243-244`, `:276-281` — in the read loop, before any
+  participant commits, `owner.TryReadCommittedRandomState(index)` for a participant with a stream;
+  `:292-293` — passed to the commit.
+- `GeneratedDispatchGroupWorkspaceV2.cs:242-243`, `:248-249` — passes
+  `_randomStates[request.RandomStateIndex]` (the workspace's own word, which the batch advanced).
+
+**Validation order.** The new guard cannot fail after another participant has committed:
+`participant.RandomStates` is the slot's own `_randomStates` (`TryPrepareForGroup` hands it out), so
+`hasRandomState` is computed from the same array the guard checks — an invariant after a successful
+prepare, not a new failure. The workspace validates every participant (`TryValidateCommits` →
+`TryValidateGroupParticipantCommit` → `TryValidateGroupCommit`) before the first commit; the
+executor has no separate validation pass, but every read that can fail (memory, binding values,
+status and now the random state) happens in its first loop, before any commit. So the validation
+pass does not need the check, and none was added.
+
+**Red before, green after** (the final shape of the tests):
+
+| Run | Code | `NativeTreeAgentRandomSeedTests` |
+|---|---|---|
+| `16-group-fix-red-before` | the tests of `04ba623` on the code without the fix (the three files reverted, then re-applied from the diff) | 5/8: `UnderEveryPolicy_…("batched-jobs")` and `("pipelined-jobs")` 0 rolls; `OneTreeSeedAndInstanceIds_…` fails on batched-jobs (no roll) |
+| `17-group-fix-green-after` | with the fix | 8/8 |
+
+`16a`/`17a` are the first shape of the tests, which counted a fixed 120 frames: with the fix,
+batched-jobs passed and pipelined-jobs reached 4 rolls. Diagnosed with a temporary per-frame log
+(`diag/`): one pipelined update spans about 10–30 scheduler frames (the driver advances one stage
+per frame), and each update still makes exactly one draw; immediate and batched made one update and
+one draw per frame, frame for frame identical. That is the pipelined policy's pace, not a stream
+fault, so both tests now count rolls (12 per agent, at most 4000 frames) instead of frames.
+
+**Four-policy comparison.** `OneTreeSeedAndInstanceIds_RollTheSameSequenceUnderEveryPolicy`: four
+agents of the roller tree, seed `0x5EED7`, the same four tree instance ids under each policy (the
+host's private id counter is set by reflection before each run and restored after). For every
+agent, the committed stream states in order are the same under Immediate, JobsAgentFrame, forced
+BatchedJobsSameFrame and forced PipelinedJobs, and each new state is exactly one draw after the last
+(no roll lost or repeated). `UnderEveryPolicy_EachAgentsStreamAdvancesOnItsOwnDerivedSequence`
+checks under each policy that every agent stays on its own derived stream, only moves forward, at
+most one roll per frame, and rolls at least 12 times.
+
+**Group waves without random streams are unchanged.** Run `18`: every test class that drives forced
+BatchedJobsSameFrame or PipelinedJobs, with no changed expectation — GeneratedDispatchLifecycleProof
+14/14, JobsPolicyEquivalence 29/29, NativeHotReloadGoldenEquivalence 4/4, NativeTreeAgent 16/16,
+ProductionTreeWorldEffect 6/6, SchedulingPolicyDriver 5/5, NativeExecutionAllocation 3/3,
+NativeAutoAdaptiveRealisticFeedback 2/2, NativeAutoAdaptiveSelection 7/7, NativeAutoSelection 25/25,
+ProductionTreeScheduler 25/25, SchedulingProfile 18/18, NativeExecutionLargePopulationStress 1/1,
+NativeTreeAgentRandomSeed 8/8. Swarm Arena has no test class. The identity dumps (forced
+BatchedJobsSameFrame included) are byte-identical after the fix (table above).
+
+### The 5 nodes (`bb059c4`)
+
+`Authoring/Registry/Generated/StandardNative/StandardNativeRandomNodes.cs`, category
+`Native/Random`, node version 1, declared deterministic, each with `[AibtRandomStream]`:
+
+| ID | Kind | Draws per tick | Invalid configuration (fails, no write, no draw) |
+|---|---|---|---|
+| `aibt.native.random-chance` | Condition | 1 float | `chance` outside 0..1 or not finite |
+| `aibt.native.random-float` | Action, writes Float32 | 1 float | a bound not finite, `min` > `max` |
+| `aibt.native.random-int` | Action, writes Int32 | 1 bounded (2 on a rejected sample) | `min` > `max`, `max` > 2147483647 |
+| `aibt.native.wait-random-microseconds` | Action, stateful | 1 at Enter, 0 while waiting or aborted | `min` > `max` |
+| `aibt.native.random-float3-in-radius` | Action, writes Float3 | 2 (flat) or 3 | a negative or non-finite radius, `min-radius` > `radius` |
+
+Contract choices (not fixed by the ADR): `random-float` never writes `max` (a sample that rounds up
+to `max` is clamped to the next float below); `random-int` uses UInt32 parameters capped at
+`int.MaxValue`; the wait's full span `[0, uint.MaxValue]` takes one unbounded draw; the point is
+uniform by area (flat, square-root radius) or by volume (cube root by 64-step bisection), angle by
+a 16-term series, computed in double; a non-finite result fails after drawing. A Failure status
+still commits the drawn state (the overflow test checks the replay after it).
+
+The 28 existing nodes are unchanged: manifest and descriptor SHA-256 of each are identical before
+and after (`existing28-unchanged.txt`, "ALL 28 EXISTING NODES UNCHANGED: True"; shard dump in
+`shard-after-nodes/`).
+
+### Tests (`fb89797`, `04ba623`)
+
+- `NativeLibraryRandomTests` (34): every node against a replay of
+  `NativeRandomStreamDerivationV1` (value and exact number of draws per tick), edge cases (chance 0
+  and 1, `min` = `max`, full ranges, the largest sample and a rejected sample set by overwriting the
+  slot's state word), invalid configurations, the wait's abort, 40-seed runs where the outcome
+  depends on the draw. Statistical checks use 6σ margins (2000 rolls of chance 0.3: hits; 2000
+  floats in [-2, 3): mean; 2500 ints in [3, 7]: each count).
+- `HostRandomSeedingTests` (+3): the five nodes give the same per-tick digests in place and with
+  Jobs in `TreeSimulation` (16 agents, 240 ticks); a host and a container agent with the same
+  derivation inputs run them alike, in place and with Jobs.
+- `NativeTreeAgentRandomSeedTests` (8): above.
+
+### Changed expectations of existing tests (old → new)
+
+| Test | Old | New |
+|---|---|---|
+| `TreeSimulationHostEquivalenceTests.Hosts_HaveZeroedRandomStreams_AndARandomNodeCannotRun` | hosts leave stream words zero; a random node is refused | replaced by `Hosts_SeedRandomStreams_AndARandomNodeRuns` (owner decision 4) |
+| `NativeLibraryTimingTests` node list, `StandardNativeShardTests` (`StandardNativeLibraryIds.All`), `StandardNodeCatalogTests.StandardNativeTypeIds` | 28 IDs | 33 IDs |
+| `NativeLibraryNodeTests` category check | Blackboard, Flow, Timing, Signals | also `Native/Random` |
+| `McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` | known failure: 95 expected, 100 found | known failure: 100 expected, 105 found (the list comes from `StandardNativeTypeIds`; the extra five are the sample nodes, as before) |
+
+### Public API
+
+`public-api-diff.txt`: additive. Runtime: `ProductionTreeHost.DefaultRandomSeed`,
+`ProductionTreeHost.RandomSeed`, the generated `ProductionTreeHost.TryBootstrap(..., randomSeed, out failure)`,
+`ProductionTreeProgram.TryBootstrap(host, randomSeed, ...)` and `NativeTreeAgent.RandomSeed` (six
+entries in the API reference). `AIBT.StandardNodes`: the node, config and memory structs of the five
+nodes. Removed lines outside `Tests/` are comments, the two bootstrap calls that now pass a seed, and
+the sample. The group fix changes only `internal` methods.
+
+### Guide, README, CHANGELOG, sample
+
+- `Documentation~/native-node-library.md`: five rows in the mapping table (managed counterparts
+  `aibt.unity.random-chance`, `random-float`, `random-int`, `wait-random`, `random-point`); the
+  "Randomness" recipe (sample JSON, where the seed lives, instance ids and reproducibility, draws per
+  tick, every dispatch mode); the sentences that said random nodes do not run on hosts are gone.
+- `Documentation~/production-host.md`: the seed on the host; the stream advances under every policy.
+- `CHANGELOG.md`: stage 3 entry, including the group-dispatch fix in plain words.
+- `Samples~/NativeGuard` (`b3b3660`): the patrol picks one of three spots (`random-int` →
+  `sweep-spot`, then `int-equals` and a signal per spot), whistles with `random-chance` 0.4 and rests
+  1–3 s (`wait-random-microseconds`). Three spot markers light up; the HUD prints the seed, the tree
+  instance and the picks. The README says when one seed repeats the picks.
+
+### Screenshots and clips
+
+- `palette-actions-native-random.png` (Random Float, Random Float3 In Radius, Random Int, Wait Random
+  Microseconds) and `palette-conditions-native-random.png` (Random Chance): the Create Node palette
+  under `Native/Random`.
+- `graph-edit.png`: the sample tree, Valid, 5 AIBT2043 notes (`sweep-spot` is new, open question 1).
+- `graph-live-1.png` … `graph-live-7.png`: Play Mode, the tower selected, "Live: Guard Tower (native)
+  — running, run N". Run 1: guard → patrol → "Wait until the gate is open", then guard → watch →
+  "Watch" (intruder seen); run 3: watch again; run 4: patrol → wait-gate. The run counter moving
+  1 → 4 is the agent restarting after each finished patrol. The blackboard panel shows "live: —"
+  for the native agent's keys (known, not in scope).
+- `clips/seed0-a`, `seed7-a`, `seed0-b`, `seed7-b`: 30 s each of the Game view, the scene's seed set
+  before each (`scripts/Record-SeedClips.ps1`, `SetDemoSeed.cs`), stills every 3 s. At 27 s:
+
+  | Clip | Tree instance | Spots (+w = whistle) | Patrols | Whistles |
+  |---|---|---|---|---|
+  | seed0-a | 3 | A A+w B A A | 5 | 1 |
+  | seed0-b | 4 | A A+w B A A+w | 5 | 2 |
+  | seed7-a | 4 | A A B+w B C | 5 | 1 |
+  | seed7-b | 4 | A A B+w B C | 5 | 1 |
+
+  Different seeds differ from the second patrol on (seed 0 whistles at the second, seed 7 at the
+  third; only seed 7 reaches spot C). The two seed 7 recordings match at the stills read (15 s:
+  instance 3, "A A B+w", 3 patrols, 1 whistle and the same signal log in both; 27 s: as in the
+  table). The two seed 0 recordings match in the spots and the first four patrols; the fifth whistle
+  differs because the runs ended at different times (instance 3 vs 4 at 27 s): the intruder moves
+  with frame time, so it interrupted a patrol at another moment, and from there the later instances
+  draw from other streams. 6 s of seed0-a: instance 1, "A A+w", spot A lit cyan, the tower green from
+  the whistle. The README and the guide describe exactly this.
+- The Console after the live session holds only Editor-level messages (invalid GC handle,
+  VirtualArtifacts), none from AIBT or the demo.
+
+### Runs
+
+All in `runs/`, through `Tools/Unity/Invoke-UnityTests.ps1` unless stated.
+
+| Run | Result |
+|---|---|
+| `07-part-a-first` | first Part A run: HostRandomSeeding 6/9 and NativeTreeAgentRandomSeed 3/7 — the new tests' trees never reached their random node (0 rolls under every policy); the tests got trees that roll (the roller tree). TreeSimulationHostEquivalence 4/4 |
+| `08-part-a-roller` | NativeTreeAgentRandomSeed 5/7: batched-jobs and pipelined-jobs 0 rolls — the group defect |
+| `09-dump-after-seeding`, `13-dump-after-nodes`, `19-dump-after-group-fix` | identity dumps, 4/4 each; compared above |
+| `10-part-a-host-classes` | 19 host/agent classes green, the two group probes red (the defect) |
+| `11-part-a-playmode` | AIBT.PlayMode.Tests 2/2 |
+| `12-part-bc-first` | NativeLibraryRandom 34/34, HostRandomSeeding 12/12, NativeLibraryTiming 30/30, NativeLibraryNode 55/55 |
+| `14-editor-and-contracts` | AIBT.Editor.Tests 790/793: the known case and two stale API-reference checks (fixed by `9808498`) |
+| `15-seed-clips` | the four recordings |
+| `16`, `17` (`16a`, `17a`) | group fix red before / green after (above) |
+| `18-group-fix-forced-policy-classes` | 14 classes green (above) |
+| `20-final-host-agent-simulation-classes` | after the last code change: 26 filters, all green — AgentConsumerTools 14, AibtLinkXmlProcessor 3, ExternalTreeBlackboardWrite 9, GeneratedDispatchFieldOrdinalRegression 7, GeneratedDispatchLifecycleProof 14, GraphConsumerWorkflow 4, HostRandomSeeding 12, JobsPolicyEquivalence 28, McpSimulationTools 4, NativeLibrary* 138, NativeTreeAgent* 26, ProductionConsumerWorkflow 12, ProductionTreeHost 20, ProductionTreeScheduler 25, ProductionTreeWorldEffect 6, SchedulingProfile 18, StandardNativeShard 3, SubtreeNative 7, TreeSimulation* 102, NativeHotReloadGoldenEquivalence 4, SchedulingPolicyDriver 5, NativeExecutionAllocation 3, NativeAutoAdaptiveRealisticFeedback 2, NativeAutoAdaptiveSelection 7, NativeAutoSelection 25, NativeExecutionLargePopulationStress 1 |
+| `21-final-playmode` | AIBT.PlayMode.Tests 2/2 (`-Mode playmode`) |
+| `22-final-editor-and-contracts` | AIBT.Editor.Tests 792/793 (only the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`, 105 vs 100; UserGuideSnippet and McpDocumentationGenerators green); `AIBT.CodeGen.ContractTests` 6/6 (ABI v2 unchanged) |
+| `23-verify-static` | `Tools~/Verification/Verify-Static.ps1` after the evidence and task card edits |
+
+JobsPolicyEquivalence counts 29 in runs `10` and `18` and 28 in `20`: the temporary dump added one
+test to that class (`P11002Stage3Dump_AgentPopulations`, a partial class) and was deleted before `20`.
+
+### Parent-project files (scratch, not committed)
+
+- `Assets/Samples/AIBT/Native Guard/`: `README.md`, `native-guard.aibt.json` and
+  `Runtime/NativeGuard.cs` updated to the new sample (identical to `Samples~/NativeGuard`, `.meta`
+  files aside; `diff -r`).
+- `Assets/AibtNativeGuardDemo/`: re-created through **AIBT > Samples > Native Guard > Create Demo**
+  (`scripts/CreateDemoViaMenu.cs`): `NativeGuard.runtime.asset`, `NativeGuard.unity` and the three
+  materials. The recordings set the tower's Random Seed (0 / 7) before each clip; the scene was saved
+  back with seed 0 afterwards.
+
+Both stay untracked in the parent repository, as in stage 2. Nothing in the package refers to them.
+
+### Open questions for the owner
+
+1. **AIBT2043** now also shows for `sweep-spot`, which the sample writes with `random-int` through a
+   native binding (same cause as stage 1 question 2 and stage 2 question 4).
+2. **No tree-key read on `NativeTreeAgent`.** A game that wants a random value (a picked spot, a
+   random point) reads it only through branches and signals, as the sample does; there is no public
+   read of a Tree-scope key on the agent. The guide shows the signal pattern.
+3. **Reproducibility of `NativeTreeAgent` runs** depends on the process-wide instance counter and on
+   when runs end (the seed 0 recordings). A per-agent instance id, or a seed per run, would make one
+   seed repeat regardless of timing; that would be a host lifecycle change and is not proposed here.
+
+### Not covered by stage 3
+
+- Stage 4 (quickstart, MCP recipes), observer re-evaluation, the AIBT2043 hint, `live: —`,
+  `aibt.stdlib.random-condition` (unchanged), performance, a Player or IL2CPP build.
+- A full nine-assembly run (the classes that boot a host, an agent or a simulation, the PlayMode
+  assembly, the Editor and contract assemblies only).
+- The Package Manager import itself: the sample was copied into `Assets/Samples/AIBT/Native Guard/`
+  by hand.
