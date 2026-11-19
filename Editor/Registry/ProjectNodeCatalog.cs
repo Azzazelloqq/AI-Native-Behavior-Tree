@@ -45,6 +45,31 @@ namespace AIBT.Editor.Registry
                 : ReferenceCompiler.Compile(document, Registry, options).Diagnostics;
         }
 
+        /// <summary>
+        /// <see cref="ValidateAuthoring(TreeDocument, ReferenceCompilerOptions)"/> for a tree that may
+        /// use subtrees (ADR-P11-001): references are resolved through <paramref name="resolver"/>, and
+        /// the managed/native choice is made on the expanded tree, so a subtree's nodes count as the
+        /// parent's. A document with no reference node and no interface, or a null resolver, takes the
+        /// overload without a resolver unchanged.
+        /// </summary>
+        internal DiagnosticCollection ValidateAuthoring(TreeDocument document, ReferenceCompilerOptions options, ISubtreeResolver resolver)
+        {
+            if (resolver == null || !SubtreeExpander.RequiresExpansion(document)) return ValidateAuthoring(document, options);
+            // Structural expansion first (every node domain admitted, as at import), only to see which
+            // nodes the expanded tree has; the compilers below expand again under the real policy.
+            var probe = SubtreeExpander.Expand(document, resolver, Registry, StructuralExpansionPolicy.CreateValidationOptions(options.SourceId), RegisteredTypes);
+            if (!probe.Success) return probe.Diagnostics;
+            if (UsesManagedNodes(probe.Document)) options = ManagedTreeProgram.CreateOptions(options.SourceId);
+            var nativeOnly = probe.Document.Nodes.Any(node => Registry.TryGet(node.TypeId, out var entry) && !entry.HasReferenceHandlerBinding);
+            return nativeOnly
+                ? GeneratedCompiledProgramV2Compiler.Compile(document, Generated.Values, RegisteredTypes, options, resolver).Diagnostics
+                : ReferenceCompiler.Compile(document, Registry, options, resolver).Diagnostics;
+        }
+
+        private static readonly ReferenceCompilationPolicy StructuralExpansionPolicy = new ReferenceCompilationPolicy(
+            allowManagedNodes: true, allowMainThreadNodes: true, requireDeterministicNodes: false,
+            supportsAgentScope: true, supportsSharedScope: true);
+
         internal static ProjectNodeCatalog Initial()
             => new ProjectNodeCatalog(NodeRegistryBuilder.CreateWithBuiltIns().Build(), Array.Empty<string>());
 

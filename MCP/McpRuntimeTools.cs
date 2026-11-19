@@ -18,7 +18,7 @@ namespace AIBT.Mcp
         {
             var (document, path) = McpAuthoringToolDispatcher.LoadTreeOrThrow(projectRoot, args);
             var catalog = ProjectNodeCatalogCache.Current;
-            return new JObject
+            var result = new JObject
             {
                 ["tree"] = JObject.Parse(System.Text.Encoding.UTF8.GetString(CanonicalTreeJson.Serialize(document, catalog.RegisteredTypes).Utf8)),
                 ["contentHash"] = McpAuthoringToolDispatcher.ComputeSemanticHash(document),
@@ -26,6 +26,42 @@ namespace AIBT.Mcp
                 ["registryProblems"] = new JArray(catalog.Problems),
                 ["referenceAvailable"] = document.Nodes.All(node => catalog.Registry.TryGet(node.TypeId, out var entry) && entry.HasReferenceHandlerBinding),
             };
+            if ((bool?)args["expanded"] == true) result["expansion"] = Expansion(projectRoot, document, path, catalog);
+            return result;
+        }
+
+        /// <summary>
+        /// ADR-P11-001 section 4.2/4.7: the expanded document the compiler sees (format 2, no references,
+        /// no interface), expanded structurally through the project's trees, with the source of every
+        /// node that came from a subtree. A tree without subtree features is its own expansion.
+        /// </summary>
+        private static JObject Expansion(string projectRoot, TreeDocument document, string path, ProjectNodeCatalog catalog)
+        {
+            var sourceId = McpSubtrees.LogicalSourceId(projectRoot, path);
+            var expansion = McpSubtrees.ExpandStructurally(document, sourceId, McpSubtrees.ResolverFor(document, projectRoot),
+                catalog.Registry, catalog.RegisteredTypes);
+            var result = new JObject
+            {
+                ["success"] = expansion.Success,
+                ["identity"] = expansion.IsIdentity,
+                ["referencedTreeIds"] = new JArray(McpSubtrees.ReferencedTreeIds(document)),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(expansion.Diagnostics),
+            };
+            if (!expansion.Success) return result;
+            var serialized = CanonicalTreeJson.Serialize(expansion.Document, catalog.RegisteredTypes);
+            if (!serialized.Success)
+            {
+                result["success"] = false;
+                result["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(serialized.Diagnostics);
+                return result;
+            }
+            result["tree"] = JObject.Parse(System.Text.Encoding.UTF8.GetString(serialized.Utf8));
+            result["contentHash"] = McpAuthoringToolDispatcher.ComputeSemanticHash(expansion.Document);
+            var sources = new JObject();
+            foreach (var pair in expansion.NodeSourceIds.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal)) sources[pair.Key.Value] = pair.Value;
+            result["nodeSources"] = sources;
+            result["referenceAvailable"] = expansion.Document.Nodes.All(node => catalog.Registry.TryGet(node.TypeId, out var entry) && entry.HasReferenceHandlerBinding);
+            return result;
         }
 
         internal static JObject Catalogs() => new JObject
@@ -69,7 +105,14 @@ namespace AIBT.Mcp
             ProductionTreeAsset prepared = null;
             try
             {
-                prepared = ProductionTreeAssetBaker.Create(document, UnityAssetPath(projectRoot, sourcePath), types[0], out var diagnostics);
+                // ADR-P11-001: references resolve through the project's trees as MCP finds them, with
+                // asset-path source IDs so the asset records each subtree file; other trees as before.
+                DiagnosticCollection diagnostics;
+                if (McpSubtrees.ReferencedTreeIds(document).Count == 0)
+                    prepared = ProductionTreeAssetBaker.Create(document, UnityAssetPath(projectRoot, sourcePath), types[0], out diagnostics);
+                else
+                    prepared = ProductionTreeAssetBaker.Create(document, UnityAssetPath(projectRoot, sourcePath), types[0],
+                        new McpSubtreeResolver(AibtTreeDiscovery.Scan(projectRoot), file => UnityAssetPath(projectRoot, file)), out diagnostics);
                 var result = new JObject
                 {
                     ["success"] = prepared != null, ["backend"] = "native-generated-v2", ["contentHash"] = sourceHash,

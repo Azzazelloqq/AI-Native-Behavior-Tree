@@ -40,13 +40,33 @@ namespace AIBT.Mcp.Verification
                     McpVerificationJson.ToValidationPolicy(snapshot))
                 : new ValidationOptions(ToLogicalSourceId(projectRoot, path));
 
-            var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options, ProjectNodeCatalogCache.Current.RegisteredTypes).Concat(migrationDiagnostics));
+            var registeredTypes = ProjectNodeCatalogCache.Current.RegisteredTypes;
+            var referenced = McpSubtrees.ReferencedTreeIds(document);
+            if (referenced.Count == 0)
+            {
+                var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options, registeredTypes).Concat(migrationDiagnostics));
 
+                return new JObject
+                {
+                    ["valid"] = !HasError(diagnostics),
+                    ["policyApplied"] = policyApplied,
+                    ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(diagnostics),
+                };
+            }
+
+            // ADR-P11-001: a tree with subtree references is validated as the compiler sees it. The
+            // expansion validates the tree and each subtree on its own (AIBT2047-2050) and checks the
+            // references (AIBT3020-3028); a successful expansion is then validated as one tree.
+            var expansion = SubtreeExpander.Expand(document, McpSubtrees.Resolver(projectRoot), registry, options, registeredTypes);
+            var expandedDiagnostics = new DiagnosticCollection((expansion.Success
+                ? TreeValidator.Validate(expansion.Document, registry, options, registeredTypes)
+                : expansion.Diagnostics).Concat(migrationDiagnostics));
             return new JObject
             {
-                ["valid"] = !HasError(diagnostics),
+                ["valid"] = !HasError(expandedDiagnostics),
                 ["policyApplied"] = policyApplied,
-                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(expandedDiagnostics),
+                ["subtrees"] = new JObject { ["expanded"] = expansion.Success, ["referencedTreeIds"] = new JArray(referenced) },
             };
         }
 
@@ -66,7 +86,10 @@ namespace AIBT.Mcp.Verification
                 : ReferenceCompilationPolicy.Phase1;
             var options = new ReferenceCompilerOptions(ToLogicalSourceId(projectRoot, path), policy, CompilerVersion);
 
-            var result = ReferenceCompiler.Compile(document, registry, options);
+            // ADR-P11-001: references resolve through the project's trees; a tree without subtree
+            // features compiles through the unchanged overload.
+            var resolver = McpSubtrees.ResolverFor(document, projectRoot);
+            var result = resolver == null ? ReferenceCompiler.Compile(document, registry, options) : ReferenceCompiler.Compile(document, registry, options, resolver);
             var diagnostics = new DiagnosticCollection(result.Diagnostics.Concat(migrationDiagnostics));
 
             return new JObject

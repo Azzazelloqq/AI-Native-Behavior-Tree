@@ -20,7 +20,7 @@ namespace AIBT.Mcp.Authoring
     /// pure edit function(s) to hand to those transactions, and serializes the result. Called
     /// from <see cref="McpToolDispatcher"/> only after permission enforcement.
     /// </summary>
-    internal static class McpAuthoringToolDispatcher
+    internal static partial class McpAuthoringToolDispatcher
     {
         private static readonly CompiledCompilerVersion CompilerVersion = new CompiledCompilerVersion(1, 0, 0, 0);
 
@@ -101,10 +101,17 @@ namespace AIBT.Mcp.Authoring
 
         internal static JObject AddNode(string projectRoot, JObject args)
         {
-            var node = McpAuthoringJson.ReadNode(RequireObject(args, "node"));
+            var nodeJson = RequireObject(args, "node");
             var parentId = new NodeId(RequireString(args, "parentId"));
             var insertIndex = args["insertIndex"]?.Value<int>();
+            if (McpAuthoringJson.HasSubtree(nodeJson))
+            {
+                // ADR-P11-001 stage 4: a reference node (tree format 3).
+                var add = AddReferenceOperation(projectRoot, nodeJson, parentId, insertIndex, args["connectSameNamedKeys"]?.Value<bool>() ?? true);
+                return ApplySemanticPatch(projectRoot, args, new[] { add });
+            }
 
+            var node = McpAuthoringJson.ReadNode(nodeJson);
             return ApplySemanticPatch(projectRoot, args, new Func<TreeDocument, TreeDocument>[]
             {
                 document => SemanticEditOperations.AddNode(document, node, parentId, insertIndex),
@@ -209,21 +216,24 @@ namespace AIBT.Mcp.Authoring
         internal static JObject ApplyDomainPatch(string projectRoot, JObject args)
         {
             var operationsJson = (JArray)RequireToken(args, "operations");
-            var operations = operationsJson.Select(token => BuildOperation((JObject)token)).ToArray();
+            var operations = operationsJson.Select(token => BuildOperation(projectRoot, (JObject)token)).ToArray();
 
             return ApplySemanticPatch(projectRoot, args, operations);
         }
 
-        private static Func<TreeDocument, TreeDocument> BuildOperation(JObject opJson)
+        private static Func<TreeDocument, TreeDocument> BuildOperation(string projectRoot, JObject opJson)
         {
             var op = RequireString(opJson, "op");
             switch (op)
             {
                 case "add":
                 {
-                    var node = McpAuthoringJson.ReadNode(RequireObject(opJson, "node"));
+                    var nodeJson = RequireObject(opJson, "node");
                     var parentId = new NodeId(RequireString(opJson, "parentId"));
                     var insertIndex = opJson["insertIndex"]?.Value<int>();
+                    if (McpAuthoringJson.HasSubtree(nodeJson))
+                        return AddReferenceOperation(projectRoot, nodeJson, parentId, insertIndex, opJson["connectSameNamedKeys"]?.Value<bool>() ?? true);
+                    var node = McpAuthoringJson.ReadNode(nodeJson);
                     return document => SemanticEditOperations.AddNode(document, node, parentId, insertIndex);
                 }
                 case "remove":
@@ -366,8 +376,12 @@ namespace AIBT.Mcp.Authoring
 
             var (registry, options) = BuildRegistryAndOptions(projectRoot, path);
             var catalog = ProjectNodeCatalogCache.Current;
+            // ADR-P11-001: a candidate that uses subtrees is validated through its expansion, with
+            // references resolved against the project's trees (the candidate replaces its own file).
+            // A candidate without subtree features takes the unchanged path (no scan, no resolver).
             var result = SemanticPatchTransaction.Apply(document, document.Revision.Value, operations,
-                candidate => catalog.ValidateAuthoring(candidate, options));
+                candidate => catalog.ValidateAuthoring(candidate, options,
+                    McpSubtrees.ResolverFor(candidate, projectRoot)?.Override(candidate, options.SourceId)));
 
             if (result.Accepted && !dryRun)
             {

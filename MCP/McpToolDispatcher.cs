@@ -92,6 +92,16 @@ namespace AIBT.Mcp
                     return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.ExtractSubtree(projectRoot, args));
                 case "inline_subtree":
                     return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.InlineSubtree(projectRoot, args));
+                // P11-001 stage 4 (ADR-P11-001 §4.7): subtree references. Not extract_subtree /
+                // inline_subtree above, which move node payloads and create no reference.
+                case "set_subtree_keys":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.SetSubtreeKeys(projectRoot, args));
+                case "extract_to_subtree":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.ExtractToSubtree(projectRoot, args));
+                case "unpack_subtree":
+                    return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.UnpackSubtree(projectRoot, args));
+                case "find_subtree_usages":
+                    return WithPermission(granted, McpPermissionCategory.Read, () => McpAuthoringToolDispatcher.FindSubtreeUsages(projectRoot, args));
                 case "apply_domain_patch":
                     return WithPermission(granted, McpPermissionCategory.SemanticEdit, () => McpAuthoringToolDispatcher.ApplyDomainPatch(projectRoot, args));
                 case "request_layout":
@@ -207,7 +217,26 @@ namespace AIBT.Mcp
                 };
 
             manifestJson["skippedTreeFiles"] = new JArray(scan.SkippedFiles);
+            AddSubtreeFields(manifestJson["trees"] as JArray, scan.Trees);
             return manifestJson;
+        }
+
+        /// <summary>
+        /// ADR-P11-001 §4.7: each listed tree's subtree interface (null when it declares none) and the
+        /// tree IDs its reference nodes name. Entries are matched to documents by tree ID, in order.
+        /// </summary>
+        private static void AddSubtreeFields(JArray trees, IReadOnlyList<TreeDocument> documents)
+        {
+            if (trees == null) return;
+            var pending = documents.GroupBy(document => document.TreeId.Value, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => new Queue<TreeDocument>(group), StringComparer.Ordinal);
+            foreach (var entry in trees.OfType<JObject>())
+            {
+                if (!pending.TryGetValue((string)entry["treeId"] ?? "", out var queue) || queue.Count == 0) continue;
+                var document = queue.Dequeue();
+                entry["interface"] = McpSubtrees.WriteInterface(document.Interface);
+                entry["referencedTreeIds"] = new JArray(McpSubtrees.ReferencedTreeIds(document));
+            }
         }
 
         private static JObject SearchNodes(JObject args)

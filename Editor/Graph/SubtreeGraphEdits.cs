@@ -295,9 +295,12 @@ namespace AIBT.Editor.Graph
         /// use those keys, and nested references are expanded too (an expanded ID contains ':',
         /// which a reference ID may not). Only this reference is expanded, so problems elsewhere in
         /// the tree do not block it. Returns null with the expansion's diagnostics when it fails.
+        /// <paramref name="documentId"/> is the document ID its diagnostics name (the graph editor's
+        /// by default; MCP passes the tree's source ID).
         /// </summary>
         internal static TreeDocument Unpack(TreeDocument document, NodeId referenceId, ISubtreeResolver resolver, NodeRegistry registry,
-            RegisteredBlackboardTypeCatalog registeredTypes, out DiagnosticCollection diagnostics, out NodeId innerRoot)
+            RegisteredBlackboardTypeCatalog registeredTypes, out DiagnosticCollection diagnostics, out NodeId innerRoot,
+            string documentId = EditorDocumentId)
         {
             innerRoot = default;
             var reference = Reference(document, referenceId);
@@ -307,7 +310,7 @@ namespace AIBT.Editor.Graph
             var probe = new TreeDocument(TreeDocument.CurrentFormat, TreeDocument.SubtreeFormatVersion, document.TreeId, document.Name,
                 probeRootId, new[] { probeRoot, reference }, document.Blackboard, null, TagSet.Empty, SemanticObject.Empty, default,
                 document.AgentContract, document.SharedContract, null);
-            var expansion = SubtreeExpander.Expand(probe, resolver, registry, UnpackPolicy.CreateValidationOptions(EditorDocumentId), registeredTypes);
+            var expansion = SubtreeExpander.Expand(probe, resolver, registry, UnpackPolicy.CreateValidationOptions(documentId), registeredTypes);
             if (!expansion.Success)
             {
                 diagnostics = expansion.Diagnostics;
@@ -327,7 +330,7 @@ namespace AIBT.Editor.Graph
                 {
                     new Diagnostic(new DiagnosticCode("AIBT3027"), DiagnosticSeverity.Error,
                         "Unpacking '" + referenceId.Value + "' would add node IDs the tree already has: " + string.Join(", ", collisions) + ".",
-                        new DiagnosticLocation(EditorDocumentId, nodeId: referenceId)),
+                        new DiagnosticLocation(documentId, nodeId: referenceId)),
                 });
                 return null;
             }

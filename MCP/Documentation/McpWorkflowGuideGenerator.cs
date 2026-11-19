@@ -40,6 +40,15 @@ namespace AIBT.Mcp.Documentation
             builder.Append(Tool("request_layout")).Append(" afterward to lay out the affected region. ");
             builder.Append("Every mutating call takes the target's current `expectedHash`/`contentHash` -- always use the value the last accepted call returned, never assume a fixed increment (`ADR-P6-002`).\n\n");
 
+            builder.Append("Subtrees (one tree used as a node of another, `ADR-P11-001`): ").Append(Tool("add_node")).Append(" with a node `{id, subtree: {treeId, interfaceVersion?, keys?}}` adds a reference; ");
+            builder.Append(Tool("set_subtree_keys")).Append(" connects its interface keys to parent keys or constants; ");
+            builder.Append(Tool("extract_to_subtree")).Append(" moves a branch into a new tree file and leaves a reference; ");
+            builder.Append(Tool("unpack_subtree")).Append(" replaces a reference by a plain copy; ");
+            builder.Append(Tool("find_subtree_usages")).Append(" lists the trees that use a tree ID; ");
+            builder.Append(Tool("inspect_tree")).Append(" with `expanded=true` shows the expanded tree the compiler sees. ");
+            builder.Append("These are not ").Append(Tool("extract_subtree")).Append("/").Append(Tool("inline_subtree")).Append(", which move node payloads and create no reference. ");
+            builder.Append("An edit of a tree with references is accepted only if the tree still expands and compiles; see `Documentation~/subtrees.md`.\n\n");
+
             builder.Append("## 4. Verify\n\n");
             builder.Append("Run ").Append(Tool("validate")).Append(" and ").Append(Tool("compile")).Append(" against a tree, ");
             builder.Append(Tool("simulate")).Append(" to step it through the Phase 1 reference executor, ");

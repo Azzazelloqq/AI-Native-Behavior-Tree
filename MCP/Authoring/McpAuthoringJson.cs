@@ -122,6 +122,7 @@ namespace AIBT.Mcp.Authoring
         /// </summary>
         internal static NodeDocument ReadNode(JObject json)
         {
+            if (HasSubtree(json)) return ReadReferenceNode(json);
             var id = new NodeId(RequireString(json, "id"));
             var typeId = RequireString(json, "typeId");
             var typeVersion = json["typeVersion"]?.Value<int>() ?? 1;
@@ -168,7 +169,108 @@ namespace AIBT.Mcp.Authoring
                 json["bindings"] = WriteBindings(node.Bindings);
             }
 
+            if (node.Subtree != null)
+            {
+                json["subtree"] = WriteSubtreeReference(node.Subtree);
+            }
+
             return json;
+        }
+
+        // ---- subtree references (ADR-P11-001, stage 4) ----------------------------------------
+
+        /// <summary>True when a node payload carries a non-null <c>subtree</c> object.</summary>
+        internal static bool HasSubtree(JObject json)
+            => json != null && json["subtree"] != null && json["subtree"].Type != JTokenType.Null;
+
+        /// <summary>
+        /// Reads a reference node payload <c>{id, subtree, displayName?, description?, tags?}</c>. The
+        /// node fields a reference cannot have (<c>typeId</c>, <c>typeVersion</c>, <c>parameters</c>,
+        /// <c>bindings</c>, <c>observer</c>, <c>children</c>) must be absent or empty, which is how
+        /// <see cref="WriteNode"/> writes a reference (so extract/inline payloads round-trip).
+        /// </summary>
+        internal static NodeDocument ReadReferenceNode(JObject json)
+        {
+            var id = new NodeId(RequireString(json, "id"));
+            foreach (var name in new[] { "typeId", "typeVersion", "parameters", "bindings", "observer", "children" })
+            {
+                var value = json[name];
+                var empty = value == null || value.Type == JTokenType.Null
+                    || value is JObject obj && obj.Count == 0 || value is JArray array && array.Count == 0
+                    || name == "typeVersion" && value.Type == JTokenType.Integer && value.Value<long>() == 0;
+                if (!empty) throw new FormatException("A subtree reference node has no '" + name + "' (node '" + id.Value + "').");
+            }
+
+            if (!(json["subtree"] is JObject subtree)) throw new FormatException("'subtree' must be an object.");
+            var tags = json["tags"] != null && json["tags"].Type != JTokenType.Null
+                ? new TagSet(((JArray)json["tags"]).Select(t => t.Value<string>()))
+                : TagSet.Empty;
+            return NodeDocument.CreateSubtreeReference(id, ReadSubtreeReference(subtree, out _),
+                json["displayName"]?.Value<string>(), json["description"]?.Value<string>(), tags);
+        }
+
+        /// <summary>
+        /// Reads <c>{treeId, interfaceVersion?, keys?}</c>. A missing <c>interfaceVersion</c> reads as
+        /// 0 (the caller fills in the subtree's current version). Key entries are read by
+        /// <see cref="ReadKeyBindings"/>; entries whose value is null are returned in
+        /// <paramref name="disconnected"/> and left out of the reference.
+        /// </summary>
+        internal static SubtreeReference ReadSubtreeReference(JObject json, out List<string> disconnected)
+        {
+            var treeId = RequireString(json, "treeId");
+            var versionToken = json["interfaceVersion"];
+            uint version = 0;
+            if (versionToken != null && versionToken.Type != JTokenType.Null)
+            {
+                if (versionToken.Type != JTokenType.Integer || versionToken.Value<long>() < 1 || versionToken.Value<long>() > uint.MaxValue)
+                    throw new FormatException("'interfaceVersion' must be an integer of at least 1.");
+                version = (uint)versionToken.Value<long>();
+            }
+
+            var keysToken = json["keys"];
+            if (keysToken != null && keysToken.Type != JTokenType.Null && !(keysToken is JObject))
+                throw new FormatException("'keys' must be an object mapping interface keys to a parent key, {\"value\": constant} or null.");
+            var bindings = ReadKeyBindings(keysToken as JObject, out disconnected);
+            return new SubtreeReference(new TreeId(treeId), version, bindings);
+        }
+
+        /// <summary>
+        /// Reads a key map: each property is an interface key whose value is a parent key ID (string),
+        /// a constant <c>{"value": v}</c>, or null for "not connected" (returned in
+        /// <paramref name="disconnected"/>).
+        /// </summary>
+        internal static List<SubtreeKeyBinding> ReadKeyBindings(JObject json, out List<string> disconnected)
+        {
+            var bindings = new List<SubtreeKeyBinding>();
+            disconnected = new List<string>();
+            if (json == null) return bindings;
+            foreach (var property in json.Properties())
+            {
+                var value = property.Value;
+                if (value.Type == JTokenType.Null) disconnected.Add(property.Name);
+                else if (value.Type == JTokenType.String && !string.IsNullOrEmpty(value.Value<string>()))
+                    bindings.Add(SubtreeKeyBinding.ToParentKey(property.Name, value.Value<string>()));
+                else if (value is JObject constant && constant.Count == 1 && constant["value"] != null)
+                    bindings.Add(SubtreeKeyBinding.ToConstant(property.Name, ReadSemanticValue(constant["value"])));
+                else
+                    throw new FormatException("Key '" + property.Name + "' must map to a parent key ID, {\"value\": constant} or null.");
+            }
+
+            return bindings;
+        }
+
+        /// <summary>The canonical shape of a reference: <c>{treeId, interfaceVersion, keys}</c>.</summary>
+        internal static JObject WriteSubtreeReference(SubtreeReference reference)
+        {
+            var keys = new JObject();
+            foreach (var binding in reference.Keys)
+            {
+                keys[binding.InterfaceKey] = binding.IsConstant
+                    ? (JToken)new JObject { ["value"] = WriteSemanticValue(binding.Constant) }
+                    : binding.ParentKey;
+            }
+
+            return new JObject { ["treeId"] = reference.TreeId.Value, ["interfaceVersion"] = reference.InterfaceVersion, ["keys"] = keys };
         }
 
         /// <summary>
