@@ -1208,7 +1208,7 @@ in `Review`. The second item, `P11-002` (a library of ready-made native nodes; F
 (P9-002, four nodes) so that native trees need no project Burst nodes for common work. Its ADR
 (`Documentation~/decisions/ADR-P11-002-native-node-library.md`, `AIBT-050`) was accepted
 2026-11-19 with all six recommendations of its §8; stage 1 (20 blackboard and flow nodes) is accepted
-(`4af5571`), stages 2–4 each need the owner's go-ahead.
+(`4af5571`), stage 2 (timing and signal nodes) is approved, stages 3–4 each need the owner's go-ahead.
 
 ### Review follow-up scopes (2026-09-04)
 

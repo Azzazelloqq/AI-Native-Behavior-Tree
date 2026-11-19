@@ -557,7 +557,8 @@ The owner accepted every recommendation of §8:
 Stage 1 of §7 was approved on 2026-11-19 and accepted the same day on `4af5571`. Its line "observer
 conditions guard a memory composite natively" is met through a reactive composite at the next update:
 native hosts do not run observer re-evaluation (existing behaviour, see
-`Planning~/Evidence/P11-002/README.md`). Stages 2–4 are not started without the owner's go-ahead.
+`Planning~/Evidence/P11-002/README.md`). Stage 2 of §7 was approved on 2026-11-19. Stages 3–4 are not
+started without the owner's go-ahead.
 
 ## 9. Noticed while reading (not part of this feature)
 
