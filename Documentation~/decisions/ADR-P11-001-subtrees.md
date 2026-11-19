@@ -677,8 +677,9 @@ Stage 1 of §7 was approved on 2026-11-19 and accepted the same day (evidence, "
 Stage 2 was approved on 2026-11-19 and accepted the same day (`c02b42b`). Stage 3 was approved on
 2026-11-19 together with two follow-ups of stage 2: a tree with subtrees whose node types are not
 in the project catalog imports with the status `Needs registry` (as a tree without subtrees does),
-and the Editor's tree-ID index also covers trees under `Packages/`. Stage 4 is not started without
-the owner's go-ahead.
+and the Editor's tree-ID index also covers trees under `Packages/`. Stage 3 was accepted the same
+day (`7794cb0`). Stage 4 (MCP, CLI, user guide) was approved on 2026-11-19; with it the stage may
+change `MCP/**`, `MCP~/Server/**`, `MCP~/Cli/**` and the user documentation.
 
 ## 9. Noticed while reading (not part of F1)
 
