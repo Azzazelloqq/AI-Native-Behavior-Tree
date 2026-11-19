@@ -105,40 +105,117 @@ namespace AIBT.Tests.Integration.NativeRuntime
         }
 
         /// <summary>
-        /// Four agents of one catalog under a scheduling policy: every agent's committed stream state
-        /// stays on its own derived stream and moves forward as the roller rolls. Covered: Immediate and
-        /// JobsAgentFrame. Forced BatchedJobsSameFrame and PipelinedJobs (the scheduler's group dispatch)
-        /// do not commit the advanced stream state today (P11-002 stage 3 evidence, open question for the
-        /// owner), so they are not asserted here.
+        /// Four agents of one catalog under each scheduling policy: every agent's committed stream state
+        /// stays on its own derived stream and moves forward as the roller rolls. Forced
+        /// BatchedJobsSameFrame and PipelinedJobs run the scheduler's group dispatch (owner decision 8 of
+        /// ADR-P11-002: the group commit now writes the advanced stream state back). A pipelined update
+        /// spans many scheduler frames, so the test runs until every agent has rolled, not a fixed count.
         /// </summary>
         [TestCase("immediate")]
         [TestCase("agent-frame")]
-        public void UnderImmediateAndAgentFrame_EachAgentsStreamAdvancesOnItsOwnDerivedSequence(string policy)
-            => AssertStreamsAdvance(policy);
-
-        private void AssertStreamsAdvance(string policy)
+        [TestCase("batched-jobs")]
+        [TestCase("pipelined-jobs")]
+        public void UnderEveryPolicy_EachAgentsStreamAdvancesOnItsOwnDerivedSequence(string policy)
         {
             const ulong Seed = 0xB47CUL;
+            const int Rolls = 12, FrameCap = 4000;
             var asset = Track(PrepareAsset(RollerTree));
             var profile = ProfileFor(policy);
             var agents = new List<NativeTreeAgent>();
             for (var index = 0; index < 4; index++) agents.Add(Spawn(asset, NativeTreeRestartMode.Never, seed: Seed, profile: profile));
             var node = RandomNode(agents[0]);
             var draws = new int[agents.Count];
-            for (var frame = 0; frame < 120; frame++)
+            var frames = 0;
+            while (frames < FrameCap && System.Array.Exists(draws, count => count < Rolls))
             {
                 Frames(1);
+                frames++;
                 for (var index = 0; index < agents.Count; index++)
                 {
                     Assert.That(agents[index].LastError, Is.Null, policy + " agent " + index);
                     var now = DrawsSinceDerivation(agents[index], Seed, node);
                     Assert.That(now, Is.GreaterThanOrEqualTo(draws[index]), policy + ": the stream only moves forward");
+                    Assert.That(now - draws[index], Is.LessThanOrEqualTo(1), policy + ": at most one roll per frame");
                     draws[index] = now;
                 }
             }
-            TestContext.WriteLine(policy + " draws per agent after 120 frames: " + string.Join(", ", draws));
+            TestContext.WriteLine(policy + ": " + frames + " frames, draws per agent " + string.Join(", ", draws));
             for (var index = 0; index < agents.Count; index++)
-                Assert.That(draws[index], Is.GreaterThan(5), policy + ": agent " + index + " rolled and its stream advanced");
+                Assert.That(draws[index], Is.GreaterThanOrEqualTo(Rolls), policy + ": agent " + index + " rolled and its stream advanced");
+        }
+
+        /// <summary>
+        /// One tree, one seed and the same four tree instance ids give the same roll sequence under all
+        /// four policies: each agent's committed stream states, in the order they appear, are the same,
+        /// and each new state is exactly one draw after the last (no roll lost or repeated). The instance
+        /// ids are pinned by setting the host's private id counter before each run (test-only reflection).
+        /// </summary>
+        [Test]
+        public void OneTreeSeedAndInstanceIds_RollTheSameSequenceUnderEveryPolicy()
+        {
+            const ulong Seed = 0x5EED7UL;
+            const int Agents = 4, Rolls = 12, FrameCap = 4000;
+            var counter = typeof(ProductionTreeHost).GetField("s_nextTreeInstanceId", BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(counter, Is.Not.Null);
+            var restore = (long)counter.GetValue(null);
+            var firstId = restore + 1000000L;
+            var asset = Track(PrepareAsset(RollerTree));
+            var policies = new[] { "immediate", "agent-frame", "batched-jobs", "pipelined-jobs" };
+            var runs = new List<List<ulong>[]>();
+            try
+            {
+                foreach (var policy in policies)
+                {
+                    counter.SetValue(null, firstId);
+                    var profile = ProfileFor(policy);
+                    var agents = new List<NativeTreeAgent>();
+                    for (var index = 0; index < Agents; index++) agents.Add(Spawn(asset, NativeTreeRestartMode.Never, seed: Seed, profile: profile));
+                    var node = RandomNode(agents[0]);
+                    var sequences = new List<ulong>[Agents];
+                    var increments = new ulong[Agents];
+                    for (var index = 0; index < Agents; index++)
+                    {
+                        Assert.That(agents[index].Host.InstanceId, Is.EqualTo((ulong)(firstId + 1 + index)), policy + ": pinned instance id");
+                        Assert.That(agents[index].Host.GeneratedDispatchAdapter.TryReadRandomStream(node, out var start, out increments[index]), Is.True);
+                        sequences[index] = new List<ulong> { start };
+                    }
+                    var frames = 0;
+                    while (frames < FrameCap && System.Array.Exists(sequences, sequence => sequence.Count <= Rolls))
+                    {
+                        Frames(1);
+                        frames++;
+                        for (var index = 0; index < Agents; index++)
+                        {
+                            Assert.That(agents[index].LastError, Is.Null, policy + " agent " + index);
+                            Assert.That(agents[index].Host.GeneratedDispatchAdapter.TryReadRandomStream(node, out var state, out _), Is.True);
+                            var sequence = sequences[index];
+                            if (state == sequence[sequence.Count - 1]) continue;
+                            var expected = sequence[sequence.Count - 1];
+                            NativeRandomStreamDerivationV1.NextUInt32(ref expected, increments[index]);
+                            Assert.That(state, Is.EqualTo(expected), policy + " agent " + index + ": exactly one draw per new state");
+                            sequence.Add(state);
+                        }
+                    }
+                    TestContext.WriteLine(policy + ": " + Rolls + " rolls per agent in " + frames + " frames");
+                    for (var index = 0; index < Agents; index++)
+                        Assert.That(sequences[index].Count, Is.GreaterThan(Rolls), policy + " agent " + index + " rolled");
+                    runs.Add(sequences);
+                    foreach (var agent in agents)
+                    {
+                        agent.Deactivate();
+                        _agents.Remove(agent);
+                    }
+                }
+            }
+            finally
+            {
+                counter.SetValue(null, System.Math.Max(restore, firstId + Agents));
+            }
+            for (var run = 1; run < runs.Count; run++)
+                for (var index = 0; index < Agents; index++)
+                    for (var roll = 0; roll <= Rolls; roll++)
+                        Assert.That(runs[run][index][roll], Is.EqualTo(runs[0][index][roll]),
+                            policies[run] + " vs immediate: agent " + index + ", roll " + roll);
         }
 
         private static int DrawsSinceDerivation(NativeTreeAgent agent, ulong seed, uint node)

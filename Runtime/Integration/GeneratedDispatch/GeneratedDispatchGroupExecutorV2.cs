@@ -240,6 +240,8 @@ namespace AIBT
                 var committedMemory = new byte[members.Count][];
                 var committedBindingValues = new byte[members.Count][];
                 var statuses = new NodeStatus[members.Count];
+                var hasRandomStates = new bool[members.Count];
+                var committedRandomStates = new ulong[members.Count];
                 for (var index = 0; index < members.Count; index++)
                 {
                     var participant = participants[index];
@@ -270,6 +272,13 @@ namespace AIBT
                         failure = BurstContextResult.InvalidHandle;
                         return false;
                     }
+
+                    hasRandomStates[index] = participant.RandomStates.Length != 0;
+                    if (hasRandomStates[index] && !owner.TryReadCommittedRandomState((uint)index, out committedRandomStates[index]))
+                    {
+                        failure = BurstContextResult.InvalidHandle;
+                        return false;
+                    }
                 }
 
                 for (var index = 0; index < members.Count; index++)
@@ -280,7 +289,8 @@ namespace AIBT
                     try
                     {
                         if (!adapter.TryCommitGroupParticipant(
-                                members[index].NodeIndex, memoryArray.AsReadOnly(), bindingArray.AsReadOnly(), out var commitFailure))
+                                members[index].NodeIndex, memoryArray.AsReadOnly(), bindingArray.AsReadOnly(),
+                                hasRandomStates[index], committedRandomStates[index], out var commitFailure))
                         {
                             failure = commitFailure;
                             return false;

@@ -453,6 +453,8 @@ namespace AIBT
             uint nodeIndex,
             NativeArray<byte>.ReadOnly committedMemory,
             NativeArray<byte>.ReadOnly committedBindingValues,
+            bool hasRandomState,
+            ulong committedRandomState,
             out BurstContextResult failure)
         {
             if (_disposed || nodeIndex >= _slots.Length)
@@ -468,7 +470,7 @@ namespace AIBT
             }
             return slot.TryCommitFromGroup(
                 _definition.Binding, _treeValues, _treeVersions, _agentBaseOffset,
-                committedMemory, committedBindingValues, out failure);
+                committedMemory, committedBindingValues, hasRandomState, committedRandomState, out failure);
         }
 
         /// <summary>Validates a group result before any participant commits its own bytes.</summary>
@@ -1129,15 +1131,20 @@ namespace AIBT
                 uint agentBaseOffset,
                 NativeArray<byte>.ReadOnly committedMemory,
                 NativeArray<byte>.ReadOnly committedBindingValues,
+                bool hasRandomState,
+                ulong committedRandomState,
                 out BurstContextResult failure)
             {
-                if (_disposed || committedMemory.Length != _memory.Length || committedBindingValues.Length != _bindingValues.Length)
+                if (_disposed || committedMemory.Length != _memory.Length || committedBindingValues.Length != _bindingValues.Length
+                    || hasRandomState != (_randomStates.Length != 0))
                 {
                     failure = BurstContextResult.InvalidHandle;
                     return false;
                 }
                 for (var index = 0; index < _memory.Length; index++) _memory[index] = committedMemory[index];
                 for (var index = 0; index < _bindingValues.Length; index++) _bindingValues[index] = committedBindingValues[index];
+                // time-and-random-v1: a successful frame atomically replaces the committed stream state.
+                if (hasRandomState) _randomStates[0] = committedRandomState;
                 if (!CommitTreeValues(programBinding, treeValues, treeVersions, agentBaseOffset))
                 {
                     failure = BurstContextResult.Overflow;

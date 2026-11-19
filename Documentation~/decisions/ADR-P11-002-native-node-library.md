@@ -553,6 +553,23 @@ The owner accepted every recommendation of §8:
    is the one permitted change of host code in stage 1. No tree in the package read a wrong key
    silently. Every existing node whose handle is not field 0 read the right ordinal by coincidence,
    and no existing test changes its result.
+8. **Group-commit fix found in stage 3 (allowed by the owner on 2026-11-20: «Да, чинить»).**
+   With the streams seeded (decision 4), a random node in a group wave did not advance its stream.
+   Group waves run only under a profile that forces `BatchedJobsSameFrame` or `PipelinedJobs`
+   (the scheduler's group dispatch for two or more adjacent hosts of one catalog). The wave's commit
+   copied memory, binding values and tree values back to each participant but dropped the advanced
+   random state, so every update rolled the same value again. The single-request path already
+   commits it. The fix touches exactly three internal methods, with no public signature change:
+   `GeneratedTreeDispatchAdapterV2.TryCommitGroupParticipant` and `DispatchSlot.TryCommitFromGroup`
+   take `(hasRandomState, committedRandomState)` and the slot writes `_randomStates[0]` when it has a
+   stream (`Runtime/Integration/GeneratedDispatch/GeneratedTreeDispatchAdapterV2.cs:452-474`,
+   `:1127-1155`); `GeneratedDispatchGroupExecutorV2.TryExecuteGroup` reads
+   `owner.TryReadCommittedRandomState` in its read loop, before any participant commits, and passes it
+   (`GeneratedDispatchGroupExecutorV2.cs:243-244`, `:276-281`, `:292-293`);
+   `GeneratedDispatchGroupWorkspaceV2.TryExecute` passes `_randomStates[request.RandomStateIndex]`
+   (`GeneratedDispatchGroupWorkspaceV2.cs:242-243`, `:248-249`). Nothing else in the scheduler, the
+   group driver, dispatch decisions or the batch owner changes. Slots without a stream are untouched.
+   Evidence: `Planning~/Evidence/P11-002/README.md`, stage 3, "Group-commit fix".
 
 Stage 1 of §7 was approved on 2026-11-19 and accepted the same day on `4af5571`. Its line "observer
 conditions guard a memory composite natively" is met through a reactive composite at the next update:

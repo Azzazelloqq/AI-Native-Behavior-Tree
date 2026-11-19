@@ -239,10 +239,14 @@ namespace AIBT
                     var committedMemory = _memoryBytes.GetSubArray((int)request.MemoryOffset, participant.Memory.Length);
                     var committedBindingValues = _bindingValueBytes.GetSubArray(
                         (int)_liveValueBaseOffsets[index], participant.BindingValues.Length);
+                    var hasRandomState = participant.RandomStates.Length != 0;
+                    var committedRandomState = hasRandomState ? _randomStates[(int)request.RandomStateIndex] : 0UL;
                     if (!adapter.TryCommitGroupParticipant(
                             members[index].NodeIndex,
                             committedMemory.AsReadOnly(),
                             committedBindingValues.AsReadOnly(),
+                            hasRandomState,
+                            committedRandomState,
                             out failure))
                     {
                         return false;
