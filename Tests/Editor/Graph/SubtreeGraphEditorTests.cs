@@ -289,6 +289,13 @@ namespace AIBT.Tests.Editor.Graph
                 Assert.That(window.SaveAll(), Is.True);
                 Assert.That(File.Exists(target), Is.False, "An undone extraction writes nothing.");
 
+                // After Undo the same file name can be used again (the new edit ends Redo).
+                Assert.That(window.ExtractToSubtree(Id("group"), target), Is.EqualTo(Id("combo")), Problems(window));
+                Assert.That(window.PendingSubtreePaths, Is.EqualTo(new[] { target }));
+                Assert.That(Node(window, "combo").Subtree.TreeId.Value, Is.EqualTo("tests.p11.plain.combo"), "The undone extraction's tree ID is free again.");
+                window.UndoEdit();
+                yield return null;
+
                 window.RedoEdit();
                 Assert.That(Node(window, "combo")?.Subtree, Is.Not.Null);
                 Assert.That(window.SaveAll(), Is.True, window.BannerText);

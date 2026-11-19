@@ -164,6 +164,14 @@ namespace AIBT.Editor.Graph
             _pendingSubtreeDocuments = null;
         }
 
+        /// <summary>The bytes of the pending file at <paramref name="path"/> when the document no longer reaches it, otherwise null.</summary>
+        private byte[] StalePendingSubtree(string path)
+        {
+            var index = _pendingSubtreePaths.FindIndex(candidate => SamePath(candidate, path));
+            if (index < 0 || ReachablePendingSubtrees().Any(candidate => SamePath(candidate, path))) return null;
+            return Convert.FromBase64String(_pendingSubtreeBytes[index]);
+        }
+
         private void ClearPendingSubtrees()
         {
             _pendingSubtreePaths.Clear();
@@ -352,11 +360,15 @@ namespace AIBT.Editor.Graph
                 Notify("Choose an .aibt or .aibt.json file for the subtree.");
                 return null;
             }
-            if (File.Exists(path) || _pendingSubtreePaths.Any(candidate => SamePath(candidate, path)) || SamePath(path, _sourcePath))
+            // A pending file the tree no longer reaches (its extraction was undone) is kept only for
+            // Redo; a new edit ends Redo, so a new extraction may take its path.
+            var stale = StalePendingSubtree(path);
+            if (File.Exists(path) || stale == null && _pendingSubtreePaths.Any(candidate => SamePath(candidate, path)) || SamePath(path, _sourcePath))
             {
                 Notify("Choose a new file; existing trees are not overwritten.");
                 return null;
             }
+            if (stale != null) RemovePendingSubtree(path);
 
             var name = TreeNameOf(path);
             var catalog = _projectCatalog ?? ProjectNodeCatalogCache.Current;
@@ -367,12 +379,14 @@ namespace AIBT.Editor.Graph
             }
             catch (ArgumentException exception)
             {
+                if (stale != null) AddPendingSubtree(path, stale);
                 Notify(exception.Message);
                 return null;
             }
             var encoded = CanonicalTreeJson.Serialize(extraction.Subtree, catalog.RegisteredTypes);
             if (!encoded.Success)
             {
+                if (stale != null) AddPendingSubtree(path, stale);
                 Notify("The subtree cannot be written: " + string.Join("\n", encoded.Diagnostics.Select(d => d.Message)));
                 return null;
             }
@@ -382,6 +396,7 @@ namespace AIBT.Editor.Graph
             if (!ApplyEdit(_ => extraction.Parent))
             {
                 RemovePendingSubtree(path);
+                if (stale != null) AddPendingSubtree(path, stale);
                 return null;
             }
             SelectNode(extraction.ReferenceId, frame: false);
