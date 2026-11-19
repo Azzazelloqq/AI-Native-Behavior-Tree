@@ -97,5 +97,9 @@ Save-UnityWindow.ps1 (palette), Save-UnityClip.ps1 (demo tree) for stages 1–3
 - Adding nodes to the shard changes the catalog fingerprint of every catalog set that lists it; assets
   prepared against such a set fail bootstrap (`TypeMismatch`) until re-prepared, which the Editor does
   after the next domain reload. In the package only tests and the Phase 10 benchmark list the shard.
+- Stage 1 found a host defect: `GeneratedTreeDispatchAdapterV2.cs:840` indexed the global
+  configuration-field array with a case-local ordinal, which broke handles that are not field 0. The
+  owner allowed the one-line fix on 2026-11-19 (ADR "Owner decisions" item 7). It is the only host-code
+  change in stage 1, and `GeneratedDispatchFieldOrdinalRegressionTests` covers it.
 - ADR §9 lists four unrelated findings (stale Swarm Arena comment, `UInt32` blackboard key in the Public
   Burst Nodes sample, untested managed nodes, unseeded `System.Random` in the stdlib reference twin).

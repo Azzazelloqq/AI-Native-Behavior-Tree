@@ -541,6 +541,18 @@ The owner accepted every recommendation of §8:
    `Hosts_HaveZeroedRandomStreams_AndARandomNodeCannotRun` is replaced in that stage.
 5. Random library nodes are declared deterministic.
 6. One package effect channel `aibt.native.signal` with an `Int32` code.
+7. **Host fix found in stage 1 (allowed by the owner on 2026-11-19).**
+   `GeneratedTreeDispatchAdapterV2.DispatchSlot.TryCreate`
+   (`Runtime/Integration/GeneratedDispatch/GeneratedTreeDispatchAdapterV2.cs:840`, since P7-037) read
+   the configuration field of a generated blackboard handle as `ConfigurationFields[ordinal]`, using
+   the binding's case-local field ordinal as an index into the catalog's global field array. A handle
+   that is not the node's first configuration field therefore read its access ordinal at another
+   field's offset. That broke 10 of the 20 stage-1 nodes on `ProductionTreeHost`, `NativeTreeAgent`
+   and `TreeSimulation`: a handle after a parameter failed bootstrap, and a second handle faulted the
+   first update. The fix indexes `FirstConfigurationField + ordinal`, as every other site does. This
+   is the one permitted change of host code in stage 1. No tree in the package read a wrong key
+   silently. Every existing node whose handle is not field 0 read the right ordinal by coincidence,
+   and no existing test changes its result.
 
 Stage 1 of §7 was approved on 2026-11-19. Stages 2–4 are not started without the owner's go-ahead.
 

@@ -4,6 +4,19 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Native dispatch: handles that are not a node's first field (fix)
+
+- **Fix:** on `ProductionTreeHost`, `NativeTreeAgent` and `TreeSimulation`, a generated blackboard
+  handle located its compiled access ordinal through the catalog's configuration field with the
+  handle's node-local field number used as a global index. A handle that is not the node's first
+  configuration field (fields are ordered by name) therefore read another field. A parameter there
+  made bootstrap fail (`NativeCapacityPlanInvalid`, or `InvalidArgument` from
+  `TreeSimulation.TryAddGroup`). Another handle there made the first update fault
+  (`NativeLifetimeStateInvalid`). Nodes only worked when the offsets happened to coincide in the
+  project's catalog. The handle's own field is now used. This affects project nodes too, not only the
+  package library. Trees that ran before behave the same: none in the package read a wrong key.
+  This is a host-code change allowed by the owner during P11-002 stage 1.
+
 ### Subtrees, stage 4: MCP, CLI, user guide (P11-001)
 
 - **MCP tools for subtree references.** `add_node` (and an `add` operation of `apply_domain_patch`)

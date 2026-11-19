@@ -837,7 +837,7 @@ namespace AIBT
                         || catalogBinding.Kind == NativeBurstDispatchBindingKindV2.BlackboardWrite
                         || catalogBinding.Kind == NativeBurstDispatchBindingKindV2.BlackboardReadWrite)
                     {
-                        var field = catalog.ConfigurationFields[(int)catalogBinding.ConfigurationFieldOrdinal];
+                        var field = catalog.ConfigurationFields[(int)(dispatchCase.FirstConfigurationField + catalogBinding.ConfigurationFieldOrdinal)];
                         var accessOrdinal = ReadU32(binding.SemanticProgram.ConfigBlob, node.ConfigOffset + field.ByteOffset);
                         if (!TryResolveTreeSlot(binding, nodeIndex, accessOrdinal, out var slotIndex))
                         {
