@@ -131,6 +131,48 @@ namespace AIBT.Tests.Consumer
             Assert.That(ProductionTreeAssetStaleness.Evaluate(asset), Is.EqualTo(ProductionTreeAssetState.Current));
         }
 
+        [Test]
+        public void SubtreeWithNodeTypesTheProjectCatalogDoesNotKnow_ImportsAsNeedsRegistry()
+        {
+            // aibt.tests.consumer.radius lives in a test assembly, which ProjectNodeCatalog.Discover() leaves out.
+            Write(ChildPath, ChildJson("1.5"));
+            Write(ParentPath, ParentJson);
+            Write(PlainPath, PlainJson);
+            AssetDatabase.Refresh();
+
+            var plain = AssetDatabase.LoadAssetAtPath<BehaviorTreeSource>(PlainPath);
+            Assert.That(plain.Status, Is.EqualTo("Needs registry"), "A tree without subtrees with the same node type.");
+            var source = AssetDatabase.LoadAssetAtPath<BehaviorTreeSource>(ParentPath);
+            Assert.That(source.Status, Is.EqualTo("Needs registry"), source.Details);
+            Assert.That(source.Details, Does.Contain("AIBT2021"));
+            Assert.That(CanonicalTreeJson.Parse(source.Json, ParentPath).Document.FormatVersion, Is.EqualTo(3),
+                "The source keeps the tree as written; it cannot be expanded without the node contracts.");
+        }
+
+        [Test]
+        public void RealExpansionErrorsNextToUnknownNodeTypes_StayErrors()
+        {
+            Write(ChildPath, ChildJson("1.5"));
+            Write(ParentPath, ParentWithMissingSubtreeJson);
+            AssetDatabase.Refresh();
+
+            var source = AssetDatabase.LoadAssetAtPath<BehaviorTreeSource>(ParentPath);
+            Assert.That(source.Status, Is.EqualTo("Errors"));
+            Assert.That(source.Details, Does.Contain("AIBT3020").And.Contain("AIBT2021"));
+        }
+
+        [Test]
+        public void OnlyUnknownNodeTypes_IsTrueOnlyWhenEveryErrorIsAIBT2021()
+        {
+            Diagnostic Error(string code) => new Diagnostic(new DiagnosticCode(code), DiagnosticSeverity.Error, "x", new DiagnosticLocation("doc"));
+            var warning = new Diagnostic(new DiagnosticCode("AIBT2043"), DiagnosticSeverity.Warning, "x", new DiagnosticLocation("doc"));
+            Assert.That(TreeCatalogEntry.OnlyUnknownNodeTypes(new DiagnosticCollection(new[] { Error("AIBT2021"), Error("AIBT2021"), warning })), Is.True);
+            Assert.That(TreeCatalogEntry.OnlyUnknownNodeTypes(new DiagnosticCollection(new[] { Error("AIBT2021"), Error("AIBT3020") })), Is.False);
+            foreach (var code in new[] { "AIBT3020", "AIBT3021", "AIBT3022", "AIBT3023", "AIBT3024", "AIBT3025", "AIBT3026", "AIBT3027", "AIBT3028", "AIBT2047" })
+                Assert.That(TreeCatalogEntry.OnlyUnknownNodeTypes(new DiagnosticCollection(new[] { Error(code) })), Is.False, code);
+            Assert.That(TreeCatalogEntry.OnlyUnknownNodeTypes(new DiagnosticCollection(new[] { warning })), Is.False);
+        }
+
         private static ProductionTreeAsset Bake() => Bake(typeof(ConsumerCatalog));
 
         private static ProductionTreeAsset Bake(Type catalog)
@@ -178,6 +220,19 @@ namespace AIBT.Tests.Consumer
   'nodes': {
     'root': { 'type': 'aibt.core.memory-sequence', 'typeVersion': 1, 'children': ['use'] },
     'use': { 'subtree': { 'treeId': 'tests.p11.import.child', 'interfaceVersion': 1, 'keys': { } } } } }";
+
+        private const string PlainPath = Folder + "/plain.aibt";
+
+        private const string PlainJson = @"{ 'format': 'aibt.tree', 'formatVersion': 2, 'treeId': 'tests.p11.import.plain', 'name': 'P11 import plain', 'root': 'near',
+  'blackboard': { 'distance': { 'type': 'Float32', 'typeVersion': 1, 'scope': 'tree', 'default': 0.0 } },
+  'nodes': { 'near': { 'type': 'aibt.tests.consumer.radius', 'typeVersion': 1, 'parameters': { 'radius': 1.5 }, 'bindings': { 'distance': 'distance' } } } }";
+
+        private const string ParentWithMissingSubtreeJson = @"{ 'format': 'aibt.tree', 'formatVersion': 3, 'treeId': 'tests.p11.import.parent', 'name': 'P11 import parent', 'root': 'root',
+  'blackboard': { 'distance': { 'type': 'Float32', 'typeVersion': 1, 'scope': 'tree', 'default': 0.0 } },
+  'nodes': {
+    'root': { 'type': 'aibt.core.memory-sequence', 'typeVersion': 1, 'children': ['use', 'gone'] },
+    'gone': { 'subtree': { 'treeId': 'tests.p11.import.missing', 'interfaceVersion': 1, 'keys': { } } },
+    'use': { 'subtree': { 'treeId': 'tests.p11.import.child', 'interfaceVersion': 1, 'keys': { 'distance': 'distance' } } } } }";
 
         private const string ParentJson = @"{ 'format': 'aibt.tree', 'formatVersion': 3, 'treeId': 'tests.p11.import.parent', 'name': 'P11 import parent', 'root': 'root',
   'blackboard': { 'distance': { 'type': 'Float32', 'typeVersion': 1, 'scope': 'tree', 'default': 0.0 } },

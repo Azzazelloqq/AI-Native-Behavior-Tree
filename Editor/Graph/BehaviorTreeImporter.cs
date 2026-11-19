@@ -17,8 +17,8 @@ namespace AIBT.Editor.Graph
     /// Editor-only <see cref="BehaviorTreeAsset"/> summary is kept as a sub-object.
     /// <para>
     /// A tree that uses subtrees (ADR-P11-001) is expanded against the project's trees (every
-    /// <c>.aibt</c> and <c>.aibt.json</c> file under <c>Assets/</c>) and the source holds the
-    /// expanded tree. Such an import
+    /// <c>.aibt</c> and <c>.aibt.json</c> file under <c>Assets/</c> and the project's packages) and
+    /// the source holds the expanded tree. Such an import
     /// depends on every subtree file it read, on the tree-ID index entry of every tree ID it looked
     /// up (so a new, removed or duplicate file with that ID re-imports it) and on the project node
     /// registry. Version 3: version-2 imports never expanded.
@@ -111,7 +111,7 @@ namespace AIBT.Editor.Graph
             }
             else
             {
-                var unknown = parsed.Document.Nodes.Where(node => !catalog.Registry.TryGet(node.TypeId, out _))
+                var unknown = parsed.Document.Nodes.Where(node => node.Subtree == null && !catalog.Registry.TryGet(node.TypeId, out _))
                     .Select(node => node.TypeId).Distinct().ToArray();
                 if (unknown.Length != 0)
                 {

@@ -52,6 +52,14 @@ namespace AIBT.Editor.Graph
                     if (!entry.Expansion.Success)
                     {
                         entry.Details = string.Join("\n", entry.Expansion.Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
+                        if (OnlyUnknownNodeTypes(entry.Expansion.Diagnostics))
+                        {
+                            // As for a tree without subtrees: node types the catalog does not know
+                            // are not a source error; the tree is reported as needing a registry.
+                            entry.Status = "Needs registry";
+                            entry.Details = "Source parsed. Project node contracts are not validated here; the subtree expansion "
+                                + "needs node types the project catalog does not know:\n" + entry.Details;
+                        }
                         return entry;
                     }
                     document = entry.Expansion.Document;
@@ -91,6 +99,17 @@ namespace AIBT.Editor.Graph
                 entry.Details = exception.Message;
             }
             return entry;
+        }
+
+        /// <summary>
+        /// True when every error of a failed expansion is <c>AIBT2021</c> (a node type the registry
+        /// does not know). Any other error — a subtree that is missing, ambiguous or recursive, a key
+        /// map error, any other validation error — keeps the status <c>Errors</c>.
+        /// </summary>
+        internal static bool OnlyUnknownNodeTypes(DiagnosticCollection diagnostics)
+        {
+            var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+            return errors.Count != 0 && errors.All(d => d.Code == TreeValidationDiagnosticCodes.UnknownNodeType);
         }
 
         public bool Matches(string search, string tag, string status)

@@ -12,8 +12,11 @@ namespace AIBT.Editor.Graph
 {
     /// <summary>
     /// The project's tree-ID index for subtree references (ADR-P11-001 §3(a) "Assets", §5): every
-    /// <c>.aibt</c> / <c>.aibt.json</c> file under <c>Assets/</c> that Unity imports (folders whose
-    /// name starts with '.' or ends with '~' are skipped, as Unity skips them), keyed by tree ID.
+    /// <c>.aibt</c> / <c>.aibt.json</c> file under <c>Assets/</c> and under every package the
+    /// AssetDatabase sees (<c>Packages/&lt;name&gt;/</c>, read from the package's resolved folder)
+    /// that Unity imports (folders whose name starts with '.' or ends with '~', and <c>cvs</c>, are
+    /// skipped, as Unity skips them), keyed by tree ID. Source IDs are asset paths
+    /// (<c>Assets/…</c> or <c>Packages/&lt;name&gt;/…</c>).
     /// A snapshot is an <see cref="ISubtreeResolver"/> whose source IDs are project asset paths; a
     /// tree ID declared by several files is ambiguous (<c>AIBT3021</c>), never resolved to one of them.
     /// <para>
@@ -62,15 +65,22 @@ namespace AIBT.Editor.Graph
             supportsAgentScope: true, supportsSharedScope: true);
 
         /// <summary>Reads the current tree files (unchanged files are not parsed again).</summary>
-        internal static Snapshot Scan()
+        internal static Snapshot Scan() => Scan(Roots());
+
+        /// <summary>
+        /// Reads the tree files under <paramref name="roots"/>: each an asset-path prefix (such as
+        /// <c>Assets</c> or <c>Packages/com.example.trees</c>) and the folder on disk it maps to.
+        /// </summary>
+        internal static Snapshot Scan(IEnumerable<ScanRoot> roots)
         {
             var seen = new HashSet<string>(StringComparer.Ordinal);
             var entries = new Dictionary<TreeId, List<KeyValuePair<string, TreeDocument>>>();
             var unreadable = new List<string>();
-            foreach (var path in FindTreeFiles())
+            foreach (var file in FindTreeFiles(roots))
             {
-                seen.Add(path);
-                var document = Read(path);
+                var path = file.Key;
+                if (!seen.Add(path)) continue;
+                var document = Read(path, file.Value);
                 if (document == null)
                 {
                     unreadable.Add(path);
@@ -146,40 +156,104 @@ namespace AIBT.Editor.Graph
             };
         }
 
-        private static IEnumerable<string> FindTreeFiles()
+        /// <summary>An asset-path prefix and the folder on disk whose files appear under it.</summary>
+        internal readonly struct ScanRoot
         {
-            var pending = new Stack<string>();
-            pending.Push(AssetsRoot);
+            internal ScanRoot(string assetRoot, string directory, bool immutable)
+            {
+                AssetRoot = assetRoot.TrimEnd('/');
+                Directory = directory;
+                Immutable = immutable;
+            }
+
+            internal string AssetRoot { get; }
+
+            internal string Directory { get; }
+
+            /// <summary>
+            /// True for packages whose files change only when the package itself changes (registry,
+            /// Git, built-in and tarball packages, held by Unity in its package cache): their tree
+            /// files are listed once per resolved folder instead of on every scan.
+            /// </summary>
+            internal bool Immutable { get; }
+        }
+
+        /// <summary><c>Assets</c>, then every registered package with a folder on disk, in asset-path order.</summary>
+        internal static IReadOnlyList<ScanRoot> Roots()
+        {
+            var roots = new List<ScanRoot> { new ScanRoot(AssetsRoot, AssetsRoot, false) };
+            UnityEditor.PackageManager.PackageInfo[] packages;
+            try { packages = UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages(); }
+            catch (InvalidOperationException) { return roots; }
+            foreach (var package in (packages ?? Array.Empty<UnityEditor.PackageManager.PackageInfo>())
+                         .Where(item => item != null && !string.IsNullOrEmpty(item.assetPath) && !string.IsNullOrEmpty(item.resolvedPath))
+                         .OrderBy(item => item.assetPath, StringComparer.Ordinal))
+            {
+                if (!Directory.Exists(package.resolvedPath)) continue;
+                var source = package.source;
+                var immutable = source != UnityEditor.PackageManager.PackageSource.Embedded
+                                && source != UnityEditor.PackageManager.PackageSource.Local;
+                roots.Add(new ScanRoot(package.assetPath, package.resolvedPath, immutable));
+            }
+            return roots;
+        }
+
+        // Tree files of immutable packages, keyed by resolved folder (a new package version has a new folder).
+        private static readonly Dictionary<string, List<KeyValuePair<string, string>>> s_immutableFiles
+            = new Dictionary<string, List<KeyValuePair<string, string>>>(StringComparer.Ordinal);
+
+        /// <summary>Asset path and path on disk of every tree file under <paramref name="roots"/>.</summary>
+        private static IEnumerable<KeyValuePair<string, string>> FindTreeFiles(IEnumerable<ScanRoot> roots)
+        {
+            foreach (var root in roots)
+            {
+                if (!root.Immutable)
+                {
+                    foreach (var file in FindTreeFiles(root)) yield return file;
+                    continue;
+                }
+                if (!s_immutableFiles.TryGetValue(root.Directory, out var files))
+                    s_immutableFiles[root.Directory] = files = FindTreeFiles(root).ToList();
+                foreach (var file in files) yield return file;
+            }
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> FindTreeFiles(ScanRoot root)
+        {
+            var pending = new Stack<KeyValuePair<string, string>>();
+            pending.Push(new KeyValuePair<string, string>(root.AssetRoot, root.Directory));
             while (pending.Count != 0)
             {
                 var directory = pending.Pop();
                 string[] files, directories;
                 try
                 {
-                    files = Directory.GetFiles(directory);
-                    directories = Directory.GetDirectories(directory);
+                    files = Directory.GetFiles(directory.Value);
+                    directories = Directory.GetDirectories(directory.Value);
                 }
                 catch (IOException) { continue; }
                 catch (UnauthorizedAccessException) { continue; }
                 foreach (var file in files.OrderBy(item => item, StringComparer.Ordinal))
                 {
-                    var path = file.Replace('\\', '/');
-                    if (!Path.GetFileName(path).StartsWith(".", StringComparison.Ordinal) && TreeSourcePaths.IsTree(path)) yield return path;
+                    var name = Path.GetFileName(file);
+                    var path = directory.Key + "/" + name;
+                    if (!name.StartsWith(".", StringComparison.Ordinal) && TreeSourcePaths.IsTree(path))
+                        yield return new KeyValuePair<string, string>(path, file);
                 }
                 foreach (var child in directories.OrderByDescending(item => item, StringComparer.Ordinal))
                 {
                     var name = Path.GetFileName(child);
                     if (name.StartsWith(".", StringComparison.Ordinal) || name.EndsWith("~", StringComparison.Ordinal)
                         || string.Equals(name, "cvs", StringComparison.OrdinalIgnoreCase)) continue;
-                    pending.Push(child);
+                    pending.Push(new KeyValuePair<string, string>(directory.Key + "/" + name, child));
                 }
             }
         }
 
-        private static TreeDocument Read(string path)
+        private static TreeDocument Read(string path, string file)
         {
             FileInfo info;
-            try { info = new FileInfo(path); }
+            try { info = new FileInfo(file); }
             catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is ArgumentException) { return null; }
             if (!info.Exists) return null;
             if (s_files.TryGetValue(path, out var cached) && cached.Length == info.Length && cached.WriteTicks == info.LastWriteTimeUtc.Ticks)
@@ -187,7 +261,7 @@ namespace AIBT.Editor.Graph
             TreeDocument document = null;
             try
             {
-                var read = CanonicalTreeJson.Parse(File.ReadAllBytes(path), path);
+                var read = CanonicalTreeJson.Parse(File.ReadAllBytes(file), path);
                 if (read.Success) document = read.Document;
             }
             catch (IOException) { }
@@ -227,8 +301,8 @@ namespace AIBT.Editor.Graph
             {
                 if (!_entries.TryGetValue(treeId, out var list))
                     return SubtreeResolution.NotFound(_unreadable.Count == 0
-                        ? "No tree file under Assets/ declares this tree ID."
-                        : "No readable tree file under Assets/ declares this tree ID; unreadable tree files: " + string.Join(", ", _unreadable) + ".");
+                        ? "No tree file under Assets/ or Packages/ declares this tree ID."
+                        : "No readable tree file under Assets/ or Packages/ declares this tree ID; unreadable tree files: " + string.Join(", ", _unreadable) + ".");
                 if (list.Count == 1) return SubtreeResolution.Found(list[0].Value, list[0].Key);
                 return SubtreeResolution.Ambiguous(list.Select(item => item.Key));
             }
