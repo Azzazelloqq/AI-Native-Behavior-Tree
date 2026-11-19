@@ -666,3 +666,100 @@ Seen in the live screenshots and not part of this stage: the blackboard panel of
 compile" while its prepared asset is running.
 
 Open for the owner (none blocks stage 3): the questions above.
+
+## Stage 3 — random nodes and host seeding (2026-11-20)
+
+Base: `feature/aibt-consumer-workflow` at `d1218b1`. Editor 6000.6.9f1, project "Modules"
+(Pipeline port 7810). Raw outputs, dumps, screenshots, clips and the scripts that made them are in
+`C:\UnityProjects\_aibt_acceptance\P11-002\stage3\` (outside the repository).
+
+### Plan for `Runtime/`, written before the change
+
+Read first: `GeneratedTreeDispatchAdapterV2.cs` (slot creation `:906-907` makes one zeroed state word
+and one zeroed increment word for a case with `HasRandomStream`, none otherwise; `SeedRandomStreams`
+`:594-599` seeds only slots that have a word, via `DispatchSlot.SeedRandomStream` `:1318-1325` and
+`NativeRandomStreamDerivationV1.TryDerive`), `NativeBurstDispatchBatchOwnerV2.cs:587-590` (a request
+of a random-capable case with an even increment is refused: the `InvalidEncoding` the pin test
+records), `ProductionTreeProgram.TryBootstrap`, `ProductionTreeHost.TryBootstrap` (generated
+overload `:226-245`; the tree instance id is the process-wide counter `s_nextTreeInstanceId`, `:43`,
+`:240`), `ProductionTreeAgentCore.TryBootstrapGenerated` (shared with the simulation container),
+`NativeTreeAgent.StartHost` (`:229-256`; every start and restart adds a new `ProductionTreeHost`),
+`ProductionTreeScheduler` (does not bootstrap hosts) and `TreeGroup.TryResetToFreshInstance`
+(`Runtime/Simulation/TreeGroup.cs:504-511`: next container-local instance id, then
+`SeedRandomStreams(Settings.RandomSeed, semantic hash)`).
+
+Lines to change (nothing else under `Runtime/`):
+
+1. `Runtime/Integration/ProductionTreeHost.cs` — the generated `TryBootstrap` (`:226-245`) gets an
+   overload with a `ulong randomSeed` before `out failure`; the existing overload calls it with
+   `DefaultRandomSeed` (0). After `_core.TryBootstrapGenerated` succeeds and before the first update,
+   the new overload calls `_core.GeneratedDispatch.SeedRandomStreams(randomSeed, semantic hash of
+   definition.Binding.SemanticProgram)` — the call `TreeGroup` makes — and records the seed in a new
+   read-only `RandomSeed` property. New constant `DefaultRandomSeed = 0`. Why here and not in
+   `ProductionTreeAgentCore`: the core is shared with `TreeSimulation`, which seeds itself; seeding
+   in the host leaves the container path byte for byte as it is. The legacy delegate overloads have
+   no generated adapter and no streams and do not change.
+2. `Runtime/Integration/ProductionTreeProgram.cs` — an overload
+   `TryBootstrap(host, ulong randomSeed, out failure, effectCapacity, clock, traceCapacity)`; the
+   existing one calls it with `ProductionTreeHost.DefaultRandomSeed`.
+3. `Runtime/Integration/NativeTreeAgent.cs` — a serialized `ulong _randomSeed` (default 0) with a
+   public `RandomSeed` property; `StartHost` passes it to the new `ProductionTreeProgram.TryBootstrap`
+   overload.
+
+Why trees without random nodes cannot change: `SeedRandomStream` returns at once for a slot without
+a stream word (`_randomStates.Length == 0`), and a tree without a random-capable node has no such
+slot, so the seeding loop writes nothing. The before/after dumps below test it.
+
+Choices for the owner to overrule:
+
+- **Default seed 0**, as `TreeSimulationSettings.Default` (`RandomSeed = 0`).
+- **Where the setting lives:** a bootstrap argument for `ProductionTreeHost` /
+  `ProductionTreeProgram` (fixed for the host's life, like the clock), and a serialized field plus
+  property on `NativeTreeAgent`, read at each start and restart.
+- **Restart:** a host has no restart (its root result is terminal). `NativeTreeAgent` restarts by
+  replacing its host, so every run is a new tree instance with a new instance id and freshly derived
+  streams — the next run draws a different sequence. This is what the container does under
+  `RootCompletionPolicy.Restart` (a new container-local instance id, then `SeedRandomStreams`), and
+  `time-and-random-v1.md` ("Stream lifecycle") allows it: a host that wants a distinct sequence after
+  a restart supplies a distinct tree instance identity under its lifecycle policy. Re-seeding the
+  same id to repeat the sequence would need a host restart that keeps the instance id, which hosts
+  do not have; that would be a lifecycle change, not seeding.
+- **Instance ids and reproducibility:** the host's tree instance id is the process-wide counter
+  (1, 2, … per host bootstrap in the domain, any program). Two agents with the same tree and seed
+  therefore differ. A run is reproducible when the same hosts bootstrap in the same order after a
+  domain reload (the counter is a static field, reset by the reload that Play Mode does when Enter
+  Play Mode Options do not disable it); otherwise the same seed gives other sequences. Measured
+  below.
+
+Found while reading, to be checked before relying on it: the scheduler's group dispatch
+(`GeneratedDispatchGroupExecutorV2` and `GeneratedDispatchGroupWorkspaceV2`, used under
+`BatchedJobsSameFrame` and `PipelinedJobs` when two or more hosts of one catalog dispatch in one
+round) copies each participant's random words into a temporary batch and commits only memory and
+binding values back (`GeneratedTreeDispatchAdapterV2.TryCommitFromGroup`). If so, a seeded stream
+there would never advance.
+
+### Identity dumps before the change
+
+`Tests/Integration/NativeRuntime/P11002Stage3IdentityDump.cs` (temporary, not committed; copy in
+`stage3\scripts\`) writes, for trees without random nodes:
+
+- `hosts.txt`: the 70 stage 1 library cases, the 29 stage 2 timing cases, the deterministic
+  simulation trees, the three `JobsPolicyEquivalenceTests` trees and the two `NativeTreeAgentTests`
+  trees, each on its own `ProductionTreeHost` (catalog `NativeLibraryCatalog`, clock 33 333 µs per
+  update, 30 updates, effect capacity 8): per update the update count, root result, failure, active
+  path, every Tree-scope byte, the random words of every node, every generated slot's per-instance
+  bytes except its transaction record (memory, random words, binding values, completions, commands,
+  operations, published commands, state), every trace record without the instance id, and the
+  drained effects;
+- `host-lifecycle-proof.txt`: the same for the `GeneratedDispatchLifecycleProofTests` fixture tree on
+  its own catalog;
+- `agents-jobs-policy.txt`: the `JobsPolicyEquivalenceTests` population of `NativeTreeAgent`s
+  (12 agents, facts between frames, restarts) under the default profile, forced Immediate, forced
+  BatchedJobsSameFrame and forced JobsAgentFrame: every frame's trace records, results, Tree bytes
+  and delivered effects;
+- `simulation.txt`: every tree above plus the container's own random trees (patrol, errand, coin) as
+  `TreeSimulation` groups of three agents, seed `0xC0FFEE`, in place and with Jobs: per tick and
+  group the digest of `SimulationTestPrograms.AppendDigest` and every agent's stream words.
+
+Taken twice at `d1218b1` (runs `05`, `06`): the two dumps are byte-identical, so the dump itself is
+deterministic. Kept in `stage3\before\`.
