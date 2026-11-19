@@ -54,7 +54,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
             {
                 Assert.That(node.Manifest.Deterministic, Is.True, node.Manifest.TypeId);
                 Assert.That(node.Manifest.Category, Is.EqualTo("Native/Blackboard").Or.EqualTo("Native/Flow")
-                    .Or.EqualTo("Native/Timing").Or.EqualTo("Native/Signals"), node.Manifest.TypeId);
+                    .Or.EqualTo("Native/Timing").Or.EqualTo("Native/Signals").Or.EqualTo("Native/Random"), node.Manifest.TypeId);
                 Assert.That(node.Manifest.Version, Is.EqualTo(1u), node.Manifest.TypeId);
             }
 

@@ -19,7 +19,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
     [AibtCatalogSet("aibt.tests.p11002.native-library", 1u, typeof(BuiltInLeafShard), typeof(StandardNativeShard), typeof(ExternalTreeWriteFixtureShard))]
     public static partial class NativeLibraryCatalog { }
 
-    /// <summary>Every node of the package shard aibt.native.standard after P11-002 stage 2.</summary>
+    /// <summary>Every node of the package shard aibt.native.standard after P11-002 stage 3.</summary>
     internal static class StandardNativeLibraryIds
     {
         /// <summary>The four P9-002 nodes.</summary>
@@ -45,7 +45,14 @@ namespace AIBT.Tests.Integration.NativeRuntime
             "aibt.native.wait-until-true", "aibt.native.set-deadline", "aibt.native.deadline-passed", "aibt.native.signal",
         };
 
-        internal static readonly string[] All = Seed.Concat(Stage1).Concat(Stage2).ToArray();
+        /// <summary>The 5 random nodes of P11-002 stage 3 (category Native/Random).</summary>
+        internal static readonly string[] Stage3 =
+        {
+            "aibt.native.random-chance", "aibt.native.random-float", "aibt.native.random-int",
+            "aibt.native.wait-random-microseconds", "aibt.native.random-float3-in-radius",
+        };
+
+        internal static readonly string[] All = Seed.Concat(Stage1).Concat(Stage2).Concat(Stage3).ToArray();
     }
 
     /// <summary>JSON builders for the library test trees (canonical aibt.tree, format 2, Tree-scope keys only).</summary>
@@ -164,13 +171,17 @@ namespace AIBT.Tests.Integration.NativeRuntime
             };
         }
 
-        /// <summary>Starts a host; <paramref name="effectCapacity"/> above 0 enables its committed-effect queue (stage 2 signals).</summary>
-        internal LibraryHost Start(Prepared prepared, Func<long> clock = null, int effectCapacity = 0)
+        /// <summary>
+        /// Starts a host; <paramref name="effectCapacity"/> above 0 enables its committed-effect queue
+        /// (stage 2 signals); <paramref name="randomSeed"/> seeds the random nodes' streams (stage 3).
+        /// </summary>
+        internal LibraryHost Start(Prepared prepared, Func<long> clock = null, int effectCapacity = 0,
+            ulong randomSeed = ProductionTreeHost.DefaultRandomSeed)
         {
             var gameObject = new GameObject("AIBT.Tests.P11002.LibraryHost");
             _hosts.Add(gameObject);
             var host = gameObject.AddComponent<ProductionTreeHost>();
-            Assert.That(prepared.Program.TryBootstrap(host, out var failure, effectCapacity, clock ?? (() => 0L)), Is.True, failure.Code.ToString());
+            Assert.That(prepared.Program.TryBootstrap(host, randomSeed, out var failure, effectCapacity, clock ?? (() => 0L)), Is.True, failure.Code.ToString());
             return new LibraryHost(host, prepared.Slots);
         }
 

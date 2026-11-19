@@ -64,7 +64,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
             var covered = new HashSet<string>(TimingCases.CoveredNodes());
             Assert.That(StandardNativeLibraryIds.Stage2.Where(id => !covered.Contains(id)), Is.Empty);
             Assert.That(StandardNativeLibraryIds.All, Is.Unique);
-            Assert.That(StandardNativeLibraryIds.All, Has.Length.EqualTo(28));
+            Assert.That(StandardNativeLibraryIds.All, Has.Length.EqualTo(33));
         }
     }
 }

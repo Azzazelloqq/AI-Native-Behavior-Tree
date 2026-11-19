@@ -2,7 +2,7 @@
 
 Source: the real AIBT node registry, via `AIBT.Authoring.NodeCatalogQuery` (P6-003). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
-95 registered node type(s).
+100 registered node type(s).
 
 ---
 
@@ -2165,6 +2165,338 @@ Full contract (verbatim `get_node_contract` output):
 
 ---
 
+### `aibt.native.random-chance` (v1)
+
+- **Summary:** Succeeds with probability 'chance' (0 to 1) and fails otherwise; one draw per tick from the node's seeded random stream. A chance outside 0 to 1 or not finite fails without drawing.
+- **Category:** Native/Random
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree for a probabilistic branch, for example 'one in four patrols stops to look around'; the result repeats for the same seed and tree instance.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.random-chance there. Use it instead of aibt.stdlib.random-condition (a whole-percent, non-deterministic built-in that the default Phase1 policy rejects) whenever the tree must pass Phase1 or reproduce its rolls; random-condition only remains for trees validated without the determinism requirement.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.random-chance",
+  "version": 1,
+  "summary": "Succeeds with probability 'chance' (0 to 1) and fails otherwise; one draw per tick from the node's seeded random stream. A chance outside 0 to 1 or not finite fails without drawing.",
+  "category": "Native/Random",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree for a probabilistic branch, for example 'one in four patrols stops to look around'; the result repeats for the same seed and tree instance.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.random-chance there. Use it instead of aibt.stdlib.random-condition (a whole-percent, non-deterministic built-in that the default Phase1 policy rejects) whenever the tree must pass Phase1 or reproduce its rolls; random-condition only remains for trees validated without the determinism requirement.",
+  "parameters": {
+    "chance": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 4,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-random-chance",
+      "parameters": {
+        "chance": 0
+      },
+      "expectedBehavior": "Succeeds with probability 'chance' (0 to 1) and fails otherwise; one draw per tick from the node's seeded random stream. A chance outside 0 to 1 or not finite fails without drawing."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.random-float` (v1)
+
+- **Summary:** Writes a uniform random float in [min, max) to a float blackboard key and succeeds; one draw per tick. min = max writes min; min > max or a bound that is not finite fails without writing or drawing.
+- **Category:** Native/Random
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to vary a number per run, such as a speed, a delay factor or a score threshold, reproducibly for the seed.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.random-float there. For a whole number use aibt.native.random-int; for a random pause use aibt.native.wait-random-microseconds.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.random-float",
+  "version": 1,
+  "summary": "Writes a uniform random float in [min, max) to a float blackboard key and succeeds; one draw per tick. min = max writes min; min > max or a bound that is not finite fails without writing or drawing.",
+  "category": "Native/Random",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to vary a number per run, such as a speed, a delay factor or a score threshold, reproducibly for the seed.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.random-float there. For a whole number use aibt.native.random-int; for a random pause use aibt.native.wait-random-microseconds.",
+  "parameters": {
+    "max": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    },
+    "min": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 8,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 12,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-random-float",
+      "parameters": {
+        "max": 0,
+        "min": 0
+      },
+      "expectedBehavior": "Writes a uniform random float in [min, max) to a float blackboard key and succeeds; one draw per tick. min = max writes min; min > max or a bound that is not finite fails without writing or drawing."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.random-float3-in-radius` (v1)
+
+- **Summary:** Writes center + a uniform random offset with min-radius <= distance <= radius to a Float3 key and succeeds; flat keeps the centre's height (Y) and spreads on the XZ ring, otherwise in the 3D shell. Two draws per tick when flat, three otherwise. A radius that is negative or not finite, or min-radius > radius, fails without drawing.
+- **Category:** Native/Random
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to choose a wander or search point around a position (often flat, around the agent's home), reproducibly for the seed.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.random-point there. The point is not checked against the NavMesh or obstacles: validate it in gameplay code. A result that is not finite (a huge centre plus radius) fails without writing, after drawing.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.random-float3-in-radius",
+  "version": 1,
+  "summary": "Writes center + a uniform random offset with min-radius <= distance <= radius to a Float3 key and succeeds; flat keeps the centre's height (Y) and spreads on the XZ ring, otherwise in the 3D shell. Two draws per tick when flat, three otherwise. A radius that is negative or not finite, or min-radius > radius, fails without drawing.",
+  "category": "Native/Random",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to choose a wander or search point around a position (often flat, around the agent's home), reproducibly for the seed.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.random-point there. The point is not checked against the NavMesh or obstacles: validate it in gameplay code. A result that is not finite (a huge centre plus radius) fails without writing, after drawing.",
+  "parameters": {
+    "flat": {
+      "type": "boolean",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 1,
+        "alignment": 1
+      }
+    },
+    "min-radius": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 8,
+        "size": 4,
+        "alignment": 4
+      }
+    },
+    "radius": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 12,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 20,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-random-float3-in-radius",
+      "parameters": {
+        "flat": false,
+        "min-radius": 0,
+        "radius": 0
+      },
+      "expectedBehavior": "Writes center + a uniform random offset with min-radius <= distance <= radius to a Float3 key and succeeds; flat keeps the centre's height (Y) and spreads on the XZ ring, otherwise in the 3D shell. Two draws per tick when flat, three otherwise. A radius that is negative or not finite, or min-radius > radius, fails without drawing."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.random-int` (v1)
+
+- **Summary:** Writes a uniform random whole number in [min, max], both ends included, to an Int32 blackboard key and succeeds; one bounded draw per tick. min > max or max above 2147483647 fails without writing or drawing.
+- **Category:** Native/Random
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to pick one of several options, such as an index into waypoints or a signal code, reproducibly for the seed.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.random-int there. Bounds are 0 to 2147483647; for negative numbers subtract an offset in your own code, and for a fraction use aibt.native.random-float.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.random-int",
+  "version": 1,
+  "summary": "Writes a uniform random whole number in [min, max], both ends included, to an Int32 blackboard key and succeeds; one bounded draw per tick. min > max or max above 2147483647 fails without writing or drawing.",
+  "category": "Native/Random",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to pick one of several options, such as an index into waypoints or a signal code, reproducibly for the seed.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.random-int there. Bounds are 0 to 2147483647; for negative numbers subtract an offset in your own code, and for a fraction use aibt.native.random-float.",
+  "parameters": {
+    "max": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    },
+    "min": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 8,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 12,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-random-int",
+      "parameters": {
+        "max": 0,
+        "min": 0
+      },
+      "expectedBehavior": "Writes a uniform random whole number in [min, max], both ends included, to an Int32 blackboard key and succeeds; one bounded draw per tick. min > max or max above 2147483647 fails without writing or drawing."
+    }
+  ]
+}
+```
+
+---
+
 ### `aibt.native.set-bool` (v1)
 
 - **Summary:** Writes a constant to a bool blackboard key and succeeds.
@@ -2811,6 +3143,90 @@ Full contract (verbatim `get_node_contract` output):
         "duration-microseconds": 0
       },
       "expectedBehavior": "Stays running until a duration of host time has passed since it started, then succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.wait-random-microseconds` (v1)
+
+- **Summary:** Picks a uniform random duration in [min, max] microseconds of host time when it starts (one draw), stays running until that much time has passed, then succeeds. min > max fails without drawing; aborting it is safe.
+- **Category:** Native/Random
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree for pauses that should not line up across agents, such as idle or look-around times, reproducibly for the seed.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.wait-random there. For a fixed pause use aibt.native.wait-microseconds; to count ticks rather than host time use aibt.stdlib.wait.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.wait-random-microseconds",
+  "version": 1,
+  "summary": "Picks a uniform random duration in [min, max] microseconds of host time when it starts (one draw), stays running until that much time has passed, then succeeds. min > max fails without drawing; aborting it is safe.",
+  "category": "Native/Random",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree for pauses that should not line up across agents, such as idle or look-around times, reproducibly for the seed.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.wait-random there. For a fixed pause use aibt.native.wait-microseconds; to count ticks rather than host time use aibt.stdlib.wait.",
+  "parameters": {
+    "max-microseconds": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    },
+    "min-microseconds": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "running",
+    "success"
+  ],
+  "memory": {
+    "size": 16,
+    "alignment": 8,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-wait-random-microseconds",
+      "parameters": {
+        "max-microseconds": 0,
+        "min-microseconds": 0
+      },
+      "expectedBehavior": "Picks a uniform random duration in [min, max] microseconds of host time when it starts (one draw), stays running until that much time has passed, then succeeds. min > max fails without drawing; aborting it is safe."
     }
   ]
 }
