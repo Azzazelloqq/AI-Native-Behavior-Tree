@@ -245,7 +245,8 @@ namespace AIBT.Editor.Graph
             var probe = GraphDocumentEdits.Rebuild(document, remaining);
             var referenceId = NewReferenceId(probe, string.IsNullOrEmpty(topNode.DisplayName) ? SeedFor(treeId) : topNode.DisplayName);
             var reference = NodeDocument.CreateSubtreeReference(referenceId,
-                new SubtreeReference(treeId, 1, treeKeys.Select(key => SubtreeKeyBinding.ToParentKey(key.Id, key.Id))), tags: TagSet.Empty);
+                new SubtreeReference(treeId, 1, treeKeys.Select(key => SubtreeKeyBinding.ToParentKey(key.Id, key.Id))),
+                displayName: topNode.DisplayName, tags: TagSet.Empty);
             var nodes = new List<NodeDocument>();
             foreach (var node in remaining)
             {

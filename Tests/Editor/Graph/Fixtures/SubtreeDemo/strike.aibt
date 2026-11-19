@@ -1,0 +1,19 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 3,
+  "treeId": "tests.p11.demo.strike",
+  "name": "Strike",
+  "root": "combo",
+  "interface": { "version": 1, "keys": ["hits"] },
+  "blackboard": {
+    "hits": { "type": "Int32", "default": 0 },
+    "swings": { "type": "Int32", "default": 0 }
+  },
+  "nodes": {
+    "combo": { "displayName": "Combo", "type": "aibt.core.memory-sequence", "typeVersion": 1, "children": ["windup", "hit", "recover", "count"] },
+    "windup": { "displayName": "Wind up", "type": "aibt.unity.wait-seconds", "typeVersion": 1, "parameters": { "seconds": 0.8 } },
+    "hit": { "displayName": "Hit", "type": "aibt.unity.increment-int", "typeVersion": 1, "parameters": { "key": "hits", "amount": 1 } },
+    "recover": { "displayName": "Recover", "type": "aibt.unity.wait-seconds", "typeVersion": 1, "parameters": { "seconds": 0.6 } },
+    "count": { "displayName": "Count swing", "type": "aibt.unity.increment-int", "typeVersion": 1, "parameters": { "key": "swings", "amount": 1 } }
+  }
+}

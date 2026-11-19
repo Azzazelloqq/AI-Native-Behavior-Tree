@@ -89,6 +89,34 @@ namespace AIBT.Tests.Editor.Graph
 
         private static string Problems(BehaviorTreeGraphWindow window) => string.Join("; ", window.Problems.Select(item => item.Node?.Value + ": " + item.Text));
 
+        // ---------------------------------------------------------------- demo fixtures
+
+        /// <summary>
+        /// The stage-3 evidence trees in Fixtures/SubtreeDemo: "Boss Fight" uses "Strike" twice
+        /// (Left strike, Right strike), so each instance gets its own nodes and private key.
+        /// </summary>
+        [Test]
+        public void DemoFixtures_BossFightExpandsToTwoStrikeInstances()
+        {
+            var catalog = AIBT.Editor.Registry.ProjectNodeCatalogCache.Current;
+            var bossPath = EditorTestPackagePaths.Resolve("Tests", "Editor", "Graph", "Fixtures", "SubtreeDemo", "boss-fight.aibt");
+            var strikePath = EditorTestPackagePaths.Resolve("Tests", "Editor", "Graph", "Fixtures", "SubtreeDemo", "strike.aibt");
+            var boss = CanonicalTreeJson.Parse(File.ReadAllBytes(bossPath), "trees/boss-fight.aibt");
+            var strike = CanonicalTreeJson.Parse(File.ReadAllBytes(strikePath), "trees/strike.aibt");
+            Assert.That(boss.Success && strike.Success, Is.True);
+            var resolver = new InMemorySubtreeResolver().Add(strike.Document, "trees/strike.aibt");
+
+            var expansion = ProjectTreeIndex.Expand("trees/boss-fight.aibt", boss.Document, catalog.Registry, catalog.RegisteredTypes, resolver);
+
+            Assert.That(expansion.Success, Is.True, string.Join("; ", expansion.Diagnostics.Select(item => item.Message)));
+            Assert.That(expansion.Document.Nodes.Count, Is.EqualTo(16));
+            foreach (var instance in new[] { "left", "right" })
+            {
+                Assert.That(expansion.Document.Nodes.Any(node => node.Id.Value == instance + ":hit"), Is.True, instance);
+                Assert.That(expansion.Document.Blackboard.Any(key => key.Id == instance + ":swings"), Is.True, instance);
+            }
+        }
+
         // ---------------------------------------------------------------- palette and picker
 
         [Test]
@@ -246,6 +274,7 @@ namespace AIBT.Tests.Editor.Graph
                 Assert.That(ChildIds(window.Document, "root"), Is.EqualTo(new[] { "x", "combo" }));
                 Assert.That(Node(window, "group"), Is.Null);
                 Assert.That(Node(window, "y"), Is.Null);
+                Assert.That(Node(window, "combo").DisplayName, Is.EqualTo("Combo"), "The reference keeps the extracted node's label.");
                 var subtreeRef = Node(window, "combo").Subtree;
                 Assert.That(subtreeRef.TreeId.Value, Is.EqualTo("tests.p11.plain.combo"));
                 Assert.That(window.PendingSubtreePaths, Is.EqualTo(new[] { target }));

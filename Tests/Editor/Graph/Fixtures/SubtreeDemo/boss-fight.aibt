@@ -1,0 +1,20 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 3,
+  "treeId": "tests.p11.demo.boss-fight",
+  "name": "Boss Fight",
+  "root": "fight",
+  "blackboard": {
+    "hits": { "type": "Int32", "default": 0 }
+  },
+  "nodes": {
+    "fight": { "displayName": "Fight", "type": "aibt.core.memory-sequence", "typeVersion": 1, "children": ["taunt", "left", "pause", "right", "finisher"] },
+    "taunt": { "displayName": "Taunt", "type": "aibt.unity.wait-seconds", "typeVersion": 1, "parameters": { "seconds": 0.5 } },
+    "left": { "displayName": "Left strike", "subtree": { "treeId": "tests.p11.demo.strike", "interfaceVersion": 1, "keys": { "hits": "hits" } } },
+    "pause": { "displayName": "Pause", "type": "aibt.unity.wait-seconds", "typeVersion": 1, "parameters": { "seconds": 0.4 } },
+    "right": { "displayName": "Right strike", "subtree": { "treeId": "tests.p11.demo.strike", "interfaceVersion": 1, "keys": { "hits": "hits" } } },
+    "finisher": { "displayName": "Finisher", "type": "aibt.core.memory-sequence", "typeVersion": 1, "children": ["charge", "slam"] },
+    "charge": { "displayName": "Charge", "type": "aibt.unity.wait-seconds", "typeVersion": 1, "parameters": { "seconds": 0.7 } },
+    "slam": { "displayName": "Slam", "type": "aibt.unity.increment-int", "typeVersion": 1, "parameters": { "key": "hits", "amount": 3 } }
+  }
+}
