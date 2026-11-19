@@ -150,6 +150,54 @@ namespace AIBT.Tests.Editor.Mcp
             Assert.That((string)badLimit["error"]["code"], Is.EqualTo("AIBT9018"));
         }
 
+        /// <summary>
+        /// P11-001 stage 4 (ADR-P11-001 section 4.7): an agent running a node inside a subtree is
+        /// described with the expansion's two-part labels ("reference / inner node") and the inner
+        /// node's prefixed ID, taken from the compiled program's debug map; describe_agent is unchanged.
+        /// </summary>
+        [Test]
+        public void AnAgentInsideASubtree_IsDescribedWithTwoPartLabels()
+        {
+            var probe = Parse(@"{ ""format"": ""aibt.tree"", ""formatVersion"": 3, ""treeId"": ""tests.p11.sim.probe"", ""name"": ""Probe"", ""root"": ""check"",
+  ""interface"": { ""version"": 1, ""keys"": [""distance""] },
+  ""blackboard"": { ""distance"": { ""type"": ""Float32"", ""default"": 0 } },
+  ""nodes"": { ""check"": { ""displayName"": ""Within radius"", ""type"": ""aibt.tests.consumer.radius"", ""typeVersion"": 1,
+    ""parameters"": { ""radius"": -1 }, ""bindings"": { ""distance"": ""distance"" } } } }", "Assets/probe.aibt");
+            var parent = Parse(@"{ ""format"": ""aibt.tree"", ""formatVersion"": 3, ""treeId"": ""tests.p11.sim.scout"", ""name"": ""Scout"", ""root"": ""main"",
+  ""blackboard"": { ""distance"": { ""type"": ""Float32"", ""default"": 0 } },
+  ""nodes"": { ""main"": { ""displayName"": ""Main"", ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""go""] },
+    ""go"": { ""displayName"": ""Go"", ""subtree"": { ""treeId"": ""tests.p11.sim.probe"", ""interfaceVersion"": 1, ""keys"": { ""distance"": ""distance"" } } } } }", "Assets/scout.aibt");
+            _asset = ProductionTreeAssetBaker.Create(parent, "Assets/scout.aibt", typeof(ConsumerCatalog),
+                new InMemorySubtreeResolver().Add(probe, "Assets/probe.aibt"), out var diagnostics);
+            Assert.That(_asset, Is.Not.Null, string.Join("; ", diagnostics.Select(item => item.Code.Value + " " + item.Message)));
+            Assert.That(_asset.TryCreateProgram(ConsumerCatalog.TryCreateRuntimeCatalog, out _program, out var failure), Is.True, failure.ToString());
+            _simulation = new TreeSimulation(TreeSimulationSettings.Default(33333));
+            Assert.That(_simulation.TryAddGroup(_program, TreeGroupSettings.Default(4), out var group), Is.EqualTo(SimulationResult.Success));
+            for (var index = 0; index < 4; index++) Assert.That(group.TryAdd(ThinkSchedule.Every(1, 0), out _), Is.EqualTo(SimulationResult.Success));
+            for (uint tick = 1; tick <= 3; tick++) Assert.That(_simulation.Step(tick), Is.EqualTo(SimulationResult.Success));
+            Assert.That(TreeSimulationDebug.Register(_simulation, "p11-subtree"), Is.True);
+
+            var describe = Dispatch("describe_agent", new JObject { ["simulation"] = "p11-subtree", ["group"] = group.Id, ["agent"] = 2 });
+            var agent = describe["result"];
+            Assert.That(agent, Is.Not.Null, describe.ToString());
+            Assert.That(agent["activePath"].Select(node => (string)node["nodeId"]), Is.EqualTo(new[] { "Main", "Go / Within radius" }), describe.ToString());
+            Assert.That(agent["activePath"].Select(node => (string)node["status"]), Is.All.EqualTo("Running"));
+            Assert.That((string)agent["text"], Does.Contain("Go / Within radius"));
+            TestContext.WriteLine(describe.ToString());
+
+            var map = _program.Program.DebugMap;
+            Assert.That(map.Select(entry => entry.AuthoringNodeId.Value), Is.EquivalentTo(new[] { "main", "go:check" }),
+                "The debug map carries the prefixed inner ID; the reference node itself is not a runtime node.");
+            Assert.That(map.Single(entry => entry.AuthoringNodeId.Value == "go:check").SourcePath, Is.EqualTo("Assets/probe.aibt"));
+        }
+
+        private static TreeDocument Parse(string json, string sourceId)
+        {
+            var parsed = CanonicalTreeJson.Parse(json, sourceId);
+            Assert.That(parsed.Success, Is.True, string.Join("; ", parsed.Diagnostics.Select(item => item.Code.Value + " " + item.Message)));
+            return parsed.Document;
+        }
+
         [Test]
         public void TheToolsAreReadOnly_AndNeedTheReadCategory()
         {
