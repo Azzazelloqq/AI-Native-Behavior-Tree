@@ -181,11 +181,10 @@ Extra arguments (a description for `tree extract`, `connectSameNamedKeys`) go in
   to it an error (`AIBT3021`).
 - Interface keys bind only to the parent's Tree-scope keys. Node parameters are not passed through
   references; pass values through interface keys.
-- A project `blackboardNaming` policy is checked against the expanded key IDs. With
-  `snake_case`, a private key `r:key` (a non-interface key of the subtree, or an interface key bound
-  to a constant) fails `AIBT2038` in `validate` and `compile`, and MCP edits of such a tree are
-  rejected. Until this is decided, keep every subtree key in the interface and bind it to a parent
-  key in such projects.
+- A project `blackboardNaming` policy applies to a key's own name, the part after the last `:`.
+  An expanded private key `r:key` (a non-interface key of the subtree, or an interface key bound to
+  a constant) follows the policy when `key` does; the reference IDs in front of it are node IDs and
+  are not checked. A key whose own name breaks the policy reports `AIBT2038` as before.
 - A tree loaded from raw JSON at run time (not through an imported asset) reports `AIBT3020` unless
   the caller passes a subtree resolver. Imported `.aibt` assets already hold the expanded tree.
 

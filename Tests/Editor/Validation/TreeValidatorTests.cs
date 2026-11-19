@@ -366,6 +366,37 @@ namespace AIBT.Tests.Editor.Validation
                 Is.GreaterThanOrEqualTo(6));
         }
 
+        [TestCase(BlackboardNamingPolicy.SnakeCase, "swing_count", "SwingCount")]
+        [TestCase(BlackboardNamingPolicy.CamelCase, "swingCount", "swing_count")]
+        [TestCase(BlackboardNamingPolicy.PascalCase, "SwingCount", "swingCount")]
+        public void Validate_NamingPolicy_AppliesToThePartOfAKeyNameAfterTheLastColon(BlackboardNamingPolicy naming, string good, string bad)
+        {
+            // ADR-P11-001: a subtree's private key `key` at reference `r` is named `r:key` in the
+            // expansion (nested: `r1:r2:key`). The qualifier is made of reference node IDs, so the
+            // naming policy checks only the key's own part; a name without ':' is checked whole.
+            var keys = new[]
+            {
+                Key(good, good, BlackboardScope.Tree),
+                Key("left-1:" + good, "left-1:" + good, BlackboardScope.Tree),
+                Key("Outer.A:inner-b:" + good, "Outer.A:inner-b:" + good, BlackboardScope.Tree),
+                Key(bad, bad, BlackboardScope.Tree),
+                Key("left-1:" + bad, "left-1:" + bad, BlackboardScope.Tree),
+                Key("Outer.A:inner-b:" + bad, "Outer.A:inner-b:" + bad, BlackboardScope.Tree),
+            };
+            var root = Node("root", BuiltInNodeManifests.MemorySequenceTypeId);
+
+            var diagnostics = TreeValidator.Validate(
+                Document(new[] { root }, blackboard: keys),
+                _registry,
+                new ValidationOptions(policy: new TreeValidationPolicy(blackboardNaming: naming)));
+
+            var violations = diagnostics.Where(item => item.Code == TreeValidationDiagnosticCodes.PolicyViolation)
+                .Select(item => item.Location.JsonPointer).OrderBy(pointer => pointer, System.StringComparer.Ordinal).ToArray();
+            var expected = new[] { bad, "left-1:" + bad, "Outer.A:inner-b:" + bad }
+                .Select(id => "/blackboard/" + id + "/name").OrderBy(pointer => pointer, System.StringComparer.Ordinal).ToArray();
+            Assert.That(violations, Is.EqualTo(expected), string.Join("; ", diagnostics.Select(item => item.Code.Value + " " + item.Location.JsonPointer)));
+        }
+
         [Test]
         public void Validate_PerformancePoliciesAndWarningsAsErrorsAreDeterministic()
         {

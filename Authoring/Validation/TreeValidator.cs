@@ -1220,7 +1220,7 @@ namespace AIBT.Authoring
             for (var index = 0; index < document.Blackboard.Count; index++)
             {
                 var key = document.Blackboard[index];
-                if (key != null && !MatchesNaming(key.Name, policy.BlackboardNaming))
+                if (key != null && !MatchesNaming(UnqualifiedName(key.Name), policy.BlackboardNaming))
                 {
                     diagnostics.Add(Create(options, TreeValidationDiagnosticCodes.PolicyViolation,
                         "Blackboard key name violates the project naming policy.",
@@ -1302,6 +1302,19 @@ namespace AIBT.Authoring
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// The part of a blackboard key name the project naming policy applies to: what follows the
+        /// last ':'. A subtree's private key <c>key</c> at reference <c>r</c> is named <c>r:key</c>
+        /// in the expansion (ADR-P11-001); the qualifier is made of reference node IDs, which the key
+        /// naming policy does not govern. A name without ':' is checked whole, as before.
+        /// </summary>
+        private static string UnqualifiedName(string name)
+        {
+            if (name == null) return null;
+            var separator = name.LastIndexOf(':');
+            return separator < 0 ? name : name.Substring(separator + 1);
         }
 
         private static bool MatchesNaming(string value, BlackboardNamingPolicy policy)

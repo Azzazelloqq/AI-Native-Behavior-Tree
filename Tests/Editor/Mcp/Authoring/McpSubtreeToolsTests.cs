@@ -462,6 +462,41 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
         }
 
         [Test]
+        public void ValidateCompileAndEdits_UnderANamingPolicy_AcceptExpandedPrivateKeys_AndStillCheckTheKeysOwnName()
+        {
+            // The project naming policy applies to a key's own name: the expanded private key
+            // `left:swings` passes snake_case, `left:SwingCount` does not.
+            WritePolicy(requireTreeDescription: false, blackboardNaming: "snake_case");
+            WriteParentWithReference();
+
+            var validated = Dispatch("validate", new JObject { ["treeId"] = FightId }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+            Assert.That((bool)validated["result"]["policyApplied"], Is.True);
+            Assert.That(Codes(validated), Does.Not.Contain("AIBT2038"));
+            var compiled = Dispatch("compile", new JObject { ["treeId"] = FightId }, "Compilation");
+            Assert.That((bool)compiled["result"]["success"], Is.True, compiled.ToString());
+
+            // An edit that adds a second private key (a constant binding becomes `left:hits`) is accepted.
+            var rebound = Dispatch("set_subtree_keys", new JObject
+            {
+                ["treeId"] = FightId, ["expectedHash"] = Hash(FightId), ["nodeId"] = "left",
+                ["keys"] = new JObject { ["hits"] = new JObject { ["value"] = 5 } },
+            }, "SemanticEdit");
+            Assert.That((bool)rebound["result"]["accepted"], Is.True, rebound.ToString());
+            validated = Dispatch("validate", new JObject { ["treeId"] = FightId }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+
+            // The subtree's own key name still has to follow the policy.
+            Write("Trees/strike.aibt", Strike.Replace("swings", "SwingCount"));
+            validated = Dispatch("validate", new JObject { ["treeId"] = FightId }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.False, validated.ToString());
+            Assert.That(Codes(validated), Does.Contain("AIBT2038"));
+            compiled = Dispatch("compile", new JObject { ["treeId"] = FightId }, "Compilation");
+            Assert.That((bool)compiled["result"]["success"], Is.False, compiled.ToString());
+            Assert.That(Codes(compiled), Does.Contain("AIBT2038"));
+        }
+
+        [Test]
         public void PrepareRuntime_ResolvesTheSubtree_AndReportsAMissingOneAsAIBT3020()
         {
             var catalog = ProjectNodeCatalog.RuntimeCatalogTypes().FirstOrDefault(type => type.FullName == "AIBT.Authoring.BuiltInLeaves.BuiltInLeafCatalog");
@@ -585,13 +620,13 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
 }");
         }
 
-        private void WritePolicy(bool requireTreeDescription)
+        private void WritePolicy(bool requireTreeDescription, string blackboardNaming = "any")
         {
             Directory.CreateDirectory(Path.Combine(_projectRoot, ".aibt"));
             File.WriteAllText(Path.Combine(_projectRoot, ".aibt", "policy.json"), new JObject
             {
                 ["format"] = "aibt.policy", ["formatVersion"] = 1, ["allowManagedNodes"] = true, ["allowMainThreadNodes"] = true,
-                ["requireTreeDescription"] = requireTreeDescription, ["requireNodeDescriptions"] = false, ["blackboardNaming"] = "any",
+                ["requireTreeDescription"] = requireTreeDescription, ["requireNodeDescriptions"] = false, ["blackboardNaming"] = blackboardNaming,
                 ["requireDeterministicNodes"] = false, ["allowSideEffects"] = true, ["unreachableNodes"] = "error",
                 ["supportsAgentScope"] = false, ["supportsSharedScope"] = false,
                 ["forbiddenNodeTypes"] = new JArray(), ["warningsAsErrors"] = new JArray(),

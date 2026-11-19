@@ -21,6 +21,11 @@ All notable changes to this project will be documented here. The project follows
   expands and compiles (before, every such edit was rejected with `AIBT3020`). Trees without
   references give the same responses as before.
 - **CLI:** `tree expand`, `tree usages`, `tree extract`, `tree unpack`, `tree keys`.
+- **Naming policy and expanded keys (fix).** The project `blackboardNaming` policy now checks the
+  part of a blackboard key name after the last `:`. Before, an expanded private key `r:key` always
+  failed `AIBT2038` under `snake_case`, `camelCase` or `PascalCase`, so MCP `validate`, `compile`
+  and edits rejected every tree whose subtree has a private key or a constant binding. Names without
+  `:` are checked as before; the policy hash and the policy file format are unchanged.
 - **Graph editor:** the running highlight of a reference card is a thicker ring set apart from the
   card's teal border, so it is visible (style sheet only).
 - **Documentation:** new [Subtrees](Documentation~/subtrees.md) guide; `cli.md`, `ai-and-mcp.md` and
