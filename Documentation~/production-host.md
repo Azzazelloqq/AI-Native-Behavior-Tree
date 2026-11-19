@@ -43,6 +43,16 @@ a claim of scheduled Burst execution. Return the actual callback `BurstContextRe
 - Success/Failure remains in `LastRootResult`; subsequent frames do not restart or retick the tree.
   `TotalUpdates` counts logical updates, not Unity frames. There is no automatic restart API here.
 
+Native hosts (`ProductionTreeHost`, `NativeTreeAgent`, `ProductionTreeScheduler` and
+`TreeSimulation`) do not run observer re-evaluation today. A condition's `observer` block compiles
+and is accepted, but nothing re-evaluates the condition when a watched key changes, and the block
+changes no outcome. To guard a running branch natively, make the condition an earlier child of a
+reactive composite (`aibt.core.reactive-sequence` or `aibt.core.reactive-selector`). The reactive
+composite ticks the condition again at the start of every update. After a node or `SetFact`
+changes the key, the condition's new result aborts the running memory composite at the next
+update, not inside the update that changed the key. Validation refuses an `observer` block outside
+a reactive composite (AIBT2034).
+
 ## Lifecycle and diagnostics
 
 Disabling pauses stepping and preserves activation. The clock may keep advancing while this

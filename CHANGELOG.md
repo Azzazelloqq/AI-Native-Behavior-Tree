@@ -4,6 +4,40 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Native node library, stage 1: blackboard and flow nodes (P11-002)
+
+- **20 new native nodes** in the package shard `aibt.native.standard` (assembly `AIBT.StandardNodes`;
+  the shard version stays 1). All are node version 1, read and write Tree-scope keys only, are
+  deterministic and native-only (`NativeTreeAgent`, `ProductionTreeHost`, `TreeSimulation`), and are
+  opt-in: list `typeof(StandardNativeShard)` in your `[AibtCatalogSet]`. Each node's "when not to
+  use" names its `aibt.unity.*` counterpart (ADR-P11-002).
+  - `Native/Blackboard` conditions: `int-at-least`, `int-equals`, `int-keys-at-least`,
+    `float-keys-at-least`, `float3-within-distance` (`flat` ignores Y), `float3-is-set`.
+  - `Native/Blackboard` actions: `set-bool`, `set-int` (a value above 2147483647 fails without
+    writing), `set-float3`, `copy-bool`, `copy-int`, `copy-float`, `copy-float3`, `increment-int`
+    (wraps), `increment-float` (a non-finite sum fails without writing), `toggle-bool`,
+    `float3-distance` (`flat` ignores Y).
+  - `Native/Flow`: `succeed`, `fail`, `idle` (running until aborted).
+- **Prepared assets are re-prepared once.** Adding nodes changes the catalog fingerprint of every
+  catalog set that lists `StandardNativeShard`. Runtime assets prepared against such a set fail
+  bootstrap (`TypeMismatch`) until they are prepared again; the Editor marks them `CatalogChanged`
+  and re-prepares them after the next domain reload. Make sure that reload has happened before
+  building a Player. Catalog sets that do not list the shard are not affected.
+- **Guards on native hosts:** native hosts do not run observer re-evaluation, so an `observer`
+  block on these conditions compiles and changes nothing (existing behaviour, documented now in
+  `Documentation~/production-host.md` and the README). To guard a running branch, put the
+  condition first under a reactive composite; it aborts the branch at the next update after the
+  key changes.
+- **Node catalog:** `Documentation~/generated/node-catalog.md` now also documents the package's
+  native shard (every `aibt.native.*` node with its contract; 91 node types).
+- **Bake error:** a tree that uses a package library node with a catalog set that does not list the
+  shard still fails with the same diagnostic; its message now ends with
+  "add typeof(AIBT.StandardNodes.StandardNativeShard) to your catalog set ([AibtCatalogSet])".
+- **Unchanged:** the four P9-002 nodes (`bool-is-true`, `float-at-least`, `set-float`,
+  `wait-microseconds`: manifests and descriptors byte for byte), ABI v2, both executors, compiled
+  program and trace formats, specifications, package version, and host and scheduler behaviour
+  apart from the fix below.
+
 ### Native dispatch: handles that are not a node's first field (fix)
 
 - **Fix:** on `ProductionTreeHost`, `NativeTreeAgent` and `TreeSimulation`, a generated blackboard

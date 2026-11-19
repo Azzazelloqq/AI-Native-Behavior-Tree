@@ -13,7 +13,7 @@ It has two runtime layers that share one tree format and one editor:
 | Tree asset | the `.aibt` file itself | a prepared `ProductionTreeAsset` (made from the `.aibt` file) |
 | Custom node | a class deriving from `BtAction` / `BtCondition` | a `partial struct` with `[AibtAction]` / `[AibtCondition]`, compiled by a source generator to Burst |
 | Node touches the scene | directly (Transform, components, other objects) | never; it reads facts and emits effects |
-| Standard nodes | 52 `aibt.unity.*` nodes (movement, navigation, animation, ...) | 4 `aibt.native.*` nodes, plus the core composites and decorators |
+| Standard nodes | 52 `aibt.unity.*` nodes (movement, navigation, animation, ...) | 24 `aibt.native.*` nodes (blackboard, Float3 distance, flow), plus the core composites and decorators |
 | Live debugging in the graph | every node, live blackboard values | active path, just-finished nodes, root result |
 | Main-thread cost, IL2CPP Player ([measured](Documentation~/performance.md)) | ≈1.2 µs per agent-tick for a 15-node tree, 0 B allocated | ≈3.8 µs per agent-update waiting in one leaf, ≈8 µs for a looping 16-node tree, 0 B while the tree runs; each restart allocates |
 | Best for | gameplay AI, fast iteration; about 800 agents ticking every frame in 1 ms of main thread, thousands with `Interval` ticking | zero GC while running, deterministic Burst execution, a simulation kept off the scene |
@@ -276,12 +276,20 @@ The full, generated reference with every parameter, default and status is
 | Events (1) | `raise-event` |
 | Checks (5) | `line-of-sight` (needs Physics), `random-chance`, `start-cooldown`, `is-cooldown-ready`, `time-since-changed` |
 | Debug (1) | `log` |
-| Native (4) | `aibt.native.bool-is-true`, `float-at-least`, `set-float`, `wait-microseconds` (native layer only) |
+| Native/Blackboard (20) | `aibt.native.bool-is-true`, `float-at-least`, `int-at-least`, `int-equals`, `int-keys-at-least`, `float-keys-at-least`, `float3-within-distance`, `float3-is-set`, `set-bool`, `set-int`, `set-float`, `set-float3`, `copy-bool`, `copy-int`, `copy-float`, `copy-float3`, `increment-int`, `increment-float`, `toggle-bool`, `float3-distance` (native layer only) |
+| Native/Flow (4) | `aibt.native.succeed`, `fail`, `idle`, `wait-microseconds` (native layer only) |
 | Built-in leaves | `aibt.stdlib.wait`, `aibt.stdlib.random-condition` (both layers) |
 
 `aibt.unity.*` nodes run only in `BehaviorTreeAgent`; `aibt.native.*` nodes only in
-`NativeTreeAgent`. Nodes that need an optional Unity module are compiled only when the module is
-enabled.
+`NativeTreeAgent`. The `aibt.native.*` nodes are opt-in: list `typeof(StandardNativeShard)` in your
+`[AibtCatalogSet]`; each node's "when not to use" names its `aibt.unity.*` counterpart. Negations
+and "below" are an `aibt.core.inverter` over an "at least" node; the per-node contracts are in
+[the node catalog](Documentation~/generated/node-catalog.md). Native hosts do not run observer
+re-evaluation today, so an `observer` block on an `aibt.native.*` condition changes nothing. To
+guard a branch natively, put the condition first under a `reactive-sequence`: the branch is
+aborted at the next update after the key changes. See
+[Production tree host](Documentation~/production-host.md#clock-budget-and-completion). Nodes that
+need an optional Unity module are compiled only when the module is enabled.
 
 ## Which layer to choose
 
