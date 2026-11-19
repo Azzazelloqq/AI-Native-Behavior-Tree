@@ -5,7 +5,9 @@ stage 1 approved the same day and implemented the same day (local commits on
 `feature/aibt-consumer-workflow`; evidence in `Planning~/Evidence/P11-001/README.md`, accepted after the
 full run of all nine assemblies on `7e614b8`). Stage 2 approved 2026-11-19 together with the owner's
 decision that generated `bindings` values may name expanded keys `r:key` (ADR "Owner decisions",
-item 9). Stages 3 and 4 each need the owner's go-ahead.
+item 9). Stage 2 implemented 2026-11-19 (local commits on `feature/aibt-consumer-workflow`; evidence in
+the "Stage 2" section of `Planning~/Evidence/P11-001/README.md`), awaiting the acceptance run. Stages
+3 and 4 each need the owner's go-ahead.
 
 ## Objective
 
@@ -97,5 +99,10 @@ Save-UnityWindow.ps1 / Save-UnityClip.ps1 for stages 3–4
   contain `:`, so a binding to an expanded `r:` key reports `AIBT3026`; the expansion is always
   format 2; registered-type constants report `AIBT3026`; `BehaviorTreeImporter` is not wired yet
   (stage 2 uses the new 8-argument `BehaviorTreeSource.SetContent`).
+- Stage 2 (2026-11-19): `BehaviorTreeImporter` is version 3 (one re-import of every `.aibt`). The
+  importer expands against `ProjectNodeCatalog.Discover()`, which leaves out test assemblies, so a
+  tree with subtrees whose nodes come only from a test or Editor assembly imports as `Errors`
+  (`AIBT2021`) with its raw JSON, where a tree without subtrees shows `Needs registry`. The tree-ID
+  index scans `Assets/` only (not `Packages/`). See the evidence README for the open questions.
 - ADR §9 lists three unrelated findings (duplicate `AIBT2042/2043` definitions, last-wins identity
   map, stale ADR-P7-042 importer sentence) for separate follow-up.

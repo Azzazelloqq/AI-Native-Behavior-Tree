@@ -4,6 +4,30 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Subtrees, stage 2: native path, import, baking (P11-001)
+
+- **Generated bindings may name expanded keys (owner decision 9).** A node's `bindings` value now
+  uses the blackboard key ID grammar, so a native node inside a subtree can bind to an instance's
+  private key `r:key` or to an interface key given a constant. Every value accepted before is still
+  accepted; binding IDs keep their grammar. The expander no longer reports `AIBT3026` for these
+  bindings. `tree.schema.json` and `agent-shared-blackboard-v1.md` say the same.
+- **Native compilation with subtrees.** New overloads
+  `GeneratedCompiledProgramV2Compiler.Compile(..., ISubtreeResolver)` and
+  `Compile(SubtreeExpansion, ...)`, plus `SubtreeExpander.Expand(..., RegisteredBlackboardTypeCatalog)`.
+  The overload without a resolver reports `AIBT3020` for a tree with references (it reported
+  unrelated validation errors before). Trees without subtrees compile to the same bytes.
+- **Import.** `BehaviorTreeImporter` is version 3 (every `.aibt` file re-imports once). A tree with
+  references is stored as its expanded document with per-node subtree sources, depends on every
+  subtree file and on a tree-ID index (`AIBT/Subtrees/TreeId/<id>`), and is re-imported when a
+  subtree file changes or a tree ID gains or loses a file (`AIBT3021` while two files share one ID).
+- **Baking.** `ProductionTreeAssetBaker.Create(..., ISubtreeResolver, out ...)` is new; the existing
+  overload resolves subtrees against the project's trees. `ProductionTreeAsset` records the subtree
+  files it was prepared from (internal serialized field), its source hash covers them, and editing a
+  subtree file marks dependent assets stale and re-prepares them.
+- **Unchanged:** executors, ABI v2 (`ExpectedPublicAbiV2.txt`), compiled program format and version,
+  trace format, node registry, `CodeGen~`, package version, `ProductionTreeHost`, `NativeTreeAgent`,
+  `ProductionTreeScheduler`. The graph editor and MCP/CLI are stages 3–4.
+
 ### Subtrees, stage 1: format, validator, expander, managed path (P11-001)
 
 - **Tree format version 3 (additive).** A `.aibt.json` file with `formatVersion: 3` may declare a
