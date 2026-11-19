@@ -678,3 +678,40 @@ the touched files and no new error (only the pre-existing `Release of invalid GC
 8. **Test windows leak when a coroutine test fails** before its `finally` (the pattern of
    `GraphEditorWorkflowTests`); nine leaked windows from the failing development runs were closed by
    hand. Passing runs leave none.
+
+### Acceptance run (orchestrator, 2026-11-19, stage 3)
+
+Full run of all nine assemblies on `7794cb0`, clean working tree, 17:13–17:22; the Editor-log
+counters did not move during the run (`No command named` 1, main-thread timeouts 13, before and
+after; the one `No command named 'help'` entry is a single CLI call made before the run). Raw
+output: `C:\UnityProjects\_aibt_acceptance\P11-001\stage3-acceptance\full-run-7794cb0.txt`.
+
+| Assembly | Stage 2 (`c02b42b`) | `7794cb0` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 240/240 | 240/240 | — |
+| `AIBT.Editor.Tests` | 741/742 | 761/762 | `SubtreeGraphEditorTests` 13, `ProjectTreeIndexPackageTests` 4, three in `SubtreeImportAndBakeTests` |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is `McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`,
+which predates this task. Every added test is accounted for (20 in Editor).
+
+Protected paths (`ExpectedPublicAbiV2.txt`, `package.json`, `Documentation~/specifications`,
+`Runtime/Execution`, `Runtime/Compiled`, `Runtime/HotReload`, `Runtime/Simulation`,
+`Runtime/Integration`, `Runtime/Trace`, `CodeGen~`, `MCP`, `MCP~`) have no change from `d8b34a8`
+to `7794cb0`. The diff of the shared Editor code was read (`SubtreeGraphEdits.cs`,
+`ProjectTreeIndex.cs`, `TreeCatalogEntry.cs`, `GraphLiveDebugger.cs`,
+`BehaviorTreeGraphExecution.cs`, `GraphDocumentEdits.cs`, `SemanticEditOperations.cs`, the window
+partials' changes to existing code); `BehaviorTreeGraphWindow.Subtrees.cs` (new, 873 lines) was
+accepted on its tests and the visual evidence, not read line by line. The eight screenshots and
+stills of the three clips were looked at and show what the table above says; the per-instance
+`swings` values in the two subtree windows agree with the shared `hits` value at their ticks.
+
+Stage 3 is accepted. Deviations 2 (Extract writes the new file on Save), 5 (the tree picker does
+not list trees under `Tests/`) and 7 (the running glow is less prominent on a reference card) go
+to the owner with the stage-4 go-ahead; stage 4 is not started.

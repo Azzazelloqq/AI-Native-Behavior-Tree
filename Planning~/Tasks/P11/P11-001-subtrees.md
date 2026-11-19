@@ -11,7 +11,8 @@ nine assemblies on `c02b42b`. Stage 3
 (graph editor) approved 2026-11-19 together with two stage-2 follow-ups (import status `Needs registry`;
 tree-ID index also covers `Packages/`). Stage 3 and both follow-ups implemented 2026-11-19 (local
 commits on `feature/aibt-consumer-workflow`; evidence, screenshots and Play Mode clips in the "Stage 3"
-section of `Planning~/Evidence/P11-001/README.md`), awaiting acceptance. Stage 4 needs the owner's
+section of `Planning~/Evidence/P11-001/README.md`), accepted after the full run of all nine assemblies
+on `7794cb0`. Stage 4 needs the owner's
 go-ahead.
 
 ## Objective
