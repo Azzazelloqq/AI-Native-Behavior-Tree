@@ -1,7 +1,9 @@
 # P11-001 — Subtrees: reuse one tree inside another (feature F1)
 
 Status: `In Progress` — ADR accepted 2026-11-19 (AIBT-049) with all eight recommendations of its §8;
-stage 1 approved the same day. Stages 2, 3 and 4 each need the owner's go-ahead.
+stage 1 approved the same day and implemented the same day (local commits on
+`feature/aibt-consumer-workflow`; evidence in `Planning~/Evidence/P11-001/README.md`, awaiting the
+owner's review). Stages 2, 3 and 4 each need the owner's go-ahead.
 
 ## Objective
 
@@ -87,6 +89,11 @@ Save-UnityWindow.ps1 / Save-UnityClip.ps1 for stages 3–4
 ## Handoff notes
 
 - Diagnostic codes `AIBT2047-2050` and `AIBT3020-3028` were free on 2026-11-19 (checked across code,
-  docs and planning); re-check before stage 1.
+  docs and planning); stage 1 now defines them.
+- Stage 1 (2026-11-19): see the evidence README for the deviations to settle before stage 2 —
+  `LatestFormatVersion` stays 2 (new `SubtreeFormatVersion = 3`); generated `bindings` values cannot
+  contain `:`, so a binding to an expanded `r:` key reports `AIBT3026`; the expansion is always
+  format 2; registered-type constants report `AIBT3026`; `BehaviorTreeImporter` is not wired yet
+  (stage 2 uses the new 8-argument `BehaviorTreeSource.SetContent`).
 - ADR §9 lists three unrelated findings (duplicate `AIBT2042/2043` definitions, last-wins identity
   map, stale ADR-P7-042 importer sentence) for separate follow-up.

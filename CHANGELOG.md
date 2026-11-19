@@ -4,9 +4,33 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Subtrees, stage 1: format, validator, expander, managed path (P11-001)
+
+- **Tree format version 3 (additive).** A `.aibt.json` file with `formatVersion: 3` may declare a
+  top-level `interface` (`version`, `keys`) and reference nodes (`subtree`: `treeId`,
+  `interfaceVersion`, `keys`). Version 1 and 2 files are read and written exactly as before.
+  `TreeDocument.LatestFormatVersion` stays 2; the new constant is `TreeDocument.SubtreeFormatVersion`.
+- **Expansion before compilation.** `SubtreeExpander.Expand` replaces each reference `r` by a copy
+  of the subtree whose nodes and private keys are renamed `r:<id>`; interface keys become the bound
+  parent key or a private key holding the constant. The result is an ordinary format-2 document
+  (`AIBT3020`-`AIBT3028` on failure). Subtrees are found through `ISubtreeResolver`
+  (`DirectorySubtreeResolver`, `InMemorySubtreeResolver`).
+- **Additive overloads.** `ReferenceCompiler.Compile(..., ISubtreeResolver)` and
+  `Compile(SubtreeExpansion, ...)`; `BehaviorTreeSource.FromJson(json, name, resolver)` and an
+  8-argument `SetContent` that keeps the per-node subtree sources; internal `ManagedTreeProgram`
+  overloads. Debug-map source paths of inner nodes name the subtree file.
+- **Validator.** `AIBT2047`-`AIBT2050` (reference shape, key target, root reference, interface).
+- **Behaviour cases** resolve subtrees relative to the case tree's directory.
+- **Unchanged:** every existing tree compiles to byte-identical hashes (409 + 57 checked lines);
+  executors, ABI v2, compiled program format, trace format, node registry. The importer, native
+  path, graph editor and MCP/CLI are stages 2–4 and not part of this change.
+- Specifications updated per ADR §4.8 (`canonical-json-v1`, `identity-and-hashing-v1`,
+  `compiled-program-v1`, `blackboard-v1`, `execution-semantics-v1`, `diagnostics-v1`,
+  `editor-layout-v1`, `data-formats`).
+
 ### Subtrees: decision accepted (ADR-P11-001, AIBT-049)
 
-- **Decision only, no package code yet.** A tree will be usable as a node of other trees through a
+- A tree will be usable as a node of other trees through a
   reference node that is replaced, before compilation, by a renamed copy of the referenced tree
   (tree format version 3, additive). Executors, ABI v2, the compiled program format and the trace
   format do not change. See `Documentation~/decisions/ADR-P11-001-subtrees.md`.
