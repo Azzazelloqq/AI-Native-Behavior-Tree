@@ -265,34 +265,110 @@ namespace AIBT.Authoring
         public static GeneratedCompiledProgramV2Result Compile(TreeDocument document, IEnumerable<GeneratedNodeDescriptor> descriptors, ReferenceCompilerOptions options)
             => Compile(document, descriptors, null, options);
 
+        /// <summary>
+        /// Compiles <paramref name="document"/>. A document with subtree references (or an interface)
+        /// is expanded first without a resolver, so every reference reports <c>AIBT3020</c>
+        /// (ADR-P11-001 section 6); use the overload with an <see cref="ISubtreeResolver"/> to resolve them.
+        /// </summary>
         public static GeneratedCompiledProgramV2Result Compile(TreeDocument document, IEnumerable<GeneratedNodeDescriptor> descriptors,
             RegisteredBlackboardTypeCatalog registeredTypes, ReferenceCompilerOptions options)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
             if (descriptors == null) throw new ArgumentNullException(nameof(descriptors));
+            if (SubtreeExpander.RequiresExpansion(document)) return Compile(document, descriptors, registeredTypes, options, null);
+            return CompileDocument(document, null, SortDescriptors(descriptors), registeredTypes, options);
+        }
+
+        /// <summary>
+        /// Compiles <paramref name="document"/>, first expanding its subtree references through
+        /// <paramref name="resolver"/> (ADR-P11-001). The parent and every subtree are validated against
+        /// the generated registry before they are combined; the debug-map source path of an inner node
+        /// is its subtree's source ID. A document with no reference node and no interface compiles
+        /// exactly as through the overload without a resolver.
+        /// </summary>
+        public static GeneratedCompiledProgramV2Result Compile(TreeDocument document, IEnumerable<GeneratedNodeDescriptor> descriptors,
+            RegisteredBlackboardTypeCatalog registeredTypes, ReferenceCompilerOptions options, ISubtreeResolver resolver)
+        {
+            if (document == null) throw new ArgumentNullException(nameof(document));
+            if (descriptors == null) throw new ArgumentNullException(nameof(descriptors));
+            var generated = SortDescriptors(descriptors);
+            if (!SubtreeExpander.RequiresExpansion(document)) return CompileDocument(document, null, generated, registeredTypes, options);
+            var diagnostics = new List<Diagnostic>();
+            if (!HasOptions(options, diagnostics)) return Failure(diagnostics);
+            var registryResult = GeneratedNodeRegistry.Build(generated, includeBuiltIns: true);
+            Add(diagnostics, registryResult.Diagnostics);
+            if (!registryResult.Success) return Failure(diagnostics);
+            var expansion = SubtreeExpander.Expand(document, resolver, registryResult.Registry,
+                GeneratedValidationOptions(options), registeredTypes);
+            if (!expansion.Success)
+            {
+                Add(diagnostics, expansion.Diagnostics);
+                return Failure(diagnostics);
+            }
+            return CompileDocument(expansion.Document, expansion.NodeSourceIds, generated, registeredTypes, options);
+        }
+
+        /// <summary>
+        /// Compiles the result of a subtree expansion (<see cref="SubtreeExpander"/>): the expanded
+        /// document, with the debug-map source path of every node that came from a subtree set to that
+        /// subtree's source ID. A failed expansion returns its diagnostics.
+        /// </summary>
+        public static GeneratedCompiledProgramV2Result Compile(SubtreeExpansion expansion, IEnumerable<GeneratedNodeDescriptor> descriptors,
+            RegisteredBlackboardTypeCatalog registeredTypes, ReferenceCompilerOptions options)
+        {
+            if (descriptors == null) throw new ArgumentNullException(nameof(descriptors));
+            var diagnostics = new List<Diagnostic>();
+            if (expansion == null)
+            {
+                diagnostics.Add(ReferenceCompilerDiagnostics.Create(ReferenceCompilerDiagnosticCodes.InvalidOptions, "A subtree expansion is required."));
+                return Failure(diagnostics);
+            }
+            if (!expansion.Success)
+            {
+                Add(diagnostics, expansion.Diagnostics);
+                return Failure(diagnostics);
+            }
+            return CompileDocument(expansion.Document, expansion.NodeSourceIds, SortDescriptors(descriptors), registeredTypes, options);
+        }
+
+        private static List<GeneratedNodeDescriptor> SortDescriptors(IEnumerable<GeneratedNodeDescriptor> descriptors)
+        {
             var generated = new List<GeneratedNodeDescriptor>(descriptors);
             generated.Sort((left, right) =>
             {
                 var comparison = Utf8OrdinalComparer.Instance.Compare(left.Manifest.TypeId, right.Manifest.TypeId);
                 return comparison != 0 ? comparison : left.Manifest.Version.CompareTo(right.Manifest.Version);
             });
+            return generated;
+        }
+
+        private static bool HasOptions(ReferenceCompilerOptions options, List<Diagnostic> diagnostics)
+        {
+            if (options != null && options.Policy != null) return true;
+            diagnostics.Add(ReferenceCompilerDiagnostics.Create(ReferenceCompilerDiagnosticCodes.InvalidOptions,
+                "Generated compiled format v2 requires explicit reference compiler options and policy."));
+            return false;
+        }
+
+        private static ValidationOptions GeneratedValidationOptions(ReferenceCompilerOptions options)
+        {
+            var accepted = options.Policy.CreateValidationOptions(options.SourceId);
+            return new ValidationOptions(options.SourceId, accepted.UnreachableNodes, true, true, accepted.Policy);
+        }
+
+        // nodeSourceIds is null for a document compiled as it is (the path every tree without
+        // subtrees takes, unchanged), and the expansion's per-node subtree sources otherwise.
+        private static GeneratedCompiledProgramV2Result CompileDocument(TreeDocument document, IReadOnlyDictionary<NodeId, string> nodeSourceIds,
+            List<GeneratedNodeDescriptor> generated, RegisteredBlackboardTypeCatalog registeredTypes, ReferenceCompilerOptions options)
+        {
             var diagnostics = new List<Diagnostic>();
-            if (options == null || options.Policy == null)
-            {
-                diagnostics.Add(ReferenceCompilerDiagnostics.Create(ReferenceCompilerDiagnosticCodes.InvalidOptions,
-                    "Generated compiled format v2 requires explicit reference compiler options and policy."));
-                return Failure(diagnostics);
-            }
+            if (!HasOptions(options, diagnostics)) return Failure(diagnostics);
             if (document.FormatVersion != TreeDocument.LatestFormatVersion)
                 diagnostics.Add(ReferenceCompilerDiagnostics.Create(ReferenceCompilerDiagnosticCodes.MissingScopeContract, "Generated compiled format v2 requires tree format version 2.", options?.SourceId, "/formatVersion", treeId: document.TreeId));
             var registryResult = GeneratedNodeRegistry.Build(generated, includeBuiltIns: true);
             Add(diagnostics, registryResult.Diagnostics);
             if (registryResult.Success)
-            {
-                var accepted = options.Policy.CreateValidationOptions(options.SourceId);
-                Add(diagnostics, TreeValidator.Validate(document, registryResult.Registry,
-                    new ValidationOptions(options.SourceId, accepted.UnreachableNodes, true, true, accepted.Policy), registeredTypes));
-            }
+                Add(diagnostics, TreeValidator.Validate(document, registryResult.Registry, GeneratedValidationOptions(options), registeredTypes));
             var scopeResult = GeneratedScopeCompiler.Compile(document, generated, registeredTypes, options.SourceId);
             Add(diagnostics, scopeResult.Diagnostics);
             if (HasError(diagnostics)) return Failure(diagnostics);
@@ -300,7 +376,10 @@ namespace AIBT.Authoring
             var projectionRegistry = NodeRegistryBuilder.CreateWithBuiltIns().Build();
             Add(diagnostics, projectionRegistry.Diagnostics);
             if (!projectionRegistry.Success || HasError(diagnostics)) return Failure(diagnostics);
-            var semantic = ReferenceCompiler.Compile(semanticDocument, projectionRegistry.Registry, options);
+            var semantic = nodeSourceIds == null
+                ? ReferenceCompiler.Compile(semanticDocument, projectionRegistry.Registry, options)
+                : ReferenceCompiler.Compile(new SubtreeExpansion(semanticDocument, semanticDocument, new Dictionary<NodeId, string>(nodeSourceIds), null),
+                    projectionRegistry.Registry, options);
             Add(diagnostics, semantic.Diagnostics);
             if (!semantic.Success || HasError(diagnostics)) return Failure(diagnostics);
             try

@@ -89,14 +89,27 @@ namespace AIBT.Authoring
             ISubtreeResolver resolver,
             NodeRegistry registry,
             ValidationOptions options = null)
+            => Expand(document, resolver, registry, options, null);
+
+        /// <summary>
+        /// <see cref="Expand(TreeDocument, ISubtreeResolver, NodeRegistry, ValidationOptions)"/> that
+        /// validates the parent and every subtree against <paramref name="registeredTypes"/>, as the
+        /// generated V2 compiler validates its document (registered blackboard types).
+        /// </summary>
+        public static SubtreeExpansion Expand(
+            TreeDocument document,
+            ISubtreeResolver resolver,
+            NodeRegistry registry,
+            ValidationOptions options,
+            RegisteredBlackboardTypeCatalog registeredTypes)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
             if (!RequiresExpansion(document)) return new SubtreeExpansion(document, document, null, null);
             if (registry == null) throw new ArgumentNullException(nameof(registry));
             options = options ?? ValidationOptions.Phase1;
 
-            var context = new Context(resolver, registry, options);
-            var parentErrors = Errors(TreeValidator.Validate(document, registry, options));
+            var context = new Context(resolver, registry, options, registeredTypes);
+            var parentErrors = Errors(TreeValidator.Validate(document, registry, options, registeredTypes));
             if (parentErrors.Count != 0)
                 return new SubtreeExpansion(document, null, null, new DiagnosticCollection(parentErrors));
 
@@ -167,13 +180,15 @@ namespace AIBT.Authoring
             private readonly ISubtreeResolver _resolver;
             private readonly NodeRegistry _registry;
             private readonly ValidationOptions _baseOptions;
+            private readonly RegisteredBlackboardTypeCatalog _registeredTypes;
             private readonly Dictionary<TreeId, LoadedSubtree> _loaded = new Dictionary<TreeId, LoadedSubtree>();
 
-            internal Context(ISubtreeResolver resolver, NodeRegistry registry, ValidationOptions baseOptions)
+            internal Context(ISubtreeResolver resolver, NodeRegistry registry, ValidationOptions baseOptions, RegisteredBlackboardTypeCatalog registeredTypes)
             {
                 _resolver = resolver;
                 _registry = registry;
                 _baseOptions = baseOptions;
+                _registeredTypes = registeredTypes;
             }
 
             internal List<Diagnostic> Diagnostics { get; } = new List<Diagnostic>();
@@ -307,7 +322,7 @@ namespace AIBT.Authoring
                             _baseOptions.SupportsAgentScope,
                             _baseOptions.SupportsSharedScope,
                             _baseOptions.Policy);
-                        loaded.ValidationErrors = Errors(TreeValidator.Validate(loaded.Resolution.Document, _registry, loaded.Options));
+                        loaded.ValidationErrors = Errors(TreeValidator.Validate(loaded.Resolution.Document, _registry, loaded.Options, _registeredTypes));
                         if (loaded.ValidationErrors.Count == 0 && loaded.Resolution.Document.TreeId != treeId)
                         {
                             loaded.ValidationErrors.Add(ReferenceCompilerDiagnostics.Create(

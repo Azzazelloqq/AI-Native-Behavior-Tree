@@ -54,12 +54,30 @@ namespace AIBT.Tests.Integration.NativeRuntime
             var read = CanonicalTreeJson.Parse(File.ReadAllBytes(path), configuration.Tree);
             if (!read.Success) throw new InvalidOperationException("Tree fixture is invalid.");
             var registry = SemanticSliceNodeContracts.CreateAuthoringRegistry();
-            var validation = TreeValidator.Validate(read.Document, registry);
+            var sourceId = configuration.Tree.Replace('\\', '/');
+            // ADR-P11-001: subtree references resolve against the case tree's own directory, exactly
+            // as in the reference adapter; the native executor then runs the expanded tree.
+            var document = read.Document;
+            SubtreeExpansion expansion = null;
+            if (SubtreeExpander.RequiresExpansion(document))
+            {
+                var slash = sourceId.LastIndexOf('/');
+                expansion = SubtreeExpander.Expand(
+                    document,
+                    new DirectorySubtreeResolver(Path.GetDirectoryName(path), slash <= 0 ? null : sourceId.Substring(0, slash)),
+                    registry,
+                    ReferenceCompilationPolicy.Phase1.CreateValidationOptions(sourceId));
+                if (!expansion.Success) throw new InvalidOperationException("Tree fixture's subtrees did not expand.");
+                document = expansion.Document;
+            }
+            var validation = TreeValidator.Validate(document, registry);
             if (validation.Any(item => item.Severity == DiagnosticSeverity.Error)) throw new InvalidOperationException("Tree fixture is invalid.");
-            var compilation = ReferenceCompiler.Compile(read.Document, registry, new ReferenceCompilerOptions(
-                configuration.Tree.Replace('\\', '/'), ReferenceCompilationPolicy.Phase1, CompilerVersion));
+            var options = new ReferenceCompilerOptions(sourceId, ReferenceCompilationPolicy.Phase1, CompilerVersion);
+            var compilation = expansion == null
+                ? ReferenceCompiler.Compile(document, registry, options)
+                : ReferenceCompiler.Compile(expansion, registry, options);
             if (!compilation.Success) throw new InvalidOperationException("Tree fixture did not compile.");
-            return new NativeBehaviorCaseExecutor(compilation.Program, read.Document, configuration, _policy);
+            return new NativeBehaviorCaseExecutor(compilation.Program, document, configuration, _policy);
         }
     }
 
@@ -99,7 +117,6 @@ namespace AIBT.Tests.Integration.NativeRuntime
         private CompletionOutcome? _completion;
         private BurstNodeAbortReason _activeAbortReason;
         private uint _activeAbortSource;
-        private NodeStatus _lastTerminalStatus;
 
         // ADR-P10-013 stage 2: a program with a retaining reactive composite reads composite
         // results, abort reasons/sources and exit reasons from the machine itself, because a
@@ -159,13 +176,18 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 consumed++;
                 if (nativeStep.Kind == NativeLifecycleStepKindV1.CompositeEntered)
                     Trace(BehaviorCaseTraceEvent.NodeEntered, nativeStep.NodeIndex);
-                else if (_retaining && nativeStep.Kind == NativeLifecycleStepKindV1.CompositeAborted)
+                // ADR-P11-001 stage 2: composite aborts and results are read from the machine for every
+                // program, as they were for retaining programs (ADR-P10-013). Non-retaining programs
+                // used to trace the last leaf status as the composite's result and no composite abort;
+                // the stage-1 subtree cases need both (an inverter over a failing check, and an
+                // observer aborting the subtree's sequence).
+                else if (nativeStep.Kind == NativeLifecycleStepKindV1.CompositeAborted)
                 {
                     _abortedComposites.Add(nativeStep.NodeIndex);
                     Trace(BehaviorCaseTraceEvent.NodeAbortStarted, nativeStep.NodeIndex, null, null,
                         Map((BurstNodeAbortReason)(byte)_control[0].AbortReason), new RuntimeNodeIndex(AbortSource()));
                 }
-                else if (_retaining && nativeStep.Kind == NativeLifecycleStepKindV1.CompositeExited)
+                else if (nativeStep.Kind == NativeLifecycleStepKindV1.CompositeExited)
                 {
                     if (_abortedComposites.Remove(nativeStep.NodeIndex))
                         Trace(BehaviorCaseTraceEvent.NodeExited, nativeStep.NodeIndex, null, NodeExitReason.Aborted);
@@ -177,12 +199,6 @@ namespace AIBT.Tests.Integration.NativeRuntime
                         Trace(BehaviorCaseTraceEvent.NodeExited, nativeStep.NodeIndex, null,
                             result == NodeStatus.Failure ? NodeExitReason.Failure : NodeExitReason.Success);
                     }
-                }
-                else if (nativeStep.Kind == NativeLifecycleStepKindV1.CompositeExited)
-                {
-                    Trace(BehaviorCaseTraceEvent.NodeTicked, nativeStep.NodeIndex, _lastTerminalStatus);
-                    Trace(BehaviorCaseTraceEvent.NodeExited, nativeStep.NodeIndex, null,
-                        _lastTerminalStatus == NodeStatus.Failure ? NodeExitReason.Failure : NodeExitReason.Success);
                 }
                 else if (nativeStep.Kind == NativeLifecycleStepKindV1.DispatchRequired) Complete(nativeStep);
                 else if (nativeStep.Kind == NativeLifecycleStepKindV1.Waiting)
@@ -308,7 +324,6 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     var terminal = _lastStatuses[step.NodeIndex];
                     Trace(BehaviorCaseTraceEvent.NodeExited, step.NodeIndex, null,
                         aborted ? NodeExitReason.Aborted : terminal == NodeStatus.Failure ? NodeExitReason.Failure : NodeExitReason.Success);
-                    if (terminal == NodeStatus.Success || terminal == NodeStatus.Failure) _lastTerminalStatus = terminal;
                     if (aborted)
                     {
                         _abortPending = false;

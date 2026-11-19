@@ -370,8 +370,10 @@ Resolves subtree references against every <c>.aibt</c> / <c>.aibt.json</c> file 
 
 ### `AIBT.Authoring.GeneratedCompiledProgramV2Compiler`
 
+- `METHOD AIBT.Authoring.GeneratedCompiledProgramV2Result Compile(AIBT.Authoring.SubtreeExpansion,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,AIBT.Authoring.RegisteredBlackboardTypeCatalog,AIBT.Authoring.ReferenceCompilerOptions)`
 - `METHOD AIBT.Authoring.GeneratedCompiledProgramV2Result Compile(AIBT.Authoring.TreeDocument,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,AIBT.Authoring.ReferenceCompilerOptions)`
 - `METHOD AIBT.Authoring.GeneratedCompiledProgramV2Result Compile(AIBT.Authoring.TreeDocument,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,AIBT.Authoring.RegisteredBlackboardTypeCatalog,AIBT.Authoring.ReferenceCompilerOptions)`
+- `METHOD AIBT.Authoring.GeneratedCompiledProgramV2Result Compile(AIBT.Authoring.TreeDocument,System.Collections.Generic.IEnumerable`1<AIBT.Authoring.GeneratedNodeDescriptor>,AIBT.Authoring.RegisteredBlackboardTypeCatalog,AIBT.Authoring.ReferenceCompilerOptions,AIBT.Authoring.ISubtreeResolver)`
 
 ---
 
@@ -1329,6 +1331,7 @@ Authoring-time subtree expansion (ADR-P11-001, decision AIBT-049): every subtree
 
 - `FIELD System.Int32 MaximumNestingDepth`
 - `METHOD AIBT.Authoring.SubtreeExpansion Expand(AIBT.Authoring.TreeDocument,AIBT.Authoring.ISubtreeResolver,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ValidationOptions)`
+- `METHOD AIBT.Authoring.SubtreeExpansion Expand(AIBT.Authoring.TreeDocument,AIBT.Authoring.ISubtreeResolver,AIBT.Authoring.NodeRegistry,AIBT.Authoring.ValidationOptions,AIBT.Authoring.RegisteredBlackboardTypeCatalog)`
 - `METHOD System.Boolean RequiresExpansion(AIBT.Authoring.TreeDocument)`
 
 ---

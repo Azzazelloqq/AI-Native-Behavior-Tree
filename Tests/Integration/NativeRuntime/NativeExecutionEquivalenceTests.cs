@@ -21,6 +21,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
         [TestCase("retaining-takeover.aibtcase.json")]
         [TestCase("retaining-pitfall.aibtcase.json")]
         [TestCase("retaining-timeout.aibtcase.json")]
+        [TestCase("subtree-reactive-observer.aibtcase.json")]
+        [TestCase("subtree-twice-private-keys.aibtcase.json")]
         public void EveryGoldenBehaviorCasePassesTheNativeAdapter(string fileName)
         {
             var root = SemanticSlice.SemanticSliceTestPackagePaths.Resolve("Tests", "Fixtures", "Golden");
