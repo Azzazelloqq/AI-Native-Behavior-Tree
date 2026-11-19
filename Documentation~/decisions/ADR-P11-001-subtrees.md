@@ -667,7 +667,14 @@ The owner accepted every recommendation of §8:
 7. Private subtree keys are per instance.
 8. Interface keys bind only to the parent's Tree-scope keys.
 
-Stage 1 of §7 is approved. Stages 2, 3 and 4 are not started without the owner's go-ahead.
+9. Added 2026-11-19 after stage 1: the values of a node's generated `bindings` map (blackboard
+   key IDs) may use the authoring ID grammar of blackboard keys, so that a generated binding can
+   name an expanded private key `r:key`. Binding IDs (the map's property names) keep the canonical
+   member identity grammar. `agent-shared-blackboard-v1.md`, the tree schema and `NodeBindingMap`
+   change accordingly in stage 2; existing documents keep their meaning.
+
+Stage 1 of §7 was approved on 2026-11-19 and accepted the same day (evidence, "Acceptance run").
+Stage 2 was approved on 2026-11-19. Stages 3 and 4 are not started without the owner's go-ahead.
 
 ## 9. Noticed while reading (not part of F1)
 

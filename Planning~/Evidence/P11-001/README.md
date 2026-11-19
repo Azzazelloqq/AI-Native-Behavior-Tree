@@ -207,3 +207,32 @@ Runs after the fixes (`stage1-acceptance/fix-tests.txt`):
 | `McpDocumentationGeneratorsTests` | 13/13 |
 | `SubtreeExpanderTests` | 26/26 |
 | `SubtreeGoldenEquivalenceTests` | 3/3 |
+
+### Acceptance run (orchestrator, 2026-11-19)
+
+Full run of all nine assemblies on `7e614b8`, clean working tree, 14:29–14:42; no `No command
+named` error in the Editor log before or after. Raw output:
+`C:\UnityProjects\_aibt_acceptance\P11-001\stage1-acceptance\full-run-7e614b8.txt` (the first run,
+on `d1e76ff`, is `full-run-d1e76ff.txt`).
+
+| Assembly | Before stage 1 (`c68df77`) | `7e614b8` |
+|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 |
+| `AIBT.Integration.Tests` | 224/224 | 229/229 |
+| `AIBT.Editor.Tests` | 649/650 | 717/718 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 |
+| `AIBT.PlayMode.Tests` (PlayMode) | 1/1 | 2/2 |
+
+The one failure is `McpToolDispatcherTests.ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`,
+which predates this task. The hash comparison was recomputed from the raw dumps: all 409 + 57
+baseline lines are present unchanged after stage 1; the 42 + 6 new lines belong to the new subtree
+fixtures. Protected paths (`ExpectedPublicAbiV2.txt`, `package.json`, `Runtime/Execution`,
+`Runtime/Compiled`, `Runtime/HotReload`, `Runtime/Simulation`, `Runtime/Integration`,
+`Runtime/Trace`, `CodeGen~`, `Editor`, `MCP`, `MCP~`) have no change from `f02ad04` to `7e614b8`.
+
+Stage 1 is accepted. Deviation 2 above (generated `bindings` values cannot contain `:`) was
+decided by the owner the same day: see ADR "Owner decisions", item 9; it is done in stage 2.

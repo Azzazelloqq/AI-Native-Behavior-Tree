@@ -2,8 +2,10 @@
 
 Status: `In Progress` — ADR accepted 2026-11-19 (AIBT-049) with all eight recommendations of its §8;
 stage 1 approved the same day and implemented the same day (local commits on
-`feature/aibt-consumer-workflow`; evidence in `Planning~/Evidence/P11-001/README.md`, awaiting the
-owner's review). Stages 2, 3 and 4 each need the owner's go-ahead.
+`feature/aibt-consumer-workflow`; evidence in `Planning~/Evidence/P11-001/README.md`, accepted after the
+full run of all nine assemblies on `7e614b8`). Stage 2 approved 2026-11-19 together with the owner's
+decision that generated `bindings` values may name expanded keys `r:key` (ADR "Owner decisions",
+item 9). Stages 3 and 4 each need the owner's go-ahead.
 
 ## Objective
 
