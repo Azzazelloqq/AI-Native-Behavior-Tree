@@ -3143,6 +3143,7 @@ One component that runs a prepared native (Burst) tree: it shares one program pe
 - `PROPERTY System.Int32 CompletedRuns`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastResult`
 - `PROPERTY System.String LastError`
+- `PROPERTY System.UInt64 RandomSeed`
 
 ---
 
@@ -3325,9 +3326,11 @@ Closed payload kinds the first production-world bridge exposes to Unity code.
 Drives one native tree in Unity Update with an optional per-frame step budget. Completion stops execution; disabling pauses; destruction cancels active work. Generated-node dispatch adapters remain caller-owned.
 
 - `FIELD System.UInt32 DefaultMaximumStepsPerUpdate`
+- `FIELD System.UInt64 DefaultRandomSeed`
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLeaf,AIBT.NativeTraceChannelCapacityV1,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLifecycle,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,System.UInt64,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryConfigureEffectDelivery(System.Int32,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryDrainEffects(AIBT.IProductionTreeEffectReceiver,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryResolveExternalTreeWrite(System.String,AIBT.NativeBlackboardTypeIdV2,,AIBT.NativeRuntimeFailureV1&)`
@@ -3343,6 +3346,7 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `PROPERTY System.Nullable`1<System.UInt32> StepBudget`
 - `PROPERTY System.UInt32 MaximumStepsPerUpdate`
 - `PROPERTY System.UInt64 InstanceId`
+- `PROPERTY System.UInt64 RandomSeed`
 - `PROPERTY System.UInt64 TotalUpdates`
 
 ---
@@ -3352,6 +3356,7 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 Shared compiled definition and generated catalog. Dispose after its hosts are destroyed.
 
 - `METHOD System.Boolean TryBootstrap(AIBT.ProductionTreeHost,AIBT.NativeRuntimeFailureV1&,System.Int32,System.Func`1<System.Int64>,System.Nullable`1<AIBT.NativeTraceChannelCapacityV1>)`
+- `METHOD System.Boolean TryBootstrap(AIBT.ProductionTreeHost,System.UInt64,AIBT.NativeRuntimeFailureV1&,System.Int32,System.Func`1<System.Int64>,System.Nullable`1<AIBT.NativeTraceChannelCapacityV1>)`
 - `METHOD System.Boolean TryDispose(AIBT.Burst.BurstContextResult&)`
 - `METHOD System.Void Dispose()`
 - `PROPERTY AIBT.CompiledProgram Program`
