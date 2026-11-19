@@ -4,6 +4,31 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Subtrees, stage 4: MCP, CLI, user guide (P11-001)
+
+- **MCP tools for subtree references.** `add_node` (and an `add` operation of `apply_domain_patch`)
+  accepts a node `{id?, subtree: {treeId, interfaceVersion?, keys?}}`; interface keys it does not
+  list are connected to same-named parent keys (optional `connectSameNamedKeys`). New tools
+  `set_subtree_keys`, `extract_to_subtree` (new tree file and reference in one transaction; no file
+  is left behind on failure) and `unpack_subtree` (SemanticEdit), and `find_subtree_usages` (Read).
+  `inspect_tree` takes an optional `expanded` and then adds the expansion the compiler sees;
+  `get_project_manifest` lists each tree's `interface` and `referencedTreeIds`. MCP server tools
+  `aibt_set_subtree_keys`, `aibt_extract_to_subtree`, `aibt_unpack_subtree`,
+  `aibt_find_subtree_usages`.
+- **References resolve in MCP.** `validate`, `compile` and `prepare_runtime` resolve references
+  through the project's trees; a missing, duplicate or recursive subtree is a diagnostic
+  (`AIBT3020`–`AIBT3022`). An MCP edit of a tree with references is accepted only if the tree still
+  expands and compiles (before, every such edit was rejected with `AIBT3020`). Trees without
+  references give the same responses as before.
+- **CLI:** `tree expand`, `tree usages`, `tree extract`, `tree unpack`, `tree keys`.
+- **Graph editor:** the running highlight of a reference card is a thicker ring set apart from the
+  card's teal border, so it is visible (style sheet only).
+- **Documentation:** new [Subtrees](Documentation~/subtrees.md) guide; `cli.md`, `ai-and-mcp.md` and
+  the generated workflow guide describe the new tools.
+- **Unchanged:** existing tool names, argument shapes, results and permission categories (only
+  optional arguments and result fields added), `extract_subtree`/`inline_subtree`, public API,
+  executors, ABI v2, compiled program and trace formats, specifications, package version.
+
 ### Subtrees, stage 3: graph editor (P11-001)
 
 - **Subtrees in the graph editor.** The palette lists "Subtree…" first and opens a picker over the

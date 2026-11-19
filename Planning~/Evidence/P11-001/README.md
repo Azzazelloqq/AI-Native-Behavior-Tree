@@ -715,3 +715,175 @@ stills of the three clips were looked at and show what the table above says; the
 Stage 3 is accepted. Deviations 2 (Extract writes the new file on Save), 5 (the tree picker does
 not list trees under `Tests/`) and 7 (the running glow is less prominent on a reference card) go
 to the owner with the stage-4 go-ahead; stage 4 is not started.
+
+## Stage 4 — MCP, CLI, user guide (2026-11-19)
+
+Start: `6caf728`, clean submodule. Evidence outside the repository:
+`C:\UnityProjects\_aibt_acceptance\P11-001\stage4\`.
+
+### What was done (stage 4, ADR §4.7 and §7)
+
+1. **`add_node` with a `subtree` object** (`MCP/Authoring/McpAuthoringJson.cs`,
+   `McpAuthoringToolDispatcher.Subtrees.cs`): a node `{id?, subtree: {treeId, interfaceVersion?,
+   keys?}, displayName?, description?}` adds a reference. Same rules as the graph editor: a missing
+   `id` is the short ID made from the tree ID (`SubtreeGraphEdits.NewReferenceId`), a missing
+   `interfaceVersion` is the subtree's current one, interface keys the node does not list are
+   connected to same-named parent keys of the same type (`connectSameNamedKeys`, default true), a key
+   given as `null` stays not connected, the tree is raised to format 3. A node with both `subtree`
+   and `typeId`/`parameters`/`children`/… is `AIBT9018`. The `add` operation of
+   `apply_domain_patch` accepts the same node.
+2. **New tools**: `set_subtree_keys` (SemanticEdit; `keys` map of `"parentKey"` / `{"value": c}` /
+   `null`, optional `interfaceVersion`, `connectSameNamedKeys`), `extract_to_subtree` (SemanticEdit;
+   `nodeId`, `newTreeId`, `path`, optional `name`, `description`; `SubtreeGraphEdits.Extract`; both
+   documents validated before anything is written; the new file is written first and deleted again
+   if the parent cannot be written; an existing tree ID or file is `AIBT9017`; the reference keeps the
+   moved node's description), `unpack_subtree` (SemanticEdit; `SubtreeGraphEdits.Unpack`; returns
+   `innerRootId`; a collision is `AIBT3027`, nothing written), `find_subtree_usages` (Read; `status`
+   `Found`/`NotFound`/`Ambiguous`, `declaredIn`, `usages` with tree, file, node ID, display name and
+   key map, `skippedTreeFiles`). Each has a catalog entry, a dispatcher case, a server tool
+   (`aibt_set_subtree_keys`, `aibt_extract_to_subtree`, `aibt_unpack_subtree`,
+   `aibt_find_subtree_usages`) and a CLI command.
+3. **`inspect_tree` `expanded`** adds `expansion` (`success`, `identity`, `referencedTreeIds`,
+   `diagnostics`, `tree` (the format-2 expansion), its `contentHash`, `nodeSources`,
+   `referenceAvailable`); without the argument the result is unchanged. **`get_project_manifest`**
+   lists `interface` (`{version, keys}` or null) and `referencedTreeIds` for every tree.
+4. **Resolution in validate / compile / prepare_runtime** through `AibtTreeDiscovery`
+   (`MCP/McpSubtrees.cs`: `McpSubtreeResolver`, logical source IDs for validate/compile, asset paths
+   for prepare). A tree without references takes exactly the old code path. `validate` of a tree with
+   references validates the expansion and adds `subtrees: {expanded, referencedTreeIds}`. Missing,
+   duplicate and recursive subtrees are `AIBT3020`/`3021`/`3022` diagnostics, never exceptions.
+5. **Every MCP edit of a tree with references** is validated with the references resolved
+   (`ProjectNodeCatalog.ValidateAuthoring(document, options, resolver)`, new internal overload). Before
+   this, any MCP edit of a format-3 tree with a reference was rejected with `AIBT3020`.
+6. **CLI** (`MCP~/Cli/Program.cs`): `tree expand <treeId>`, `tree usages <treeId>`,
+   `tree extract <treeId> <nodeId> <newTreeId> <path>`, `tree unpack <treeId> <nodeId>`,
+   `tree keys <treeId> <nodeId> key=parent|key:=<json>|key=`. Both .NET projects build with 0
+   warnings, 0 errors.
+7. **Documentation**: new `Documentation~/subtrees.md` (linked from the README's documentation list,
+   `cli.md` and `ai-and-mcp.md`; text only, the guides have no image convention), a "Subtrees"
+   section in `cli.md`, `ai-and-mcp.md` authoring and verification lists, a "Subtrees" paragraph in
+   the workflow guide generator; `Documentation~/generated/workflow-guide.md` regenerated with
+   **AIBT > MCP > Regenerate Documentation** (the other generated files are unchanged; the
+   host-project `node-catalog.md` differs only by the host's own nodes and was not copied).
+8. **Reference-card running glow** (stage 3 deviation 7, `Editor/Graph/Styles/AibtGraph.uss` only):
+   on a reference card the glow ring is 5 px instead of 3 px and drawn 11 px outside the card instead
+   of 6 px, so a dark gap separates it from the teal border.
+9. **`describe_agent`** needed no change: a test shows the two-part labels.
+
+### New tests
+
+| ADR §7 stage 4 item | Test |
+|---|---|
+| Dispatcher tests per tool | `McpSubtreeToolsTests` (23): add_node (format raise, same-named keys, explicit `null` → `AIBT3025`, generated ID, domain patch, missing subtree → `AIBT3020`, malformed node → `AIBT9018`), set_subtree_keys (constant, `AIBT3026`, `AIBT3025`, back to a parent key, not a reference, unknown node), extract_to_subtree (dry run, success and expansion, policy rejection without file, existing tree ID or file, root, read-only parent → no orphan file), unpack (labels, private keys, `AIBT3027`), find_subtree_usages (Found/NotFound/Ambiguous), manifest fields, inspect expanded vs. `SubtreeExpander` and identity, validate/compile `AIBT3020/3021/3022`, prepare_runtime dry run with references and `AIBT3020`, plain tree vs. direct `ReferenceCompiler` hash, `extract_subtree`/`inline_subtree` round trip of a reference |
+| Permission negatives | `EachNewToolIsCatalogued_AndDeniedWithoutItsCategory` (4 cases: no grant and a wrong grant → `AIBT9012`, no file changed), `TheExistingToolsKeepTheirPermissions_AndOnlyGainOptionalArguments` |
+| `describe_agent` inside a subtree | `McpSimulationToolsTests.AnAgentInsideASubtree_IsDescribedWithTwoPartLabels` (active path `Main`, `Go / Within radius`; debug map `go:check` from `Assets/probe.aibt`) |
+| Live CLI session | below |
+
+No existing test expectation was changed.
+
+### Runs (stage 4)
+
+Raw output in `stage4\runs\`. Final run of every touched or covering class
+(`touched-classes-1.txt`):
+
+| Run | Result |
+|---|---|
+| `AIBT.CodeGen.ContractTests` | 6/6 |
+| `McpAuthoringToolDispatcherTests` | 20/20 |
+| `McpAuthoringJsonTests` | 2/2 |
+| `McpToolDispatcherTests` | 7/8, `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` is known (below) |
+| `McpVerificationToolDispatcherTests` | 23/23 |
+| `McpPermissionEnforcerTests` | 17/17 |
+| `AgentConsumerToolsTests` | 14/14 |
+| `ProjectManifestQueryTests` | 3/3 |
+| `AibtTreeDiscoveryTests` | 4/4 |
+| `SubtreeGraphEditorTests` | 13/13 |
+| `McpDocumentationGeneratorsTests` | 13/13 (after regeneration) |
+| `McpSubtreeToolsTests` (new) | 23/23 |
+| `McpSimulationToolsTests` | 4/4 (one new) |
+
+`ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` fails because the host project Modules
+registers five sample nodes (`aibt.samples.first-agent.move`, three `aibt.samples.swarm.*`,
+`samples.simple.next-waypoint`) from samples imported into the parent project; the test expects the
+package's built-in set only. It is unrelated to the tool catalog; the expectation was not changed.
+`Tools~/Verification/Verify-Static.ps1` passes (`verify-static.txt`).
+
+### Trees without references: hash comparison
+
+`stage4\hashes-mcp-{before,after-core,after}.txt`: SHA-256 of the normalized responses of
+`inspect_tree`, `validate`, `compile` and `prepare_runtime` (dry run, each of the three Player
+catalogs) for every one of the 65 tree files of the package, each alone in a temporary project
+(390 lines). `before` is `6caf728`; `after` is the final code (identical to `after-core`). All lines
+of the files without references are byte-identical, including the interface-only subtree files. The
+13 differing lines belong to the three parents with references (`boss-fight`, `reactive-parent`,
+`twice-parent`), whose subtrees are not in the single-file temporary project: they now report
+`AIBT3020`, where before validate checked the parent alone and prepare stopped at the parent's own
+errors. The dump tool is kept as `stage4\P11Stage4BaselineDump.cs` (not committed).
+
+### Live CLI session
+
+`stage4\live\`: the package CLI (`MCP~/Cli`, built DLL) through the Editor bridge (`mcp ensure`)
+against the running Editor "Modules", on copies in `Assets/P11Stage4Scratch/` (deleted afterwards,
+Editor refreshed). Three sessions; transcripts and resulting files kept:
+
+- **C (`transcript-c.txt`, `result-c/`, all green)**: usages; extract with the default `Read`
+  permission → `AIBT9012`; extract Finisher into `finisher.aibt` (interface `hits`); disconnecting
+  `hits` of the right strike → rejected with `AIBT3025`, nothing written; rebind the right strike
+  `hits=bonus_hits`; expand (`right:windup` …, node sources); usages of both subtrees;
+  `tree validate` → valid, `tree compile` → success; `orphan.aibt` → `AIBT3020` from validate and
+  compile.
+- **A (`transcript-a-managed-demo.txt`)**: the stage-3 demo shape (managed `wait-seconds`,
+  `increment-int`) with the constant rebinding `hits:=5` (private key `right:hits` in the
+  expansion); extract, expand and usages succeed; validate/compile report `AIBT2040` because this
+  project's policy forbids nondeterministic nodes (correct).
+- **B (`transcript-b-naming-policy-AIBT2038.txt`)**: deterministic `aibt.stdlib.wait` leaves and a
+  subtree with a private key `swings`: validate, compile and the edits are rejected with `AIBT2038`
+  for `left:swings` / `right:swings` (open question 1).
+
+`describe_agent` output with two-part labels: `stage4\describe-agent-subtree.json`.
+
+### Visual evidence (reference-card glow)
+
+`stage4\glow\`: the stage-3 demo `boss-fight.aibt` in Play Mode (agent created by an Editor eval in
+Play Mode only, `create-agent.cs`), recorded from the AIBT Graph window with stills every 0.5 s.
+`before-live-parent.mp4` and `before-peak-left-strike-running.png`: the yellow ring lies on the teal
+border. `after-live-parent.mp4`, `after-peak-right-strike-running.png` and
+`after-low-pulse-right-strike-running.png`: the thicker ring outside the border, visible also at the
+low point of the pulse. `before-window.png`, `after-window.png`: window screenshots.
+
+### Deviations and open questions
+
+1. **Naming policy and private keys (found, not fixed).** With `blackboardNaming: snake_case` (the
+   Modules project), the expanded private keys `r:key` fail `AIBT2038` when a tree is validated or
+   compiled under the project policy (MCP `validate`, `compile`, and every MCP edit of a native or
+   reference tree). The check is in the existing validator run on the expansion (stages 1–2), not in
+   stage-4 code; changing it changes validation semantics, so it is left to the owner (for example,
+   apply the naming rule to the part after the last `:`). Documented as a limit in `subtrees.md`.
+   MCP edits of managed trees are validated under the managed policy (unchanged behaviour), so they
+   pass, but `validate`/`compile` of such trees report it.
+2. **Two additive changes outside `MCP/**`**: the internal overload
+   `ProjectNodeCatalog.ValidateAuthoring(TreeDocument, ReferenceCompilerOptions, ISubtreeResolver)`
+   and an optional `documentId` parameter of the internal `SubtreeGraphEdits.Unpack`, so MCP shares
+   the graph editor's logic and reports its own document IDs.
+3. **MCP edits are stricter than the graph editor**: an edit that leaves a not connected key or a
+   missing subtree is rejected (the graph editor allows such states while editing). This follows
+   the MCP rule that invalid partial trees are not persisted.
+4. **Two tree indexes**: MCP resolves through `AibtTreeDiscovery` (trees under `Assets/`), import and
+   the graph editor through `ProjectTreeIndex` (`Assets/` and `Packages/`). A reference to a subtree
+   under `Packages/` imports but is `AIBT3020` in MCP.
+5. **`extract_subtree` payload** now includes the `subtree` object of a reference node (additive; the
+   round trip through `inline_subtree` restores the reference exactly).
+6. **`AIBT3020` messages** from MCP list the tree files `AibtTreeDiscovery` could not read; in Modules
+   these are three invalid fixtures (under `Spikes~`, `Tests/Fixtures`, `Tools~/Verification`), so
+   the message is long.
+7. Seen, not changed (pre-existing): `describe_agent` names a node type from a test-only catalog
+   `type 0x…`; `inspect_tree`'s `sourcePath` mixes `/` and `\`; extracting a node whose label equals
+   the new tree's root label gives labels like `Finisher / Finisher` in the expansion.
+
+### Not run / not covered (stage 4)
+
+- No full nine-assembly run (only the touched classes, as the brief requires).
+- The MCP server tools were built, not called through an MCP client; the CLI exercises the same
+  bridge operations.
+- `prepare_runtime` with references was tested as a dry run (test), not persisted to an asset in the
+  live session.

@@ -12,7 +12,9 @@ nine assemblies on `c02b42b`. Stage 3
 tree-ID index also covers `Packages/`). Stage 3 and both follow-ups implemented 2026-11-19 (local
 commits on `feature/aibt-consumer-workflow`; evidence, screenshots and Play Mode clips in the "Stage 3"
 section of `Planning~/Evidence/P11-001/README.md`), accepted after the full run of all nine assemblies
-on `7794cb0`. Stage 4 (MCP, CLI, user guide) approved 2026-11-19.
+on `7794cb0`. Stage 4 (MCP, CLI, user guide) approved 2026-11-19 and implemented the same day (local
+commits on `feature/aibt-consumer-workflow`; evidence in the "Stage 4" section of
+`Planning~/Evidence/P11-001/README.md`).
 
 ## Objective
 
@@ -113,5 +115,14 @@ Save-UnityWindow.ps1 / Save-UnityClip.ps1 for stages 3–4
   format-3 tree now keep its `interface` (they dropped it before). Extract writes the new subtree
   file on the next Save (Undo leaves no file); Unpack keeps format 3. Demo trees for the evidence are
   in `Tests/Editor/Graph/Fixtures/SubtreeDemo/`. Open questions in the evidence README.
+- Stage 4 (2026-11-19): MCP tools, server tools, CLI commands and the user guide
+  `Documentation~/subtrees.md`. MCP resolves references through `AibtTreeDiscovery` (trees under
+  `Assets/` only), the importer and the graph editor through `ProjectTreeIndex` (`Assets/` and
+  `Packages/`). MCP edits of a tree with references must still expand and compile (stricter than the
+  graph editor). Two small additive changes outside `MCP/**`: an internal
+  `ProjectNodeCatalog.ValidateAuthoring` overload with a resolver, and an optional `documentId` of
+  `SubtreeGraphEdits.Unpack`. Found and not fixed: a project `blackboardNaming` of `snake_case`
+  rejects the expanded private keys `r:key` (`AIBT2038`) in MCP validate/compile. Open questions in
+  the "Stage 4" section of the evidence README.
 - ADR §9 lists three unrelated findings (duplicate `AIBT2042/2043` definitions, last-wins identity
   map, stale ADR-P7-042 importer sentence) for separate follow-up.
