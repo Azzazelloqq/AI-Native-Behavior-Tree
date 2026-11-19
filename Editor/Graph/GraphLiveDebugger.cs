@@ -14,6 +14,12 @@ namespace AIBT.Editor.Graph
     /// A <see cref="NativeTreeAgent"/> is shown from its host's activation stack: the running path
     /// pulses, nodes that leave it flash in a neutral colour (the native trace contract does not
     /// record composite exit statuses), and the root flashes with each finished run's result.
+    /// <para>
+    /// Program node IDs reach the cards through <see cref="MapNode"/>: with subtrees
+    /// (ADR-P11-001) an expanded node <c>r:n</c> lights its reference card <c>r</c> in the parent,
+    /// and a subtree window maps only its own instance's <c>prefix + id</c>. Several program nodes
+    /// on one card combine: running wins, otherwise the strongest flash shows.
+    /// </para>
     /// </summary>
     internal sealed class GraphLiveDebugger
     {
@@ -30,7 +36,9 @@ namespace AIBT.Editor.Graph
         private readonly List<(NodeId Parent, NodeId Child)> _activeEdges = new List<(NodeId, NodeId)>();
         private readonly HashSet<NodeId> _running = new HashSet<NodeId>();
         private ManagedTreeInstance _instance;
-        private NodeId[] _ids = Array.Empty<NodeId>();
+        private string[] _programIds = Array.Empty<string>();
+        private NodeId?[] _ids = Array.Empty<NodeId?>();
+        private readonly Dictionary<NodeId, (bool Running, float Strength, Color Color)> _cards = new Dictionary<NodeId, (bool, float, Color)>();
         private ManagedNodeState[] _last = Array.Empty<ManagedNodeState>();
         private double[] _flashStart = Array.Empty<double>();
         private Color[] _flashColor = Array.Empty<Color>();
@@ -59,6 +67,22 @@ namespace AIBT.Editor.Graph
         internal IReadOnlyCollection<NodeId> RunningNodes => _running;
 
         internal IReadOnlyList<(NodeId Parent, NodeId Child)> ActiveEdges => _activeEdges;
+
+        /// <summary>The card that shows a program node ID, or null; null maps every ID to the card of the same ID.</summary>
+        internal Func<string, NodeId?> MapNode { get; set; }
+
+        /// <summary>Maps the program's node IDs again (the shown document or its instance prefix changed).</summary>
+        internal void InvalidateMapping()
+        {
+            _ids = new NodeId?[_programIds.Length];
+            for (var index = 0; index < _programIds.Length; index++) _ids[index] = Map(_programIds[index]);
+        }
+
+        private NodeId? Map(string programId)
+        {
+            if (string.IsNullOrEmpty(programId)) return null;
+            return MapNode != null ? MapNode(programId) : new NodeId(programId);
+        }
 
         /// <summary>True when the agent runs (or will run) the tree with this ID.</summary>
         internal static bool Matches(BehaviorTreeAgent agent, TreeDocument document)
@@ -90,7 +114,8 @@ namespace AIBT.Editor.Graph
             _instance = null;
             _running.Clear();
             _activeEdges.Clear();
-            _ids = Array.Empty<NodeId>();
+            _programIds = Array.Empty<string>();
+            _ids = Array.Empty<NodeId?>();
             _view.ClearExecutionHighlight();
         }
 
@@ -119,6 +144,7 @@ namespace AIBT.Editor.Graph
                 return;
             }
 
+            _cards.Clear();
             for (var index = 0; index < _ids.Length; index++)
             {
                 var state = _instance.GetNodeState((uint)index);
@@ -134,19 +160,37 @@ namespace AIBT.Editor.Graph
                     _last[index] = state;
                 }
 
-                if (state == ManagedNodeState.Running) _running.Add(_ids[index]);
-                if (!_view.NodesById.TryGetValue(_ids[index], out var node)) continue;
-                if (state == ManagedNodeState.Running)
-                {
-                    node.SetHighlight(RunningColor, Pulse(now));
-                }
-                else
-                {
-                    var fade = FlashStrength(now - _flashStart[index]);
-                    node.SetHighlight(_flashColor[index], fade);
-                }
+                Combine(index, state == ManagedNodeState.Running, now);
             }
 
+            Paint(now);
+        }
+
+        // Folds one program node into the state of the card that shows it.
+        private void Combine(int index, bool running, double now)
+        {
+            var card = _ids[index];
+            if (!card.HasValue) return;
+            var strength = running ? 1f : FlashStrength(now - _flashStart[index]);
+            if (_cards.TryGetValue(card.Value, out var current))
+            {
+                if (current.Running || !running && current.Strength >= strength) return;
+            }
+            _cards[card.Value] = (running, strength, running ? RunningColor : _flashColor[index]);
+        }
+
+        private void Paint(double now)
+        {
+            _running.Clear();
+            _activeEdges.Clear();
+            foreach (var pair in _cards)
+            {
+                if (pair.Value.Running) _running.Add(pair.Key);
+                if (!_view.NodesById.TryGetValue(pair.Key, out var node)) continue;
+                node.SetHighlight(pair.Value.Color, pair.Value.Running ? Pulse(now) : pair.Value.Strength);
+            }
+            foreach (var pair in _view.NodesById)
+                if (!_cards.ContainsKey(pair.Key)) pair.Value.SetHighlight(Color.clear, 0f);
             foreach (var key in _view.EdgesByKey.Keys)
                 if (_running.Contains(key.Parent) && _running.Contains(key.Child)) _activeEdges.Add(key);
             _view.SetActiveEdges(_activeEdges);
@@ -255,18 +299,9 @@ namespace AIBT.Editor.Graph
                 }
             }
 
-            _running.Clear();
-            _activeEdges.Clear();
-            for (var index = 0; index < _ids.Length; index++)
-            {
-                if (_nativeRunning[index]) _running.Add(_ids[index]);
-                if (!_view.NodesById.TryGetValue(_ids[index], out var node)) continue;
-                if (_nativeRunning[index]) node.SetHighlight(RunningColor, Pulse(now));
-                else node.SetHighlight(_flashColor[index], FlashStrength(now - _flashStart[index]));
-            }
-            foreach (var key in _view.EdgesByKey.Keys)
-                if (_running.Contains(key.Parent) && _running.Contains(key.Child)) _activeEdges.Add(key);
-            _view.SetActiveEdges(_activeEdges);
+            _cards.Clear();
+            for (var index = 0; index < _ids.Length; index++) Combine(index, _nativeRunning[index], now);
+            Paint(now);
         }
 
         private void RebindNative(CompiledProgram program)
@@ -274,15 +309,20 @@ namespace AIBT.Editor.Graph
             _view.ClearExecutionHighlight();
             _nativeProgram = program;
             var count = program?.Nodes.Count ?? 0;
-            _ids = new NodeId[count];
+            _programIds = new string[count];
             _nativeRunning = new bool[count];
             _flashStart = new double[count];
             _flashColor = new Color[count];
             _last = new ManagedNodeState[count];
             for (var index = 0; index < count; index++) _flashStart[index] = double.NegativeInfinity;
-            if (program == null) return;
+            if (program == null)
+            {
+                InvalidateMapping();
+                return;
+            }
             foreach (var entry in program.DebugMap)
-                if (entry.RuntimeNodeIndex < count) _ids[entry.RuntimeNodeIndex] = entry.AuthoringNodeId;
+                if (entry.RuntimeNodeIndex < count) _programIds[entry.RuntimeNodeIndex] = entry.AuthoringNodeId.Value;
+            InvalidateMapping();
             _nativeRoot = program.Header.RootNodeIndex;
             _nativeRuns = NativeAgent.CompletedRuns;
         }
@@ -292,15 +332,16 @@ namespace AIBT.Editor.Graph
             _view.ClearExecutionHighlight();
             _instance = instance;
             var count = instance?.NodeIds.Length ?? 0;
-            _ids = new NodeId[count];
+            _programIds = new string[count];
             _last = new ManagedNodeState[count];
             _flashStart = new double[count];
             _flashColor = new Color[count];
             for (var index = 0; index < count; index++)
             {
-                _ids[index] = new NodeId(instance.NodeIds[index]);
+                _programIds[index] = instance.NodeIds[index];
                 _flashStart[index] = double.NegativeInfinity;
             }
+            InvalidateMapping();
         }
     }
 }

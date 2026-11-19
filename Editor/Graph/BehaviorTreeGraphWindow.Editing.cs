@@ -38,6 +38,11 @@ namespace AIBT.Editor.Graph
                 return change;
             };
             _view.SelectionChanged += () => _view.schedule.Execute(RefreshInspector);
+            _view.DescribeSubtree = DescribeSubtree;
+            _view.NodeOpened = id =>
+            {
+                if (Document != null && GraphDocumentEdits.Find(Document, id)?.Subtree != null) OpenSubtree(id);
+            };
         }
 
         // ---------------------------------------------------------------- context menu
@@ -59,6 +64,17 @@ namespace AIBT.Editor.Graph
                 var index = parent?.Children.ToList().IndexOf(node.NodeId) ?? -1;
                 menu.AppendAction("Add Child…", _ => OpenNodeSearch(node.NodeId, PanelToScreen(panelPosition)),
                     CanAddChild(node.NodeId) ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                if (document?.Subtree != null)
+                {
+                    menu.AppendAction("Open Subtree\tDouble-click", _ => OpenSubtree(node.NodeId));
+                    menu.AppendAction("Unpack Subtree", _ => UnpackSubtree(node.NodeId),
+                        _session != null ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                }
+                else
+                {
+                    menu.AppendAction("Extract to Subtree…", _ => ChooseExtractTarget(node.NodeId),
+                        _session != null && document != null && Document.Root != node.NodeId ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                }
                 menu.AppendSeparator();
                 menu.AppendAction("Move Earlier\tAlt+Left", _ => MoveChild(node.NodeId, -1),
                     index > 0 ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
@@ -86,6 +102,8 @@ namespace AIBT.Editor.Graph
             {
                 menu.AppendAction("Create Node…\tSpace", _ => OpenNodeSearch(null, PanelToScreen(panelPosition)),
                     _session != null ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                menu.AppendAction("Add Subtree…", _ => OpenSubtreePicker(null, PanelToScreen(panelPosition), ScreenToGraph(PanelToScreen(panelPosition))),
+                    _session != null ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
                 menu.AppendSeparator();
                 menu.AppendAction("Auto Layout", _ => AutoLayout());
                 menu.AppendAction("Frame All\tA", _ => _view.FrameAll());
@@ -112,7 +130,7 @@ namespace AIBT.Editor.Graph
         private bool CanAddChild(NodeId parentId)
         {
             var parent = Document == null ? null : GraphDocumentEdits.Find(Document, parentId);
-            if (_session == null || parent == null || _registry == null || !_registry.TryGet(parent.TypeId, out var entry)) return false;
+            if (_session == null || parent == null || parent.Subtree != null || _registry == null || !_registry.TryGet(parent.TypeId, out var entry)) return false;
             var maximum = entry.Manifest.ChildPolicy.Maximum;
             return !maximum.HasValue || parent.Children.Count < maximum.Value;
         }
@@ -139,6 +157,9 @@ namespace AIBT.Editor.Graph
             _searchProvider.Registry = _registry;
             _searchProvider.Title = parent.HasValue ? "Add Child" : "Create Node";
             var graphPosition = ScreenToGraph(screenPosition);
+            // A reference has no children, so it cannot be inserted into an edge.
+            _searchProvider.IncludeSubtree = !replaceChild.HasValue;
+            _searchProvider.SubtreeSelected = _ => EditorApplication.delayCall += () => OpenSubtreePicker(parent, screenPosition, parent.HasValue ? (Vector2?)null : graphPosition);
             _searchProvider.Selected = (manifest, _) =>
             {
                 if (replaceChild.HasValue) InsertNodeBetween(parent.Value, replaceChild.Value, manifest);

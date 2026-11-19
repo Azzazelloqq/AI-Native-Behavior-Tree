@@ -83,6 +83,7 @@ namespace AIBT.Editor.Graph
             root.AddToClassList("aibt-window");
             GraphStyles.ApplyWindow(root);
             root.Add(BuildToolbar());
+            root.Add(BuildBreadcrumb());
 
             _banner = new VisualElement { name = "aibt-banner" };
             _banner.AddToClassList("aibt-banner");
@@ -133,6 +134,7 @@ namespace AIBT.Editor.Graph
             root.Add(body);
 
             WireGraphEditing();
+            RefreshBreadcrumb();
             _view.RegisterCallback<MouseUpEvent>(_ => _view.schedule.Execute(RefreshInspector));
             _view.RegisterCallback<KeyDownEvent>(OnGraphKeyDown, TrickleDown.TrickleDown);
             RefreshCatalog();
@@ -339,8 +341,8 @@ namespace AIBT.Editor.Graph
                 if (seen.Add(severity + "|" + text + "|" + node?.Value)) _problems.Add(new ProblemItem { Severity = severity, Text = text, Node = node });
             }
 
-            if (Diagnostics != null) foreach (var diagnostic in Diagnostics) Add(diagnostic.Severity, diagnostic.Code.Value + ": " + diagnostic.Message, NodeOf(diagnostic));
-            if (_session != null) foreach (var diagnostic in _session.Diagnostics) Add(diagnostic.Severity, diagnostic.Code.Value + ": " + diagnostic.Message, NodeOf(diagnostic));
+            if (Diagnostics != null) foreach (var diagnostic in Diagnostics) Add(diagnostic.Severity, ProblemText(diagnostic), ViewNodeOf(diagnostic));
+            if (_session != null) foreach (var diagnostic in _session.Diagnostics) Add(diagnostic.Severity, ProblemText(diagnostic), ViewNodeOf(diagnostic));
             foreach (var message in _extraMessages) Add(message.Severity, message.Text, null);
             _problems.Sort((left, right) => left.Severity.CompareTo(right.Severity));
 

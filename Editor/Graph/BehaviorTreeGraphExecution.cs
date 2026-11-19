@@ -36,7 +36,7 @@ namespace AIBT.Editor.Graph
 
         private void EnableLiveDebugging()
         {
-            _live = new GraphLiveDebugger(_view);
+            _live = new GraphLiveDebugger(_view) { MapNode = MapLiveNode };
             Selection.selectionChanged += OnSelectionChanged;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             EditorApplication.update += UpdateLive;
@@ -105,12 +105,28 @@ namespace AIBT.Editor.Graph
                 }
             }
 
+            ShowLive(agent);
+            return true;
+        }
+
+        /// <summary>Shows the native agent on this graph (the caller checked that it matches).</summary>
+        internal void ShowLive(NativeTreeAgent agent)
+        {
             ReleaseExecutionView();
             _live.Attach(agent);
             _live.Update(EditorApplication.timeSinceStartup);
             RefreshToolbarState();
             RefreshInspector();
-            return true;
+        }
+
+        /// <summary>Shows the managed agent on this graph (the caller checked that it matches).</summary>
+        internal void ShowLive(BehaviorTreeAgent agent)
+        {
+            ReleaseExecutionView();
+            _live.Attach(agent);
+            _live.Update(EditorApplication.timeSinceStartup);
+            RefreshToolbarState();
+            RefreshInspector();
         }
 
         /// <summary>
@@ -134,11 +150,7 @@ namespace AIBT.Editor.Graph
                 if (!GraphLiveDebugger.Matches(agent, Document)) { reason = agent.name + "'s tree could not be opened."; return false; }
             }
 
-            ReleaseExecutionView();
-            _live.Attach(agent);
-            _live.Update(EditorApplication.timeSinceStartup);
-            RefreshToolbarState();
-            RefreshInspector();
+            ShowLive(agent);
             return true;
         }
 
@@ -210,18 +222,34 @@ namespace AIBT.Editor.Graph
             return true;
         }
 
+        /// <summary>
+        /// True when <paramref name="program"/> was compiled from this graph: from the document's
+        /// subtree expansion when it has references (ADR-P11-001), and, in a subtree window, when
+        /// the program contains this window's instance.
+        /// </summary>
         internal bool MatchesProgram(CompiledProgram program)
         {
             if (Document == null || program == null) return false;
+            if (InstancePrefix.Length != 0)
+                return SubtreeGraphEdits.InstanceMatches(Document, InstancePrefix,
+                    new System.Collections.Generic.HashSet<string>(program.DebugMap.Select(entry => entry.AuthoringNodeId.Value), StringComparer.Ordinal));
             var catalog = _projectCatalog ?? ProjectNodeCatalogCache.Current;
-            var serialized = AIBT.Authoring.CanonicalTreeJson.Serialize(Document, catalog.RegisteredTypes);
+            var document = Document;
+            if (SubtreeExpander.RequiresExpansion(document))
+            {
+                var expansion = ProjectTreeIndex.Expand(SubtreeGraphEdits.EditorDocumentId, document, _registry ?? catalog.Registry,
+                    catalog.RegisteredTypes, CurrentSubtreeResolver());
+                if (!expansion.Success) return false;
+                document = expansion.Document;
+            }
+            var serialized = AIBT.Authoring.CanonicalTreeJson.Serialize(document, catalog.RegisteredTypes);
             if (!serialized.Success) return false;
             var hash = program.Header.CanonicalSemanticHash.HexadecimalValue;
             var semanticHash = BitConverter.ToString(serialized.SemanticHash).Replace("-", "").ToLowerInvariant();
             if (hash != StableHash.Sha256Hex(serialized.Utf8) && hash != semanticHash) return false;
-            var ids = new System.Collections.Generic.HashSet<NodeId>(Document.Nodes.Select(node => node.Id));
+            var ids = new System.Collections.Generic.HashSet<NodeId>(document.Nodes.Select(node => node.Id));
             return ids.Count == program.DebugMap.Count && ids.SetEquals(program.DebugMap.Select(entry => entry.AuthoringNodeId))
-                && program.DebugMap.Single(entry => entry.RuntimeNodeIndex == program.Header.RootNodeIndex).AuthoringNodeId == Document.Root;
+                && program.DebugMap.Single(entry => entry.RuntimeNodeIndex == program.Header.RootNodeIndex).AuthoringNodeId == document.Root;
         }
 
         // ---------------------------------------------------------------- native check and runtime asset
@@ -239,7 +267,7 @@ namespace AIBT.Editor.Graph
             {
                 var result = GeneratedCompiledProgramV2Compiler.Compile(_session.Document, catalog.Generated.Values, catalog.RegisteredTypes,
                     new ReferenceCompilerOptions("trees/editor.aibt.json", ReferenceCompilationPolicy.Phase1,
-                        new CompiledCompilerVersion(1, 0, 0, 5)));
+                        new CompiledCompilerVersion(1, 0, 0, 5)), CurrentSubtreeResolver());
                 _nativeMessage = result.Success
                     ? "Native program compiled. Player dispatch and game integration still require verification."
                     : "Native compilation: " + string.Join("\n", result.Diagnostics.Select(d => d.Code.Value + ": " + d.Message));

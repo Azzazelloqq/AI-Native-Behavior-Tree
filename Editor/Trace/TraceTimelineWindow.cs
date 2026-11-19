@@ -30,6 +30,9 @@ namespace AIBT.Editor.Trace
         private TreeDocument _document;
         private NodeRegistry _registry;
         private IReadOnlyDictionary<uint, NodeId> _nodeIdByRuntimeIndex = new Dictionary<uint, NodeId>();
+        private IReadOnlyDictionary<uint, string> _labelByRuntimeIndex = new Dictionary<uint, string>();
+        private readonly List<string> _activeLabels = new List<string>();
+        private Label _activeLabel;
 
         private BehaviorTreeGraphView _graphView;
         private BehaviorTreeGraphView _standaloneGraphView;
@@ -69,6 +72,7 @@ namespace AIBT.Editor.Trace
             _document = null;
             _registry = null;
             _nodeIdByRuntimeIndex = new Dictionary<uint, NodeId>();
+            _labelByRuntimeIndex = new Dictionary<uint, string>();
             _targetActiveNodeIds.Clear();
             _highlightAlphaByNode.Clear();
             _graphView.ClearDocument();
@@ -100,6 +104,7 @@ namespace AIBT.Editor.Trace
             _document = null;
             _registry = null;
             _nodeIdByRuntimeIndex = new Dictionary<uint, NodeId>();
+            _labelByRuntimeIndex = new Dictionary<uint, string>();
             _targetActiveNodeIds.Clear();
             _highlightAlphaByNode.Clear();
         }
@@ -109,6 +114,18 @@ namespace AIBT.Editor.Trace
 
         /// <summary>The step index currently scrubbed to, or -1 if there is no history.</summary>
         public int CurrentStepIndex => _scrubStepIndex;
+
+        /// <summary>
+        /// Labels of the nodes active at the scrubbed step, from the program's debug map: a node of
+        /// a subtree instance reads "reference / inner node" (ADR-P11-001).
+        /// </summary>
+        internal IReadOnlyList<string> ActiveNodeLabels => _activeLabels;
+
+        /// <summary>The graph card that runtime node <paramref name="runtimeIndex"/> lights, if any.</summary>
+        internal NodeId? CardOf(uint runtimeIndex) => _nodeIdByRuntimeIndex.TryGetValue(runtimeIndex, out var id) ? id : (NodeId?)null;
+
+        /// <summary>The label the timeline shows for runtime node <paramref name="runtimeIndex"/>, if any.</summary>
+        internal string LabelOf(uint runtimeIndex) => _labelByRuntimeIndex.TryGetValue(runtimeIndex, out var label) ? label : null;
 
         /// <summary>
         /// Supplies the graph/node-identity context needed to translate the channel's raw runtime
@@ -122,13 +139,20 @@ namespace AIBT.Editor.Trace
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
             if (compiledProgram == null) throw new ArgumentNullException(nameof(compiledProgram));
 
+            // With subtrees the program's IDs are expanded ("r:n"): they light the reference card r,
+            // or, in a subtree window, the card n of that window's instance only.
             var map = new Dictionary<uint, NodeId>();
+            var labels = new Dictionary<uint, string>();
             foreach (var entry in compiledProgram.DebugMap)
             {
-                map[entry.RuntimeNodeIndex] = entry.AuthoringNodeId;
+                var id = entry.AuthoringNodeId.Value;
+                var card = _sharedWindow != null ? _sharedWindow.MapLiveNode(id) : SubtreeGraphEdits.MapExpandedId(document, string.Empty, id);
+                if (card.HasValue) map[entry.RuntimeNodeIndex] = card.Value;
+                labels[entry.RuntimeNodeIndex] = string.IsNullOrEmpty(entry.DisplayName) ? id : entry.DisplayName;
             }
 
             _nodeIdByRuntimeIndex = map;
+            _labelByRuntimeIndex = labels;
             if (_sharedWindow == null) _graphView.Populate(document, registry);
             Refresh();
         }
@@ -189,6 +213,9 @@ namespace AIBT.Editor.Trace
             scrubRow.Add(_scrubSlider);
             scrubRow.Add(_scrubLabel);
             rootVisualElement.Add(scrubRow);
+
+            _activeLabel = new Label { name = "aibt-trace-active", style = { paddingLeft = 4, paddingBottom = 2, whiteSpace = WhiteSpace.Normal } };
+            rootVisualElement.Add(_activeLabel);
 
             var body = new VisualElement { style = { flexDirection = FlexDirection.Row, flexGrow = 1 } };
             rootVisualElement.Add(body);
@@ -266,13 +293,16 @@ namespace AIBT.Editor.Trace
         {
             var activeRuntimeIndices = _model.ActiveRuntimeNodeIndicesAtStep(stepIndex);
             _targetActiveNodeIds = new HashSet<NodeId>();
+            _activeLabels.Clear();
             foreach (var runtimeIndex in activeRuntimeIndices)
             {
                 if (_nodeIdByRuntimeIndex.TryGetValue(runtimeIndex, out var nodeId))
                 {
                     _targetActiveNodeIds.Add(nodeId);
                 }
+                if (_labelByRuntimeIndex.TryGetValue(runtimeIndex, out var label)) _activeLabels.Add(label);
             }
+            if (_activeLabel != null) _activeLabel.text = _activeLabels.Count == 0 ? string.Empty : "Active: " + string.Join("  ›  ", _activeLabels);
 
             // The graph was just repopulated with fresh VisualElements -- apply each node's own
             // already-tracked alpha immediately so a still-active node doesn't visually reset to
@@ -334,7 +364,9 @@ namespace AIBT.Editor.Trace
             {
                 var nodeText = diagnostic.Record.RuntimeNodeIndex == CompiledIndex.Invalid
                     ? "(no node)"
-                    : "node " + diagnostic.Record.RuntimeNodeIndex;
+                    : _labelByRuntimeIndex.TryGetValue(diagnostic.Record.RuntimeNodeIndex, out var label)
+                        ? "node " + diagnostic.Record.RuntimeNodeIndex + " (" + label + ")"
+                        : "node " + diagnostic.Record.RuntimeNodeIndex;
                 _diagnosticsView.Add(new Label(
                     "step " + (diagnostic.StepIndex + 1) + " -- code " + diagnostic.Record.DiagnosticCodeNumber + " -- " + nodeText));
             }

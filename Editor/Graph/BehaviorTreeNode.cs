@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using AIBT.Authoring;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -10,6 +12,10 @@ namespace AIBT.Editor.Graph
     /// A node card: kind accent and tag, readable title, one-line parameter summary, a child-order
     /// badge, a problem badge and a glow used by live execution views. Ports sit on the top
     /// (parent) and bottom (children) edges. Presentation only.
+    /// <para>
+    /// A subtree reference (ADR-P11-001) is one card with the subtree's name, a SUBTREE badge and
+    /// one row per interface key showing what it is connected to; it has no child port.
+    /// </para>
     /// </summary>
     public sealed class BehaviorTreeNode : Node
     {
@@ -18,6 +24,8 @@ namespace AIBT.Editor.Graph
         private readonly Label _summary;
         private readonly Label _order;
         private readonly Label _problem;
+        private readonly Label _subtreeBadge;
+        private readonly VisualElement _rows;
         private readonly VisualElement _glow;
         private string _kindClass;
 
@@ -27,10 +35,16 @@ namespace AIBT.Editor.Graph
         }
 
         internal BehaviorTreeNode(NodeDocument document, NodeManifest manifest, IEdgeConnectorListener listener)
+            : this(document, manifest, listener, null)
+        {
+        }
+
+        internal BehaviorTreeNode(NodeDocument document, NodeManifest manifest, IEdgeConnectorListener listener, SubtreeCardInfo subtree)
         {
             AddToClassList("aibt-node");
             GraphStyles.ApplyGraph(this);
             NodeId = document.Id;
+            IsSubtreeReference = document.Subtree != null;
             capabilities = Capabilities.Selectable | Capabilities.Movable;
 
             // Ports live in the card's own top and bottom slots: GraphView keeps its default
@@ -50,9 +64,12 @@ namespace AIBT.Editor.Graph
             _kind = AddLabel(body, "aibt-node-kind", "aibt-node__kind");
             _title = AddLabel(body, "aibt-node-title", "aibt-node__title");
             _summary = AddLabel(body, "aibt-node-summary", "aibt-node__summary");
+            _rows = new VisualElement { name = "aibt-node-subtree-rows", pickingMode = PickingMode.Ignore };
+            _rows.AddToClassList("aibt-node__rows");
+            body.Add(_rows);
             mainContainer.Add(body);
 
-            if (AcceptsChildren(manifest))
+            if (AcceptsChildren(document, manifest))
             {
                 OutputPort = BehaviorTreePort.Create(Direction.Output, Port.Capacity.Multi, listener);
                 OutputPort.SetEnabled(false);
@@ -73,8 +90,13 @@ namespace AIBT.Editor.Graph
             _problem.AddToClassList("aibt-node__badge--hidden");
             _problem.text = "!";
             _problem.pickingMode = PickingMode.Position;
+            _subtreeBadge = AddLabel(this, "aibt-node-subtree-badge", "aibt-node__badge");
+            _subtreeBadge.AddToClassList("aibt-node__subtree-badge");
+            _subtreeBadge.text = "SUBTREE";
+            _subtreeBadge.tooltip = "A subtree reference. Double-click to open the subtree.";
+            _subtreeBadge.EnableInClassList("aibt-node__badge--hidden", !IsSubtreeReference);
 
-            Bind(document, manifest);
+            Bind(document, manifest, subtree);
             RefreshExpandedState();
             RefreshPorts();
         }
@@ -84,6 +106,15 @@ namespace AIBT.Editor.Graph
         public string TypeId { get; private set; }
 
         public NodeManifest Manifest { get; private set; }
+
+        /// <summary>True for a subtree reference node (ADR-P11-001).</summary>
+        internal bool IsSubtreeReference { get; }
+
+        /// <summary>The interface-key rows of a reference card ("key → parent key", "key = value", "key: not connected").</summary>
+        internal IReadOnlyList<string> SubtreeRows => _rows.Children().OfType<Label>().Select(label => label.text).ToList();
+
+        /// <summary>True when the card shows its SUBTREE badge.</summary>
+        internal bool ShowsSubtreeBadge => !_subtreeBadge.ClassListContains("aibt-node__badge--hidden");
 
         public Port InputPort { get; }
 
@@ -105,8 +136,17 @@ namespace AIBT.Editor.Graph
         internal Color HighlightColor { get; private set; }
 
         /// <summary>Updates the card text for a document node whose type did not change.</summary>
-        internal void Bind(NodeDocument document, NodeManifest manifest)
+        internal void Bind(NodeDocument document, NodeManifest manifest) => Bind(document, manifest, null);
+
+        internal void Bind(NodeDocument document, NodeManifest manifest, SubtreeCardInfo subtree)
         {
+            if (document.Subtree != null)
+            {
+                BindReference(document, subtree);
+                return;
+            }
+
+            _rows.Clear();
             TypeId = document.TypeId;
             Manifest = manifest;
             var readable = ReadableTitle(document.TypeId);
@@ -125,6 +165,58 @@ namespace AIBT.Editor.Graph
                 if (_kindClass != null) RemoveFromClassList(_kindClass);
                 AddToClassList(kindClass);
                 _kindClass = kindClass;
+            }
+        }
+
+        private void BindReference(NodeDocument document, SubtreeCardInfo subtree)
+        {
+            TypeId = null;
+            Manifest = null;
+            var reference = document.Subtree;
+            var name = subtree?.Name;
+            title = !string.IsNullOrEmpty(document.DisplayName) ? document.DisplayName
+                : !string.IsNullOrEmpty(name) ? name : reference.TreeId.Value;
+            _title.text = title;
+            _kind.text = "SUBTREE · " + reference.TreeId.Value;
+            var state = subtree == null ? null
+                : subtree.Status == SubtreeResolutionStatus.NotFound ? "Subtree not found"
+                : subtree.Status == SubtreeResolutionStatus.Ambiguous ? "Ambiguous tree ID" : null;
+            var summary = state ?? (string.IsNullOrEmpty(document.DisplayName) || string.IsNullOrEmpty(name) ? string.Empty : name);
+            _summary.text = summary;
+            _summary.tooltip = summary;
+            _summary.EnableInClassList("aibt-node__summary--empty", summary.Length == 0);
+            tooltip = reference.TreeId.Value + (string.IsNullOrEmpty(subtree?.SourcePath) ? string.Empty : "\n" + subtree.SourcePath)
+                      + "\nDouble-click to open the subtree.";
+
+            _rows.Clear();
+            foreach (var row in KeyRows(reference, subtree?.Document))
+            {
+                var label = new Label(row) { pickingMode = PickingMode.Ignore };
+                label.AddToClassList("aibt-node__row");
+                label.EnableInClassList("aibt-node__row--open", row.EndsWith(": not connected", System.StringComparison.Ordinal));
+                _rows.Add(label);
+            }
+
+            const string kindClass = "aibt-node--subtree";
+            if (_kindClass != kindClass)
+            {
+                if (_kindClass != null) RemoveFromClassList(_kindClass);
+                AddToClassList(kindClass);
+                _kindClass = kindClass;
+            }
+        }
+
+        /// <summary>One row per interface key (the subtree's, plus any the reference binds that the subtree lacks), in ordinal order.</summary>
+        internal static IEnumerable<string> KeyRows(SubtreeReference reference, TreeDocument subtree)
+        {
+            var keys = new SortedSet<string>(System.StringComparer.Ordinal);
+            if (subtree?.Interface != null) foreach (var key in subtree.Interface.Keys) keys.Add(key);
+            foreach (var binding in reference.Keys) keys.Add(binding.InterfaceKey);
+            foreach (var key in keys)
+            {
+                if (!reference.TryGetBinding(key, out var binding)) yield return key + ": not connected";
+                else if (binding.IsConstant) yield return key + " = " + NodeParameterSummary.Format(binding.Constant);
+                else yield return key + " → " + binding.ParentKey;
             }
         }
 
@@ -176,6 +268,7 @@ namespace AIBT.Editor.Graph
 
         internal static string ReadableTitle(string typeId)
         {
+            if (string.IsNullOrEmpty(typeId)) return string.Empty;
             var leaf = typeId.Substring(typeId.LastIndexOf('.') + 1).Replace('-', ' ').Replace('_', ' ');
             return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(leaf);
         }
@@ -187,6 +280,10 @@ namespace AIBT.Editor.Graph
             var kind = manifest.Kind.ToString().ToUpperInvariant();
             return showType ? kind + " · " + readableType.ToUpperInvariant() : kind;
         }
+
+        /// <summary>False for a subtree reference, which never has children; otherwise as for its manifest.</summary>
+        internal static bool AcceptsChildren(NodeDocument document, NodeManifest manifest)
+            => document?.Subtree == null && AcceptsChildren(manifest);
 
         internal static bool AcceptsChildren(NodeManifest manifest)
         {
@@ -213,5 +310,29 @@ namespace AIBT.Editor.Graph
                 : value % 10 == 1 ? "st" : value % 10 == 2 ? "nd" : value % 10 == 3 ? "rd" : "th";
             return value.ToString(CultureInfo.InvariantCulture) + suffix;
         }
+    }
+}
+
+namespace AIBT.Editor.Graph
+{
+    /// <summary>What a reference card shows about its subtree: name, file and how the tree ID resolved.</summary>
+    internal sealed class SubtreeCardInfo
+    {
+        internal SubtreeCardInfo(string name, string sourcePath, SubtreeResolutionStatus status, TreeDocument document)
+        {
+            Name = name;
+            SourcePath = sourcePath;
+            Status = status;
+            Document = document;
+        }
+
+        internal string Name { get; }
+
+        internal string SourcePath { get; }
+
+        internal SubtreeResolutionStatus Status { get; }
+
+        /// <summary>The subtree document when its tree ID resolved to one file; else null.</summary>
+        internal TreeDocument Document { get; }
     }
 }

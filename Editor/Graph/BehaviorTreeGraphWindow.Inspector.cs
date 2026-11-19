@@ -82,6 +82,12 @@ namespace AIBT.Editor.Graph
             }
             else Text(section, view.title, "aibt-inspector__name");
 
+            if (node.Subtree != null)
+            {
+                BuildReferenceInspector(section, node, view);
+                return;
+            }
+
             Text(section, view.KindText + "\n" + node.TypeId + "  ·  id " + node.Id.Value, "aibt-inspector__type");
             if (view.Manifest == null)
             {
@@ -407,7 +413,7 @@ namespace AIBT.Editor.Graph
         {
             if (_live == null || !_live.IsAttached) return;
             foreach (var pair in _liveValueLabels)
-                pair.Value.text = _live.TryFormatValue(pair.Key, out var text) ? "live: " + text : "live: —";
+                pair.Value.text = _live.TryFormatValue(LiveKeyName(pair.Key), out var text) ? "live: " + text : "live: —";
         }
 
         // ---------------------------------------------------------------- generated bindings

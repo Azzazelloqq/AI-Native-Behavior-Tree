@@ -121,6 +121,8 @@ namespace AIBT.Editor.Graph
             ReleaseExecutionView();
             ResetLayoutChanges();
             HideBanner();
+            // Reloading the same file keeps the breadcrumb; opening another tree here leaves the subtree view.
+            if (!SamePath(path, _sourcePath)) ClearNavigation();
             _sourcePath = path;
             _sourceGuid = AssetDatabase.AssetPathToGUID(path);
             try
@@ -151,6 +153,7 @@ namespace AIBT.Editor.Graph
         {
             ResetLayoutChanges();
             HideBanner();
+            ClearNavigation();
             _sourcePath = null;
             _sourceGuid = null;
             OpenDocument(utf8, documentId, registry, null);
@@ -166,6 +169,8 @@ namespace AIBT.Editor.Graph
             _extraMessages.Clear();
             _pinned.Clear();
             _pendingPlacement.Clear();
+            ClearPendingSubtrees();
+            ForgetTreeIndex();
             ResetHistory();
 
             var result = CanonicalTreeJson.Parse(utf8, documentId);
@@ -202,7 +207,7 @@ namespace AIBT.Editor.Graph
                 _layoutHistory = new LayoutHistory(LayoutSnapshot());
                 if (registry != null)
                 {
-                    var missing = Document.Nodes.Where(n => !registry.TryGet(n.TypeId, out _)).Select(n => n.TypeId).Distinct().ToArray();
+                    var missing = Document.Nodes.Where(n => !n.IsSubtreeReference && !registry.TryGet(n.TypeId, out _)).Select(n => n.TypeId).Distinct().ToArray();
                     if (missing.Length > 0)
                         _extraMessages.Add(new GraphMessage(DiagnosticSeverity.Info,
                             "Project node contracts unresolved in this view (not a runtime failure): " + string.Join(", ", missing)));
@@ -298,6 +303,8 @@ namespace AIBT.Editor.Graph
         private void ProjectChanged()
         {
             RefreshCatalog();
+            ForgetTreeIndex();
+            RevalidateSubtrees();
             if (!string.IsNullOrEmpty(_sourceGuid))
             {
                 var moved = AssetDatabase.GUIDToAssetPath(_sourceGuid);
@@ -396,6 +403,8 @@ namespace AIBT.Editor.Graph
                 root.Id, new[] { root }, null, null, tags: TagSet.Empty, metadata: SemanticObject.Empty);
             _sourcePath = path;
             _sourceGuid = null;
+            ClearNavigation();
+            ClearPendingSubtrees();
             ResetLayoutChanges();
             HideBanner();
             _layoutBaseBytes = null;
@@ -425,6 +434,8 @@ namespace AIBT.Editor.Graph
                 var savedTree = false;
                 if (_session.IsDirty)
                 {
+                    // New subtree files from Extract are written (and imported) before the tree that uses them.
+                    WritePendingSubtrees();
                     _session.Save(_sourcePath);
                     savedTree = true;
                 }
@@ -629,6 +640,7 @@ namespace AIBT.Editor.Graph
             ReleaseExecutionView();
             Document = _session.Document;
             Diagnostics = _session.Diagnostics;
+            _live?.InvalidateMapping();
             _nativeMessage = null;
             var positions = CurrentPositions();
             var placedNew = false;
@@ -791,9 +803,23 @@ namespace AIBT.Editor.Graph
                string.Equals(left.Replace('\\', '/'), right.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
         private DiagnosticCollection ValidateProjectDocument(TreeDocument document)
-            => _projectCatalog != null && ReferenceEquals(_registry, _projectCatalog.Registry)
-                ? _projectCatalog.ValidateAuthoring(document, CompilerOptions())
-                : ReferenceCompiler.Compile(document, _registry, CompilerOptions()).Diagnostics;
+            => ValidateExpandedDocument(document, candidate => _projectCatalog != null && ReferenceEquals(_registry, _projectCatalog.Registry)
+                ? _projectCatalog.ValidateAuthoring(candidate, CompilerOptions())
+                : ReferenceCompiler.Compile(candidate, _registry, CompilerOptions()).Diagnostics);
+
+        // A subtree file changed: validation and reference cards read it again.
+        private void RevalidateSubtrees()
+        {
+            if (Document == null || _view == null || !SubtreeExpander.RequiresExpansion(Document)) return;
+            if (_session != null)
+            {
+                _session.RebindRegistry(_registry, ValidateProjectDocument);
+                Document = _session.Document;
+                Diagnostics = _session.Diagnostics;
+            }
+            _view.Sync(Document, _registry, _ => Vector2.zero);
+            RefreshChrome();
+        }
 
         private void Notify(string message)
         {

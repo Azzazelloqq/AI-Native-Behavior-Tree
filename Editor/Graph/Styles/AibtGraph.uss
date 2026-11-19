@@ -71,6 +71,7 @@
 .aibt-node--decorator .aibt-node__accent { background-color: #b07cd8; }
 .aibt-node--condition .aibt-node__accent { background-color: #d9a43b; }
 .aibt-node--action .aibt-node__accent { background-color: #3fae6a; }
+.aibt-node--subtree .aibt-node__accent { background-color: #2bb3a6; height: 6px; }
 
 .aibt-node__body {
     padding: 3px 8px 5px 8px;
@@ -92,6 +93,7 @@
 .aibt-node--decorator .aibt-node__kind { color: #cfa6ee; }
 .aibt-node--condition .aibt-node__kind { color: #ecc46f; }
 .aibt-node--action .aibt-node__kind { color: #7ed69f; }
+.aibt-node--subtree .aibt-node__kind { color: #6fd8cc; }
 
 .aibt-node__title {
     font-size: 13px;
@@ -153,6 +155,48 @@
 
 .aibt-node__badge--hidden {
     display: none;
+}
+
+/* ---------- Subtree reference card (ADR-P11-001) ---------- */
+
+.aibt-node--subtree > #node-border {
+    background-color: #24302f;
+    border-width: 2px;
+    border-color: #2bb3a6;
+}
+
+.aibt-node--subtree.aibt-node--invalid > #node-border {
+    border-color: #e5534b;
+}
+
+.aibt-node__subtree-badge {
+    left: 50%;
+    width: 62px;
+    margin-left: -31px;
+    background-color: #2bb3a6;
+    color: #0e1514;
+    font-size: 9px;
+}
+
+.aibt-node--subtree .aibt-node__rows {
+    padding: 3px 0 0 0;
+    margin: 3px 0 0 0;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.aibt-node__row {
+    font-size: 10px;
+    color: #c9d6d4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0;
+    margin: 0;
+}
+
+.aibt-node__row--open {
+    color: #f0a59f;
 }
 
 .aibt-node--invalid > #node-border {

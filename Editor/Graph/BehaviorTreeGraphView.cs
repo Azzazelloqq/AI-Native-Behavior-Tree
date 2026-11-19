@@ -71,6 +71,12 @@ namespace AIBT.Editor.Graph
         /// <summary>Builds the right-click menu while editing is enabled.</summary>
         internal Action<ContextualMenuPopulateEvent> ContextMenuBuilder { get; set; }
 
+        /// <summary>What a subtree reference card shows about its subtree (ADR-P11-001); null shows the tree ID only.</summary>
+        internal Func<NodeDocument, SubtreeCardInfo> DescribeSubtree { get; set; }
+
+        /// <summary>A node card was double-clicked (a reference opens its subtree).</summary>
+        internal Action<NodeId> NodeOpened { get; set; }
+
         /// <summary>Lets the host enable connecting, deleting and duplicating. Read-only by default.</summary>
         internal bool Editable
         {
@@ -171,11 +177,13 @@ namespace AIBT.Editor.Graph
             {
                 NodeManifest manifest = null;
                 if (registry != null && registry.TryGet(node.TypeId, out var entry)) manifest = entry.Manifest;
+                var subtree = node.Subtree != null ? DescribeSubtree?.Invoke(node) : null;
                 if (_nodesById.TryGetValue(node.Id, out var view))
                 {
-                    if (view.TypeId == node.TypeId && BehaviorTreeNode.AcceptsChildren(view.Manifest) == BehaviorTreeNode.AcceptsChildren(manifest))
+                    if (view.IsSubtreeReference == (node.Subtree != null) && view.TypeId == node.TypeId
+                        && (view.OutputPort != null) == BehaviorTreeNode.AcceptsChildren(node, manifest))
                     {
-                        view.Bind(node, manifest);
+                        view.Bind(node, manifest, subtree);
                         continue;
                     }
 
@@ -213,7 +221,14 @@ namespace AIBT.Editor.Graph
 
         private BehaviorTreeNode AddNodeView(NodeDocument node, NodeManifest manifest, Vector2 position)
         {
-            var view = new BehaviorTreeNode(node, manifest, _edgeListener);
+            var view = new BehaviorTreeNode(node, manifest, _edgeListener, node.Subtree != null ? DescribeSubtree?.Invoke(node) : null);
+            var id = node.Id;
+            view.RegisterCallback<MouseDownEvent>(evt =>
+            {
+                if (evt.button != 0 || evt.clickCount != 2 || NodeOpened == null) return;
+                NodeOpened(id);
+                evt.StopPropagation();
+            });
             view.SetEditable(_editable);
             AddElement(view);
             view.SetPosition(new Rect(position, Vector2.zero));

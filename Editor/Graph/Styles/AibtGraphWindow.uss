@@ -367,3 +367,36 @@
     flex-shrink: 1;
     min-width: 60px;
 }
+
+/* ---------- Subtree breadcrumb (ADR-P11-001; view state only) ---------- */
+
+.aibt-breadcrumb {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 2px 8px;
+    background-color: #1f2a29;
+    border-bottom-width: 1px;
+    border-color: #2bb3a6;
+}
+
+.aibt-breadcrumb--hidden {
+    display: none;
+}
+
+.aibt-breadcrumb__crumb {
+    margin: 1px 2px;
+    padding: 1px 6px;
+    color: #6fd8cc;
+}
+
+.aibt-breadcrumb__separator {
+    color: #8aa;
+    margin: 0 2px;
+}
+
+.aibt-breadcrumb__current {
+    color: #e6f2f0;
+    -unity-font-style: bold;
+    margin-left: 4px;
+}

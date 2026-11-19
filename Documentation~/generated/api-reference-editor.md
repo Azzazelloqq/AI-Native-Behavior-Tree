@@ -122,7 +122,7 @@ Hosts an authoring graph over an AIBT tree document. One toolbar, one Save for t
 
 ### `AIBT.Editor.Graph.BehaviorTreeImporter`
 
-Imports an <c>.aibt</c> tree. The main object is a Player-loadable <see cref="BehaviorTreeSource"/> that a <see cref="BehaviorTreeAgent"/> runs directly; the Editor-only <see cref="BehaviorTreeAsset"/> summary is kept as a sub-object. <para> A tree that uses subtrees (ADR-P11-001) is expanded against the project's trees (every <c>.aibt</c> and <c>.aibt.json</c> file under <c>Assets/</c>) and the source holds the expanded tree. Such an import depends on every subtree file it read, on the tree-ID index entry of every tree ID it looked up (so a new, removed or duplicate file with that ID re-imports it) and on the project node registry. Version 3: version-2 imports never expanded. </para>
+Imports an <c>.aibt</c> tree. The main object is a Player-loadable <see cref="BehaviorTreeSource"/> that a <see cref="BehaviorTreeAgent"/> runs directly; the Editor-only <see cref="BehaviorTreeAsset"/> summary is kept as a sub-object. <para> A tree that uses subtrees (ADR-P11-001) is expanded against the project's trees (every <c>.aibt</c> and <c>.aibt.json</c> file under <c>Assets/</c> and the project's packages) and the source holds the expanded tree. Such an import depends on every subtree file it read, on the tree-ID index entry of every tree ID it looked up (so a new, removed or duplicate file with that ID re-imports it) and on the project node registry. Version 3: version-2 imports never expanded. </para>
 
 - `METHOD System.Void .ctor()`
 - `METHOD System.Void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext)`
@@ -131,7 +131,7 @@ Imports an <c>.aibt</c> tree. The main object is a Player-loadable <see cref="Be
 
 ### `AIBT.Editor.Graph.BehaviorTreeNode`
 
-A node card: kind accent and tag, readable title, one-line parameter summary, a child-order badge, a problem badge and a glow used by live execution views. Ports sit on the top (parent) and bottom (children) edges. Presentation only.
+A node card: kind accent and tag, readable title, one-line parameter summary, a child-order badge, a problem badge and a glow used by live execution views. Ports sit on the top (parent) and bottom (children) edges. Presentation only. <para> A subtree reference (ADR-P11-001) is one card with the subtree's name, a SUBTREE badge and one row per interface key showing what it is connected to; it has no child port. </para>
 
 - `METHOD System.Void .ctor(AIBT.Authoring.NodeDocument,AIBT.Authoring.NodeManifest)`
 - `METHOD System.Void BuildContextualMenu(UnityEngine.UIElements.ContextualMenuPopulateEvent)`

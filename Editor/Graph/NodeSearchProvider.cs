@@ -18,18 +18,47 @@ namespace AIBT.Editor.Graph
 
         internal Action<NodeManifest, Vector2> Selected { get; set; }
 
-        public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context) => BuildTree(Registry, Title);
+        /// <summary>Shows the "Subtree…" entry (ADR-P11-001 §4.7) at the top of the list.</summary>
+        internal bool IncludeSubtree { get; set; }
+
+        /// <summary>The "Subtree…" entry was chosen; the host opens the tree picker.</summary>
+        internal Action<Vector2> SubtreeSelected { get; set; }
+
+        public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context) => BuildTree(Registry, Title, IncludeSubtree);
 
         public bool OnSelectEntry(SearchTreeEntry entry, SearchWindowContext context)
         {
+            if (entry.userData is SubtreeEntry)
+            {
+                SubtreeSelected?.Invoke(context.screenMousePosition);
+                return true;
+            }
             if (!(entry.userData is NodeManifest manifest)) return false;
             Selected?.Invoke(manifest, context.screenMousePosition);
             return true;
         }
 
-        internal static List<SearchTreeEntry> BuildTree(NodeRegistry registry, string title)
+        /// <summary>Marks the "Subtree…" entry of the list.</summary>
+        internal sealed class SubtreeEntry
+        {
+            internal static readonly SubtreeEntry Instance = new SubtreeEntry();
+
+            private SubtreeEntry()
+            {
+            }
+        }
+
+        internal const string SubtreeEntryLabel = "Subtree…";
+
+        internal static List<SearchTreeEntry> BuildTree(NodeRegistry registry, string title) => BuildTree(registry, title, false);
+
+        /// <summary>The node list; with <paramref name="includeSubtree"/> a "Subtree…" entry comes first.</summary>
+        internal static List<SearchTreeEntry> BuildTree(NodeRegistry registry, string title, bool includeSubtree)
         {
             var entries = new List<SearchTreeEntry> { new SearchTreeGroupEntry(new GUIContent(title), 0) };
+            if (includeSubtree)
+                entries.Add(new SearchTreeEntry(new GUIContent(SubtreeEntryLabel, Indent(), "Use another tree of the project here: pick it from the list."))
+                    { level = 1, userData = SubtreeEntry.Instance });
             if (registry == null) return entries;
             var manifests = registry.Select(entry => entry.Manifest)
                 .Where(manifest => string.IsNullOrEmpty(manifest.ReplacementTypeId))
@@ -71,7 +100,7 @@ namespace AIBT.Editor.Graph
             return withCategory && !string.IsNullOrEmpty(manifest.Category) ? label + "  · " + manifest.Category : label;
         }
 
-        private static SearchTreeEntry Entry(NodeManifest manifest, string label, int level)
+        internal static SearchTreeEntry Entry(NodeManifest manifest, string label, int level)
             => new SearchTreeEntry(new GUIContent(label, Indent(), manifest.Summary)) { level = level, userData = manifest };
 
         private static string GroupTitle(NodeBehaviorKind kind)
@@ -86,13 +115,56 @@ namespace AIBT.Editor.Graph
         }
 
         // SearchWindow aligns entries without an icon differently from groups; a blank icon keeps them in line.
-        private static Texture2D Indent()
+        internal static Texture2D Indent()
         {
             if (s_indent != null) return s_indent;
             s_indent = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
             s_indent.SetPixel(0, 0, Color.clear);
             s_indent.Apply();
             return s_indent;
+        }
+    }
+}
+
+namespace AIBT.Editor.Graph
+{
+    /// <summary>
+    /// The tree picker behind the palette's "Subtree…" entry (ADR-P11-001 §4.7): the project trees
+    /// the window's tree list shows, without the open tree itself.
+    /// </summary>
+    internal sealed class SubtreePickerProvider : ScriptableObject, ISearchWindowProvider
+    {
+        internal IReadOnlyList<TreeCatalogEntry> Entries { get; set; }
+
+        internal string CurrentPath { get; set; }
+
+        internal string CurrentTreeId { get; set; }
+
+        internal Action<TreeCatalogEntry> Selected { get; set; }
+
+        public List<SearchTreeEntry> CreateSearchTree(SearchWindowContext context) => BuildTree(Entries, CurrentPath, CurrentTreeId);
+
+        public bool OnSelectEntry(SearchTreeEntry entry, SearchWindowContext context)
+        {
+            if (!(entry.userData is TreeCatalogEntry tree)) return false;
+            Selected?.Invoke(tree);
+            return true;
+        }
+
+        internal static List<SearchTreeEntry> BuildTree(IEnumerable<TreeCatalogEntry> trees, string currentPath, string currentTreeId)
+        {
+            var entries = new List<SearchTreeEntry> { new SearchTreeGroupEntry(new GUIContent("Pick Subtree"), 0) };
+            if (trees == null) return entries;
+            foreach (var tree in trees
+                         .Where(item => !string.IsNullOrEmpty(item.TreeId) && item.TreeId != currentTreeId
+                                        && !string.Equals(item.Path, currentPath, StringComparison.OrdinalIgnoreCase))
+                         .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(item => item.TreeId, StringComparer.Ordinal))
+            {
+                entries.Add(new SearchTreeEntry(new GUIContent(tree.Name + "  (" + tree.TreeId + ")", NodeSearchProvider.Indent(),
+                    tree.Path + "\n" + tree.Status)) { level = 1, userData = tree });
+            }
+            return entries;
         }
     }
 }
