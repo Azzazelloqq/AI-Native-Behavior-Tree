@@ -1,0 +1,179 @@
+{
+  "format": "aibt.tree",
+  "formatVersion": 2,
+  "treeId": "tests.p11002.native-library-demo",
+  "name": "Native Library Demo",
+  "root": "root",
+  "blackboard": {
+    "alert": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": false
+    },
+    "caught": {
+      "type": "Bool",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": false
+    },
+    "distance": {
+      "type": "Float32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0
+    },
+    "max-steps": {
+      "type": "Int32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 5
+    },
+    "self": {
+      "type": "Float3",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "steps": {
+      "type": "Int32",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": 0
+    },
+    "target": {
+      "type": "Float3",
+      "typeVersion": 1,
+      "scope": "tree",
+      "default": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    }
+  },
+  "nodes": {
+    "at-limit": {
+      "type": "aibt.native.int-keys-at-least",
+      "typeVersion": 1,
+      "bindings": {
+        "left": "steps",
+        "right": "max-steps"
+      }
+    },
+    "chase": {
+      "type": "aibt.core.reactive-sequence",
+      "typeVersion": 1,
+      "children": [
+        "has-target",
+        "pursue"
+      ]
+    },
+    "close-enough": {
+      "type": "aibt.native.float3-within-distance",
+      "typeVersion": 1,
+      "parameters": {
+        "distance": 2,
+        "flat": true
+      },
+      "bindings": {
+        "a": "self",
+        "b": "target"
+      }
+    },
+    "done": {
+      "type": "aibt.native.succeed",
+      "typeVersion": 1
+    },
+    "has-target": {
+      "type": "aibt.native.float3-is-set",
+      "typeVersion": 1,
+      "bindings": {
+        "key": "target"
+      }
+    },
+    "mark-caught": {
+      "type": "aibt.native.set-bool",
+      "typeVersion": 1,
+      "parameters": {
+        "value": true
+      },
+      "bindings": {
+        "key": "caught"
+      }
+    },
+    "measure": {
+      "type": "aibt.native.float3-distance",
+      "typeVersion": 1,
+      "parameters": {
+        "flat": true
+      },
+      "bindings": {
+        "a": "self",
+        "b": "target",
+        "result": "distance"
+      }
+    },
+    "patrol": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "step",
+        "under-limit",
+        "remember-alert",
+        "done"
+      ]
+    },
+    "pursue": {
+      "type": "aibt.core.memory-sequence",
+      "typeVersion": 1,
+      "children": [
+        "measure",
+        "close-enough",
+        "mark-caught",
+        "wait"
+      ]
+    },
+    "remember-alert": {
+      "type": "aibt.native.copy-bool",
+      "typeVersion": 1,
+      "bindings": {
+        "from": "caught",
+        "to": "alert"
+      }
+    },
+    "root": {
+      "type": "aibt.core.reactive-selector",
+      "typeVersion": 1,
+      "children": [
+        "chase",
+        "patrol"
+      ]
+    },
+    "step": {
+      "type": "aibt.native.increment-int",
+      "typeVersion": 1,
+      "parameters": {
+        "amount": 1
+      },
+      "bindings": {
+        "key": "steps"
+      }
+    },
+    "under-limit": {
+      "type": "aibt.core.inverter",
+      "typeVersion": 1,
+      "children": [
+        "at-limit"
+      ]
+    },
+    "wait": {
+      "type": "aibt.native.idle",
+      "typeVersion": 1
+    }
+  }
+}
