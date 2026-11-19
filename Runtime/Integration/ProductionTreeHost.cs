@@ -95,6 +95,21 @@ namespace AIBT
         public ulong TotalUpdates => _core.TotalUpdates;
         /// <summary>Stable per-instance identity assigned at bootstrap; 0 before bootstrap. Used for deterministic coordinator ordering (<see cref="ProductionTreeScheduler"/>) -- never reused across instances within a process.</summary>
         public ulong InstanceId => _core.InstanceId;
+
+        /// <summary>
+        /// P11-002: root seed used when a bootstrap does not pass one (0, as
+        /// <c>TreeSimulationSettings.Default</c>).
+        /// </summary>
+        public const ulong DefaultRandomSeed = 0UL;
+
+        /// <summary>
+        /// P11-002: root seed of this host's random streams, fixed at generated bootstrap
+        /// (<see cref="DefaultRandomSeed"/> unless the bootstrap passed one). Every node that declares
+        /// a random stream derives it from this seed, the program's semantic hash,
+        /// <see cref="InstanceId"/> and its runtime node index (<c>time-and-random-v1</c>).
+        /// </summary>
+        public ulong RandomSeed { get; private set; }
+
         /// <summary>Null selects Immediate; otherwise limits native steps per frame. Zero pauses progress.</summary>
         public uint? StepBudget
         {
@@ -229,6 +244,22 @@ namespace AIBT
             NativeTraceChannelCapacityV1 traceCapacity,
             Func<long> clock,
             out NativeRuntimeFailureV1 failure)
+            => TryBootstrap(definition, catalog, traceCapacity, clock, DefaultRandomSeed, out failure);
+
+        /// <summary>
+        /// P11-002: the generated bootstrap with a root seed for the random streams of nodes that
+        /// declare one (<c>[AibtRandomStream]</c>). Each such node's stream is derived before the first
+        /// update from <paramref name="randomSeed"/>, the program's semantic hash, this host's
+        /// <see cref="InstanceId"/> and the node's runtime index, as <c>TreeSimulation</c> does. A tree
+        /// without such nodes has no stream and is not affected.
+        /// </summary>
+        public bool TryBootstrap(
+            GeneratedTreeRuntimeDefinitionV2 definition,
+            GeneratedBurstCatalogV2 catalog,
+            NativeTraceChannelCapacityV1 traceCapacity,
+            Func<long> clock,
+            ulong randomSeed,
+            out NativeRuntimeFailureV1 failure)
         {
             if (definition == null) throw new ArgumentNullException(nameof(definition));
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
@@ -240,6 +271,9 @@ namespace AIBT
             var treeInstanceId = new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId));
             if (!_core.TryBootstrapGenerated(definition, catalog, traceCapacity, treeInstanceId, _driving, out failure))
                 return false;
+            _core.GeneratedDispatch.SeedRandomStreams(
+                randomSeed, new NativeHash256V1(definition.Binding.SemanticProgram.Header.CanonicalSemanticHash));
+            RandomSeed = randomSeed;
             _clock = clock ?? ReadScaledTime;
             return true;
         }

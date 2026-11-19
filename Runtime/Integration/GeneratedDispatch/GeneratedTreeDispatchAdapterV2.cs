@@ -588,8 +588,9 @@ namespace AIBT
         /// <summary>
         /// P10-009: seeds every random-capable generated leaf's stream as
         /// <c>Documentation~/specifications/time-and-random-v1.md</c> requires (root seed, semantic
-        /// hash, this instance's tree instance id, runtime node index). Hosts never call this: their
-        /// stream words stay as created (see <c>Planning~/Evidence/P10-009/README.md</c>).
+        /// hash, this instance's tree instance id, runtime node index). Called by the simulation
+        /// container for every fresh instance and, since P11-002 stage 3, by
+        /// <see cref="ProductionTreeHost"/> once at generated bootstrap.
         /// </summary>
         internal void SeedRandomStreams(ulong rootSeed, NativeHash256V1 semanticHash)
         {

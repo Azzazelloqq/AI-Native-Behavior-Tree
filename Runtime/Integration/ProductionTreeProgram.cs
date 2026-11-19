@@ -24,12 +24,20 @@ namespace AIBT
         /// <summary>Bootstraps a host with bounded tracing, optionally enabling its committed-effect queue.</summary>
         public bool TryBootstrap(ProductionTreeHost host, out NativeRuntimeFailureV1 failure, int effectCapacity = 0,
             Func<long> clock = null, NativeTraceChannelCapacityV1? traceCapacity = null)
+            => TryBootstrap(host, ProductionTreeHost.DefaultRandomSeed, out failure, effectCapacity, clock, traceCapacity);
+
+        /// <summary>
+        /// P11-002: bootstraps a host whose random streams derive from <paramref name="randomSeed"/>
+        /// (see <see cref="ProductionTreeHost.RandomSeed"/>); otherwise as the overload without a seed.
+        /// </summary>
+        public bool TryBootstrap(ProductionTreeHost host, ulong randomSeed, out NativeRuntimeFailureV1 failure, int effectCapacity = 0,
+            Func<long> clock = null, NativeTraceChannelCapacityV1? traceCapacity = null)
         {
             if (host == null) throw new ArgumentNullException(nameof(host));
             if (effectCapacity < 0) throw new ArgumentOutOfRangeException(nameof(effectCapacity));
             if (effectCapacity > 0 && !host.TryConfigureEffectDelivery(effectCapacity, out failure)) return false;
             return host.TryBootstrap(_definition, _catalog,
-                traceCapacity ?? new NativeTraceChannelCapacityV1(256, 0, 0, 512), clock, out failure);
+                traceCapacity ?? new NativeTraceChannelCapacityV1(256, 0, 0, 512), clock, randomSeed, out failure);
         }
 
         /// <summary>Refuses disposal while live hosts retain the shared catalog; the caller can retry.</summary>

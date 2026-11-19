@@ -132,31 +132,41 @@ namespace AIBT.Tests.Integration.Simulation
         }
 
         /// <summary>
-        /// The finding P10-009 was asked to establish: hosts create random-capable generated leaves with
-        /// zeroed stream words (state 0, increment 0). time-and-random-v1 requires an odd increment
-        /// derived from the root seed, so the dispatch owner refuses the stream and the node never rolls.
-        /// The host behaviour is recorded here, unchanged.
+        /// P11-002 stage 3 (owner decision 4, replaces the P10-009 pin
+        /// <c>Hosts_HaveZeroedRandomStreams_AndARandomNodeCannotRun</c>): a host seeds the stream of a
+        /// random-capable generated leaf at bootstrap as time-and-random-v1 requires (root seed, semantic
+        /// hash, the host's tree instance id, runtime node index), so the node rolls on the first update.
+        /// Before stage 3 the words stayed zero (even increment), the dispatch owner refused the stream
+        /// with InvalidEncoding and the host stopped with NativeLifetimeStateInvalid.
         /// </summary>
         [Test]
-        public void Hosts_HaveZeroedRandomStreams_AndARandomNodeCannotRun()
+        public void Hosts_SeedRandomStreams_AndARandomNodeRuns()
         {
             var coin = Program(CoinTree);
+            var hash = new NativeHash256V1(coin.Program.Header.CanonicalSemanticHash);
+            var root = coin.Program.Header.RootNodeIndex;
             long now = 0;
             var host = Host(coin, () => now);
-            var root = coin.Program.Header.RootNodeIndex;
+            Assert.That(host.RandomSeed, Is.EqualTo(ProductionTreeHost.DefaultRandomSeed), "No seed passed: the default, 0.");
             Assert.That(host.GeneratedDispatchAdapter.TryReadRandomStream(root, out var state, out var increment), Is.True,
                 "The random condition has a stream slot.");
-            Assert.That(state, Is.Zero, "Host stream state is never seeded.");
-            Assert.That(increment, Is.Zero, "Host stream increment is never seeded (even; the spec requires odd).");
+            Assert.That(NativeRandomStreamDerivationV1.TryDerive(0UL, hash, host.InstanceId, root, out var expected), Is.True);
+            Assert.That(state, Is.EqualTo(expected.State), "Seeded state word.");
+            Assert.That(increment, Is.EqualTo(expected.Increment), "Seeded increment word.");
+            Assert.That(increment & 1UL, Is.EqualTo(1UL), "Odd increment, as the spec requires.");
+
+            // The roll draws one NextFloat32 (the upper 24 bits of one NextUInt32) from that stream.
+            var reference = expected.State;
+            var draw = NativeRandomStreamDerivationV1.NextUInt32(ref reference, expected.Increment);
+            var expectedRoot = (draw >> 8) / 16777216f * 100f < 50f ? NodeStatus.Success : NodeStatus.Failure;
+
             now = TickMicroseconds;
-            UnityEngine.TestTools.LogAssert.Expect(LogType.Error,
-                new System.Text.RegularExpressions.Regex("AIBT ProductionTreeHost: .*Callback rejected: InvalidEncoding"));
             Drive(host);
-            TestContext.WriteLine("host after one update: root=" + host.LastRootResult + " failure=" + host.LastFailure.Code
-                + " updates=" + host.TotalUpdates);
-            Assert.That(host.LastRootResult, Is.Null, "The roll never produced Success or Failure.");
-            Assert.That(host.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid),
-                "The host stops: the dispatch owner rejects the stream (InvalidEncoding).");
+            Assert.That(host.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None), "The host runs the random node.");
+            Assert.That(host.LastRootResult, Is.EqualTo(expectedRoot), "The roll used the first value of the derived stream.");
+            Assert.That(host.GeneratedDispatchAdapter.TryReadRandomStream(root, out state, out increment), Is.True);
+            Assert.That(state, Is.EqualTo(reference), "One draw committed: the state advanced once.");
+            Assert.That(increment, Is.EqualTo(expected.Increment), "The increment never changes.");
         }
 
         [Test]

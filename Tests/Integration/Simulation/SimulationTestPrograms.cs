@@ -64,8 +64,9 @@ namespace AIBT.Tests.Integration.Simulation
   }
 }";
 
-        // Deterministic (no random node; hosts cannot run random-capable generated nodes, see the
-        // random-stream tests): never finishes; cooldown, reactive selector, waits and writes.
+        // Deterministic (no random node; written when hosts could not run random-capable generated
+        // nodes, which they can since P11-002 stage 3): never finishes; cooldown, reactive selector,
+        // waits and writes.
         internal const string DeterministicLoopTree = @"{
   ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p10009.det-loop"", ""name"": ""P10-009 deterministic loop"",
   ""root"": ""loop"",
@@ -110,6 +111,27 @@ namespace AIBT.Tests.Integration.Simulation
   ""root"": ""roll"",
   ""nodes"": {
     ""roll"": { ""type"": ""aibt.stdlib.random-condition"", ""typeVersion"": 1, ""parameters"": { ""success-chance-percent"": 50 } }
+  }
+}";
+
+        // P11-002 stage 3: rolls every few updates for ever (the patrol tree never reaches its roll: its
+        // v1 reactive selector re-enters the work branch at every update). The result of each roll is
+        // written to 'score' (1 after a win, 0 after a loss).
+        internal const string RollerTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p11002.roller"", ""name"": ""P11-002 roller"",
+  ""root"": ""loop"",
+  ""blackboard"": {
+    ""score"": { ""type"": ""Float32"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": 0.5 }
+  },
+  ""nodes"": {
+    ""loop"": { ""type"": ""aibt.core.repeater"", ""typeVersion"": 1, ""children"": [""cycle""], ""parameters"": { ""count"": 4000000000, ""stopOnFailure"": false } },
+    ""cycle"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""hold"", ""pick""] },
+    ""hold"": { ""type"": ""aibt.stdlib.wait"", ""typeVersion"": 1, ""parameters"": { ""ticks"": 2 } },
+    ""pick"": { ""type"": ""aibt.core.memory-selector"", ""typeVersion"": 1, ""children"": [""win"", ""lose""] },
+    ""win"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""roll"", ""mark-win""] },
+    ""roll"": { ""type"": ""aibt.stdlib.random-condition"", ""typeVersion"": 1, ""parameters"": { ""success-chance-percent"": 50 } },
+    ""mark-win"": { ""type"": ""aibt.native.set-float"", ""typeVersion"": 1, ""parameters"": { ""value"": 1.0 }, ""bindings"": { ""key"": ""score"" } },
+    ""lose"": { ""type"": ""aibt.native.set-float"", ""typeVersion"": 1, ""parameters"": { ""value"": 0.0 }, ""bindings"": { ""key"": ""score"" } }
   }
 }";
 

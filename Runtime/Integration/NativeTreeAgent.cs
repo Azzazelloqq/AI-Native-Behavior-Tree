@@ -40,6 +40,8 @@ namespace AIBT
         [SerializeField, Min(1)] private int _effectCapacity = 16;
         [Tooltip("Optional world to join. Empty: a shared world named '" + SharedWorldName + "' is created on demand.")]
         [SerializeField] private ProductionTreeWorld _world;
+        [Tooltip("Root seed of the random streams of the tree's random nodes. Read when a run starts; each run is a new tree instance with its own streams.")]
+        [SerializeField] private ulong _randomSeed = ProductionTreeHost.DefaultRandomSeed;
 
         private readonly Dictionary<string, FactSlot> _factsByKey = new Dictionary<string, FactSlot>(StringComparer.Ordinal);
         private readonly List<FactSlot> _facts = new List<FactSlot>();
@@ -70,6 +72,15 @@ namespace AIBT
         }
 
         public NativeTreeRestartMode RestartMode { get => _restart; set => _restart = value; }
+
+        /// <summary>
+        /// P11-002: root seed of the random streams of nodes that declare one (<c>[AibtRandomStream]</c>),
+        /// default <see cref="ProductionTreeHost.DefaultRandomSeed"/>. Read when a run starts (enable,
+        /// <see cref="Restart"/>, automatic restart); a change applies from the next run. Every run gets a
+        /// new host, so a new tree instance id and new streams: two agents, or two runs of one agent,
+        /// draw different sequences with the same seed (see <see cref="ProductionTreeHost.RandomSeed"/>).
+        /// </summary>
+        public ulong RandomSeed { get => _randomSeed; set => _randomSeed = value; }
 
         /// <summary>
         /// Optional explicit catalog (<c>YourCatalog.TryCreateRuntimeCatalog</c>). Null resolves the
@@ -232,7 +243,7 @@ namespace AIBT
             var world = ResolveWorld();
             var host = gameObject.AddComponent<ProductionTreeHost>();
             host.hideFlags = HideFlags.HideInInspector | HideFlags.DontSave;
-            if (!_program.TryBootstrap(host, out var failure, _effectCapacity))
+            if (!_program.TryBootstrap(host, _randomSeed, out var failure, _effectCapacity))
             {
                 host.Stop();
                 DestroyComponent(host);
