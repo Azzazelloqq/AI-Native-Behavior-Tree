@@ -14,10 +14,20 @@ namespace AIBT.Mcp.Documentation
     internal static class McpNodeCatalogDocumentGenerator
     {
         /// <summary>
-        /// The registry the package's committed catalog documents: the built-in nodes plus the
-        /// standard managed nodes shipped in AIBT.Agents (<c>aibt.unity.*</c>), without any project node.
+        /// The registry the package's committed catalog documents: the built-in nodes, the standard
+        /// managed nodes shipped in AIBT.Agents (<c>aibt.unity.*</c>) and the package's native shard
+        /// <c>aibt.native.standard</c> (AIBT.StandardNodes, ADR-P11-002 §4.6), without any project node.
         /// </summary>
-        internal static NodeRegistry PackageRegistry() => AIBT.Agents.ManagedNodeCatalog.Standard.Registry;
+        internal static NodeRegistry PackageRegistry()
+        {
+            var catalog = AIBT.Editor.Registry.ProjectNodeCatalog.Build(
+                new[] { typeof(AIBT.StandardNodes.StandardNativeShard) },
+                System.Array.Empty<IReferenceLeafBehaviorProvider>(),
+                managed: AIBT.Agents.ManagedNodeCatalog.Standard);
+            if (catalog.Problems.Count != 0)
+                throw new System.InvalidOperationException("The package node catalog cannot be built: " + string.Join("; ", catalog.Problems));
+            return catalog.Registry;
+        }
 
         internal static string Generate(NodeRegistry registry)
         {

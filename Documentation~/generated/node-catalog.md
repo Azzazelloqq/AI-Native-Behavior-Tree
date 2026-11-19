@@ -2,7 +2,7 @@
 
 Source: the real AIBT node registry, via `AIBT.Authoring.NodeCatalogQuery` (P6-003). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
-67 registered node type(s).
+91 registered node type(s).
 
 ---
 
@@ -968,6 +968,1642 @@ Full contract (verbatim `get_node_contract` output):
         "terminalResult": "failure"
       },
       "expectedBehavior": "After one second the running child is aborted and the decorator fails."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.bool-is-true` (v1)
+
+- **Summary:** Succeeds while a bool blackboard value is true.
+- **Category:** Native/Blackboard
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree to gate a branch on a flag gameplay code writes.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-true there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.bool-is-true",
+  "version": 1,
+  "summary": "Succeeds while a bool blackboard value is true.",
+  "category": "Native/Blackboard",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree to gate a branch on a flag gameplay code writes.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-true there.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 4,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-bool-is-true",
+      "parameters": {},
+      "expectedBehavior": "Succeeds while a bool blackboard value is true."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.copy-bool` (v1)
+
+- **Summary:** Copies one bool blackboard value into another key and succeeds.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to latch a fact gameplay code writes into a key the tree owns.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.copy-bool there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.copy-bool",
+  "version": 1,
+  "summary": "Copies one bool blackboard value into another key and succeeds.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to latch a fact gameplay code writes into a key the tree owns.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.copy-bool there.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-copy-bool",
+      "parameters": {},
+      "expectedBehavior": "Copies one bool blackboard value into another key and succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.copy-float` (v1)
+
+- **Summary:** Copies one float blackboard value into another key and succeeds.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to remember a value, for example the health when a fight started.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.copy-float there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.copy-float",
+  "version": 1,
+  "summary": "Copies one float blackboard value into another key and succeeds.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to remember a value, for example the health when a fight started.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.copy-float there.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-copy-float",
+      "parameters": {},
+      "expectedBehavior": "Copies one float blackboard value into another key and succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.copy-float3` (v1)
+
+- **Summary:** Copies one Float3 blackboard value into another key and succeeds.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to remember a position, for example the last place the player was seen.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.copy-vector3 there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.copy-float3",
+  "version": 1,
+  "summary": "Copies one Float3 blackboard value into another key and succeeds.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to remember a position, for example the last place the player was seen.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.copy-vector3 there.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-copy-float3",
+      "parameters": {},
+      "expectedBehavior": "Copies one Float3 blackboard value into another key and succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.copy-int` (v1)
+
+- **Summary:** Copies one int blackboard value into another key and succeeds.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to remember a value, or to write a negative constant held in a key.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.copy-int there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.copy-int",
+  "version": 1,
+  "summary": "Copies one int blackboard value into another key and succeeds.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to remember a value, or to write a negative constant held in a key.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.copy-int there.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-copy-int",
+      "parameters": {},
+      "expectedBehavior": "Copies one int blackboard value into another key and succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.fail` (v1)
+
+- **Summary:** Fails immediately.
+- **Category:** Native/Flow
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree as a placeholder branch, or to end a sequence on purpose.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.fail there. To force a child's result use aibt.core.failer.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.fail",
+  "version": 1,
+  "summary": "Fails immediately.",
+  "category": "Native/Flow",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree as a placeholder branch, or to end a sequence on purpose.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.fail there. To force a child's result use aibt.core.failer.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 0,
+    "alignment": 1
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-fail",
+      "parameters": {},
+      "expectedBehavior": "Fails immediately."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.float-at-least` (v1)
+
+- **Summary:** Succeeds while a float blackboard value is at least a threshold.
+- **Category:** Native/Blackboard
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree for checks such as health against a constant.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-float there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.float-at-least",
+  "version": 1,
+  "summary": "Succeeds while a float blackboard value is at least a threshold.",
+  "category": "Native/Blackboard",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree for checks such as health against a constant.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-float there.",
+  "parameters": {
+    "threshold": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-float-at-least",
+      "parameters": {
+        "threshold": 0
+      },
+      "expectedBehavior": "Succeeds while a float blackboard value is at least a threshold."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.float-keys-at-least` (v1)
+
+- **Summary:** Succeeds while one float blackboard value is at least another.
+- **Category:** Native/Blackboard
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree when both sides change at runtime, such as health against flee-health; wrap it in aibt.core.inverter for "below".
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-float-keys there. Use aibt.native.float-at-least when one side is a constant.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.float-keys-at-least",
+  "version": 1,
+  "summary": "Succeeds while one float blackboard value is at least another.",
+  "category": "Native/Blackboard",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree when both sides change at runtime, such as health against flee-health; wrap it in aibt.core.inverter for \"below\".",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-float-keys there. Use aibt.native.float-at-least when one side is a constant.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-float-keys-at-least",
+      "parameters": {},
+      "expectedBehavior": "Succeeds while one float blackboard value is at least another."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.float3-distance` (v1)
+
+- **Summary:** Writes the distance between two Float3 blackboard values to a float key and succeeds; flat ignores the height (Y) difference.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree when later nodes need the number itself, for example to compare it with a key that changes.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.distance there. Use aibt.native.float3-within-distance to just test a range.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.float3-distance",
+  "version": 1,
+  "summary": "Writes the distance between two Float3 blackboard values to a float key and succeeds; flat ignores the height (Y) difference.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree when later nodes need the number itself, for example to compare it with a key that changes.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.distance there. Use aibt.native.float3-within-distance to just test a range.",
+  "parameters": {
+    "flat": {
+      "type": "boolean",
+      "required": true,
+      "packing": {
+        "offset": 8,
+        "size": 1,
+        "alignment": 1
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 16,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-float3-distance",
+      "parameters": {
+        "flat": false
+      },
+      "expectedBehavior": "Writes the distance between two Float3 blackboard values to a float key and succeeds; flat ignores the height (Y) difference."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.float3-is-set` (v1)
+
+- **Summary:** Succeeds while a Float3 blackboard value is not (0, 0, 0), the value of a key nothing has written.
+- **Category:** Native/Blackboard
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree to check that a position fact such as last-seen or target has been filled in.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-vector3-set there. When the world origin is a valid position, track it with a separate bool key instead.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.float3-is-set",
+  "version": 1,
+  "summary": "Succeeds while a Float3 blackboard value is not (0, 0, 0), the value of a key nothing has written.",
+  "category": "Native/Blackboard",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree to check that a position fact such as last-seen or target has been filled in.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-vector3-set there. When the world origin is a valid position, track it with a separate bool key instead.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 4,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-float3-is-set",
+      "parameters": {},
+      "expectedBehavior": "Succeeds while a Float3 blackboard value is not (0, 0, 0), the value of a key nothing has written."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.float3-within-distance` (v1)
+
+- **Summary:** Succeeds while two Float3 blackboard positions are at most a distance apart; flat ignores the height (Y) difference.
+- **Category:** Native/Blackboard
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree for range checks between positions gameplay code writes as facts, such as self-position and enemy-position.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-within-distance there (it reads the agent's transform). A negative distance never succeeds.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.float3-within-distance",
+  "version": 1,
+  "summary": "Succeeds while two Float3 blackboard positions are at most a distance apart; flat ignores the height (Y) difference.",
+  "category": "Native/Blackboard",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree for range checks between positions gameplay code writes as facts, such as self-position and enemy-position.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.is-within-distance there (it reads the agent's transform). A negative distance never succeeds.",
+  "parameters": {
+    "distance": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 8,
+        "size": 4,
+        "alignment": 4
+      }
+    },
+    "flat": {
+      "type": "boolean",
+      "required": true,
+      "packing": {
+        "offset": 12,
+        "size": 1,
+        "alignment": 1
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 16,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-float3-within-distance",
+      "parameters": {
+        "distance": 0,
+        "flat": false
+      },
+      "expectedBehavior": "Succeeds while two Float3 blackboard positions are at most a distance apart; flat ignores the height (Y) difference."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.idle` (v1)
+
+- **Summary:** Stays running until a parent aborts it.
+- **Category:** Native/Flow
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree as the last child of a reactive selector, so the tree keeps running while nothing else applies.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.idle there. To pause for a time use aibt.native.wait-microseconds.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.idle",
+  "version": 1,
+  "summary": "Stays running until a parent aborts it.",
+  "category": "Native/Flow",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree as the last child of a reactive selector, so the tree keeps running while nothing else applies.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.idle there. To pause for a time use aibt.native.wait-microseconds.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "running"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 0,
+    "alignment": 1
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-idle",
+      "parameters": {},
+      "expectedBehavior": "Stays running until a parent aborts it."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.increment-float` (v1)
+
+- **Summary:** Adds an amount to a float blackboard value and succeeds; a negative amount decrements. A sum too large for a float fails without writing.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree for meters such as heat, fatigue or alertness.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.increment-float there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.increment-float",
+  "version": 1,
+  "summary": "Adds an amount to a float blackboard value and succeeds; a negative amount decrements. A sum too large for a float fails without writing.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree for meters such as heat, fatigue or alertness.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.increment-float there.",
+  "parameters": {
+    "amount": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-increment-float",
+      "parameters": {
+        "amount": 0
+      },
+      "expectedBehavior": "Adds an amount to a float blackboard value and succeeds; a negative amount decrements. A sum too large for a float fails without writing."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.increment-int` (v1)
+
+- **Summary:** Adds an amount to an int blackboard value and succeeds; the sum wraps around like unchecked 32-bit arithmetic.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree for counters such as patrol steps or attempts. An amount of 4294967295 subtracts one.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.increment-int there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.increment-int",
+  "version": 1,
+  "summary": "Adds an amount to an int blackboard value and succeeds; the sum wraps around like unchecked 32-bit arithmetic.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree for counters such as patrol steps or attempts. An amount of 4294967295 subtracts one.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.increment-int there.",
+  "parameters": {
+    "amount": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-increment-int",
+      "parameters": {
+        "amount": 0
+      },
+      "expectedBehavior": "Adds an amount to an int blackboard value and succeeds; the sum wraps around like unchecked 32-bit arithmetic."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.int-at-least` (v1)
+
+- **Summary:** Succeeds while an int blackboard value is at least a threshold.
+- **Category:** Native/Blackboard
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree for counters, ammo or state levels against a constant; wrap it in aibt.core.inverter for "below".
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-int there. The threshold is not negative; compare with a key (aibt.native.int-keys-at-least) for negative bounds.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.int-at-least",
+  "version": 1,
+  "summary": "Succeeds while an int blackboard value is at least a threshold.",
+  "category": "Native/Blackboard",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree for counters, ammo or state levels against a constant; wrap it in aibt.core.inverter for \"below\".",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-int there. The threshold is not negative; compare with a key (aibt.native.int-keys-at-least) for negative bounds.",
+  "parameters": {
+    "threshold": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-int-at-least",
+      "parameters": {
+        "threshold": 0
+      },
+      "expectedBehavior": "Succeeds while an int blackboard value is at least a threshold."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.int-equals` (v1)
+
+- **Summary:** Succeeds while an int blackboard value equals a constant.
+- **Category:** Native/Blackboard
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree to branch on a state code; wrap it in aibt.core.inverter for "not equal".
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-int there. A value above 2147483647 never matches.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.int-equals",
+  "version": 1,
+  "summary": "Succeeds while an int blackboard value equals a constant.",
+  "category": "Native/Blackboard",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree to branch on a state code; wrap it in aibt.core.inverter for \"not equal\".",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-int there. A value above 2147483647 never matches.",
+  "parameters": {
+    "value": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-int-equals",
+      "parameters": {
+        "value": 0
+      },
+      "expectedBehavior": "Succeeds while an int blackboard value equals a constant."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.int-keys-at-least` (v1)
+
+- **Summary:** Succeeds while one int blackboard value is at least another.
+- **Category:** Native/Blackboard
+- **Kind:** Condition
+- **When to use:** Use in a native (Burst) tree when both sides change at runtime, such as ammo against ammo-needed; either side may be negative.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-int-keys there. Use aibt.native.int-at-least when one side is a constant.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** NotApplicable
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.int-keys-at-least",
+  "version": 1,
+  "summary": "Succeeds while one int blackboard value is at least another.",
+  "category": "Native/Blackboard",
+  "kind": "condition",
+  "whenToUse": "Use in a native (Burst) tree when both sides change at runtime, such as ammo against ammo-needed; either side may be negative.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.compare-int-keys there. Use aibt.native.int-at-least when one side is a constant.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "not-applicable",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-int-keys-at-least",
+      "parameters": {},
+      "expectedBehavior": "Succeeds while one int blackboard value is at least another."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.set-bool` (v1)
+
+- **Summary:** Writes a constant to a bool blackboard key and succeeds.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to raise or clear a flag for gameplay code or later nodes.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-bool there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.set-bool",
+  "version": 1,
+  "summary": "Writes a constant to a bool blackboard key and succeeds.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to raise or clear a flag for gameplay code or later nodes.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-bool there.",
+  "parameters": {
+    "value": {
+      "type": "boolean",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 1,
+        "alignment": 1
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-set-bool",
+      "parameters": {
+        "value": false
+      },
+      "expectedBehavior": "Writes a constant to a bool blackboard key and succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.set-float` (v1)
+
+- **Summary:** Writes a constant to a float blackboard key and succeeds.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to record a state for gameplay code or later nodes.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-float there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.set-float",
+  "version": 1,
+  "summary": "Writes a constant to a float blackboard key and succeeds.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to record a state for gameplay code or later nodes.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-float there.",
+  "parameters": {
+    "value": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-set-float",
+      "parameters": {
+        "value": 0
+      },
+      "expectedBehavior": "Writes a constant to a float blackboard key and succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.set-float3` (v1)
+
+- **Summary:** Writes a constant (x, y, z) to a Float3 blackboard key and succeeds.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to set a fixed position or direction, or to clear a position to (0, 0, 0).
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-vector3 there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.set-float3",
+  "version": 1,
+  "summary": "Writes a constant (x, y, z) to a Float3 blackboard key and succeeds.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to set a fixed position or direction, or to clear a position to (0, 0, 0).",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-vector3 there.",
+  "parameters": {
+    "x": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    },
+    "y": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 8,
+        "size": 4,
+        "alignment": 4
+      }
+    },
+    "z": {
+      "type": "float32",
+      "required": true,
+      "packing": {
+        "offset": 12,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 16,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-set-float3",
+      "parameters": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "expectedBehavior": "Writes a constant (x, y, z) to a Float3 blackboard key and succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.set-int` (v1)
+
+- **Summary:** Writes a constant (0 to 2147483647) to an int blackboard key and succeeds; a larger value fails without writing.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to record a state code or reset a counter.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-int there. For a negative value copy it from a key with aibt.native.copy-int.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.set-int",
+  "version": 1,
+  "summary": "Writes a constant (0 to 2147483647) to an int blackboard key and succeeds; a larger value fails without writing.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to record a state code or reset a counter.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.set-int there. For a negative value copy it from a key with aibt.native.copy-int.",
+  "parameters": {
+    "value": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 4,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 8,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-set-int",
+      "parameters": {
+        "value": 0
+      },
+      "expectedBehavior": "Writes a constant (0 to 2147483647) to an int blackboard key and succeeds; a larger value fails without writing."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.succeed` (v1)
+
+- **Summary:** Succeeds immediately.
+- **Category:** Native/Flow
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree as a placeholder branch or as the last child of a selector that must not fail.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.succeed there. To force a child's result use aibt.core.succeeder.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.succeed",
+  "version": 1,
+  "summary": "Succeeds immediately.",
+  "category": "Native/Flow",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree as a placeholder branch or as the last child of a selector that must not fail.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.succeed there. To force a child's result use aibt.core.succeeder.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 0,
+    "alignment": 1
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-succeed",
+      "parameters": {},
+      "expectedBehavior": "Succeeds immediately."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.toggle-bool` (v1)
+
+- **Summary:** Inverts a bool blackboard value and succeeds.
+- **Category:** Native/Blackboard
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree to alternate between two branches on each pass.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.toggle-bool there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.toggle-bool",
+  "version": 1,
+  "summary": "Inverts a bool blackboard value and succeeds.",
+  "category": "Native/Blackboard",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree to alternate between two branches on each pass.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.toggle-bool there.",
+  "parameters": {},
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "success"
+  ],
+  "memory": {
+    "size": 0,
+    "alignment": 1,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 4,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-toggle-bool",
+      "parameters": {},
+      "expectedBehavior": "Inverts a bool blackboard value and succeeds."
+    }
+  ]
+}
+```
+
+---
+
+### `aibt.native.wait-microseconds` (v1)
+
+- **Summary:** Stays running until a duration of host time has passed since it started, then succeeds.
+- **Category:** Native/Flow
+- **Kind:** Action
+- **When to use:** Use in a native (Burst) tree for pauses in host time; aibt.stdlib.wait counts ticks instead.
+- **When not to use:** Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.wait-seconds there.
+- **Execution domain:** Burst
+- **Deterministic:** True
+- **Cancellation:** AbortOnly
+- **Cost hint:** Trivial
+
+Full contract (verbatim `get_node_contract` output):
+
+```json
+{
+  "typeId": "aibt.native.wait-microseconds",
+  "version": 1,
+  "summary": "Stays running until a duration of host time has passed since it started, then succeeds.",
+  "category": "Native/Flow",
+  "kind": "action",
+  "whenToUse": "Use in a native (Burst) tree for pauses in host time; aibt.stdlib.wait counts ticks instead.",
+  "whenNotToUse": "Native-only: it does not run in a BehaviorTreeAgent; use aibt.unity.wait-seconds there.",
+  "parameters": {
+    "duration-microseconds": {
+      "type": "uint32",
+      "required": true,
+      "packing": {
+        "offset": 0,
+        "size": 4,
+        "alignment": 4
+      }
+    }
+  },
+  "childPolicy": {
+    "minimum": 0,
+    "maximum": 0,
+    "ordered": true
+  },
+  "reads": [],
+  "writes": [],
+  "sideEffects": [],
+  "possibleStatuses": [
+    "failure",
+    "running",
+    "success"
+  ],
+  "memory": {
+    "size": 8,
+    "alignment": 8,
+    "lifetime": "activation"
+  },
+  "configuration": {
+    "size": 4,
+    "alignment": 4
+  },
+  "cancellation": "abort-only",
+  "executionDomain": "burst",
+  "deterministic": true,
+  "costHint": "trivial",
+  "examples": [
+    {
+      "title": "native-wait-microseconds",
+      "parameters": {
+        "duration-microseconds": 0
+      },
+      "expectedBehavior": "Stays running until a duration of host time has passed since it started, then succeeds."
     }
   ]
 }

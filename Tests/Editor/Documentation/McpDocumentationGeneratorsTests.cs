@@ -137,6 +137,30 @@ namespace AIBT.Tests.Editor.Documentation
             Assert.That(document, Does.Contain("### `aibt.core.memory-sequence`"), "Built-ins are still listed.");
         }
 
+        [Test]
+        public void ThePackageCatalogListsEveryStandardNativeNodeWithItsContract()
+        {
+            // P11-002 (ADR-P11-002 §4.6): the package registry includes the package's native shard
+            // aibt.native.standard, so node-catalog.md documents every aibt.native.* node.
+            var registry = McpNodeCatalogDocumentGenerator.PackageRegistry();
+            var query = new NodeCatalogQuery(registry);
+            var document = McpNodeCatalogDocumentGenerator.Generate(registry);
+            var native = query.Search(string.Empty).Select(entry => entry.Manifest.TypeId)
+                .Where(id => id.StartsWith("aibt.native.", StringComparison.Ordinal)).ToArray();
+            Assert.That(native, Is.EquivalentTo(AIBT.Tests.Editor.Agents.StandardNodeCatalogTests.StandardNativeTypeIds));
+            foreach (var typeId in native)
+            {
+                Assert.That(registry.TryGet(typeId, out var entry), Is.True, typeId);
+                Assert.That(entry.Manifest.ExecutionDomain, Is.EqualTo(NodeExecutionDomain.Burst), typeId);
+                Assert.That(entry.Manifest.Category, Does.StartWith("Native/"), typeId);
+                Assert.That(entry.Manifest.WhenNotToUse, Does.Contain("aibt.unity."), typeId + " names its managed counterpart");
+                query.TryGetContract(typeId, out var expectedContract);
+                Assert.That(JToken.DeepEquals(JObject.Parse(ExtractJsonBlockFor(document, typeId)), expectedContract), Is.True, typeId);
+            }
+
+            Assert.That(document, Does.Contain("### `aibt.unity.set-bool`"), "The managed nodes are still listed.");
+        }
+
         private static string ExtractJsonBlockFor(string document, string typeId)
         {
             var marker = "### `" + typeId + "`";

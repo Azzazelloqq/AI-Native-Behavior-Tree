@@ -6,6 +6,7 @@
     "AIBT.Authoring",
     "AIBT.Agents",
     "AIBT.Editor",
+    "AIBT.StandardNodes",
     "Newtonsoft.Json",
     "Unity.Collections"
   ],
