@@ -4,6 +4,35 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Native node library, stage 3: random nodes and host seeding (P11-002)
+
+- **Hosts seed random streams.** `ProductionTreeHost` and `NativeTreeAgent` now derive the random
+  stream of every node that declares one (`[AibtRandomStream]`) from a root seed, the program's
+  semantic hash, the tree instance id and the node index, as `TreeSimulation` does. New, additive:
+  `NativeTreeAgent.RandomSeed` (serialized, default 0, read when a run starts),
+  `ProductionTreeHost.RandomSeed`, `ProductionTreeHost.DefaultRandomSeed` (0) and `TryBootstrap`
+  overloads with a `ulong randomSeed` on `ProductionTreeHost` (generated) and `ProductionTreeProgram`.
+  Every run is a new tree instance, so restarts and agents with one seed draw different sequences.
+  Trees without such nodes behave exactly as before.
+- **5 new native nodes** in `aibt.native.standard`, category `Native/Random` (node version 1,
+  Tree-scope keys, declared deterministic, so they pass the default `Phase1` policy):
+  `random-chance` (succeeds with probability `chance`, 0 to 1), `random-float` (Float32 key in
+  [`min`, `max`)), `random-int` (Int32 key in [`min`, `max`], both included, bounds up to
+  2147483647), `wait-random-microseconds` (a duration in [`min`, `max`] µs drawn once at start) and
+  `random-float3-in-radius` (Float3 key := centre key + offset with `min-radius` <= distance <=
+  `radius`; `flat` keeps Y). An invalid configuration fails without writing and without drawing;
+  a valid one always takes the same number of draws.
+- **Fix: random nodes in grouped job dispatch now advance their stream.** Under a scheduling profile
+  that forces `BatchedJobsSameFrame` or `PipelinedJobs`, agents of one catalog that share a job wave
+  kept rolling the first value of their stream; now each roll moves the stream on, as on every other
+  path, and one tree, seed and instance id give the same rolls under every policy. Trees without
+  random nodes are not affected.
+- **Prepared assets are re-prepared once again** (the catalog fingerprint of sets that list
+  `StandardNativeShard` changes).
+- **Guide and sample:** a "Randomness" recipe and the five rows in
+  `Documentation~/native-node-library.md`; the Native Guard patrol picks a random spot, whistles at
+  random and rests 1 to 3 s, with the seed and the picks on screen.
+
 ### Native node library, stage 2: timing and signal nodes (P11-002)
 
 - **4 new native nodes** in the package shard `aibt.native.standard` (node version 1, Tree-scope

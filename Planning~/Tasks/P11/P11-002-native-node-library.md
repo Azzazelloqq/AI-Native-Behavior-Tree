@@ -134,5 +134,21 @@ Save-UnityWindow.ps1 (palette), Save-UnityClip.ps1 (demo tree) for stages 1–3
   (`reference-executor-machine-v1.md`, "Reactive replacement"), so a `wait-until-true` or
   `wait-microseconds` directly under one never times out. The guide says to use the retaining
   reactive composites above waits. Existing behaviour, not changed.
+- Stage 3 (random nodes; hosts seed random streams) is implemented on `feature/aibt-consumer-workflow`
+  after `d1218b1` and awaits the orchestrator's acceptance; evidence in
+  `Planning~/Evidence/P11-002/README.md` ("Stage 3"), raw runs, dumps, screenshots and clips in
+  `C:\UnityProjects\_aibt_acceptance\P11-002\stage3\`. `Runtime/` changes are the seeding only
+  (`ProductionTreeHost`, `ProductionTreeProgram`, `NativeTreeAgent`, one comment in
+  `GeneratedTreeDispatchAdapterV2`); trees without random nodes are byte-identical before and after
+  (identity dumps). Five `Native/Random` nodes; changed existing expectations: the pin test
+  `Hosts_HaveZeroedRandomStreams_AndARandomNodeCannotRun` (replaced) and the node lists (28 → 33).
+- Found in stage 3 and fixed with the owner's permission (ADR owner decision 8, 2026-11-20): the
+  scheduler's group dispatch (profiles forcing `BatchedJobsSameFrame` or `PipelinedJobs`, two or more
+  adjacent agents of one catalog) did not commit the advanced random state, so every draw repeated
+  the first value. The fix changes three internal methods in `Runtime/Integration/GeneratedDispatch/`
+  (`GeneratedTreeDispatchAdapterV2`, `GeneratedDispatchGroupExecutorV2`,
+  `GeneratedDispatchGroupWorkspaceV2`); `UnderEveryPolicy_EachAgentsStreamAdvancesOnItsOwnDerivedSequence`
+  and `OneTreeSeedAndInstanceIds_RollTheSameSequenceUnderEveryPolicy` were red before and are green
+  after. Group waves without random streams are unchanged (forced-policy test classes, identity dumps).
 - ADR §9 lists four unrelated findings (stale Swarm Arena comment, `UInt32` blackboard key in the Public
   Burst Nodes sample, untested managed nodes, unseeded `System.Random` in the stdlib reference twin).

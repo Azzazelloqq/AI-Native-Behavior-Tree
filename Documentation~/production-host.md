@@ -95,9 +95,9 @@ program's semantic hash, the host's `InstanceId` and the node index, as `TreeSim
 `TryBootstrap(..., randomSeed, out failure)` overloads (default `DefaultRandomSeed`, 0) and is
 reported by `RandomSeed`; `NativeTreeAgent.RandomSeed` passes it for every run. A tree without such
 nodes has no stream and is not affected. Instance ids are process-wide, so two hosts with one seed
-draw different sequences. A profile that forces `BatchedJobsSameFrame` or `PipelinedJobs` does not
-keep the advanced stream today (each draw repeats the first value); see the Randomness recipe in
-[Native node library](native-node-library.md#randomness).
+draw different sequences. The stream advances the same way under every scheduling policy, including
+the grouped job waves of a forced `BatchedJobsSameFrame` or `PipelinedJobs` profile; see the
+Randomness recipe in [Native node library](native-node-library.md#randomness).
 
 `NativeTreeAgent` is a ready-made world participant built only from these public pieces: it
 creates a hidden host per run, restarts it by `NativeTreeRestartMode`, flushes `SetFact` values at

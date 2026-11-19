@@ -173,7 +173,8 @@ Choose the reactive composite by what the guarded branch does:
 
 The Native Guard tree uses a retaining reactive selector at the root: the zap, flare and watch
 branches are checked at every update, and the patrol below them (open the gate, wait until it is
-open, sweep, rest) keeps its progress until one of them takes over.
+open, light a random spot, sweep, maybe whistle, rest) keeps its progress until one of them takes
+over.
 
 `deadline-passed` reads time as well as a key, so it is not an observer condition. Use it as a
 reactive guard as above.
@@ -186,14 +187,18 @@ node's index, as `TreeSimulation` does (`specifications/time-and-random-v1.md`).
 declared deterministic, so they pass the default `Phase1` policy: one seed, one instance id and one
 sequence of updates and facts give one sequence of results.
 
-```text
-reactive-selector-retaining
-  ...guards...
-  memory-sequence  "wander"
-    random-float3-in-radius  center = home, result = target, min-radius 2, radius 8, flat
-    signal                   code 1   (the game walks to 'target')
-    wait-random-microseconds 1 000 000 .. 3 000 000
+The Native Guard patrol picks one of three spots, whistles 40 % of the time and rests 1 to 3 s.
+A picked value leaves the tree through branches (`int-equals` on `sweep-spot`, then a signal per
+spot), because game code reads signals, not keys:
+
+```json
+"pick-spot": { "type": "aibt.native.random-int", "typeVersion": 1, "parameters": { "min": 0, "max": 2 }, "bindings": { "key": "sweep-spot" } },
+"whistle-chance": { "type": "aibt.native.random-chance", "typeVersion": 1, "parameters": { "chance": 0.4 } },
+"rest": { "type": "aibt.native.wait-random-microseconds", "typeVersion": 1, "parameters": { "min-microseconds": 1000000, "max-microseconds": 3000000 } }
 ```
+
+`random-float` and `random-float3-in-radius` write Float32 and Float3 keys for later nodes, for
+example `float-at-least` on a random threshold or `float3-within-distance` against a random point.
 
 Where the seed lives and what it means:
 
@@ -207,8 +212,10 @@ Where the seed lives and what it means:
 Every run of a `NativeTreeAgent` is a new host with a new tree instance id, so a restart draws a
 new sequence, and two agents with one seed draw different sequences. Host instance ids are
 process-wide and given in start order from 1 after a domain reload: entering Play Mode with domain
-reload and starting the same agents in the same order repeats the results; without a domain reload
-(Enter Play Mode Options), or in another start order, the ids and so the sequences differ. For a
+reload and starting the same agents in the same order repeats the results, as long as every run
+also ends at the same point. Without a domain reload (Enter Play Mode Options), in another start
+order, or when game timing changes when runs end (for example an interruption timed by an object
+that moves with frame time), the ids and so the later sequences differ. For a
 replay that never depends on start order use `TreeSimulation`, whose instance ids are local to the
 container.
 
@@ -219,12 +226,10 @@ rejection), two for a flat `random-float3-in-radius` and three otherwise, and on
 configuration (`min` > `max`, `chance` outside 0 to 1, a negative radius, `max` above 2147483647
 for `random-int`) fails without writing and without drawing.
 
-Not covered today: a scheduling profile that **forces** `BatchedJobsSameFrame` or `PipelinedJobs`
-groups two or more agents of one catalog into one job wave, and that path does not keep a random
-node's advanced stream, so every draw repeats the first value (no error is reported). Random nodes
-work under the default profiles, under `Immediate` and `JobsAgentFrame`, on a lone
-`ProductionTreeHost`, and in `TreeSimulation` (in place and with Jobs). This is an open question
-for the next stage (`Planning~/Evidence/P11-002/README.md`).
+Random nodes work in every dispatch mode: the default profiles, `Immediate`, `JobsAgentFrame`, a
+profile that forces `BatchedJobsSameFrame` or `PipelinedJobs` (where agents of one catalog share a
+job wave), a lone `ProductionTreeHost`, and `TreeSimulation` in place and with Jobs. One tree, seed
+and instance id draw the same sequence under every scheduling policy.
 
 `aibt.stdlib.random-condition` (a whole-percent chance) is a built-in leaf declared
 non-deterministic: the default `Phase1` policy refuses it (AIBT2040). Use `random-chance` in native
