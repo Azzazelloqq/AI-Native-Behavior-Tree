@@ -12,7 +12,7 @@ Normative Phase 1 JSON Schemas live in `Schemas~/` and are governed by `specific
 
 ## Semantic tree: `.aibt.json`
 
-Contains format version, stable tree identity, human name and description, blackboard declarations, root node, node map, node type versions, typed parameters, ordered children, subtree references, tags, and semantic metadata.
+Contains format version, stable tree identity, human name and description, blackboard declarations, root node, node map, node type versions, typed parameters, ordered children, tags, and semantic metadata. Subtree references are defined by `decisions/ADR-P11-001-subtrees.md` (format version 3).
 
 It does not contain canvas positions, colors, selection, generated runtime indices, compiled buffers, or model-specific prompts.
 

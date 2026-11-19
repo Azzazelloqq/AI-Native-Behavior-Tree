@@ -10,6 +10,13 @@
 
 They are stable opaque identities, not display names. Tools preserve existing IDs. New IDs MAY be human-readable when uniqueness is guaranteed; copy/paste and merge tools MUST remap collisions explicitly.
 
+## Expanded identities
+
+Expanding a subtree reference node `r` gives each inner node and private key the ID `r:` followed
+by its ID in the expanded subtree. Reference node IDs do not contain `:`. Expanded IDs follow the
+authoring grammar; an expansion that would exceed 128 characters or produce a duplicate fails.
+Expanded IDs are stable as long as the reference node ID and inner IDs are stable.
+
 ## Runtime identities
 
 - `TreeInstanceId`, `AgentId`, and `EntityId` are unsigned 64-bit values; zero is invalid.

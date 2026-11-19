@@ -2,6 +2,11 @@
 
 Read `conventions.md` first. This specification defines behavior independently of executor backend.
 
+## Subtree references
+
+A subtree reference has no runtime behaviour of its own. A tree with references executes exactly
+as its expansion (ADR-P11-001); no executor, trace record or node ABI observes a reference.
+
 ## Status model
 
 Public node statuses are exactly:

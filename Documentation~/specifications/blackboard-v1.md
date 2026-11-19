@@ -36,6 +36,30 @@ Canonical keys have stable opaque IDs, unique human-readable names within their 
 
 A missing key, scope mismatch, or type mismatch is a compilation error. The runtime MUST NOT create keys implicitly.
 
+## Subtree interface
+
+Rules of ADR-P11-001 §4.3 (tree format version 3):
+
+- A subtree's `interface.keys` lists Tree-scope keys of the subtree that every caller must
+  connect. `interface.version` is a positive integer the author raises when the interface changes
+  incompatibly (keys added/removed/retyped). A reference states the `interfaceVersion` it was
+  written for (data-formats.md:50, "External subtree … references include expected contract
+  versions"); a mismatch is `AIBT3024`.
+- A reference's `keys` object has exactly one entry per interface key (`AIBT3025` for missing or
+  unknown). An entry is either a parent key ID (string) — the parent key must be Tree scope and
+  have the identical type, type version and enum contract (`AIBT2048` in the parent alone,
+  `AIBT3026` across documents) — or a constant `{ "value": <canonical typed value> }` checked
+  against the interface key's type (`AIBT3026`).
+- Expansion: an interface key bound to a parent key is renamed to that key everywhere in the
+  instance; one bound to a constant becomes a private key `r:key` with the constant as default.
+  Every other Tree key of the subtree becomes a private per-instance key `r:key` with its own
+  default. Writes inside the subtree to a parent-bound key are visible to the parent (in-out); to a
+  constant-bound key they stay inside the instance.
+- Renaming covers all four access paths of §2.3: manifest fixed-name accesses are not renamable,
+  so a subtree whose node uses a fixed-name access to a key that is not bound to a same-named parent
+  key is rejected (`AIBT3026`, message names the node); `BlackboardKey` parameters, generated
+  `bindings` values and observer `watchedKeys` are renamed.
+
 ## Reads and writes
 
 Node manifests declare every possible read and write. The compiler rejects undeclared access in generated Burst bindings. A write becomes visible immediately to later nodes in the same instance execution pass for `Tree` scope.

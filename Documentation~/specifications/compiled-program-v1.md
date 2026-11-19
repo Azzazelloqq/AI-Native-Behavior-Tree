@@ -15,7 +15,8 @@ The header contains:
 - magic and compiled-format version;
 - execution-semantics version;
 - compiler version;
-- canonical semantic hash;
+- canonical semantic hash of the compiled document; for a tree with subtree references this is the
+  semantic hash of its expansion (ADR-P11-001). A tree without references is its own expansion;
 - node-registry hash;
 - canonical policy hash and policy-format version;
 - root node index;
@@ -50,7 +51,7 @@ Observer records contain observer node index, owning reactive-composite index, m
 
 ## Debug and hot-reload map
 
-The debug map associates runtime node index with stable authoring node ID, source path, and optional display metadata. Presentation layout is not included. Release builds may strip display strings while retaining stable IDs required by configured hot reload and diagnostics.
+The debug map associates runtime node index with stable authoring node ID, source path, and optional display metadata. Each entry's source path is the source of the document the node came from; inner nodes of an expanded subtree carry the subtree's source path. Presentation layout is not included. Release builds may strip display strings while retaining stable IDs required by configured hot reload and diagnostics.
 
 ## Validation
 

@@ -142,7 +142,7 @@ with a `NodeId` — they are free-floating canvas elements.
   between its two node endpoints.
 - Both `fromNodeId` and `toNodeId` MUST reference an edge that exists in the
   semantic document's execution structure (i.e., `toNodeId` is a child of
-  `fromNodeId` in the compiled tree, or a documented subtree-reference edge).
+  `fromNodeId` in the compiled tree).
   An orphaned reroute (edge no longer exists) is a structural error.
 
 ## Framework-native vs. AIBT-owned fields

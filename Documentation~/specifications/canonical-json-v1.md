@@ -41,6 +41,20 @@ The semantic hash is SHA-256 over canonical JSON bytes after removing `name`, `d
 
 The policy hash is SHA-256 over the complete canonical policy JSON bytes. Registry canonicalization is defined by `compiled-program-v1.md`.
 
+## Format version 3 (subtrees, ADR-P11-001)
+
+Format version 3 is additive over version 2. It adds an optional top-level `interface` object,
+written immediately before `blackboardContracts` (or `blackboard`), with ordered properties
+`version` (unsigned 32-bit integer ≥ 1) and `keys` (array of Tree-scope blackboard key IDs,
+written in ascending ordinal order, unique). It adds an optional node property `subtree`; a node
+with `subtree` has no `type`, `typeVersion`, `parameters`, `bindings`, `observer` or `children`.
+`subtree` has ordered properties `treeId`, `interfaceVersion` (unsigned 32-bit ≥ 1) and `keys`, a
+map ordered by key ID whose values are a parent blackboard key ID or an object `{ "value": v }`
+with a canonical typed value. Both properties take part in the semantic hash. Version 1 and 2
+documents are never reinterpreted.
+
+A reference node's members are written in the order `displayName`, `description`, `subtree`, `tags`.
+
 ## Versions
 
 Unsupported future format versions fail. Phase 1 has no best-effort reader and no migration. A future migration must accept old canonical bytes and produce deterministic new bytes and a previewable semantic diff.
