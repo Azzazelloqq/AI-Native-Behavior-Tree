@@ -4,7 +4,7 @@
   "sourceBranch": "main",
   "items": [
     {
-      "id": "P11-001", "phase": 11, "title": "Subtrees: reuse one tree inside another (feature F1): ADR accepted (AIBT-049); stage 1 (format v3, validator, expander, managed path, specs) accepted 2026-11-19 (7e614b8); stage 2 (native path, import, baking) accepted 2026-11-19 (c02b42b); stages 3-4 each need the owner's go-ahead", "status": "in_progress", "kind": "implementation",
+      "id": "P11-001", "phase": 11, "title": "Subtrees: reuse one tree inside another (feature F1): ADR accepted (AIBT-049); stage 1 (format v3, validator, expander, managed path, specs) accepted 2026-11-19 (7e614b8); stage 2 (native path, import, baking) accepted 2026-11-19 (c02b42b); stage 3 (graph editor) approved 2026-11-19; stage 4 needs the owner's go-ahead", "status": "in_progress", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-001-subtrees.md",
       "dependsOn": ["P10-014"],
       "owns": ["Documentation~/decisions/ADR-P11-001-subtrees.md", "Planning~/Evidence/P11-001/", "Authoring/Compilation/Subtrees/"]

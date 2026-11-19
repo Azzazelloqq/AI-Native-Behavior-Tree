@@ -7,8 +7,9 @@ full run of all nine assemblies on `7e614b8`). Stage 2 approved 2026-11-19 toget
 decision that generated `bindings` values may name expanded keys `r:key` (ADR "Owner decisions",
 item 9). Stage 2 implemented 2026-11-19 (local commits on `feature/aibt-consumer-workflow`; evidence in
 the "Stage 2" section of `Planning~/Evidence/P11-001/README.md`), accepted after the full run of all
-nine assemblies on `c02b42b`. Stages
-3 and 4 each need the owner's go-ahead.
+nine assemblies on `c02b42b`. Stage 3
+(graph editor) approved 2026-11-19 together with two stage-2 follow-ups (import status `Needs registry`;
+tree-ID index also covers `Packages/`). Stage 4 needs the owner's go-ahead.
 
 ## Objective
 
