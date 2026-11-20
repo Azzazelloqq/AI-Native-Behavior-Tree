@@ -139,3 +139,31 @@ Files: `live-read-log.txt` (run 2), `live-read-log-run1-camera.txt`, `native-gua
   then waits for readiness); the `AIBT/MCP/Regenerate Documentation` menu writes into
   `Assets/AIBT-Documentation/` of the parent project (removed after copying `api-reference-runtime.md`),
   and its `node-catalog.md` differs from the committed one because it uses the project registry.
+
+## Fix after the orchestrator's review (`ac4201c`)
+
+The orchestrator's full run on `1eb2359` was green (815/815, 422/422, 813/814 with the known failure,
+65/65, 79/79, 33/33, 36/36, 6/6, PlayMode 2/2). Its review found one defect: `ReadSlot<T>.TryRead`
+built the refusal message (string concatenation and the code's `ToString`) on every refused call,
+although `TryGetValue` logs it once per key, type and program. Fix: `TryRead` returns the refusal
+code and `TryGetValue` formats the same text inside the log-once branch. The log text is unchanged.
+
+New test `RefusedReads_AfterTheOneLog_AllocateNoManagedMemory`: after the one logged refusal per key
+and type, 1000 × (read of an unknown key as `int` + read of the Int32 key `owned-target` as `float`).
+
+| | GC.Alloc samples for 2000 refused reads | Raw result |
+| --- | --- | --- |
+| before the fix (`75eab34` code + the new test) | 10000 (5 per refused read), test failed | `tests\RefusedReads-before-fix.json` |
+| after the fix (`ac4201c`) | 0, test passed | `tests\NativeTreeAgentValueReadTests-after-review-fix.json` |
+
+After the fix: `NativeTreeAgentValueReadTests` 9/9, `ExternalTreeBlackboardReadTests` 10/10 (raw in
+`C:\UnityProjects\_aibt_acceptance\P11-004\tests\*-after-review-fix.json`); recompile without errors.
+
+Correction to "Tests" above: `GC.GetAllocatedBytesForCurrentThread` does not count in this Editor. A
+probe measured 0 bytes for 1000 `new object()` where the profiler's GC.Alloc recorder counted 1000
+samples (`tests\CounterProbe-GetAllocatedBytes-vs-Recorder.json`). So the "0 bytes" figures for
+`TryGetValue_RepeatedAfterWarmup_AllocatesNoManagedMemory` and the "0 bytes per call" diagnostic
+proved nothing by themselves. Both agent allocation tests now count GC.Alloc recorder samples (the
+counter `AllocatingGCMemory` uses): warmed successful reads 0 samples for 2000 reads. Their
+`AllocatingGCMemory` assertions were valid throughout. Why the unwarmed delegate allocated once in
+the first version of that test is not known.
