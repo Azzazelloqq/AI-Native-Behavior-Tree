@@ -168,6 +168,18 @@ namespace AIBT.Tests.Editor.Documentation
             Assert.That(shared, Is.GreaterThanOrEqualTo(4), "The shared-cooldown recipe quotes the sample tree.");
         }
 
+        // P11-002 stage 4: the native quickstart's opt-in block quotes the Native Guard sample's
+        // catalog set; its other C# blocks are illustrations of the integration API.
+        [Test]
+        public void QuickstartNativeLibraryOptInIsQuotedFromTheNativeGuardSample()
+        {
+            var quickstart = Normalize(File.ReadAllText(Path.Combine(PackageRoot(), "Documentation~", "consumer-quickstart.md")));
+            var blocks = Regex.Matches(quickstart, "```csharp\n(?<body>.*?)```", RegexOptions.Singleline)
+                .Cast<Match>().Select(match => match.Groups["body"].Value).ToList();
+            AssertQuoted(blocks, Path.Combine("Samples~", "NativeGuard", "Catalog", "NativeGuardCatalog.cs"), "AibtCatalogSet");
+            Assert.That(blocks.Count(block => block.Contains("AibtCatalogSet")), Is.EqualTo(1));
+        }
+
         private static void AssertQuoted(IReadOnlyList<string> blocks, string relativePath, string marker)
         {
             var block = blocks.FirstOrDefault(candidate => candidate.Contains(marker) && !candidate.Contains("guide:"));

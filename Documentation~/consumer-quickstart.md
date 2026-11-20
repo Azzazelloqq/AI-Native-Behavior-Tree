@@ -8,6 +8,31 @@ Import **First Agent** through AIBT's Package Manager Samples tab, then run **AI
 First Agent > Create Demo** and press Play. The cube moves to the goal using one generated Action,
 typed external input and a committed Float32 effect. Its runtime assembly has no Authoring reference.
 
+## Without writing a Burst node
+
+A native tree does not need your own Burst nodes for blackboard logic, timers, signals or random
+choices: the package ships 33 ready-made native leaves (`aibt.native.*`, shard
+`aibt.native.standard`). Opt in once by listing the shard in your project's catalog set, as the
+**Native Guard** sample does (`Catalog/NativeGuardCatalog.cs`):
+
+```csharp
+[AibtCatalogSet("aibt.samples.native-guard.catalog", 1u, typeof(StandardNativeShard))]
+public static partial class NativeGuardCatalog { }
+```
+
+- `Native/Blackboard` (20): compare, set, copy and count Bool, Int32, Float32 and Float3 keys, distances.
+- `Native/Flow` (4): `succeed`, `fail`, `idle`, and a fixed wait.
+- `Native/Timing` (3): wait until a Bool key is true, and a deadline in an Int64 key shared by branches.
+- `Native/Signals` (1): `signal` tells the game "do X" with an Int32 code on `aibt.native.signal`.
+- `Native/Random` (5): chance, random int, float, point and wait, from a stream the host seeds.
+
+They run on `NativeTreeAgent`, `ProductionTreeHost` and `TreeSimulation`, not in a
+`BehaviorTreeAgent`. The **Native Guard** sample (Package Manager Samples tab, then **AIBT >
+Samples > Native Guard > Create Demo**) is a tower built only from `aibt.core.*` and
+`aibt.native.*` nodes. The [Native node library](native-node-library.md) guide maps every managed
+node to its native counterpart and has recipes; agents build such a tree with the MCP/CLI recipes
+in [generated/recipes.md](generated/recipes.md).
+
 ## Author and prepare
 
 1. Create/open a version 2 tree in **AIBT > Graph Editor**. Save incomplete drafts whenever needed;
@@ -40,7 +65,8 @@ agent.SetFact("distance", Vector3.Distance(transform.position, goal.position));
 ```
 
 A fact must be a Tree-scope key of the same type that no node writes; a wrong key is logged once
-and ignored. Facts are kept across restarts. A throwing effect handler is logged and does not block
+and ignored. Facts are kept across restarts; keys that nodes write start each run from their
+defaults, because every run is a new host. A throwing effect handler is logged and does not block
 later effects. The agent resolves the catalog from the type recorded in the asset; assign
 `CatalogFactory` from code (for example `ProjectCatalog.TryCreateRuntimeCatalog`) when code
 stripping may remove that type in a Player build (see "Player builds" below). Disabling the agent stops its host, leaves the
