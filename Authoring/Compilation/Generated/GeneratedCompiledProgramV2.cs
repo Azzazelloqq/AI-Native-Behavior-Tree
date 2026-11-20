@@ -380,7 +380,7 @@ namespace AIBT.Authoring
                 ? ReferenceCompiler.Compile(semanticDocument, projectionRegistry.Registry, options)
                 : ReferenceCompiler.Compile(new SubtreeExpansion(semanticDocument, semanticDocument, new Dictionary<NodeId, string>(nodeSourceIds), null),
                     projectionRegistry.Registry, options);
-            Add(diagnostics, semantic.Diagnostics);
+            for (var index = 0; index < semantic.Diagnostics.Count; index++) if (!TreeValidator.IsTreeScopeSlotNeverWrittenNote(semantic.Diagnostics[index])) diagnostics.Add(semantic.Diagnostics[index]);
             if (!semantic.Success || HasError(diagnostics)) return Failure(diagnostics);
             try
             {
