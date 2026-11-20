@@ -1210,7 +1210,8 @@ closed the item (`Done`) on 2026-11-20. The second item, `P11-002` (a library of
 2026-11-19 with all six recommendations of its §8; stage 1 (20 blackboard and flow nodes) is accepted
 (`4af5571`), stage 2 (timing and signal nodes, the Native Guard sample) is accepted (`bad2892`), stage 3 (random nodes;
 hosts seed random streams) is accepted (`e944c5c`), stage 4 (documentation pass, MCP/CLI recipes) is accepted (`0485779`);
-the item is in `Review`.
+the item is in `Review`. The third item, `P11-003` (the note `AIBT2043` counts writes through native
+`bindings`, P11-002 open question 2), is implemented and awaits the orchestrator's acceptance.
 
 ### Review follow-up scopes (2026-09-04)
 
