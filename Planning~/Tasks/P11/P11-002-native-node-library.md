@@ -5,7 +5,8 @@ stage 1 (blackboard and flow nodes) approved the same day and accepted after the
 nine assemblies on `4af5571`. Stage 2 (timing and signal nodes) approved by the owner 2026-11-19,
 implemented the same day and accepted on `bad2892`. Stage 3 (random nodes; hosts seed random
 streams, and the group-commit fix of owner decision 8) approved by the owner 2026-11-20 and accepted
-on `e944c5c`. Stage 4 (documentation pass) approved by the owner 2026-11-20.
+on `e944c5c`. Stage 4 (documentation pass) approved by the owner 2026-11-20, implemented the same day
+(`b5439d2`..`029888b`) and awaits the orchestrator's acceptance.
 
 ## Objective
 
@@ -153,3 +154,27 @@ Save-UnityWindow.ps1 (palette), Save-UnityClip.ps1 (demo tree) for stages 1–3
   after. Group waves without random streams are unchanged (forced-policy test classes, identity dumps).
 - ADR §9 lists four unrelated findings (stale Swarm Arena comment, `UInt32` blackboard key in the Public
   Burst Nodes sample, untested managed nodes, unseeded `System.Random` in the stdlib reference twin).
+- All four stages are implemented. Stage 4 (documentation pass) is on `feature/aibt-consumer-workflow`
+  after `3e00372` (`b5439d2`, `2f39af3`, `b62f8d6`, `029888b`, and the evidence commit) and awaits the
+  orchestrator's acceptance; evidence in `Planning~/Evidence/P11-002/README.md` ("Stage 4"), raw
+  transcripts and screenshots in `C:\UnityProjects\_aibt_acceptance\P11-002\stage4\`. Three MCP/CLI
+  recipes for native trees (`MCP/Documentation/McpRecipesDocumentGenerator.cs`, run live through CLI
+  and `mcp serve`), a quickstart section with a snippet test, "Native-only nodes" in `ai-and-mcp.md`,
+  `cli.md`, a CHANGELOG entry and a consistency sweep. No code change outside the recipe generator and
+  the snippet test; no existing expectation changed.
+- Found in stage 4: keys that nodes write start every `NativeTreeAgent` run from their defaults (every
+  run is a new host), so a tree whose root can succeed needs an `idle` hold to keep a cooldown; now in
+  the guide and the quickstart. Tool findings, reported and not fixed: `create_tree` defaults to format
+  version 1 (a bound node then fails with AIBT2042); no in-place rebind (`configure_node` `bindings` →
+  AIBT2025, remove + add works); `compile`/`simulate`/`run_tests` do not run native-only nodes and
+  `run_tests` gives an unclear FactoryFault; `runtime_hosts`/`read_trace` do not see the hidden host of
+  a `NativeTreeAgent`; node manifest `reads`/`writes` are empty for bindings; `tree validate
+  samples.native-guard` → AIBT9022 in Modules (two copies of the sample tree in the parent project).
+- Open questions for the owner, stages 1–4 in one place: (1) observers are not re-evaluated on native
+  hosts; (2) AIBT2043 ignores native bindings; (3) the AIBT Graph shows `live: —` for native agent
+  keys and "Needs native compile" for prepared trees; (4) no public Tree-key read on
+  `NativeTreeAgent`; (5) reproducibility of `NativeTreeAgent` runs depends on the process-wide
+  instance counter; (6) the Package Manager import of the Native Guard sample is not exercised; (7)
+  `BehaviorTreeAgent.Restart(true)` on a tree running `idle` faults with AIBT4001; (8) the stage 4
+  tool findings above (default format version, `runtime_hosts` and hidden hosts, bindings in the
+  manifest, the `run_tests` diagnostic).

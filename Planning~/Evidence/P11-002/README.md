@@ -1070,3 +1070,169 @@ build; no performance measurement of the new nodes or of the group commit.
 To know: with host seeding, `aibt.stdlib.random-condition` runs on hosts too (it declares a stream);
 a host's tree instance id is a process-wide counter, so one seed repeats a sequence only when the
 hosts start in the same order after a domain reload (open question 3).
+
+## Stage 4 — documentation pass (2026-11-20)
+
+Approved by the owner 2026-11-20 (`23534c8`). Documentation and recipe source only: no change under
+`Runtime/`, `CodeGen~`, `Schemas~`, `Authoring/`, `Agents`, `Editor/`, `package.json`,
+`Documentation~/specifications/` or `ExpectedPublicAbiV2.txt`, and no MCP tool or CLI command
+behaves differently. Raw transcripts, scripts and screenshots are in
+`C:\UnityProjects\_aibt_acceptance\P11-002\stage4\`.
+
+A commit that is not part of this stage, `3e00372` ("docs(P11-001): closed by the owner", Planning
+files of P11-001, `work-items.json`, `MASTER_PLAN.md`), landed on the branch after `23534c8` and
+before the stage 4 commits.
+
+### Commits
+
+| Commit | Content |
+|---|---|
+| `b5439d2` | `MCP/Documentation/McpRecipesDocumentGenerator.cs`: three native-library recipes; `Documentation~/generated/recipes.md` regenerated |
+| `2f39af3` | `consumer-quickstart.md` section "Without writing a Burst node"; `UserGuideSnippetTests.QuickstartNativeLibraryOptInIsQuotedFromTheNativeGuardSample` |
+| `b62f8d6` | `ai-and-mcp.md` "Native-only nodes", `cli.md`, `native-node-library.md`, `README.md` (sweep) |
+| `029888b` | `CHANGELOG.md`: stage 4 entry, stage 3 parameter names |
+
+### What was added where
+
+- **Recipes** (`generated/recipes.md`, from `McpRecipesDocumentGenerator.AppendNativeLibraryRecipes`):
+  - "find native library nodes and their bindings": `search_nodes`, `get_node_contract` (bindings
+    are in `behaviorCaseContract.inputs`), `runtime_catalogs`;
+  - "build a native tree from library nodes": nine MCP steps from `create_tree` (`formatVersion` 2,
+    Tree keys of types Bool, Int32, Float32, Float3 and Int64) through `add_node` with `parameters`
+    and `bindings`, one `apply_domain_patch` of 26 operations, `validate`, `compile` (AIBT3012
+    expected), `inspect_tree`, `prepare_runtime` dry run and write. The tree is a guard
+    (`float3-within-distance`) under `reactive-sequence`, `reactive-sequence-retaining` above the
+    waits, a shared cooldown (`set-deadline` / `deadline-passed`), a `signal`, a `random-int` pick, a
+    `wait-random-microseconds` and `idle` holds; plus the same steps as CLI commands;
+  - "change a native tree and prepare it again": `configure_node`, dry run for `existingAssetHash`,
+    `prepare_runtime` with `overwrite` and `expectedAssetHash`; how bindings survive edits.
+- **Quickstart** (`consumer-quickstart.md:11`): the opt-in line quoted from
+  `Samples~/NativeGuard/Catalog/NativeGuardCatalog.cs` (new snippet test), the five categories, the
+  hosts, the Native Guard sample, links to the guide and the recipes.
+- **AI clients** (`ai-and-mcp.md:31`, "Native-only nodes"): discovery, format version 2, which tools
+  run the nodes (`prepare_runtime` and the native hosts) and which do not (`compile` AIBT3012,
+  `simulate` AIBT2021, `run_tests` FactoryFault), `runtime_hosts` / `read_trace` not seeing a
+  `NativeTreeAgent` host, tools not tried. `cli.md:103` and `cli.md:133` the same for the CLI.
+- **CHANGELOG** (`CHANGELOG.md:7`): stage 4 entry. Stages 1 and 2 already named their nodes and the
+  re-prepare note; stage 3 had one wrong parameter name (below).
+
+### Run live
+
+Every recipe step was run against the Modules Editor (bridge port from `Library/AibtMcp.json`,
+Pipeline CLI port 7810) before it was written down; the recipe text follows the transcripts.
+
+| Transcript | What it shows |
+|---|---|
+| `cli/01-status-ensure` | bridge status and `mcp ensure` |
+| `cli/02-runtime-catalogs` | catalog sets; `NativeGuardCatalog` lists `StandardNativeShard` (33 leaves) |
+| `cli/03-nodes-search`, `04`, `05` | all 33 `aibt.native.*` nodes found; contracts of `set-deadline` and others; binding members only in `behaviorCaseContract.inputs` (id, type, no direction); manifest `reads`/`writes` empty |
+| `cli/10-recipe-build` | the build recipe through `call`: create (v2), add, patch, validate (valid, policy applied, 8 AIBT2043 infos), compile (AIBT3012 on the first native node), inspect |
+| `cli/11-recipe-prepare` | prepare against `SwarmArenaCatalog` → AIBT3012 naming the shard; against `NativeGuardCatalog` (short type name accepted) → dry run and write, backend `native-generated-v2` |
+| `cli/12-edit-bound-node-probe` | `configure_node` and `replace_node` keep bindings; `configure_node` with `parameterName` `bindings` → AIBT2025; remove + add rebinds; a v1 tree rejects a bound node (AIBT2042) |
+| `cli/13-binding-errors-probe` | missing, undeclared and wrongly typed bindings → AIBT3018 + AIBT3015; `set_blackboard_keys` keeps v2 |
+| `cli/15-runtime-hosts-native-agent` | `runtime hosts` = `[]` and `trace read 1` = AIBT9018 while the agent runs (finding 5) |
+| `cli/16-recipe-reprepare` | write without overwrite → AIBT9018; dry run gives `existingAssetHash`; overwrite keeps the GUID |
+| `cli/17-run-tests-and-simulations` | `simulate` AIBT2021 for every native node; `run_tests` FactoryFault; no runtime simulations registered |
+| `mcp/20-mcp-recipe`, `21-mcp-reprepare` | the same recipes through `mcp serve` (stdio JSON-RPC, `aibt_*` tools, nested JSON as strings), including the remove + add rebind as a dry run |
+| `runs/30`–`34` | scratch scene `Assets/AibtRecipeScratch/NativeSentry.unity`, one GameObject with `NativeTreeAgent`, `_tree` set to the prepared asset (no code); agent state samples while running |
+| `runs/40`–`43` | recompile and recipe regeneration (`scripts/RegenerateRecipes.cs` through `eval_file`) |
+
+`cli/first-attempt-no-hold/` keeps the first attempt. Without the `idle` holds the root succeeded at
+every update (5086 completed runs in one sample, `runs/31`) and the agent's host was replaced between two
+queries. That run showed that keys written by nodes start every `NativeTreeAgent` run from their
+defaults (every run is a new host; `NativeTreeAgent.cs:402` re-applies only facts). The trees were
+deleted and the recipe was run again with `strike_hold` and `warn_hold`; the guide and the
+quickstart now say it.
+
+### Screenshots
+
+- `screenshots/graph-edit-native-sentry.png`: the recipe tree in the AIBT Graph (Edit Mode).
+- `screenshots/graph-live-1.png` … `graph-live-3.png`: Play Mode, "Live: Sentry (native) — running,
+  run 1", path sentry → patrol → Wait Until True highlighted, `completedRuns` 0. The blackboard shows
+  `live: —` and the tree list "Needs native compile" (stage 2 and 3 open questions).
+
+No new code was written for the screenshots or the live run.
+
+### Consistency sweep (old → new)
+
+| File:line | Old | New |
+|---|---|---|
+| `README.md:283` | "seeded per tree instance from `NativeTreeAgent.RandomSeed`" | "seeded per tree instance from the host's seed (`NativeTreeAgent.RandomSeed`, default 0)" |
+| `README.md:286` | "`aibt.native.*` nodes only in `NativeTreeAgent`" | "`aibt.native.*` nodes only on native hosts (`NativeTreeAgent`, `ProductionTreeHost`, `TreeSimulation`)" |
+| `consumer-quickstart.md:68` | "Facts are kept across restarts." | "Facts are kept across restarts; keys that nodes write start each run from their defaults, because every run is a new host." |
+| `CHANGELOG.md:42` | "`wait-random-microseconds` (a duration in [`min`, `max`] µs drawn once at start)" | "… [`min-microseconds`, `max-microseconds`] drawn once at start" |
+| `native-node-library.md:128` | — (missing fact) | paragraph: written keys live as long as the run, so `zap-hold` keeps the run going |
+| `native-node-library.md:253` | — | "See also" link to the recipes and to `ai-and-mcp.md#native-only-nodes` |
+| `cli.md:133` | — | the `NativeTreeAgent` host is not listed by `runtime hosts`; watch it in the AIBT Graph |
+
+Checked and correct: counts (33 native nodes: Blackboard 20, Flow 4, Timing 3, Signals 1, Random 5;
+the package `node-catalog.md` lists 100 node types, Modules 105 with its samples), the five
+categories in README, guide, quickstart and CHANGELOG, node documentation texts. Link check
+(`scripts/check_links.py`, `runs/50-link-check-before-fixes.txt`) over README, `Documentation~/*.md`,
+`generated/recipes.md` and the sample READMEs: 118 links, 0 broken; run again on the committed
+docs (`runs/51-link-check-after-fixes.txt`): 118 links, 0 broken.
+
+### Findings about tools (reported, not fixed)
+
+1. **`create_tree` defaults to format version 1.** A tree created without `formatVersion` rejects a
+   node with `bindings` (AIBT2042). The recipe passes `"formatVersion": 2`.
+2. **No in-place rebind.** `configure_node` with `parameterName` `bindings` → AIBT2025; a binding is
+   changed by removing and adding the node in one patch.
+3. **`compile`, `simulate` and `run_tests` do not execute native-only nodes** (AIBT3012, AIBT2021,
+   FactoryFault). Only `prepare_runtime` and the native hosts do.
+4. **`run_tests` diagnostic is unclear**: "Executor factory failed: InvalidOperationException", with
+   no node or reason, where `simulate` names each native node (AIBT2021).
+5. **`runtime_hosts` / `read_trace` do not see a `NativeTreeAgent` host.** The agent's
+   `ProductionTreeHost` has `HideInInspector, DontSave` and a trace channel, but
+   `FindObjectsByType<ProductionTreeHost>` (`McpRuntimeTools.cs:206`) returns 0 for it, so
+   `trace read` answers AIBT9018. Documented in `ai-and-mcp.md` and `cli.md`.
+6. **Manifest `reads` / `writes` are empty for native nodes**; bindings show only in
+   `get_node_contract` `behaviorCaseContract.inputs`, without direction.
+7. **AIBT2043** shows for keys that native nodes write (stage 1 question 2).
+8. **`tree validate samples.native-guard` → AIBT9022 "No tree with id"** in Modules, probably
+   because the parent project has two copies of the sample tree (`Assets/Samples/AIBT/Native Guard/`
+   and `Assets/AibtNativeGuardDemo/`). Not investigated further.
+
+### Tests
+
+After `Invoke-UnityRecompile.ps1` (`runs/42-recompile.txt`), `runs/60-doc-and-mcp-tests.txt`:
+
+| Class | Result |
+|---|---|
+| `UserGuideSnippetTests` | 5/5 (one new case) |
+| `McpDocumentationGeneratorsTests` | 14/14 |
+| `McpToolDispatcherTests` | 7/8, the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` (105 vs 100) |
+
+Changed expectations of existing tests: none. The regenerated `generated/recipes.md` is the only
+generated-doc snapshot that changed.
+
+### Parent-project files
+
+Created and removed (`delete_asset`, copies in `scratch-copy/`, `runs/70`, `runs/71`):
+`Assets/AibtRecipeScratch/` with `NativeSentry.unity`, `native-sentry.aibt`,
+`native-sentry.runtime.asset`, `native-sentry-mcp.aibt`, `native-sentry-mcp.runtime.asset`,
+`native-sentry.aibtcase.json`, `probe-edit.aibt`, `probe-v1.aibt` and their `.meta` files. The scene
+Native Guard was reopened first. Nothing in `ProjectSettings/` or the parent `git status` points to
+them. `Assets/Samples/AIBT/Native Guard/` and `Assets/AibtNativeGuardDemo/` (earlier stages) were
+left as they were. `Library/AibtMcp.json` was written by `mcp ensure`.
+
+### Not covered by stage 4
+
+- `runtime_simulations`, `describe_agent` and `read_agent_trace` with library nodes (none registered
+  in Modules); `ai-and-mcp.md` says they were not tried.
+- The Package Manager import of the sample, a full nine-assembly run, a Player or IL2CPP build,
+  performance.
+
+### Open questions for the owner (stages 1–4)
+
+1. Observers are not re-evaluated on native hosts (stage 1).
+2. AIBT2043 ignores writes through native bindings (stage 1).
+3. The AIBT Graph shows `live: —` for native agent keys and "Needs native compile" for prepared trees
+   (stages 2–4).
+4. No public read of a Tree-scope key on `NativeTreeAgent` (stage 3).
+5. Reproducibility of `NativeTreeAgent` runs depends on the process-wide instance counter (stage 3).
+6. The Package Manager import of the Native Guard sample has not been exercised (stages 2–4).
+7. `BehaviorTreeAgent.Restart(true)` on a tree still running `idle` faults with AIBT4001 (stage 1).
+8. New in stage 4: tool findings 1, 2, 4, 5 and 8 above; whether `create_tree` should default to
+   version 2, whether `runtime_hosts` should list hidden agent hosts, and whether bindings should
+   appear in the node manifest.
