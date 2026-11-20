@@ -1,7 +1,7 @@
 # P11-004 evidence — reading a Tree-scope value back from a running native tree
 
 Branch `feature/aibt-consumer-workflow`, base `0038a3b`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-004\`.
-Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Status: awaits the orchestrator's acceptance.
+Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Status: accepted by the orchestrator on `8d03467` ("Acceptance run" at the end); the item is in `Review`.
 
 ## Commits
 
@@ -167,3 +167,59 @@ proved nothing by themselves. Both agent allocation tests now count GC.Alloc rec
 counter `AllocatingGCMemory` uses): warmed successful reads 0 samples for 2000 reads. Their
 `AllocatingGCMemory` assertions were valid throughout. Why the unwarmed delegate allocated once in
 the first version of that test is not known.
+
+## Acceptance run (orchestrator, 2026-11-21)
+
+Read by the orchestrator: the ADR against the code before the go-ahead (phase A), then the whole code
+diff `0038a3b..8d03467` under `Runtime/`, the documentation diff, this file, the raw live logs and
+one still of the Game view clip.
+
+- **Scope.** Code outside tests: `Runtime/Integration/ProductionTreeHost.cs` (+125),
+  `Runtime/Integration/GeneratedDispatch/GeneratedTreeDispatchAdapterV2.cs` (+125) and
+  `Runtime/Integration/NativeTreeAgent.cs` (+119, then the review fix). Up to `1eb2359` no line of an
+  existing file was deleted. Nothing changed under `CodeGen~`, `Schemas~`, `Samples~`, `Editor/`,
+  `Authoring/`, `Runtime/Scheduling`, `Documentation~/specifications/`, and not `package.json` or
+  `ExpectedPublicAbiV2.txt`. The regenerated `api-reference-runtime.md` gained the 5 new public members.
+- **ADR.** Accepted by the orchestrator under the owner's approval of the task; the four questions
+  were taken as the session recommended and none needs a protected change. The owner was told and
+  may revise them.
+- **Live logs recounted** by the orchestrator's own script from `C:\UnityProjects\_aibt_acceptance\P11-004\live-read-log.txt` and
+  `live-read-log-run1-camera.txt`: 2718 frames, 10872 reads, 0 refused, 9 deadline changes, 5 spot
+  changes, 1291 frames with `intruder-seen` true; and 4172 frames, 16688 reads, 0 refused, 11 and 5
+  changes, 2355 frames. Steps between consecutive deadlines inside one run: 1500413-1512502 us (the
+  node's duration is 1500000). They match the table above.
+- **Still.** `native-guard-read-gameview.mp4.stills\t010.0s.png`: the probe overlay shows
+  `weapon-ready-at (node) = 12159262 us`, `intruder-seen (fact) = True`, "reads ok 6540 refused 0";
+  the sample's own line shows `intruder-seen=True`.
+- **Full run of all nine assemblies** on `1eb2359`, 00:24-00:40; Editor-log counters did not move
+  during the run (1 and 1 at the start and at the end). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-004\acceptance\full-run-1eb2359.txt`.
+
+| Assembly | `5094631` | `1eb2359` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | - |
+| `AIBT.Integration.Tests` | 404/404 | 422/422 | `ExternalTreeBlackboardReadTests` 10, `NativeTreeAgentValueReadTests` 8 |
+| `AIBT.Editor.Tests` | 812/813 | 813/814 | `UserGuideSnippetTests.QuickstartValueReadIsQuotedFromACompiledFile` |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | - |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | - |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | - |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | - |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | - |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | - |
+
+The one failure is the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`.
+
+- **Review finding and its fix.** One defect found by reading: a refused agent read built its message
+  on every call (section "Fix after the orchestrator's review"). The fix `ac4201c` changes 13 lines of
+  `NativeTreeAgent.cs` and the tests. After it the orchestrator ran `AIBT.Integration.Tests` alone on
+  `8d03467`: 423/423, 00:45-00:58 (raw output `C:\UnityProjects\_aibt_acceptance\P11-004\acceptance\integration-8d03467.txt`).
+  The other eight assemblies were NOT run again on `8d03467`; the next item's acceptance run covers them.
+
+Not done by the orchestrator: the two new test files were not read line by line; the Play Mode check
+was not run again (the logs and one still were read); no Player or IL2CPP build; no measurement of
+the read's cost in a frame beyond the allocation tests.
+
+To know: a `PipelinedJobs` agent refuses most reads (one warning per agent); a fact key reads its
+default for up to one frame after an automatic restart; `BlackboardUnsupportedScope` has no test
+because the generated compiler refuses a tree with an Agent-scope key (AIBT3017), which is a separate
+limit or defect and is not investigated.

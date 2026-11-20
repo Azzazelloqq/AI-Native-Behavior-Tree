@@ -1214,7 +1214,7 @@ the item is in `Review`. The third item, `P11-003` (the note `AIBT2043` counts w
 `bindings`, P11-002 open question 2), is accepted (`5094631`) and in `Review`. The fourth item, `P11-004`
 (reading a Tree-scope value back from a running native tree: `ProductionTreeHost` read handle,
 `NativeTreeAgent.TryGetValue`; ADR `Documentation~/decisions/ADR-P11-004-native-tree-value-read.md`,
-`AIBT-051`, accepted 2026-11-21), is implemented (`aded2f9`) and `In Progress` until the orchestrator's acceptance.
+`AIBT-051`, accepted 2026-11-21), is accepted (`8d03467`) and in `Review`.
 
 ### Review follow-up scopes (2026-09-04)
 

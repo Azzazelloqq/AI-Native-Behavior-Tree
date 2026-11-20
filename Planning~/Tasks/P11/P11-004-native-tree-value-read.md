@@ -1,7 +1,7 @@
 # P11-004 — Read a Tree-scope value back from a running native tree
 
-Status: `In Progress` — implemented on `feature/aibt-consumer-workflow` after `0038a3b`; awaits the
-orchestrator's acceptance (full run of the test assemblies).
+Status: `Review` — implemented on `feature/aibt-consumer-workflow` after `0038a3b` and accepted by the
+orchestrator on `8d03467` (full run of all nine assemblies on `1eb2359`, then the review fix `ac4201c`).
 
 ## Objective
 
