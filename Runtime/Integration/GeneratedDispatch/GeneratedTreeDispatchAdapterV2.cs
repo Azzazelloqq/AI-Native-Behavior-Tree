@@ -340,6 +340,131 @@ namespace AIBT
             return true;
         }
 
+        /// <summary>
+        /// P11-004 (ADR-P11-004): resolves a Tree-scope, built-in-typed slot for repeated external
+        /// reads by <paramref name="stableKeyId"/>. Any Tree-scope key is eligible, whoever writes it.
+        /// Refuses an unknown key (<c>BlackboardUndeclaredAccess</c>), a key of another scope
+        /// (<c>BlackboardUnsupportedScope</c>), and a registered type, a different type identity or a
+        /// <typeparamref name="T"/> whose size or alignment differs from the slot (<c>BlackboardTypeMismatch</c>).
+        /// Reads only the managed binding.
+        /// </summary>
+        internal bool TryResolveExternalTreeRead<T>(
+            ulong stableKeyId,
+            NativeBlackboardTypeIdV2 expectedType,
+            out uint slotIndex,
+            out NativeBlackboardSlotBindingV2 slot,
+            out NativeRuntimeDiagnosticCodeV1 failure)
+            where T : unmanaged
+        {
+            slotIndex = 0;
+            slot = default;
+            if (_disposed)
+            {
+                failure = NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid;
+                return false;
+            }
+            var otherScope = false;
+            var slots = _definition.Binding.Slots;
+            for (var index = 0; index < slots.Count; index++)
+            {
+                var candidate = slots[index];
+                if (candidate.StableKeyId != stableKeyId) continue;
+                if (candidate.Scope != BlackboardScope.Tree)
+                {
+                    otherScope = true;
+                    continue;
+                }
+                if (candidate.RegisteredTypeIndex != CompiledIndex.Invalid
+                    || expectedType.TypeId != candidate.TypeId || expectedType.Version != candidate.TypeVersion
+                    || expectedType.Size != candidate.Size || expectedType.Alignment != candidate.Alignment
+                    || expectedType.EnumContractId != candidate.EnumContractId
+                    || UnsafeUtility.SizeOf<T>() != candidate.Size || UnsafeUtility.AlignOf<T>() != candidate.Alignment
+                    || (ulong)candidate.Offset + candidate.Size > (uint)_treeValues.Length)
+                {
+                    failure = NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch;
+                    return false;
+                }
+                slotIndex = (uint)index;
+                slot = candidate;
+                failure = NativeRuntimeDiagnosticCodeV1.None;
+                return true;
+            }
+            failure = otherScope
+                ? NativeRuntimeDiagnosticCodeV1.BlackboardUnsupportedScope
+                : NativeRuntimeDiagnosticCodeV1.BlackboardUndeclaredAccess;
+            return false;
+        }
+
+        /// <summary>
+        /// P11-004: reads the Tree-scope slot <paramref name="slot"/> already resolved by
+        /// <see cref="TryResolveExternalTreeRead{T}"/>. No allocation; the caller guarantees no
+        /// drive or job touches this instance (the host's <c>_driving</c> gate).
+        /// </summary>
+        internal bool TryReadExternalTreeValue<T>(NativeBlackboardSlotBindingV2 slot, out T value) where T : unmanaged
+        {
+            value = default;
+            if (_disposed || UnsafeUtility.SizeOf<T>() != slot.Size
+                || (ulong)slot.Offset + slot.Size > (uint)_treeValues.Length) return false;
+            value = _treeValues.ReinterpretLoad<T>((int)slot.Offset);
+            return true;
+        }
+
+        /// <summary>
+        /// P11-004: type-erased read of a built-in-typed Tree-scope key for the editor. Allocates
+        /// (it copies the slot's bytes and may decode a string); never used on a per-frame game path.
+        /// </summary>
+        internal bool TryReadTreeValue(ulong stableKeyId, out BlackboardValue value, out NativeRuntimeDiagnosticCodeV1 failure)
+        {
+            value = default;
+            if (_disposed)
+            {
+                failure = NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid;
+                return false;
+            }
+            var otherScope = false;
+            var slots = _definition.Binding.Slots;
+            for (var index = 0; index < slots.Count; index++)
+            {
+                var candidate = slots[index];
+                if (candidate.StableKeyId != stableKeyId) continue;
+                if (candidate.Scope != BlackboardScope.Tree)
+                {
+                    otherScope = true;
+                    continue;
+                }
+                failure = NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch;
+                if (candidate.RegisteredTypeIndex != CompiledIndex.Invalid
+                    || !TryFindBuiltInDescriptor(candidate, out var descriptor)
+                    || (ulong)candidate.Offset + candidate.Size > (uint)_treeValues.Length) return false;
+                var bytes = new byte[candidate.Size];
+                for (var offset = 0; offset < bytes.Length; offset++)
+                    bytes[offset] = _treeValues[(int)candidate.Offset + offset];
+                if (!BlackboardBuiltInCodec.TryDecode(descriptor, bytes, out value))
+                {
+                    failure = NativeRuntimeDiagnosticCodeV1.BlackboardInvalidValue;
+                    return false;
+                }
+                failure = NativeRuntimeDiagnosticCodeV1.None;
+                return true;
+            }
+            failure = otherScope
+                ? NativeRuntimeDiagnosticCodeV1.BlackboardUnsupportedScope
+                : NativeRuntimeDiagnosticCodeV1.BlackboardUndeclaredAccess;
+            return false;
+        }
+
+        private static bool TryFindBuiltInDescriptor(NativeBlackboardSlotBindingV2 slot, out BlackboardTypeDescriptor descriptor)
+        {
+            for (var type = BlackboardValueType.Bool; type < BlackboardValueType.Registered; type++)
+            {
+                if (!BuiltInBlackboardTypes.TryGet(type, out descriptor)) continue;
+                if (descriptor.TypeId == slot.TypeId && descriptor.Version == slot.TypeVersion
+                    && descriptor.Size == slot.Size) return true;
+            }
+            descriptor = default;
+            return false;
+        }
+
         /// <summary>The exact catalog identity this instance was bound to -- a group wave's own grouping key (only instances sharing one catalog can share one batch call).</summary>
         internal GeneratedBurstCatalogV2 Catalog => _catalog;
 

@@ -409,6 +409,131 @@ namespace AIBT
             }
         }
 
+        /// <summary>
+        /// True when a Tree-scope value of this host may be read (ADR-P11-004): bootstrapped through
+        /// the generated catalog, not stopped, and not executing. Unlike
+        /// <see cref="CanAcceptExternalTreeWrites"/> it stays true after the root finished or the
+        /// host faulted. A <c>PipelinedJobs</c> host is executing between scheduler frames.
+        /// </summary>
+        public bool CanReadTreeValues
+            => _core.Bootstrapped && _core.GeneratedDispatch != null && !_core.Disposed && !_core.DestroyRequested && !_driving;
+
+        /// <summary>P11-004: true while this host runs a round or holds its drive lock (a PipelinedJobs job in flight).</summary>
+        internal bool IsExecuting => _driving && !_core.Disposed;
+
+        /// <summary>
+        /// Opaque, per-host handle for one Tree-scope blackboard slot resolved for external read
+        /// (ADR-P11-004). Resolve once via <see cref="TryResolveExternalTreeRead{T}"/>, then reuse every
+        /// frame with <see cref="TryReadExternalTreeValue{T}"/>. Valid only for the exact host it was
+        /// resolved against.
+        /// </summary>
+        public readonly struct ExternalTreeReadHandle<T> where T : unmanaged
+        {
+            private readonly ulong _instanceId;
+            private readonly NativeBlackboardSlotBindingV2 _slot;
+
+            internal ExternalTreeReadHandle(ulong instanceId, NativeBlackboardSlotBindingV2 slot)
+            {
+                _instanceId = instanceId;
+                _slot = slot;
+            }
+
+            internal ulong InstanceId => _instanceId;
+            internal NativeBlackboardSlotBindingV2 Slot => _slot;
+            internal bool IsValid => _instanceId != 0;
+        }
+
+        /// <summary>
+        /// Resolves a Tree-scope blackboard slot, addressed by <paramref name="stableKey"/>, for
+        /// repeated reads from ordinary C# code (ADR-P11-004): any Tree-scope key with a built-in type,
+        /// whether nodes write it, a fact sets it or nobody writes it. Refuses an unknown key
+        /// (<c>BlackboardUndeclaredAccess</c>), an Agent- or Shared-scope key (<c>BlackboardUnsupportedScope</c>),
+        /// a different type or a <typeparamref name="T"/> of another size (<c>BlackboardTypeMismatch</c>), a
+        /// host bootstrapped through a delegate overload (<c>NativeCapacityPlanInvalid</c>) and a host not
+        /// bootstrapped or stopped (<c>NativeLifetimeStateInvalid</c>). Legal while the host executes.
+        /// </summary>
+        public bool TryResolveExternalTreeRead<T>(
+            string stableKey,
+            NativeBlackboardTypeIdV2 expectedType,
+            out ExternalTreeReadHandle<T> handle,
+            out NativeRuntimeFailureV1 failure)
+            where T : unmanaged
+        {
+            handle = default;
+            if (string.IsNullOrEmpty(stableKey)) throw new ArgumentException("A stable blackboard key is required.", nameof(stableKey));
+            if (!_core.Bootstrapped || _core.Disposed)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            var generatedDispatch = _core.GeneratedDispatch;
+            if (generatedDispatch == null)
+            {
+                failure = new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid);
+                return false;
+            }
+            if (!generatedDispatch.TryResolveExternalTreeRead<T>(
+                    StableHash.Fnv1A64(stableKey), expectedType, out _, out var slot, out var code))
+            {
+                failure = new NativeRuntimeFailureV1(code);
+                return false;
+            }
+            handle = new ExternalTreeReadHandle<T>(InstanceId, slot);
+            failure = default;
+            return true;
+        }
+
+        /// <summary>
+        /// Reads one value through a handle resolved by <see cref="TryResolveExternalTreeRead{T}"/> --
+        /// the per-frame path: no string lookup, no managed allocation. Refuses with
+        /// <c>NativeLifetimeStateInvalid</c>, touching no memory, while <see cref="CanReadTreeValues"/> is
+        /// false (executing, stopped) or when <paramref name="handle"/> belongs to another host. After a
+        /// fault the value is whatever the storage held when the fault happened and may be mid-update.
+        /// </summary>
+        public bool TryReadExternalTreeValue<T>(
+            ExternalTreeReadHandle<T> handle,
+            out T value,
+            out NativeRuntimeFailureV1 failure)
+            where T : unmanaged
+        {
+            value = default;
+            if (!handle.IsValid || handle.InstanceId != InstanceId || !CanReadTreeValues
+                || !_core.GeneratedDispatch.TryReadExternalTreeValue(handle.Slot, out value))
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            failure = default;
+            return true;
+        }
+
+        /// <summary>
+        /// Editor-only type-erased read of a Tree-scope key by name (ADR-P11-004 D7), for the graph's
+        /// live view of a native agent. Allocates; same gate and failure codes as the typed read.
+        /// </summary>
+        internal bool TryReadTreeValue(string stableKey, out BlackboardValue value, out NativeRuntimeFailureV1 failure)
+        {
+            value = default;
+            if (string.IsNullOrEmpty(stableKey)) throw new ArgumentException("A stable blackboard key is required.", nameof(stableKey));
+            if (_core.Bootstrapped && !_core.Disposed && _core.GeneratedDispatch == null)
+            {
+                failure = new NativeRuntimeFailureV1(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid);
+                return false;
+            }
+            if (!CanReadTreeValues)
+            {
+                failure = InvalidLifetime();
+                return false;
+            }
+            if (!_core.GeneratedDispatch.TryReadTreeValue(StableHash.Fnv1A64(stableKey), out value, out var code))
+            {
+                failure = new NativeRuntimeFailureV1(code);
+                return false;
+            }
+            failure = default;
+            return true;
+        }
+
         internal bool TryRegisterOwner(ProductionTreeScheduler owner)
         {
             if (owner == null) throw new ArgumentNullException(nameof(owner));

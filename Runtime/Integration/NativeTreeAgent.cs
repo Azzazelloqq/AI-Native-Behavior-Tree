@@ -52,6 +52,9 @@ namespace AIBT
         private bool _resultReported;
         private bool _stopped;
         private SchedulingProfile _profile = SchedulingProfile.Normal;
+        // P11-004: created on the first TryGetValue, so agents that never read pay nothing.
+        private Dictionary<string, ReadSlot> _readsByKey;
+        private bool _executingReadWarned;
 
         /// <summary>Raised on the main thread after the root finishes, before any automatic restart.</summary>
         public event Action<NodeStatus> Completed;
@@ -143,6 +146,68 @@ namespace AIBT
 
         /// <summary>Sets a Float3 fact from a Unity vector.</summary>
         public void SetFact(string key, Vector3 value) => SetFact(key, new Float3Value(value.x, value.y, value.z));
+
+        /// <summary>
+        /// Reads the current value of a Tree-scope key of the current run (ADR-P11-004): a key nodes
+        /// write, a fact, or a key nobody writes. Supported: the <see cref="SetFact{T}"/> types. Returns
+        /// false when the agent has no run (stopped, faulted, disabled), when the key cannot be read as
+        /// <typeparamref name="T"/> (logged once per key and type), and while the host is executing (a
+        /// <c>PipelinedJobs</c> host between frames; one warning per agent). Before the first update a
+        /// key reads its default, and every run starts again from the defaults; with
+        /// <see cref="NativeTreeRestartMode.Always"/> the final values of a run are readable in
+        /// <see cref="Completed"/>. No managed allocation after the first read of a key.
+        /// </summary>
+        public bool TryGetValue<T>(string key, out T value) where T : unmanaged
+        {
+            if (string.IsNullOrEmpty(key)) throw new ArgumentException("A blackboard key is required.", nameof(key));
+            if (!FactSlot<T>.Supported)
+                throw new NotSupportedException("Values of type " + typeof(T).Name + " cannot be read. Use bool, int, long, float, double, Float2Value, Float3Value or QuaternionValue.");
+            value = default;
+            var host = Host;
+            if (host == null) return false;
+            if (_readsByKey == null) _readsByKey = new Dictionary<string, ReadSlot>(StringComparer.Ordinal);
+            _readsByKey.TryGetValue(key, out var first);
+            var slot = first;
+            while (slot != null && !(slot is ReadSlot<T>)) slot = slot.Next;
+            if (slot == null)
+            {
+                slot = new ReadSlot<T>(key) { Next = first };
+                _readsByKey[key] = slot;
+            }
+            switch (((ReadSlot<T>)slot).TryRead(host, out value, out var error))
+            {
+                case ReadOutcome.Read:
+                    return true;
+                case ReadOutcome.KeyRefused:
+                    if (!ReferenceEquals(slot.LoggedFor, _program))
+                    {
+                        slot.LoggedFor = _program;
+                        Debug.LogError("AIBT NativeTreeAgent '" + name + "': " + error, this);
+                    }
+                    return false;
+                case ReadOutcome.Executing:
+                    if (!_executingReadWarned)
+                    {
+                        _executingReadWarned = true;
+                        var forced = _profile.ForcedPolicy;
+                        Debug.LogWarning("AIBT NativeTreeAgent '" + name + "': a value read was refused because the host is executing"
+                            + " (profile '" + _profile.Id + "', policy " + (forced.HasValue ? forced.Value.ToString() : "automatic")
+                            + "). A PipelinedJobs host executes between frames, so TryGetValue returns false while its update runs."
+                            + " This warning is shown once per agent.", this);
+                    }
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>Reads a Float3 key as a Unity vector; see <see cref="TryGetValue{T}"/>.</summary>
+        public bool TryGetVector3(string key, out Vector3 value)
+        {
+            var read = TryGetValue(key, out Float3Value float3);
+            value = new Vector3(float3.X, float3.Y, float3.Z);
+            return read;
+        }
 
         /// <summary>Handles an effect command by its binding name (the id in <c>[AibtCommandBinding]</c>). Replaces an earlier handler.</summary>
         public void OnEffect(string name, Action<int> handler) => AddEffect(name, new EffectHandler(handler));
@@ -389,6 +454,10 @@ namespace AIBT
 
             internal override Type ValueType => typeof(T);
 
+            /// <summary>P11-004: whether <typeparamref name="T"/> is a fact type, shared with value reads.</summary>
+            internal static bool Supported => s_supported;
+            internal static NativeBlackboardTypeIdV2 BlackboardType => s_type;
+
             internal void Set(T value)
             {
                 _value = value;
@@ -439,6 +508,56 @@ namespace AIBT
                 if (type == typeof(QuaternionValue)) { descriptor = BuiltInBlackboardTypes.Quaternion; return true; }
                 descriptor = default;
                 return false;
+            }
+        }
+
+        // ------------------------------------------------------------------ value reads (P11-004)
+
+        private enum ReadOutcome : byte { Read, NoRun, KeyRefused, Executing }
+
+        /// <summary>One (key, type) read; slots of one key with different types form a chain.</summary>
+        private abstract class ReadSlot
+        {
+            protected ReadSlot(string key) { Key = key; }
+            internal string Key { get; }
+            internal ReadSlot Next { get; set; }
+            internal object LoggedFor { get; set; }
+        }
+
+        private sealed class ReadSlot<T> : ReadSlot where T : unmanaged
+        {
+            private ProductionTreeHost.ExternalTreeReadHandle<T> _handle;
+            private ProductionTreeHost _resolvedFor;
+            private ProductionTreeHost _refusedFor;
+            private NativeRuntimeDiagnosticCodeV1 _refusal;
+
+            internal ReadSlot(string key) : base(key) { }
+
+            internal ReadOutcome TryRead(ProductionTreeHost host, out T value, out string error)
+            {
+                value = default;
+                error = null;
+                if (!ReferenceEquals(_resolvedFor, host))
+                {
+                    if (!ReferenceEquals(_refusedFor, host))
+                    {
+                        if (!host.TryResolveExternalTreeRead(Key, FactSlot<T>.BlackboardType, out _handle, out var failure))
+                        {
+                            if (failure.Code == NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid) return ReadOutcome.NoRun;
+                            _refusedFor = host;
+                            _refusal = failure.Code;
+                        }
+                        else _resolvedFor = host;
+                    }
+                    if (!ReferenceEquals(_resolvedFor, host))
+                    {
+                        error = "value '" + Key + "' (" + typeof(T).Name + ") cannot be read: " + _refusal
+                            + ". The tree must declare a Tree-scope key of this type.";
+                        return ReadOutcome.KeyRefused;
+                    }
+                }
+                if (host.TryReadExternalTreeValue(_handle, out value, out _)) return ReadOutcome.Read;
+                return host.IsExecuting ? ReadOutcome.Executing : ReadOutcome.NoRun;
             }
         }
 
