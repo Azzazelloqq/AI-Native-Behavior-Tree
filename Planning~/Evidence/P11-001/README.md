@@ -1,8 +1,8 @@
 # P11-001 evidence: subtrees
 
 Decision: `Documentation~/decisions/ADR-P11-001-subtrees.md` (accepted 2026-11-19, AIBT-049, all §8
-recommendations). Stage 1 of ADR §7 is accepted; stage 2 is implemented (section "Stage 2" below)
-and awaits acceptance; stages 3–4 are not started.
+recommendations). All four stages of ADR §7 and the naming-policy fix are accepted; the owner closed
+the item on 2026-11-20 (section "Closing" at the end).
 
 ## Stage 1 — format v3, validator, expander, managed path (2026-11-19)
 
@@ -988,3 +988,35 @@ All four stages of ADR §7 are accepted and the open question is closed. Still o
 notes, none blocking: MCP resolves subtrees under `Assets/` only (import and the graph editor also
 under `Packages/`); the MCP server tools were not called from an MCP client; `prepare_runtime` with
 references was run only as a dry run; native agents in a subtree window were not exercised.
+
+## Closing (2026-11-20)
+
+The owner closed P11-001 on 2026-11-20 on the condition that the orchestrator sees no problem.
+Checked before closing, by reading (no new run, the Editor was in use by P11-002 stage 4):
+
+- Every acceptance criterion of the task card has a test or a recorded live session in the stage
+  sections above.
+- The four stages and the naming-policy fix each passed a full run of all nine assemblies
+  (`7e614b8`, `c02b42b`, `7794cb0`, `6b7e141`, `34e80f0`).
+- The subtree test classes stayed green in the three later full runs made for P11-002
+  (`4af5571`, `bad2892`, `e944c5c`); the only failure in each is the known
+  `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`.
+- No defect is open against the feature.
+
+Not covered at closing (never run; none is a known defect):
+
+- A native agent shown in a subtree window (the code path is shared with the managed agent, which
+  was exercised).
+- `prepare_runtime` of a tree with references persisted to an asset in a live session (a dry run is
+  tested; baking through `ProductionTreeAssetBaker` is tested).
+- The MCP server tools called from an MCP client (the CLI and the tool dispatcher tests use the same
+  bridge operations).
+- An installed package that holds trees (the `Packages/` index is tested with mapped temporary
+  folders).
+
+Known limits that stay: MCP resolves subtrees under `Assets/` only, while import and the graph
+editor also look in `Packages/`; MCP edits reject a tree that does not expand and compile, the graph
+editor allows such states while editing.
+
+The three findings of ADR §9 (duplicate `AIBT2042`/`AIBT2043` definitions, the last-wins identity
+map, the stale importer sentence of ADR-P7-042) are not part of this item and have no task yet.

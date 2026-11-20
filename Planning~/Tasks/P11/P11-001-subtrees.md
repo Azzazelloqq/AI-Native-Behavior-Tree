@@ -1,6 +1,6 @@
 # P11-001 — Subtrees: reuse one tree inside another (feature F1)
 
-Status: `Review` — ADR accepted 2026-11-19 (AIBT-049) with all eight recommendations of its §8;
+Status: `Done` — closed by the owner 2026-11-20 (evidence section "Closing"). ADR accepted 2026-11-19 (AIBT-049) with all eight recommendations of its §8;
 stage 1 approved the same day and implemented the same day (local commits on
 `feature/aibt-consumer-workflow`; evidence in `Planning~/Evidence/P11-001/README.md`, accepted after the
 full run of all nine assemblies on `7e614b8`). Stage 2 approved 2026-11-19 together with the owner's
@@ -127,5 +127,8 @@ Save-UnityWindow.ps1 / Save-UnityClip.ps1 for stages 3–4
   `SubtreeGraphEdits.Unpack`. Found in stage 4 and fixed in `34e80f0`: a project `blackboardNaming` of `snake_case`
   rejected the expanded private keys `r:key` (`AIBT2038`) in MCP validate/compile. Open questions in
   the "Stage 4" section of the evidence README.
+- Closed 2026-11-20. Never run, none a known defect: a native agent in a subtree window;
+  `prepare_runtime` with references persisted in a live session; the MCP server tools from an MCP
+  client; an installed package that holds trees. See the "Closing" section of the evidence README.
 - ADR §9 lists three unrelated findings (duplicate `AIBT2042/2043` definitions, last-wins identity
   map, stale ADR-P7-042 importer sentence) for separate follow-up.
