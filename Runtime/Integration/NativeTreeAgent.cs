@@ -174,7 +174,7 @@ namespace AIBT
                 slot = new ReadSlot<T>(key) { Next = first };
                 _readsByKey[key] = slot;
             }
-            switch (((ReadSlot<T>)slot).TryRead(host, out value, out var error))
+            switch (((ReadSlot<T>)slot).TryRead(host, out value, out var refusal))
             {
                 case ReadOutcome.Read:
                     return true;
@@ -182,7 +182,8 @@ namespace AIBT
                     if (!ReferenceEquals(slot.LoggedFor, _program))
                     {
                         slot.LoggedFor = _program;
-                        Debug.LogError("AIBT NativeTreeAgent '" + name + "': " + error, this);
+                        Debug.LogError("AIBT NativeTreeAgent '" + name + "': value '" + key + "' (" + typeof(T).Name
+                            + ") cannot be read: " + refusal + ". The tree must declare a Tree-scope key of this type.", this);
                     }
                     return false;
                 case ReadOutcome.Executing:
@@ -533,10 +534,11 @@ namespace AIBT
 
             internal ReadSlot(string key) : base(key) { }
 
-            internal ReadOutcome TryRead(ProductionTreeHost host, out T value, out string error)
+            /// <summary>On <see cref="ReadOutcome.KeyRefused"/>, <paramref name="refusal"/> is the code; the caller formats the message only when it logs it.</summary>
+            internal ReadOutcome TryRead(ProductionTreeHost host, out T value, out NativeRuntimeDiagnosticCodeV1 refusal)
             {
                 value = default;
-                error = null;
+                refusal = NativeRuntimeDiagnosticCodeV1.None;
                 if (!ReferenceEquals(_resolvedFor, host))
                 {
                     if (!ReferenceEquals(_refusedFor, host))
@@ -551,8 +553,7 @@ namespace AIBT
                     }
                     if (!ReferenceEquals(_resolvedFor, host))
                     {
-                        error = "value '" + Key + "' (" + typeof(T).Name + ") cannot be read: " + _refusal
-                            + ". The tree must declare a Tree-scope key of this type.";
+                        refusal = _refusal;
                         return ReadOutcome.KeyRefused;
                     }
                 }

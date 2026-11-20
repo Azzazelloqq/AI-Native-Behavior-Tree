@@ -190,14 +190,56 @@ namespace AIBT.Tests.Integration.NativeRuntime
             // (the first-ever reads of each key also create the agent's read slots).
             reads();
             Assert.That(sum, Is.EqualTo(10000));
-            var before = GC.GetAllocatedBytesForCurrentThread();
-            reads();
-            Assert.That(GC.GetAllocatedBytesForCurrentThread() - before, Is.Zero, "2000 warmed agent reads, bytes allocated.");
+            var allocations = GcAllocations(reads);
+            Assert.That(allocations, Is.Zero, "2000 warmed agent reads, GC.Alloc samples: " + allocations);
             Assert.That(reads, GcAllocIs.Not.AllocatingGCMemory(), "A warmed agent read must not allocate managed memory.");
             Assert.That(sum, Is.EqualTo(30000));
         }
 
+        [Test]
+        public void RefusedReads_AfterTheOneLog_AllocateNoManagedMemory()
+        {
+            // Orchestrator review of P11-004: a refused read must not build its message on every call.
+            var agent = Spawn(NativeTreeRestartMode.Never);
+            LogAssert.Expect(LogType.Error, new Regex("value 'missing' \\(Int32\\) cannot be read: BlackboardUndeclaredAccess"));
+            LogAssert.Expect(LogType.Error, new Regex("value 'owned-target' \\(Single\\) cannot be read: BlackboardTypeMismatch"));
+            var refused = 0;
+            TestDelegate reads = () =>
+            {
+                for (var index = 0; index < 1000; index++)
+                {
+                    if (!agent.TryGetValue("missing", out int _)) refused++;
+                    if (!agent.TryGetValue("owned-target", out float _)) refused++;
+                }
+            };
+            reads(); // the one log per key and type, the read slots, and the delegate's first call
+            var allocations = GcAllocations(reads);
+            Assert.That(allocations, Is.Zero, "2000 refused agent reads after the one log, GC.Alloc samples: " + allocations);
+            Assert.That(reads, GcAllocIs.Not.AllocatingGCMemory(), "A refused agent read must not allocate managed memory.");
+            Assert.That(refused, Is.EqualTo(6000));
+            LogAssert.NoUnexpectedReceived();
+        }
+
         // ------------------------------------------------------------------ helpers
+
+        /// <summary>
+        /// GC.Alloc profiler samples on this thread while <paramref name="action"/> runs: the counter
+        /// UnityEngine.TestTools.Constraints.AllocatingGCMemory uses, reported as a number.
+        /// (GC.GetAllocatedBytesForCurrentThread is not used: in this Editor it reported 0 bytes for
+        /// 1000 <c>new object()</c>, where this recorder counted 1000 samples.)
+        /// </summary>
+        private static int GcAllocations(TestDelegate action)
+        {
+            var recorder = UnityEngine.Profiling.Recorder.Get("GC.Alloc");
+            recorder.enabled = false;
+            recorder.FilterToCurrentThread();
+            recorder.enabled = true;
+            try { action(); }
+            finally { recorder.enabled = false; }
+            var count = recorder.sampleBlockCount;
+            recorder.CollectFromAllThreads();
+            return count;
+        }
 
         private NativeTreeAgent Spawn(NativeTreeRestartMode restart, SchedulingProfile profile = null)
         {
