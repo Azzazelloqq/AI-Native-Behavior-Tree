@@ -131,6 +131,11 @@ ends with the run. `zap-hold` (`idle`) keeps the run going after a zap: the reac
 the branch at the next update, when `zap-ready` fails, and the guard goes on with the cooldown
 running. Without the hold the root would succeed, the agent would start a new run with
 `weapon-ready-at` = 0, and the zap would fire at every update while the intruder is close.
+A finished patrol ends the run too. In the sample a patrol usually takes longer than the 1.5 s
+cooldown (the gate takes about a second to open, the rest at least one more), but a patrol that
+starts with the gate still open can end sooner, and an intruder back within 1.5 s of a zap is then
+zapped at once. A tree whose cooldowns or counters must last across rounds loops inside one run
+with a repeater at the root, as the tree of the [MCP and CLI recipes](generated/recipes.md) does.
 
 ### Signals to the game
 
