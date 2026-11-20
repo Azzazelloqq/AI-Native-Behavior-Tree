@@ -6,7 +6,7 @@ accepted by the orchestrator on `4af5571` ("Acceptance run" at the end of its se
 approved by the owner on 2026-11-19, is implemented (section "Stage 2" after the stage 1 material)
 and was accepted by the orchestrator on `bad2892`. Stage 3 (random nodes; hosts seed random streams)
 was approved by the owner on 2026-11-20, is implemented (section "Stage 3") and was accepted by the
-orchestrator on `e944c5c`. Stage 4 is not started; it needs the owner's go-ahead.
+orchestrator on `e944c5c`. Stage 4 (documentation pass) was approved by the owner on 2026-11-20.
 
 ## Stage 1 — blackboard and flow nodes (2026-11-19)
 

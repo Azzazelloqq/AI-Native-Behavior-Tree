@@ -5,7 +5,7 @@ stage 1 (blackboard and flow nodes) approved the same day and accepted after the
 nine assemblies on `4af5571`. Stage 2 (timing and signal nodes) approved by the owner 2026-11-19,
 implemented the same day and accepted on `bad2892`. Stage 3 (random nodes; hosts seed random
 streams, and the group-commit fix of owner decision 8) approved by the owner 2026-11-20 and accepted
-on `e944c5c`. Stage 4 needs the owner's go-ahead.
+on `e944c5c`. Stage 4 (documentation pass) approved by the owner 2026-11-20.
 
 ## Objective
 

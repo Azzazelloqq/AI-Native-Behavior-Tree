@@ -1209,7 +1209,7 @@ in `Review`. The second item, `P11-002` (a library of ready-made native nodes; F
 (`Documentation~/decisions/ADR-P11-002-native-node-library.md`, `AIBT-050`) was accepted
 2026-11-19 with all six recommendations of its §8; stage 1 (20 blackboard and flow nodes) is accepted
 (`4af5571`), stage 2 (timing and signal nodes, the Native Guard sample) is accepted (`bad2892`), stage 3 (random nodes;
-hosts seed random streams) is accepted (`e944c5c`), stage 4 needs the owner's go-ahead.
+hosts seed random streams) is accepted (`e944c5c`), stage 4 (documentation pass) is approved.
 
 ### Review follow-up scopes (2026-09-04)
 
