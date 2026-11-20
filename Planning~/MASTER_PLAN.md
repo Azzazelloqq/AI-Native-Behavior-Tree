@@ -1211,7 +1211,10 @@ closed the item (`Done`) on 2026-11-20. The second item, `P11-002` (a library of
 (`4af5571`), stage 2 (timing and signal nodes, the Native Guard sample) is accepted (`bad2892`), stage 3 (random nodes;
 hosts seed random streams) is accepted (`e944c5c`), stage 4 (documentation pass, MCP/CLI recipes) is accepted (`0485779`);
 the item is in `Review`. The third item, `P11-003` (the note `AIBT2043` counts writes through native
-`bindings`, P11-002 open question 2), is accepted (`5094631`) and in `Review`.
+`bindings`, P11-002 open question 2), is accepted (`5094631`) and in `Review`. The fourth item, `P11-004`
+(reading a Tree-scope value back from a running native tree: `ProductionTreeHost` read handle,
+`NativeTreeAgent.TryGetValue`; ADR `Documentation~/decisions/ADR-P11-004-native-tree-value-read.md`,
+`AIBT-051`, accepted 2026-11-21), is implemented (`aded2f9`) and `In Progress` until the orchestrator's acceptance.
 
 ### Review follow-up scopes (2026-09-04)
 

@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P11-004", "phase": 11, "title": "Read a Tree-scope value back from a running native tree: ProductionTreeHost resolve-once read handle and allocation-free read, NativeTreeAgent.TryGetValue/TryGetVector3 across runs, internal BlackboardValue read for the graph; ADR accepted 2026-11-21 (AIBT-051); implemented (aded2f9), awaits the orchestrator's acceptance", "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P11/P11-004-native-tree-value-read.md",
+      "dependsOn": ["P7-039", "P9-004"],
+      "owns": ["Documentation~/decisions/ADR-P11-004-native-tree-value-read.md", "Planning~/Evidence/P11-004/"]
+    },
+    {
       "id": "P11-003", "phase": 11, "title": "AIBT2043 counts writes through native bindings: a Tree key a generated node binds through a Write or ReadWrite member is not an input key (P11-002 open question 2, approved by the owner 2026-11-20); accepted 2026-11-20 (5094631)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-003-aibt2043-native-bindings.md",
       "dependsOn": ["P11-002"],
