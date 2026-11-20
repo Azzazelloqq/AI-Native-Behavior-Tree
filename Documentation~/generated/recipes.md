@@ -109,7 +109,7 @@ Goal: from nothing to a prepared runtime asset of a tree that uses only `aibt.co
                        {\"id\":\"spot\",\"valueType\":\"Int32\",\"description\":\"The patrol spot picked at random (0 to 2).\"},
                        {\"id\":\"fatigue\",\"valueType\":\"Float32\",\"description\":\"Grows by 0.25 with every finished patrol in this run.\"}]"}
    -> {"accepted": true, "contentHash": "<hash>", "path": "<project>/Assets/AibtRecipeScratch/native-sentry.aibt",
-       "diagnostics": [<one AIBT2043 info per key>]}
+       "diagnostics": [<one AIBT2043 info per key: no node binds a key yet>]}
 
 2) aibt_add_node {"treeId": "recipes.native-sentry", "expectedHash": "<hash from step 1>", "parentId": "sentry_loop",
    "nodeJson": "{\"id\":\"sentry\",\"typeId\":\"aibt.core.reactive-selector-retaining\",\"typeVersion\":1,\"description\":\"One round: strike, warn or patrol; the first branch that can run wins.\"}"}
@@ -128,7 +128,7 @@ Goal: from nothing to a prepared runtime asset of a tree that uses only `aibt.co
    -> {"accepted": true, "contentHash": "<new hash>", "diff": {"entries": [<31 entries>]}, ...}
 
 6) aibt_validate {"treeId": "recipes.native-sentry"}
-   -> {"valid": true, "policyApplied": true, "diagnostics": [<one AIBT2043 info per key>]}
+   -> {"valid": true, "policyApplied": true, "diagnostics": [<four AIBT2043 infos: gate_open, self_position, target_position, target_seen>]}
 
 7) aibt_compile {"treeId": "recipes.native-sentry"}
    -> {"success": false, "contentHash": null, "diagnostics": [{"code": "AIBT3012", "severity": "error",
@@ -190,7 +190,7 @@ What each step relies on:
 - The shared cooldown: both branches check `ready_at` with `deadline-passed` and restart it with `set-deadline`. A strike or a warning ends its round; in the next rounds neither guard passes until the 2 s are over, so the sentry patrols, and `sentry` interrupts the patrol with the next strike or warning when the cooldown is over.
 - The counters: `shots` counts strikes. `fatigue` grows by 0.25 with every patrol that finishes (an interrupted or failed patrol does not count); from the fourth finished patrol on, `float-at-least` passes and every finished patrol sends signal 20. `succeeder` keeps the patrol a success while the sentry is not tired.
 - The random pick: game code cannot read a Tree-scope key from `NativeTreeAgent`, so the tree reports `spot` through `int-equals` branches and signals. Hosts seed random streams (seed setting, default 0).
-- Diagnostics: AIBT2043 ("no node in this tree writes it") is an info note. It also appears for keys that native nodes write through `bindings` (here `ready_at`, `shots`, `spot`, `fatigue`).
+- Diagnostics: AIBT2043 ("no node in this tree writes it") is an info note on an input key, a key the game feeds: here `target_seen`, `gate_open`, `self_position` and `target_position`. A key a native node writes through a Write or ReadWrite member of `bindings` (here `ready_at`, `shots`, `spot`, `fatigue`) has no note; `NativeTreeAgent.SetFact` refuses exactly those keys.
 - `aibt_compile` and `aibt_simulate` are the Phase 1 reference backend: `compile` fails with AIBT3012 on the first native node, and `simulate` refuses every native node with AIBT2021. `aibt_run_tests` (behavior cases) fails with a `FactoryFault`. They do not execute native nodes. The native compile happens inside `aibt_prepare_runtime`.
 - `aibt_prepare_runtime` with a catalog that does not declare a node fails with AIBT3012 "Selected native catalog does not declare node 'aibt.native.int-equals'. It is a package node of shard aibt.native.standard: add typeof(AIBT.StandardNodes.StandardNativeShard) to your catalog set ([AibtCatalogSet])." `catalog` is the full type name from `aibt_runtime_catalogs` (a short name is refused with AIBT9018). Create the output folder first.
 
