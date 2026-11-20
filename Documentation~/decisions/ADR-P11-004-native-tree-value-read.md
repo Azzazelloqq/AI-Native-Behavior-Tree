@@ -1,7 +1,8 @@
 # ADR P11-004: Reading a Tree-scope value back from a running native tree
 
-- Status: Proposed (2026-11-20). Nothing is implemented until the go-ahead.
-- Decision ID: AIBT-051 (the row in `Documentation~/decisions.md` is added on acceptance)
+- Status: Accepted (2026-11-21). Proposed 2026-11-20; accepted by the orchestrator on 2026-11-21 under the
+  owner's approval of the task (2026-11-20), with the changes listed under "Decided"; open to the owner's revision.
+- Decision ID: AIBT-051
 - Task: `Planning~/Tasks/P11/P11-004-*.md` (written in phase B)
 - Mirror of: [ADR P7-039](ADR-P7-039-external-tree-blackboard-write.md) (external Tree-scope write).
 
@@ -68,13 +69,17 @@ public bool TryGetVector3(string key, out Vector3 value);                  // Fl
 ```
 
 Supported `T`: exactly the `SetFact` set (bool, int, long, float, double, `Float2Value`, `Float3Value`,
-`QuaternionValue`); another `T` throws `NotSupportedException` and a key first read as another `T` throws
-`InvalidOperationException`, both as `SetFact` does. The Vector3 form is named `TryGetVector3`, not a
+`QuaternionValue`). `TryGetValue` throws only for a null or empty key (`ArgumentException`) and an unsupported
+`T` (`NotSupportedException`). Reading one key as a second `T` is a type mismatch (one of the two types must differ
+from the key's), so it is logged once and returns false, whatever the call order. The Vector3 form is named `TryGetVector3`, not a
 `TryGetValue` overload: with `out var` the compiler would silently pick the `Vector3` overload. The agent keeps a
 lazily created `Dictionary<string, ReadSlot>`; a slot holds the handle and the host it was resolved for, and
 re-resolves when `Host` is a different object. So a new run re-resolves once, on the first read; the caller sees
 nothing. `StartHost`/`StopHost` are not changed. A key that does not exist, has another type or another scope is
-logged once per key and program (`Debug.LogError`, as a wrong fact is) and the read returns false.
+logged once per key and program (`Debug.LogError`, as a wrong fact is) and the read returns false. A read refused
+because the host is executing (in practice a `PipelinedJobs` host between frames) logs one warning per agent
+(not per key or frame) naming the cause and the profile, then keeps returning false. "No run" (stopped, faulted,
+disabled) is documented behaviour and logs nothing.
 
 ### D3. Which keys
 
@@ -88,13 +93,14 @@ the registered-type tables the adapter does not hold. Each refusal returns a cod
 
 Host rule: **a host is readable from bootstrap until `Stop`, also after its root finished or it faulted, except
 while it is executing.** Before the first update a read returns the compiled default (or a fact already flushed).
+After a fault the values are whatever the storage held when the fault happened and may be mid-update.
 
 Agent rule (one sentence for users): **a read shows the current run's tree: its defaults before the first update,
 its live values while it runs, its final values until the next run starts, and false when the agent has no run.**
 Consequences, documented: with `RestartMode.Always` the final values of a run are readable only inside
 `Completed`; after `Stop()`, a fault, or while disabled `TryGetValue` returns false; a fresh run reads node-written
 keys at their defaults. A fact key reads its default between an automatic restart (agent `LateUpdate`) and the
-next scheduler frame's flush; see Q1.
+next scheduler frame's flush (Q1).
 
 ### D5. When a read is legal
 
@@ -156,20 +162,26 @@ read-slot class on the agent. `api-reference-runtime.md` is regenerated for the 
   and its failures.
 - Agent: fact key round trip; node-written key; value inside `Completed`; new run reads defaults
   (`RestartMode.Always`); `Never` keeps the final value; `Stop` and fault return false; `TryGetVector3`; unsupported
-  `T` and second `T` throw; unknown key logged once; zero allocations of `TryGetValue` after warm-up.
+  `T` throws; second `T` returns false and logs once; unknown key logged once; refusal while executing logs one
+  warning per agent; zero allocations of `TryGetValue` after warm-up.
+- Host, pipelined: a `PipelinedJobs` host between frames is refused, if an existing fixture makes it cheap.
 - Docs: a `UserGuideSnippetTests` case pinning the new snippet to a compiled file; the regenerated API reference.
 
 Live check: the Native Guard scratch scene in Play Mode; a scratch script reads `weapon-ready-at` (Int64, written
 by `aibt.native.set-deadline`) and `intruder-seen` (Bool fact) every frame, logs them to
 `C:\UnityProjects\_aibt_acceptance\P11-004\` and shows them with `OnGUI`; a screenshot or a short clip.
 
-## Open questions for the owner
+## Decided
 
-- Q1. Flush facts into a new host at `StartHost` so a fact key never reads its default for that one-frame window?
-  It changes when an existing member writes (not what the tree sees: facts still land before the first update).
-  Recommendation: not in this task; document the window.
-- Q2. `PipelinedJobs` hosts are refused for most of a frame because they hold the drive lock across frames.
-  Recommendation: accept and document; a "last committed copy" for pipelined hosts is a separate task if needed.
-- Q3. Agent scope out (D3). Recommendation: out now; the storage exists, so adding it later is small.
-- Q4. Agent misuse is logged once and returns false (D2) rather than an `out` failure overload.
-  Recommendation: keep it, it matches `SetFact`; the host API gives exact codes.
+Taken as recommended by the orchestrator on 2026-11-21 under the owner's approval of the task (2026-11-20),
+open to the owner's revision. None needs a protected change.
+
+- Q1. No fact flush at `StartHost`: a fact key reads its default between an automatic restart and the next
+  scheduler frame. The user guide says so in plain words.
+- Q2. `PipelinedJobs` hosts are refused for most of a frame because they hold the drive lock across frames;
+  accepted and documented in the user guide. A "last committed copy" would be a separate task.
+- Q3. Agent scope stays out (D3); the storage exists, so adding it later is small.
+- Q4. Agent misuse is logged once and returns false (D2); no `out` failure overload. The host API gives codes.
+
+Orchestrator changes folded in on acceptance: a second `T` for one key is a type mismatch, not an exception (D2);
+one warning per agent for a read refused while the host executes (D2); fault values may be mid-update (D4).
