@@ -178,3 +178,16 @@ Save-UnityWindow.ps1 (palette), Save-UnityClip.ps1 (demo tree) for stages 1–3
   `BehaviorTreeAgent.Restart(true)` on a tree running `idle` faults with AIBT4001; (8) the stage 4
   tool findings above (default format version, `runtime_hosts` and hidden hosts, bindings in the
   manifest, the `run_tests` diagnostic).
+- Owner's answers on the open questions (2026-11-20). Approved, each as its own work item after
+  stage 4 is accepted: (2) AIBT2043 counts writes through native `bindings` (a change in
+  `Authoring/Validation` is allowed for this); (3) the AIBT Graph for a native agent (`live: —`,
+  "Needs native compile"): find the cause, then fix; (4) a public read of a Tree-scope key on
+  `NativeTreeAgent` and the host, with a short ADR first. Kept: the `samples` entry of `package.json`.
+  The scratch folders in the parent project (`Assets/Samples/AIBT/Native Guard/`,
+  `Assets/AibtNativeGuardDemo/`) are deleted when P11-002 closes. Not decided: (1) observers — the
+  owner asked for the history: the queue was never called by a host (reference executor only with
+  evaluators that tests supply, `09b5692`; native queue `360bbe7`, called by unit tests only); managed
+  agents use the condition `interrupt` mode (P9-001), native trees a reactive composite; (5)
+  reproducibility — the owner asked for options; proposed: the stream identity is a stable agent id
+  plus the agent's own run index instead of the process-wide instance id (needs an ADR and a change in
+  `ProductionTreeHost` and `NativeTreeAgent`).
