@@ -505,6 +505,7 @@ namespace AIBT.Authoring
                 ValidateParameters(document, node, manifest, options, diagnostics);
                 ValidateAccess(document, node, manifest, blackboard, options, diagnostics, writtenTreeKeys);
                 CollectKeyParameterTargets(node, manifest, writtenTreeKeys);
+                CollectGeneratedBindingWrites(node, manifest, writtenTreeKeys);
                 ValidateObserver(document, node, graph, blackboard, manifest, options, diagnostics);
                 ValidateNodeCapabilities(document, node, manifest, options, diagnostics);
             }
@@ -528,6 +529,37 @@ namespace AIBT.Authoring
                 if (!TryFindParameter(manifest.Parameters, property.Name, out var contract)
                     || contract.Type != NodeParameterType.BlackboardKey) continue;
                 if (property.Value != null && property.Value.TryGetString(out var keyId) && !string.IsNullOrEmpty(keyId)) writtenTreeKeys.Add(keyId);
+            }
+        }
+
+        /// <summary>
+        /// P11-003: true only for this validator's Info note AIBT2043 <c>TreeScopeSlotNeverWritten</c>.
+        /// The generated compiler validates a semantic projection of a native tree (native nodes
+        /// become built-in placeholders without <c>bindings</c>), where every key looks unwritten;
+        /// it drops these notes from the projection, because the real document's notes were already
+        /// reported. The compiler's own <c>ScopeContractMismatch</c> error shares the code AIBT2043
+        /// and is not matched (it is an Error).
+        /// </summary>
+        internal static bool IsTreeScopeSlotNeverWrittenNote(Diagnostic diagnostic)
+            => diagnostic != null
+               && diagnostic.Code == TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten
+               && diagnostic.Severity == DiagnosticSeverity.Info;
+
+        /// <summary>
+        /// P11-003: a native (generated) node binds keys through <c>bindings</c>; a key bound to a
+        /// Tree-scope member whose declared access is Write or ReadWrite counts as written by a node
+        /// for <see cref="ValidateBlackboardWriteCoverage"/> -- the same members for which the native
+        /// host refuses an external write. A manifest no generated descriptor registered keeps the
+        /// earlier behaviour (<see cref="GeneratedBindingWriteIndex"/>).
+        /// </summary>
+        private static void CollectGeneratedBindingWrites(NodeDocument node, NodeManifest manifest, ICollection<string> writtenTreeKeys)
+        {
+            var values = node.Bindings?.Values;
+            if (values == null || values.Count == 0) return;
+            if (!GeneratedBindingWriteIndex.TryGetWrittenBindings(manifest, out var written)) return;
+            foreach (var pair in values)
+            {
+                if (written.Contains(pair.Key)) writtenTreeKeys.Add(pair.Value);
             }
         }
 

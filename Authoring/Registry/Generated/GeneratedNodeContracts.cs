@@ -314,6 +314,7 @@ namespace AIBT.Authoring
             AccessLayoutHash = GeneratedNodeMetadata.HashAccess(this);
             CallbackCapabilities = callbackCapabilities;
             HasRandomStream = hasRandomStream;
+            GeneratedBindingWriteIndex.Register(manifest, _bindings);
         }
 
         public NodeManifest Manifest { get; }
