@@ -1,7 +1,7 @@
 # P11-003 — AIBT2043 counts writes through native `bindings`
 
-Branch `feature/aibt-consumer-workflow`, base `360538b`. Status: implemented; it awaits the
-orchestrator's acceptance. Raw runs, probes, the two stop notes and the screenshots are in
+Branch `feature/aibt-consumer-workflow`, base `360538b`. Status: implemented and accepted by the
+orchestrator on `5094631` ("Acceptance run" at the end); the item is in `Review`. Raw runs, probes, the two stop notes and the screenshots are in
 `C:\UnityProjects\_aibt_acceptance\P11-003\`. All paths below are relative to the submodule unless they
 start with `C:\`.
 
@@ -315,3 +315,54 @@ These files were checked and needed no change:
    code with the note. This is out of scope here.
 3. The node manifest's `reads`/`writes` stay empty for generated nodes, so MCP `get_node_contract` shows
    no access in the manifest (P11-002 stage 4 tool finding). This is out of scope here.
+
+## Acceptance run (orchestrator, 2026-11-20)
+
+Read by the orchestrator on `5094631` (clean working tree): the whole code diff `360538b..5094631`
+under `Authoring/`, this file, the "after" screenshot and the raw recipe transcripts.
+
+- **Scope.** Code outside tests and the recipe generator: `Authoring/Validation/TreeValidator.cs` (+32),
+  the new `Authoring/Validation/GeneratedBindingWriteIndex.cs`, one added line in
+  `Authoring/Registry/Generated/GeneratedNodeContracts.cs` (deviation 1) and one replaced line in
+  `Authoring/Compilation/Generated/GeneratedCompiledProgramV2.cs` (deviation 2). Each deviation was
+  allowed by the owner in the orchestrator's session before the session went on («Да, вариант B»,
+  «Да, разрешаю»). Nothing changed under `Runtime/`, `CodeGen~`, `Schemas~`, `Agents`, `Samples~`,
+  `Documentation~/specifications/`, and not `package.json` or `ExpectedPublicAbiV2.txt`.
+- **The compiler line.** The helper `Add` it replaces is the same loop
+  (`GeneratedCompiledProgramV2.cs:785`), so only the dropped notes differ. The predicate needs the
+  validator's code and severity Info, so the compiler error that shares the code AIBT2043 passes.
+- **Recount from the raw transcripts** (`C:\UnityProjects\_aibt_acceptance\P11-003\before\recipe-cli.txt`, `after\recipe-cli.txt`, the
+  orchestrator's own script): steps 1–4 report 8 notes before and after; from `apply_domain_patch`
+  on (`validate`, `compile`, `prepare --dry-run`, `prepare`) 8 notes before and 4 after
+  (`gate_open`, `self_position`, `target_position`, `target_seen`). The content hash of every step
+  and the prepared-asset hash (`599843b5…`) are equal in both files; `tree compile` reports AIBT3012
+  in both. The three hash values of `before\native-guard-probe.txt` equal those of
+  `after\native-guard-probe.txt`.
+- **Screenshot.** `screens\after-native-guard-graph.png`: "Problems: 3 notes", on `gate-open`,
+  `intruder-close` and `intruder-seen`.
+- **Parent project.** `Assets/AibtRecipeScratch` does not exist.
+- **Full run of all nine assemblies** on `5094631`, 19:47–20:05; Editor-log counters did not move
+  during the run. Raw output: `C:\UnityProjects\_aibt_acceptance\P11-003\acceptance\full-run-5094631.txt`.
+
+| Assembly | `0485779` | `5094631` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 403/403 | 404/404 | `NativeBindingInputNoteHostRuleTests` 1 |
+| `AIBT.Editor.Tests` | 793/794 | 812/813 | `TreeScopeSlotNeverWrittenNativeBindingTests` 19 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` (105 found,
+100 expected).
+
+Not done by the orchestrator: the new test file was not read line by line; no recipe step and no
+probe was run again; the "before" screenshot was not opened; the two `GeneratedArtifactContractTests`
+failures named in run 2 are outside the nine assemblies of the full run and were not looked into.
+
+To know: the rule depends on a registry holding the descriptor's own manifest instance (an internal
+static side table). A manifest that is not registered keeps the note, so the failure mode is the old
+behaviour, never a missing note.

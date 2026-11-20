@@ -1,7 +1,7 @@
 # P11-003 — AIBT2043 counts writes through native `bindings`
 
-Status: `In Progress` — implemented on `feature/aibt-consumer-workflow` after `360538b`, awaits the
-orchestrator's acceptance. Two deviations from the brief, each allowed by the owner on 2026-11-20
+Status: `Review` — implemented on `feature/aibt-consumer-workflow` after `360538b` and accepted by the
+orchestrator after the full run of all nine assemblies on `5094631`. Two deviations from the brief, each allowed by the owner on 2026-11-20
 (see "Handoff notes").
 
 ## Objective
