@@ -72,6 +72,39 @@ later effects. The agent resolves the catalog from the type recorded in the asse
 stripping may remove that type in a Player build (see "Player builds" below). Disabling the agent stops its host, leaves the
 world and releases the program; the last agent disposes it.
 
+### Reading a value back
+
+`TryGetValue` reads a Tree-scope key of the running tree, for UI, animation or debugging: a key
+nodes write, a fact, or a key nobody writes. It takes the same types as `SetFact`; `TryGetVector3`
+reads a Float3 key as a `Vector3`.
+
+```csharp
+// The current run's value; false while the agent has no run.
+if (agent.TryGetValue("sweep-spot", out int spot))
+    spotText = spot < 0 ? "no spot" : "spot " + spot;
+// The final values of a run: read them in Completed, before the next run starts.
+agent.Completed += result => agent.TryGetValue("weapon-ready-at", out lastDeadline);
+```
+
+A read shows the current run's tree: its defaults before the first update, its live values while it
+runs, its final values until the next run starts, and false when the agent has no run (stopped,
+faulted or disabled).
+
+- Every run is a new tree, so a new run starts from the defaults. With Restart Mode `Always` the
+  next run starts right after the root finishes, so read a run's final values in `Completed`; with
+  `Never` they stay readable until `Restart`.
+- A fact is written at the world's next update, not when you call `SetFact`. Until then the key
+  still reads its old value, and right after an automatic restart it reads its default for up to
+  one frame.
+- With a profile that forces `PipelinedJobs`, a tree's update runs across frames and cannot be read
+  while it runs, so most reads return false. The agent logs one warning about it. Use another
+  profile for agents whose values you read every frame.
+- A key that does not exist, or has another type, is logged once and returns false. An unsupported
+  type throws.
+- No allocation after the first read of a key. Without the key lookup, read through the host
+  (`ProductionTreeHost.TryResolveExternalTreeRead` once, then `TryReadExternalTreeValue`; see
+  [Production host](production-host.md)).
+
 ### Low-level path
 
 For custom scheduling or populations managed by your own code, keep one `ProductionTreeProgram` per shared asset/catalog, rather than repeating compilation or

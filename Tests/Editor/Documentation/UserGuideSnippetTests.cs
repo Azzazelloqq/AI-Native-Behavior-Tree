@@ -180,6 +180,17 @@ namespace AIBT.Tests.Editor.Documentation
             Assert.That(blocks.Count(block => block.Contains("AibtCatalogSet")), Is.EqualTo(1));
         }
 
+        // P11-004: the quickstart's "Reading a value back" block is quoted from a compiled test file.
+        [Test]
+        public void QuickstartValueReadIsQuotedFromACompiledFile()
+        {
+            var quickstart = Normalize(File.ReadAllText(Path.Combine(PackageRoot(), "Documentation~", "consumer-quickstart.md")));
+            var blocks = Regex.Matches(quickstart, "```csharp\n(?<body>.*?)```", RegexOptions.Singleline)
+                .Cast<Match>().Select(match => match.Groups["body"].Value).ToList();
+            AssertQuoted(blocks, Path.Combine("Tests", "Integration", "NativeRuntime", "UserGuideValueReadSnippet.cs"), "TryGetValue");
+            Assert.That(blocks.Count(block => block.Contains("TryGetValue")), Is.EqualTo(1));
+        }
+
         private static void AssertQuoted(IReadOnlyList<string> blocks, string relativePath, string marker)
         {
             var block = blocks.FirstOrDefault(candidate => candidate.Contains(marker) && !candidate.Contains("guide:"));

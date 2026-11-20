@@ -4,6 +4,23 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Reading a value back from a native tree (P11-004)
+
+- **`NativeTreeAgent.TryGetValue<T>(key, out value)`** and **`TryGetVector3`** read a Tree-scope key
+  of the running tree (a key nodes write, a fact, or a key nobody writes) for UI, animation or
+  debugging. Same types as `SetFact`; no allocation after the first read of a key. A read shows the
+  current run: defaults before the first update, final values until the next run starts, false when
+  the agent has no run. Read a run's final values in `Completed` when the agent restarts at once. A
+  wrong key or type is logged once and returns false. With a profile that forces `PipelinedJobs`
+  most reads return false (one warning per agent). See "Reading a value back" in
+  `Documentation~/consumer-quickstart.md`.
+- **`ProductionTreeHost`**: `TryResolveExternalTreeRead<T>` once, then `TryReadExternalTreeValue<T>`
+  every frame (no key lookup, no allocation), and `CanReadTreeValues`. A host stays readable after
+  its root finished or it faulted, until `Stop`; it refuses while executing
+  (`NativeLifetimeStateInvalid`). Existing failure codes only.
+- **Unchanged:** ABI v2, the compiled program format, generated code, execution semantics and every
+  existing member. Decision: `ADR-P11-004` (AIBT-051).
+
 ### AIBT2043 counts writes through native bindings (P11-003)
 
 - **Fewer false input notes.** The info note `AIBT2043` ("Input key ...: no node in this tree

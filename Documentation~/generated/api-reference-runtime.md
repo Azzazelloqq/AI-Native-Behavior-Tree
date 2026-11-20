@@ -3123,6 +3123,8 @@ An immutable, non-owning job view of one snapshot revision. Payload bytes use th
 One component that runs a prepared native (Burst) tree: it shares one program per (runtime asset, catalog), creates the world and scheduler when the scene has none assigned, writes named facts at the scheduler's safe boundary, and calls named effect handlers. It is a facade over <see cref="ProductionTreeAsset"/>, <see cref="ProductionTreeProgram"/>, <see cref="ProductionTreeHost"/> and <see cref="ProductionTreeWorld"/>, which stay available for full control. See ADR-P9-004.
 
 - `METHOD System.Boolean RemoveEffect(System.String)`
+- `METHOD System.Boolean TryGetValue(System.String,)`
+- `METHOD System.Boolean TryGetVector3(System.String,UnityEngine.Vector3&)`
 - `METHOD System.Void .ctor()`
 - `METHOD System.Void OnEffect(System.String,System.Action`1<AIBT.Float3Value>)`
 - `METHOD System.Void OnEffect(System.String,System.Action`1<System.Int32>)`
@@ -3333,6 +3335,8 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,System.UInt64,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryConfigureEffectDelivery(System.Int32,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryDrainEffects(AIBT.IProductionTreeEffectReceiver,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryReadExternalTreeValue(AIBT.ProductionTreeHost+ExternalTreeReadHandle`1<>,,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryResolveExternalTreeRead(System.String,AIBT.NativeBlackboardTypeIdV2,,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryResolveExternalTreeWrite(System.String,AIBT.NativeBlackboardTypeIdV2,,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryWriteExternalTreeValue(AIBT.ProductionTreeHost+ExternalTreeWriteHandle`1<>,,System.Boolean&,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Void .ctor()`
@@ -3341,6 +3345,7 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `PROPERTY AIBT.NativeRuntimeFailureV1 LastFailure`
 - `PROPERTY AIBT.NativeTraceChannelOwnerV1 TraceChannelOwner`
 - `PROPERTY System.Boolean CanAcceptExternalTreeWrites`
+- `PROPERTY System.Boolean CanReadTreeValues`
 - `PROPERTY System.Boolean IsCoordinatorOwned`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastRootResult`
 - `PROPERTY System.Nullable`1<System.UInt32> StepBudget`

@@ -83,6 +83,17 @@ thread. `TryResolveExternalTreeWrite<T>` and `TryWriteExternalTreeValue<T>` are 
 limited to the generated-catalog bootstrap path, Tree scope, and slots no tree node writes; see
 `ADR-P7-039` and `blackboard-v1.md`.
 
+The read is the mirror (`ADR-P11-004`): `TryResolveExternalTreeRead<T>` once, then
+`TryReadExternalTreeValue<T>` every frame, with no key lookup and no managed allocation. Any
+Tree-scope key with a built-in type is readable, whoever writes it. A host is readable from
+bootstrap until `Stop`, also after its root finished or it faulted (after a fault the values are
+whatever the storage held and may be mid-update), except while it is executing: then
+`CanReadTreeValues` is false and the read returns `NativeLifetimeStateInvalid` without touching
+memory. A `PipelinedJobs` host executes between frames, so it is mostly unreadable. Other refusals:
+an unknown key (`BlackboardUndeclaredAccess`), an Agent- or Shared-scope key
+(`BlackboardUnsupportedScope`), another type (`BlackboardTypeMismatch`) and a delegate-bootstrapped
+host (`NativeCapacityPlanInvalid`). `NativeTreeAgent.TryGetValue` is the by-name form.
+
 `TryConfigureEffectDelivery` must be called before generated bootstrap when the consumer needs
 typed effects. The host's bounded queue is drained by `TryDrainEffects`; effect delivery is a
 post-commit public boundary, not a license to inspect generated dispatch storage. Pipelined hosts
