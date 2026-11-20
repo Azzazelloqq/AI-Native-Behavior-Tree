@@ -100,6 +100,15 @@ Native-only nodes require `tree prepare`; reference simulation does not silently
 Discovery, semantic authoring and validation share the project catalog and policy. Native
 preparation additionally checks that the selected catalog declares every non-core leaf.
 
+A tree built only from `aibt.core.*` and the package's native node library (`aibt.native.*`)
+follows the same path: `call create_tree` with `"formatVersion": 2`, `call add_node` or
+`call apply_domain_patch` with `parameters` and `bindings` in the node JSON, `tree validate`,
+`tree prepare` against a catalog set that lists `StandardNativeShard`. `tree compile` reports
+AIBT3012 for such a tree, and `call simulate` and `call run_tests` do not run it. The step-by-step
+recipes are in [generated/recipes.md](generated/recipes.md) ("find native library nodes", "build a
+native tree from library nodes", "change a native tree and prepare it again"); see also
+[AI-native authoring](ai-and-mcp.md#native-only-nodes).
+
 ## Native preparation and trace
 
 ```powershell
@@ -121,7 +130,9 @@ aibt --project "<UnityProject>" --json runtime hosts
 aibt --project "<UnityProject>" --json trace read <instanceId> --limit 128 --after-sequence 0
 ```
 
-Trace results identify the host/program, root outcome and source node IDs. Follow `hasMore` and
+The host that a `NativeTreeAgent` creates for itself is not listed by `runtime hosts` (it is a
+hidden component that the host search does not find), so `trace read` cannot reach it; watch such
+an agent in the AIBT Graph in Play Mode. Trace results identify the host/program, root outcome and source node IDs. Follow `hasMore` and
 `nextSequence` for paging. `complete` describes retained-history coverage, not page size;
 `droppedCount`/`faulted` disclose incomplete history. `activeNodesReliable=false` means projected
 active nodes may be stale because their exits were lost. Root status is reported independently

@@ -280,11 +280,11 @@ The full, generated reference with every parameter, default and status is
 | Native/Flow (4) | `aibt.native.succeed`, `fail`, `idle`, `wait-microseconds` (native layer only) |
 | Native/Timing (3) | `aibt.native.wait-until-true`, `set-deadline`, `deadline-passed` (native layer only) |
 | Native/Signals (1) | `aibt.native.signal`: an Int32 code on the effect channel `aibt.native.signal` (native layer only) |
-| Native/Random (5) | `aibt.native.random-chance`, `random-float`, `random-int`, `wait-random-microseconds`, `random-float3-in-radius`: seeded per tree instance from `NativeTreeAgent.RandomSeed` (native layer only) |
+| Native/Random (5) | `aibt.native.random-chance`, `random-float`, `random-int`, `wait-random-microseconds`, `random-float3-in-radius`: seeded per tree instance from the host's seed (`NativeTreeAgent.RandomSeed`, default 0) (native layer only) |
 | Built-in leaves | `aibt.stdlib.wait`, `aibt.stdlib.random-condition` (both layers) |
 
-`aibt.unity.*` nodes run only in `BehaviorTreeAgent`; `aibt.native.*` nodes only in
-`NativeTreeAgent`. The `aibt.native.*` nodes are opt-in: list `typeof(StandardNativeShard)` in your
+`aibt.unity.*` nodes run only in `BehaviorTreeAgent`; `aibt.native.*` nodes only on native hosts
+(`NativeTreeAgent`, `ProductionTreeHost`, `TreeSimulation`). The `aibt.native.*` nodes are opt-in: list `typeof(StandardNativeShard)` in your
 `[AibtCatalogSet]`; each node's "when not to use" names its `aibt.unity.*` counterpart. The
 [Native node library](Documentation~/native-node-library.md) guide maps every managed node to its
 native counterpart and has recipes (negation, a cooldown shared by key, signals, guards, randomness); the

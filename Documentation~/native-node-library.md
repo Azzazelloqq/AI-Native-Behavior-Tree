@@ -125,6 +125,13 @@ The flare branch has the same shape with its own signal code. After a zap, no fl
 fact, as long as no node in the tree writes the same key (a key a node writes refuses external
 writes).
 
+A key that nodes write lives as long as the run. Every run of a `NativeTreeAgent` is a new host
+that starts from the tree's key defaults (facts the game set are applied again), so the cooldown
+ends with the run. `zap-hold` (`idle`) keeps the run going after a zap: the reactive sequence drops
+the branch at the next update, when `zap-ready` fails, and the guard goes on with the cooldown
+running. Without the hold the root would succeed, the agent would start a new run with
+`weapon-ready-at` = 0, and the zap would fire at every update while the intruder is close.
+
 ### Signals to the game
 
 `signal` emits its `code` on `aibt.native.signal`, once per tick of the node. The game handles all
@@ -243,3 +250,6 @@ trees.
 - [Simulation container](simulation-container.md): command channels in `TreeSimulation`.
 - [Burst node authoring](burst-node-authoring.md): write your own native node when the library does
   not cover it.
+- [MCP and CLI recipes](generated/recipes.md): find the library nodes and build, validate and
+  prepare a native tree from them with the authoring tools; [AI-native authoring](ai-and-mcp.md#native-only-nodes)
+  says which tools can and cannot run native-only nodes.

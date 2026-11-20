@@ -28,6 +28,36 @@ tool discovery remain available. Neither adapter is a runtime dependency.
 
 Agents should request summaries first and load detailed contracts only when needed. Tools support pagination and targeted lookup so large projects do not require placing every tree and node definition in context.
 
+## Native-only nodes
+
+The package's native node library (`aibt.native.*`, shard `aibt.native.standard`, 33 nodes in
+`Native/Blackboard`, `Native/Flow`, `Native/Timing`, `Native/Signals` and `Native/Random`; see
+[Native node library](native-node-library.md)) and a project's own Burst nodes are native-only.
+What an AI client needs to know about them:
+
+- They appear in `search_nodes` and `get_node_contract` like any node, with `executionDomain`
+  `burst`. Their blackboard keys are not in the manifest's `reads`/`writes`: they are the node's
+  `bindings`, listed by `get_node_contract` in `behaviorCaseContract.inputs` (member id and value
+  type). A node is added with `parameters` and `bindings` in its node JSON (`create_tree`,
+  `add_node`, an `add` in `apply_domain_patch`); the tree must be format version 2
+  (`create_tree` with `formatVersion: 2`).
+- They run on `NativeTreeAgent`, `ProductionTreeHost` and `TreeSimulation`, never in a
+  `BehaviorTreeAgent`.
+- `validate` checks them (types, bindings, policy) but executes nothing. `compile` is the reference
+  compiler and fails with AIBT3012 on the first native node; `simulate` refuses them with AIBT2021;
+  `run_tests` (behavior cases) fails with a `FactoryFault`. `prepare_runtime` compiles them for the
+  native runtime against a catalog that declares them (a project `[AibtCatalogSet]` listing
+  `StandardNativeShard` for the library), which is the check that the tree will run.
+- `runtime_hosts` and `read_trace` do not see a `NativeTreeAgent`'s host, so a running agent is
+  watched in the AIBT Graph in Play Mode. `runtime_simulations`, `describe_agent` and
+  `read_agent_trace` work on a `TreeSimulation` the game registers with
+  `TreeSimulationDebug.Register`; they were not tried with library nodes.
+
+The [generated recipes](generated/recipes.md) take an agent through finding the nodes, building
+a native tree (keys, a guard, a shared cooldown, signals, a random pick), validating and preparing
+it, and preparing it again after a change. Each step was run against a live Editor through MCP and
+the CLI.
+
 ## Node manifest
 
 Every node type declares a stable ID and version, concise summary, intended and discouraged use, parameters, ports, allowed children, blackboard access, side effects, lifecycle statuses, threading domain, determinism, estimated cost category, examples, and deprecation or migration information.
