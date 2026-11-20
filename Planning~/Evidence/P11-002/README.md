@@ -1103,7 +1103,8 @@ before the stage 4 commits.
     expected), `inspect_tree`, `prepare_runtime` dry run and write. The tree is a guard
     (`float3-within-distance`) under `reactive-sequence`, `reactive-sequence-retaining` above the
     waits, a shared cooldown (`set-deadline` / `deadline-passed`), a `signal`, a `random-int` pick, a
-    `wait-random-microseconds` and `idle` holds; plus the same steps as CLI commands;
+    `wait-random-microseconds` and `idle` holds; plus the same steps as CLI commands. This first
+    version lost its cooldown and counters at the end of every patrol; the rework below replaced it;
   - "change a native tree and prepare it again": `configure_node`, dry run for `existingAssetHash`,
     `prepare_runtime` with `overwrite` and `expectedAssetHash`; how bindings survive edits.
 - **Quickstart** (`consumer-quickstart.md:11`): the opt-in line quoted from
@@ -1127,12 +1128,12 @@ Pipeline CLI port 7810) before it was written down; the recipe text follows the 
 | `cli/02-runtime-catalogs` | catalog sets; `NativeGuardCatalog` lists `StandardNativeShard` (33 leaves) |
 | `cli/03-nodes-search`, `04`, `05` | all 33 `aibt.native.*` nodes found; contracts of `set-deadline` and others; binding members only in `behaviorCaseContract.inputs` (id, type, no direction); manifest `reads`/`writes` empty |
 | `cli/10-recipe-build` | the build recipe through `call`: create (v2), add, patch, validate (valid, policy applied, 8 AIBT2043 infos), compile (AIBT3012 on the first native node), inspect |
-| `cli/11-recipe-prepare` | prepare against `SwarmArenaCatalog` → AIBT3012 naming the shard; against `NativeGuardCatalog` (short type name accepted) → dry run and write, backend `native-generated-v2` |
-| `cli/12-edit-bound-node-probe` | `configure_node` and `replace_node` keep bindings; `configure_node` with `parameterName` `bindings` → AIBT2025; remove + add rebinds; a v1 tree rejects a bound node (AIBT2042) |
+| `cli/11-recipe-prepare` | prepare against `SwarmArenaCatalog` → AIBT3012 naming the shard; against `NativeGuardCatalog` (full type name) → dry run and write, backend `native-generated-v2`; `simulate` (run at the end of the same script) → AIBT2021 for every native node |
+| `cli/12-edit-bound-node-probe` | `configure_node` and `replace_node` keep bindings; `configure_node` with `parameterName` `bindings` → AIBT2025; remove + add rebinds (the v1 probe was not recorded here; see `rework/cli/E1`) |
 | `cli/13-binding-errors-probe` | missing, undeclared and wrongly typed bindings → AIBT3018 + AIBT3015; `set_blackboard_keys` keeps v2 |
 | `cli/15-runtime-hosts-native-agent` | `runtime hosts` = `[]` and `trace read 1` = AIBT9018 while the agent runs (finding 5) |
 | `cli/16-recipe-reprepare` | write without overwrite → AIBT9018; dry run gives `existingAssetHash`; overwrite keeps the GUID |
-| `cli/17-run-tests-and-simulations` | `simulate` AIBT2021 for every native node; `run_tests` FactoryFault; no runtime simulations registered |
+| `cli/17-run-tests-and-simulations` | `run_tests` FactoryFault; no runtime simulations registered |
 | `mcp/20-mcp-recipe`, `21-mcp-reprepare` | the same recipes through `mcp serve` (stdio JSON-RPC, `aibt_*` tools, nested JSON as strings), including the remove + add rebind as a dry run |
 | `runs/30`–`34` | scratch scene `Assets/AibtRecipeScratch/NativeSentry.unity`, one GameObject with `NativeTreeAgent`, `_tree` set to the prepared asset (no code); agent state samples while running |
 | `runs/40`–`43` | recompile and recipe regeneration (`scripts/RegenerateRecipes.cs` through `eval_file`) |
@@ -1142,14 +1143,19 @@ every update (5086 completed runs in one sample, `runs/31`) and the agent's host
 queries. That run showed that keys written by nodes start every `NativeTreeAgent` run from their
 defaults (every run is a new host; `NativeTreeAgent.cs:402` re-applies only facts). The trees were
 deleted and the recipe was run again with `strike_hold` and `warn_hold`; the guide and the
-quickstart now say it.
+quickstart now say it. (The holds kept a strike's run going but not a patrol's; the rework below
+replaced them with a repeater at the root.)
 
 ### Screenshots
 
+The first screenshots showed the first, superseded tree and were moved to
+`screenshots/superseded-first-tree/`; the files below were taken again from the reworked tree (see
+the rework section).
+
 - `screenshots/graph-edit-native-sentry.png`: the recipe tree in the AIBT Graph (Edit Mode).
 - `screenshots/graph-live-1.png` … `graph-live-3.png`: Play Mode, "Live: Sentry (native) — running,
-  run 1", path sentry → patrol → Wait Until True highlighted, `completedRuns` 0. The blackboard shows
-  `live: —` and the tree list "Needs native compile" (stage 2 and 3 open questions).
+  run 1". The blackboard shows `live: —` and the tree list "Needs native compile" (stage 2 and 3
+  open questions).
 
 No new code was written for the screenshots or the live run.
 
@@ -1236,3 +1242,152 @@ left as they were. `Library/AibtMcp.json` was written by `mcp ensure`.
 8. New in stage 4: tool findings 1, 2, 4, 5 and 8 above; whether `create_tree` should default to
    version 2, whether `runtime_hosts` should list hidden agent hosts, and whether bindings should
    appear in the node manifest.
+
+## Stage 4 — rework after the acceptance run (2026-11-20)
+
+The orchestrator's acceptance run on `fe28a5e` (all nine assemblies green except the known failure)
+left three points: the recipe tree promised cooldowns and counters that do not last, the Edit Mode
+screenshot showed the first tree, and the AIBT2042 claim had no transcript. Base `3cd9fbb`. Raw
+files: `C:\UnityProjects\_aibt_acceptance\P11-002\stage4\rework\`. Same limits as stage 4: no code
+outside the recipe generator, no tool or host behaviour changed, the Native Guard sample unchanged.
+
+| Commit | Content |
+|---|---|
+| `cb20509` | recipe tree loops inside one run: generator, `generated/recipes.md`, CHANGELOG |
+| `b94ca96` | `native-node-library.md`: a finished patrol ends a Native Guard run too |
+| this commit | this section, corrected rows above, task card note |
+
+### Point 1: the recipe tree lost its cooldown and counters
+
+The orchestrator's reading was checked live first, on the first tree rebuilt from the stage 4
+argument files (`cli/A1`, `cli/A2`, scene `runs/B0`). Facts at t = 29.271 s: target 1 m away, seen,
+gate open. Signal log `runs/B4`, summary `runs/C10`:
+
+- 12 strikes (signal 1) in 20.6 s; gaps 1.623, 1.920, 1.863, 1.966, 1.825, 1.844, 1.990, 1.986,
+  1.857, 1.508, 1.413 s: none reaches the 2 s cooldown;
+- every strike in a new host (12 hosts), `completedRuns` 0 → 11 (`runs/B3`).
+
+The reading is right: `patrol` succeeding is the root succeeding, the run ends, `NativeTreeAgent`
+starts a new host from the key defaults, and `ready_at`, `shots` and `fatigue` start again from 0;
+`fatigue` never exceeds 0.25, and `strike` fires at once after a patrol shorter than the cooldown.
+
+**The tree was changed** (`rework/scripts/tree_v2.py` is the one source of the CLI arguments, the MCP
+run and the recipe text):
+
+- the root is `sentry_loop`, `aibt.core.repeater` (`count` 1000000, `stopOnFailure` false) over
+  `sentry`: one run lasts up to 1000000 rounds (a strike, a warning or a patrol each), so the keys
+  that nodes write last across rounds; a failed round does not stop the loop. This is the pattern
+  the README already gives ("loop inside the tree (a repeater at the root)");
+- the `idle` holds are gone: a strike or warning ends its round, and the next rounds patrol until
+  the cooldown is over;
+- `fatigue` is read: after `tire`, `report_tired` (`succeeder`) → `tired` (`memory-sequence`) →
+  `is_tired` (`float-at-least`, threshold 1) and `signal_tired` (signal 20);
+- descriptions now say what happens: `shots` "Strikes in this run", `fatigue` "Grows by 0.25 with
+  every finished patrol in this run", `wait_gate` "…if it stays closed, the patrol fails and the next
+  round starts", and the "What each step relies on" list explains the repeater, the round, the
+  counters and the short-name refusal;
+- `create_tree` refuses a decorator root without its child (AIBT2023, `cli/C1a`, and the MCP dry run
+  in `mcp/F1`), so the root is created as a `memory-sequence` and the first patch operation
+  (`replace`) turns it into the repeater once `sentry` is its child; `replace` keeps the id, the
+  description and the children (`cli/C1` inspect). The recipe has 10 steps, the patch 29
+  operations, the tree 32 nodes.
+
+**Run again live:**
+
+| Transcript | What it shows |
+|---|---|
+| `cli/C1-recipe-build-and-prepare` | create, add ×3, patch, validate (valid, policy applied, 8 AIBT2043), compile AIBT3012 on `target_close`, inspect (root `aibt.core.repeater`, 32 nodes), prepare dry run and write (`native-generated-v2`) |
+| `cli/C11-recipe-reprepare` | configure `strike_cooldown`; write without overwrite → AIBT9018; dry run → `existingAssetHash`; overwrite; GUID before = after |
+| `cli/E3-prepare-catalog-without-shard` | against `SwarmArenaCatalog` → AIBT3012 "…does not declare node 'aibt.native.int-equals'…StandardNativeShard…" (the recipe's quoted message) |
+| `mcp/F1-mcp-recipe-v2` (+ `-summary`) | the whole build recipe, the change recipe, `configure_node` `bindings` → AIBT2025, remove + add rebind (dry run, `insertIndex`), `simulate` AIBT2021, both probes below |
+| `runs/C2`–`C9` | the reworked asset on the scratch agent, Play Mode, facts set by `eval_file` scripts (`rework/scripts/ProbeCooldown.cs`, `ProbeFarClosedGate.cs`), signal log |
+
+Live result (`runs/C9`, `runs/C10`), facts at t = 0.929 s (target 1 m, seen, gate open):
+
+- 11 strikes, gaps 2.002, 2.004, 2.013, 2.009, 2.003, 2.006, 2.009, 2.011, 2.004, 2.007 s;
+- one host for the whole run, `completedRuns` 0 at 21.7 s (`runs/C6`);
+- signal 20 first at 9.491 s, when the fourth patrol finished (patrols finished at 3.674, 5.943,
+  7.274 and 9.491 s; patrols cut by a strike did not count), then after every finished patrol.
+
+Then target 20 m away, not seen, gate closed (t = 22.327 s): the patrol fails every 3.0 s (gaps
+3.008, 3.001, 3.003 s, the `wait_gate` timeout), the loop goes on, `completedRuns` still 0, same host
+at 35.96 s (`runs/C8`).
+
+**Native Guard sample and the guide's `zap-hold` paragraph** (read, not run). The sample has the
+same mechanism: its root succeeds when a patrol finishes, which ends the run and resets
+`weapon-ready-at`. While the intruder is seen, `watch` (`idle`) holds the run, so the cooldown is
+kept in the usual case. A patrol normally lasts longer than the 1.5 s cooldown (the gate takes about
+1 s to open, the rest 1–3 s). If a patrol was cut after the gate started to open, the gate stays
+open (it closes only on signal 4), the next patrol passes `wait-gate` at once and can end after
+about 1 s; an intruder close again within 1.5 s of the zap is then zapped at once. The zap pushes
+the intruder 4 m back, so this is rare. The sample was not changed (finding 10); the guide paragraph
+got the sentence "A finished patrol ends the run too…" (`native-node-library.md:134`), pointing to
+the repeater of the recipe.
+
+### Point 2: screenshots
+
+The first screenshots (first tree: three children under `strike_fire`, two under `warn_fire`) were
+moved to `screenshots/superseded-first-tree/`. Taken again from the reworked tree, no new code:
+
+- `screenshots/graph-edit-native-sentry.png`: Edit Mode, repeater root, 32 nodes (`runs/D4`);
+- `screenshots/graph-live-1.png` … `graph-live-3.png`: Play Mode after `SetCloseFacts.cs`,
+  "Live: Sentry (native) — running, run 1", path Repeater → Reactive Selector Retaining → patrol →
+  rest highlighted; `completedRuns` 0 and the same host afterwards (`runs/D3`).
+
+### Point 3: AIBT2042 and the "Run live" table
+
+AIBT2042 had no transcript (the stage 4 v1 probe was run without saving its output). Run live now:
+
+- CLI `cli/E1-v1-tree-rejects-bound-node`: `create_tree` without `formatVersion` is accepted and
+  writes `"formatVersion": 1`; `add_node` of `bool-is-true` with `bindings` → accepted false, AIBT2042
+  "Generated bindings and Agent/Shared scopes require tree format version 2." and AIBT2042
+  "Generated compiled format v2 requires tree format version 2.";
+- MCP `mcp/F1`: the same (inspect reports format version 1, the same two AIBT2042).
+
+Every row of the stage 4 "Run live" table was checked by `rework/scripts/check_run_live_table.py`
+(`runs/G1`): 32 claims, 4 not found in the named transcript.
+
+| Claim | Found | Correction (old → new) |
+|---|---|---|
+| contract of `set-deadline` in `cli/03`, `04`, `05` | in `05` | none: the row names the three files together |
+| `cli/11`: `NativeGuardCatalog` "(short type name accepted)" | nowhere; run live in `cli/E2`: `--catalog NativeGuardCatalog` → AIBT9018 "Select one exact catalog from runtime_catalogs." | "(short type name accepted)" → "(full type name)"; the recipe now says a short name is refused |
+| `cli/12`: "a v1 tree rejects a bound node (AIBT2042)" | nowhere | → "(the v1 probe was not recorded here; see `rework/cli/E1`)" |
+| `cli/17`: "`simulate` AIBT2021 for every native node" | in `cli/11` (end of the prepare script) and `mcp/20` | moved from the `cli/17` row to the `cli/11` row |
+
+Other lines of the stage 4 section that became wrong were corrected in place: the recipes bullet of
+"What was added where" (marked as the first version), the `first-attempt-no-hold` paragraph (the
+holds were replaced) and "Screenshots".
+
+### Other corrections (old → new)
+
+| File:line | Old | New |
+|---|---|---|
+| `generated/recipes.md` (build recipe) | 9 steps, root `reactive-selector-retaining`, `idle` holds, 26 operations, "Grows with every patrol", "Shots fired." | 10 steps, repeater root, 29 operations, counters and descriptions as above, AIBT2023 and short-name notes |
+| `native-node-library.md:134` | — | "A finished patrol ends the run too…" |
+| `CHANGELOG.md:11` | "(Tree-scope keys of five types, a guard under a reactive composite, a cooldown shared by key, signals, …)" | "(…, a repeater at the root that keeps one run and its keys going, a guard …, counters, signals, …)" |
+| `CHANGELOG.md:25` | "…explains why the Native Guard zap ends in `idle`." | "…ends in `idle`, and that a finished patrol also ends the run." |
+
+### Tests and checks
+
+After `Invoke-UnityRecompile.ps1` (`runs/H1`) and regeneration through the generator (`runs/H2`;
+the generated recipes are identical to `rework/scripts/native-recipes-v2.md`), `runs/H3`:
+`UserGuideSnippetTests` 5/5, `McpDocumentationGeneratorsTests` 14/14, `McpToolDispatcherTests` 7/8
+(the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`, 105 vs 100). Changed expectations:
+none; the regenerated `generated/recipes.md` is the only generated snapshot that changed. Link check
+(`runs/H4`): 119 links, 0 broken. `Verify-Static.ps1`: `runs/H6`.
+
+### Parent-project files
+
+Created and removed again (`runs/H5`, copies in `rework/scratch-copy/`): `Assets/AibtRecipeScratch/`
+with `NativeSentry.unity`, `native-sentry.aibt`, `native-sentry.runtime.asset`,
+`native-sentry-mcp.aibt`, `native-sentry-mcp.runtime.asset`, `probe-v1.aibt`, `probe-v1-mcp.aibt` and
+their `.meta` files. The Native Guard scene was reopened first. No trace in `ProjectSettings/`.
+
+### New findings (reported, not fixed)
+
+9. **`create_tree` refuses a decorator root without its child** (AIBT2023), and `rootNodeJson` takes
+   no children, so a tree with a repeater at the root needs a composite root and a `replace`.
+10. **Native Guard:** a finished patrol ends the run and resets `weapon-ready-at`; the cooldown can
+    be lost in the narrow case above (by reading; not run). Sample unchanged.
+11. **The stage 4 evidence claimed a short catalog name was accepted**; it is refused (AIBT9018).
+    Not a tool defect: the text was wrong and is corrected.

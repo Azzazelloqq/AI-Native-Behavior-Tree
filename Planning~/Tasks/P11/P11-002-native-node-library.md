@@ -191,3 +191,11 @@ Save-UnityWindow.ps1 (palette), Save-UnityClip.ps1 (demo tree) for stages 1–3
   reproducibility — the owner asked for options; proposed: the stream identity is a stable agent id
   plus the agent's own run index instead of the process-wide instance id (needs an ADR and a change in
   `ProductionTreeHost` and `NativeTreeAgent`).
+- Stage 4 rework after the acceptance run (2026-11-20, `cb20509`, `b94ca96` and the evidence commit;
+  evidence "Stage 4 — rework after the acceptance run"): the recipe tree's patrol ended the run, so
+  the cooldown, `shots` and `fatigue` reset with every new host (live: strikes 1.41–1.99 s apart, 11
+  runs in 20 s). The recipe tree now has a repeater at the root (live: strikes 2.00–2.01 s apart, one
+  run, signal 20 after the fourth finished patrol). Screenshots retaken; the AIBT2042 probe recorded;
+  the false "short catalog name accepted" corrected (AIBT9018). New findings: `create_tree` refuses a
+  decorator root without its child (AIBT2023); the Native Guard sample can lose its cooldown when a
+  patrol finishes within it (by reading; sample unchanged, guide says it).
