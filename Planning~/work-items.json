@@ -4,7 +4,7 @@
   "sourceBranch": "main",
   "items": [
     {
-      "id": "P11-002", "phase": 11, "title": "Library of ready-made native nodes (feature F4): grow the aibt.native.standard shard so native trees need no project Burst nodes; ADR accepted (AIBT-050); stage 1 (blackboard and flow nodes) accepted 2026-11-19 (4af5571); stage 2 (timing and signal, Native Guard sample, guide page) accepted 2026-11-19 (bad2892); stage 3 (random nodes, host seeding, group-commit fix) accepted 2026-11-20 (e944c5c); stage 4 (documentation pass) approved 2026-11-20", "status": "in_progress", "kind": "implementation",
+      "id": "P11-002", "phase": 11, "title": "Library of ready-made native nodes (feature F4): grow the aibt.native.standard shard so native trees need no project Burst nodes; ADR accepted (AIBT-050); stage 1 (blackboard and flow nodes) accepted 2026-11-19 (4af5571); stage 2 (timing and signal, Native Guard sample, guide page) accepted 2026-11-19 (bad2892); stage 3 (random nodes, host seeding, group-commit fix) accepted 2026-11-20 (e944c5c); stage 4 (documentation pass, MCP/CLI recipes) accepted 2026-11-20 (0485779)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-002-native-node-library.md",
       "dependsOn": ["P9-002"],
       "owns": ["Documentation~/decisions/ADR-P11-002-native-node-library.md", "Planning~/Evidence/P11-002/", "Authoring/Registry/Generated/StandardNative/"]

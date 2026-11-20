@@ -1,12 +1,13 @@
 # P11-002 — Library of ready-made native nodes (feature F4)
 
-Status: `In Progress` — ADR accepted 2026-11-19 (AIBT-050) with all six recommendations of its §8;
+Status: `Review` — ADR accepted 2026-11-19 (AIBT-050) with all six recommendations of its §8;
 stage 1 (blackboard and flow nodes) approved the same day and accepted after the full run of all
 nine assemblies on `4af5571`. Stage 2 (timing and signal nodes) approved by the owner 2026-11-19,
 implemented the same day and accepted on `bad2892`. Stage 3 (random nodes; hosts seed random
 streams, and the group-commit fix of owner decision 8) approved by the owner 2026-11-20 and accepted
 on `e944c5c`. Stage 4 (documentation pass) approved by the owner 2026-11-20, implemented the same day
-(`b5439d2`..`029888b`) and awaits the orchestrator's acceptance.
+(`b5439d2`..`0485779`, with one rework round) and accepted on `0485779`. All four stages are
+accepted; the owner closes the item.
 
 ## Objective
 

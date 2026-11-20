@@ -6,7 +6,9 @@ accepted by the orchestrator on `4af5571` ("Acceptance run" at the end of its se
 approved by the owner on 2026-11-19, is implemented (section "Stage 2" after the stage 1 material)
 and was accepted by the orchestrator on `bad2892`. Stage 3 (random nodes; hosts seed random streams)
 was approved by the owner on 2026-11-20, is implemented (section "Stage 3") and was accepted by the
-orchestrator on `e944c5c`. Stage 4 (documentation pass) was approved by the owner on 2026-11-20.
+orchestrator on `e944c5c`. Stage 4 (documentation pass) was approved by the owner on 2026-11-20, is
+implemented (sections "Stage 4" and "Stage 4 — rework") and was accepted by the orchestrator on
+`0485779`. All four stages are accepted; the item is in `Review`.
 
 ## Stage 1 — blackboard and flow nodes (2026-11-19)
 
@@ -1391,3 +1393,63 @@ their `.meta` files. The Native Guard scene was reopened first. No trace in `Pro
     be lost in the narrow case above (by reading; not run). Sample unchanged.
 11. **The stage 4 evidence claimed a short catalog name was accepted**; it is refused (AIBT9018).
     Not a tool defect: the text was wrong and is corrected.
+
+### Acceptance run (orchestrator, 2026-11-20, stage 4)
+
+Two rounds. Round 1 on `fe28a5e`: the diff `23534c8..fe28a5e` was read in full and all nine
+assemblies ran (10:41–10:59; 815/815, 403/403, 793/794, 65/65, 79/79, 33/33, 36/36, 6/6, 2/2; raw
+output `C:\UnityProjects\_aibt_acceptance\P11-002\stage4-acceptance\full-run-fe28a5e.txt`). Three points went back to the session: the recipe tree
+promised a cooldown and counters that end with every patrol (derived by reading, then confirmed
+live by the session), the Edit Mode screenshot showed the first tree, and the AIBT2042 claim had no
+transcript. Round 2 on `0485779` (clean working tree) is the acceptance.
+
+- **Protected paths.** `23534c8..0485779` changes no file under `Runtime/`, `CodeGen~`, `Schemas~`,
+  `Authoring/`, `Agents`, `Editor/`, `Samples~`, `MCP~`, `Documentation~/specifications/`, and not
+  `package.json` or `ExpectedPublicAbiV2.txt`. Code: `MCP/Documentation/McpRecipesDocumentGenerator.cs`
+  (recipe text only) and one new test in `Tests/Editor/Documentation/UserGuideSnippetTests.cs`. No
+  existing test expectation changed.
+- **Recipe against the transcripts.** The quoted messages (AIBT3012 with the shard hint, AIBT9018,
+  AIBT2025, AIBT2023, both AIBT2042), `totalCount` 33 and the operation count were found in the named
+  files of `stage4\` and `stage4\rework\`.
+- **Signal logs recomputed** from `rework\runs\B4-signal-log.txt` and `C9-signal-log.txt` by the
+  orchestrator's own script. First tree: 12 strikes, gaps 1.413–1.990 s (none reaches 2 s), 12 hosts,
+  `completedRuns` 0 → 11. Reworked tree: 11 strikes, gaps 2.002–2.013 s, one host, `completedRuns` 0,
+  signal 20 first at 9.491 s and 7 times in the segment. They match the rework section.
+- **Counts.** `generated/node-catalog.md`: 100 node types, 33 `aibt.native.*`, 20 in
+  `Native/Blackboard`; `Native/Flow` is `fail`, `idle`, `succeed`, `wait-microseconds`. The quickstart's
+  opt-in line equals `Samples~/NativeGuard/Catalog/NativeGuardCatalog.cs`.
+- **Screenshots.** `screenshots\graph-edit-native-sentry.png` and `graph-live-2.png` show the reworked
+  tree (repeater root); the live one shows "running, run 1" with the patrol path highlighted,
+  `live: —` for every key and "Needs native compile" in the tree list (open question 3).
+- **Parent project.** `Assets/AibtRecipeScratch` does not exist; the two scratch folders of the
+  earlier stages are as before.
+- **Full run of all nine assemblies** on `0485779`, 18:16–18:32; Editor-log counters did not move
+  (`No command named` 0, main-thread timeouts 0 at the start and at the end). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-002\stage4-acceptance\full-run-0485779.txt`. A first attempt at 11:20 was cut after the Runtime assembly
+  (815/815) when the computer was restarted at 11:34
+  (`C:\UnityProjects\_aibt_acceptance\P11-002\stage4-acceptance\full-run-0485779-interrupted-by-reboot.txt`); the Editor was started again at 18:15 and
+  the run repeated from the beginning.
+
+| Assembly | `e944c5c` | `0485779` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | — |
+| `AIBT.Integration.Tests` | 403/403 | 403/403 | — |
+| `AIBT.Editor.Tests` | 792/793 | 793/794 | `UserGuideSnippetTests.QuickstartNativeLibraryOptInIsQuotedFromTheNativeGuardSample` |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | — |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | — |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | — |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | — |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | — |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | — |
+
+The one failure is the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` (105 found,
+100 expected).
+
+Not done by the orchestrator: no recipe step was run again (the transcripts were read); the MCP and
+CLI transcripts were not read line by line; the Native Guard cooldown case of finding 10 was not
+run; no Player or IL2CPP build; the Package Manager import of the sample was not exercised.
+
+To know: on `NativeTreeAgent` a key that nodes write lasts only as long as the run (every run is a
+new host), so cooldowns and counters need a tree that does not finish, as the recipe's repeater
+root; the Native Guard sample can lose its cooldown when a patrol ends early (finding 10, by
+reading).

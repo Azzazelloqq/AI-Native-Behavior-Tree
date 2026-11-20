@@ -1209,7 +1209,8 @@ closed the item (`Done`) on 2026-11-20. The second item, `P11-002` (a library of
 (`Documentation~/decisions/ADR-P11-002-native-node-library.md`, `AIBT-050`) was accepted
 2026-11-19 with all six recommendations of its §8; stage 1 (20 blackboard and flow nodes) is accepted
 (`4af5571`), stage 2 (timing and signal nodes, the Native Guard sample) is accepted (`bad2892`), stage 3 (random nodes;
-hosts seed random streams) is accepted (`e944c5c`), stage 4 (documentation pass) is approved.
+hosts seed random streams) is accepted (`e944c5c`), stage 4 (documentation pass, MCP/CLI recipes) is accepted (`0485779`);
+the item is in `Review`.
 
 ### Review follow-up scopes (2026-09-04)
 
