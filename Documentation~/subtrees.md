@@ -106,7 +106,9 @@ The expansion has the nodes `fight`, `left:combo`, `left:windup`, `left:hit`, `l
 same four under `right:`; the keys `hits` (shared by both instances and the parent),
 `left:swings` and `right:swings`. A reference node has no `type`, `typeVersion`, `parameters`,
 `bindings`, `observer` or `children`. Adding the first reference raises a format 1 or 2 file to
-format 3; files without subtree features keep their format.
+format 3; files without subtree features keep their format. A format 3 file without reference
+nodes and without an `interface` (after Unpack, or after its last reference was deleted) compiles
+and prepares for the native runtime as the same tree in format 2, with the same semantic hash.
 
 ## Graph editor
 

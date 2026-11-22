@@ -15,6 +15,10 @@ All notable changes to this project will be documented here. The project follows
   handles now share the key's value: every handle reads the value from before the tick and the
   write is published after it, so `center == result` steps from the previous point. Covered under
   immediate, agent-frame, batched-jobs and pipelined-jobs scheduling.
+- **Format 3 without subtrees compiles natively** (review F2). A tree saved as format 3 with no
+  reference node and no `interface` (after Unpack, after its last reference was deleted, or written
+  so) was refused by the native compiler with `AIBT2042`. It now compiles as the same tree in
+  format 2 and gets the same semantic hash (ADR-P11-001 §4.4, §4.5).
 
 ### A truthful graph window for native agents (P11-005)
 

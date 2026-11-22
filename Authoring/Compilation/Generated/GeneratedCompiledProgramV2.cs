@@ -363,6 +363,14 @@ namespace AIBT.Authoring
         {
             var diagnostics = new List<Diagnostic>();
             if (!HasOptions(options, diagnostics)) return Failure(diagnostics);
+            // P11-007 (review F2): a format-3 document with no reference node and no interface is its
+            // own expansion (ADR-P11-001 section 4.4, identity rule), and an expansion is a format-2
+            // document (section 4.4 step 5) whose semantic hash is the program's (section 4.5). It is
+            // compiled as that format-2 document, so it gets the hash of the same tree written as format 2.
+            if (document.FormatVersion == TreeDocument.SubtreeFormatVersion && !document.UsesSubtreeFeatures)
+                document = new TreeDocument(document.Format, SubtreeExpander.ExpandedFormatVersion, document.TreeId, document.Name,
+                    document.Root, document.Nodes, document.Blackboard, document.Description, document.Tags, document.Metadata,
+                    document.Revision, document.AgentContract, document.SharedContract);
             if (document.FormatVersion != TreeDocument.LatestFormatVersion)
                 diagnostics.Add(ReferenceCompilerDiagnostics.Create(ReferenceCompilerDiagnosticCodes.MissingScopeContract, "Generated compiled format v2 requires tree format version 2.", options?.SourceId, "/formatVersion", treeId: document.TreeId));
             var registryResult = GeneratedNodeRegistry.Build(generated, includeBuiltIns: true);
