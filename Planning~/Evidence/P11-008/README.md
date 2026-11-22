@@ -2,8 +2,8 @@
 
 Branch `feature/aibt-consumer-workflow`, base `45de034`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-008\`.
 Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Findings from `Planning~/Evidence/P11-REVIEW/README.md`.
-Approved by the owner on 2026-11-22 ("Да, пакет 2"). Status: `in_progress`; the orchestrator runs the full
-test run and moves the item to `Review`.
+Approved by the owner on 2026-11-22 ("Да, пакет 2"). Status: accepted by the orchestrator on `7773059`
+("Acceptance run" at the end); the item is in `Review`. F9 and the native half of F10 wait for the owner.
 
 ## Commits
 
@@ -200,3 +200,62 @@ of tests. No error from AIBT code.
 - F10: the managed AIBT4002 run-time fault was established by reading, not reproduced.
 - F8: the write API keeps the size-only check.
 - The full ten assemblies were not run here.
+
+## Acceptance run (orchestrator, 2026-11-22)
+
+Read by the orchestrator on `7773059` (clean working tree): this file, the session's report, the
+whole diff `45de034..7773059` under `Runtime/`, `Agents/`, `Authoring/`, `Editor/`,
+`MCP/Verification`, `Documentation~/specifications` and `Tests/Fixtures`, and ADR-P11-008.
+
+- **Pin.** Recomputed from git: `bytesHex` of `45de034` and of `7773059` are both 861 bytes and
+  differ in 32 bytes, offsets 54-85; `contentHash` is `426504d3...`.
+- **Protected paths.** `git diff --stat 45de034..7773059` is empty for
+  `Tests/Editor/CodeGen/Contracts`, `CodeGen~` and `package.json`. Under `Tests/Fixtures` only the
+  pin. Under `Documentation~/specifications`: the implementation-status note in
+  `execution-semantics-v1.md` (7 lines, no rule changed) and one code reference in
+  `blackboard-v1.md` (`AIBT2043` -> `AIBT2053`).
+- **F8.** One added condition in the adapter's `TryResolveExternalTreeRead<T>`
+  (`BuiltInManagedType<T>.TypeId != expectedType.TypeId`) and a static generic class with the 17
+  built-in managed types; no signature changed.
+- **F11 direction.** Confirmed by `git log -S`: the compiler's `AIBT2042`/`AIBT2043` are from
+  `360bbe7` (2026-08-18), the validator's from `0b29f78` (2026-09-03) and `5050f67` (2026-09-07). So
+  by the approved rule the validator codes moved; the note users see on an input key is now
+  `AIBT2053`. This is the opposite of the review's suggestion and is reported to the owner.
+- **Stops.** Both are stops the brief asked for. F9: the semantic slot records are built with
+  `BlackboardScope.Tree` and scope-local offsets (`GeneratedCompiledProgramV2.cs:679`, read by the
+  orchestrator). F10 native half: `NativeLibraryReactiveGuardTests` states in its summary that an
+  `observer` block "compiles, runs and changes nothing" and runs every case with and without one.
+- **Full run of ten assemblies** on `7773059`, 2026-11-22 22:10-22:27; Editor-log counters did not
+  move (unknown-command 0, main-thread-timeout 3 before and after; the Editor had been started
+  anew by the session, so the counters are lower than in the previous run). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-008\acceptance\full-run-7773059.txt`.
+
+| Assembly | `42253ac` | `7773059` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | - |
+| `AIBT.Integration.Tests` | 440/440 | 441/441 | `ExternalTreeBlackboardReadTests` +1 |
+| `AIBT.Editor.Tests` | 842/842 | 846/846 | `ManagedObserverRefusalTests` 3, `DiagnosticCodeUniquenessTests` 1 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | - |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | - |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | - |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | - |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | - |
+| `AIBT.CodeGen.GenerationTests` | 13/14 | 14/14 | - |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | - |
+
+All ten assemblies pass with no failure for the first time in this phase.
+
+Not done by the orchestrator: the new test files and the documentation changes outside the
+specifications were not read line by line; the F9 probe was not run again; nothing was looked at
+in the Editor window.
+
+To know:
+- The Modules Editor was not running when the session started (cause unknown); the session started
+  it without `-Restart`.
+- A tree with only built-in nodes shows no `AIBT2051` in the Editor, but a `BehaviorTreeAgent`
+  refuses it at load.
+- The external write (`TryWriteExternalTreeValue<T>`) still checks only size and alignment of `T`:
+  the same class of defect as F8, on the write side, not in this batch.
+- Open for the owner: F9 (fix the semantic projection or refuse the case), the native half of F10
+  (refuse the block, which breaks the P11-002 tests and documentation, or keep the documented
+  silence), ADR-P11-008 (five questions), F6 and F14 (not in any batch).

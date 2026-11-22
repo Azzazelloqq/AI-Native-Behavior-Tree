@@ -1,8 +1,8 @@
 # P11-008 — Review fixes, batch 2 (stale pin, F8, F9, F10, F11, F13 ADR)
 
-Status: `in_progress` — the fixes are committed on `feature/aibt-consumer-workflow`; F9 and the native
-half of F10 are stopped for the owner (see the evidence). The orchestrator runs the full test run and
-moves the item to `Review`.
+Status: `Review` — the fixes are committed on `feature/aibt-consumer-workflow` and accepted by the
+orchestrator after the full run of ten assemblies on `7773059` (all green). F9 and the native half of
+F10 are stopped for the owner (see the evidence).
 
 ## Objective
 
