@@ -1,7 +1,7 @@
 # P11-009 — Review fixes, batch 3 (F9, F10 native half, F8 write side, F6)
 
-Status: `In progress`. The fixes are committed on `feature/aibt-consumer-workflow`; the orchestrator's
-acceptance run (the ten assemblies) is not part of this item.
+Status: `Review` — the fixes are committed on `feature/aibt-consumer-workflow` and accepted by the
+orchestrator after the full run of ten assemblies on `3d16480` (all green).
 
 ## Objective
 

@@ -2,8 +2,8 @@
 
 Branch `feature/aibt-consumer-workflow`, base `1d081c7`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-009\`.
 Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Findings from `Planning~/Evidence/P11-REVIEW/README.md`
-and the stops of `Planning~/Evidence/P11-008/README.md`. Status: `In progress`; the orchestrator's run of
-the ten assemblies is not part of this item.
+and the stops of `Planning~/Evidence/P11-008/README.md`. Status: accepted by the orchestrator on `3d16480`
+("Acceptance run" at the end); the item is in `Review`.
 
 ## Commits
 
@@ -209,3 +209,60 @@ named assembly and reports the filtered classes too; both counts are given).
 - Console after the runs: the tests' expected errors plus Editor messages ("Release of invalid GC handle",
   "Failed to load 'VirtualArtifacts/…'") not from AIBT code; their origin was not traced.
 - Not checked in a Player build.
+
+## Acceptance run (orchestrator, 2026-11-23)
+
+Read by the orchestrator on `3d16480` (clean working tree): this file, the session's report, the
+whole diff `1d081c7..3d16480` under `Authoring/`, `Runtime/`, `Editor/`, `MCP/`,
+`Documentation~/specifications` and the two changed asmdef files; two screenshots.
+
+- **Protected paths.** `git diff --stat 1d081c7..3d16480` is empty for
+  `Tests/Editor/CodeGen/Contracts`, `Tests/Fixtures`, `CodeGen~` and `package.json`. Under
+  `Documentation~/specifications` one line: the implementation-status note of P11-008 names
+  `AIBT2054`; no rule changed.
+- **F9, existing bytes.** Checked by reading, not only by the probe: `GeneratedScopeCompiler.BuildSlots`
+  emits the slots scope by scope (Tree, Agent, Shared), each scope sorted by key ID with the same
+  comparer the semantic projection sorts with. For a tree with keys of one scope the new default
+  blob order therefore equals the old one and every scope base is 0, so offsets and defaults are
+  what they were. `F9\native-guard-bytes-compare.txt`: the Tree-only section is identical including
+  `bytesHex`. Both pins pass untouched in the full run.
+- **F8 twin.** One added condition in the write resolve and one in `TryWriteExternalTreeValue<T>`;
+  public signatures unchanged.
+- **F6.** `F6\probe-f6-before.txt` / `probe-f6-after.txt`: in this project MCP saw 120 tree files
+  and the Editor 39 before, 39 and 39 after; the synthetic layout's six cases agree after the fix
+  except a package outside this project, which a foreign folder does not get by design.
+- **F10.** `F10\graph-native-observer.png` and `F10\tree-list-native-observer.png` opened: the
+  problem list shows `AIBT2054` on node `guard`, the header "1 warning", the tree list "Warnings".
+  The probe folder `Assets/_P11009Probe` of the parent project is gone.
+- **Full run of ten assemblies** on `3d16480`, 2026-11-23 00:21-00:34; Editor-log counters did not
+  move (unknown-command 1, main-thread-timeout 3 before and after). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-009\acceptance\full-run-3d16480.txt`.
+
+| Assembly | `7773059` | `3d16480` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | - |
+| `AIBT.Integration.Tests` | 441/441 | 454/454 | `MixedScopeNativeTreeTests` 11, `ExternalTreeBlackboardWriteTests` +2 |
+| `AIBT.Editor.Tests` | 846/846 | 857/857 | `NativeObserverWarningTests`, new cases in `McpSubtreeToolsTests` (11 in all) |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | - |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | - |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | - |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | - |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | - |
+| `AIBT.CodeGen.GenerationTests` | 14/14 | 14/14 | - |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | - |
+
+Not done by the orchestrator: the new test files and the documentation pages were not read line by
+line; no probe was run again; the MCP `validate` response was not opened.
+
+To know (found by the session, not fixed, reported to the owner):
+- A native node that reads and writes through one ReadWrite binding opens two value sessions; in a
+  catalog whose largest case has no spare bindings the per-frame session capacity is exceeded and
+  the host stops with `NativeLifetimeStateInvalid`. The test fixture was split into two nodes to
+  avoid it. This is a defect of its own, of the same class as F1.
+- Agent-scope values start from their default in every `NativeTreeAgent` run (each restart builds a
+  fresh host); whether they should survive a restart is not specified.
+- A tree with Shared keys compiles now, but a native node with a Shared binding is still refused
+  by the host at run time, as before.
+- `NativeCompiledProgramV2Verifier` (not used by the production host) was not run on a mixed tree.
+- MCP's tree lookup by ID and its manifest still list trees in folders Unity does not import; only
+  subtree resolution follows the Editor's rule.
