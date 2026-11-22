@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P11-006", "phase": 11, "title": "Independent production-readiness review of P11-001 to P11-005 (2e6b9c7..ad1e581): verdict ready with conditions, no blocker, 14 fix-before-release findings; the three known failing tests are stale", "status": "review", "kind": "review",
+      "card": "Planning~/Tasks/P11/P11-006-production-readiness-review.md",
+      "dependsOn": ["P11-001", "P11-002", "P11-003", "P11-004", "P11-005"],
+      "owns": ["Planning~/Evidence/P11-REVIEW/"]
+    },
+    {
       "id": "P11-005", "phase": 11, "title": "A truthful AIBT Graph for a native agent: live blackboard values of a NativeTreeAgent read through the host (P11-004 D7), and a tree-list status that says Needs native compile only when generated code is missing; approved by the owner (find the cause, then fix); accepted 2026-11-22 (bb56c00)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-005-graph-native-agent.md",
       "dependsOn": ["P11-004", "P11-001", "P11-002"],
