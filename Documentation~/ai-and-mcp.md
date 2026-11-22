@@ -48,8 +48,9 @@ What an AI client needs to know about them:
   `run_tests` (behavior cases) fails with a `FactoryFault`. `prepare_runtime` compiles them for the
   native runtime against a catalog that declares them (a project `[AibtCatalogSet]` listing
   `StandardNativeShard` for the library), which is the check that the tree will run.
-- `runtime_hosts` and `read_trace` do not see a `NativeTreeAgent`'s host, so a running agent is
-  watched in the AIBT Graph in Play Mode. `runtime_simulations`, `describe_agent` and
+- `runtime_hosts` lists the host of a running `NativeTreeAgent` (under the agent's GameObject
+  name) and `read_trace` reads it by that `instanceId`; a running agent can also be watched in the
+  AIBT Graph in Play Mode. `runtime_simulations`, `describe_agent` and
   `read_agent_trace` work on a `TreeSimulation` the game registers with
   `TreeSimulationDebug.Register`; they were not tried with library nodes.
 

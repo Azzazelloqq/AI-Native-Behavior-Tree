@@ -203,7 +203,14 @@ namespace AIBT.Mcp
             return result;
         }
 
-        private static ProductionTreeHost[] FindHosts() => UnityEngine.Object.FindObjectsByType<ProductionTreeHost>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        // FindObjectsByType skips objects marked DontSave, and a NativeTreeAgent marks the host it
+        // creates so; those hosts are reached through their agents (P11-007, review F7).
+        private static ProductionTreeHost[] FindHosts()
+            => UnityEngine.Object.FindObjectsByType<ProductionTreeHost>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .Concat(UnityEngine.Object.FindObjectsByType<NativeTreeAgent>(FindObjectsInactive.Include, FindObjectsSortMode.None).Select(agent => agent.Host))
+                .Where(host => host != null)
+                .Distinct()
+                .ToArray();
 
         private static JObject HostInfo(ProductionTreeHost host) => new JObject
         {

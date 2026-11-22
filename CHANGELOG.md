@@ -19,6 +19,9 @@ All notable changes to this project will be documented here. The project follows
   reference node and no `interface` (after Unpack, after its last reference was deleted, or written
   so) was refused by the native compiler with `AIBT2042`. It now compiles as the same tree in
   format 2 and gets the same semantic hash (ADR-P11-001 §4.4, §4.5).
+- **MCP sees native agents** (review F7). `runtime_hosts` now lists the host of a running
+  `NativeTreeAgent` (the agent hides it from scene searches), and `read_trace` reads it by its
+  `instanceId`. Nothing was renamed or removed from either tool's output.
 
 ### A truthful graph window for native agents (P11-005)
 
