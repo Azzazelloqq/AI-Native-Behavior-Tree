@@ -292,13 +292,16 @@ namespace AIBT.Tests.Editor.Validation
         public void TheGraphTreeList_ShowsANativeTreeAsNeedingNativeCompile_WithoutNotes()
         {
             // The tree list validates with the project registry but describes a valid native tree by
-            // its status only, so no note reaches it (before P11-003 as after).
+            // its status only, so no note reaches it (before P11-003 as after). P11-005: with the
+            // project facts the window passes, a tree whose native nodes have generated code is
+            // "Valid" (it was "Needs native compile" before); the test name is kept.
             var path = Path.Combine(Path.GetTempPath(), "aibt-p11003-" + Guid.NewGuid().ToString("N") + ".aibt");
             try
             {
                 File.WriteAllText(path, WriteAndReadTree);
-                var entry = TreeCatalogEntry.Read(path, _catalog.Registry);
-                Assert.That(entry.Status, Is.EqualTo("Needs native compile"), entry.Details);
+                var entry = TreeCatalogEntry.Read(path, _catalog.Registry, null,
+                    new TreeCatalogEntry.NativeFacts(_catalog.Generated, Array.Empty<(string, string)>()));
+                Assert.That(entry.Status, Is.EqualTo("Valid"), entry.Details);
                 Assert.That(entry.Details, Does.Not.Contain("AIBT2043"), entry.Details);
             }
             finally
