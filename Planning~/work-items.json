@@ -4,7 +4,7 @@
   "sourceBranch": "main",
   "items": [
     {
-      "id": "P11-005", "phase": 11, "title": "A truthful AIBT Graph for a native agent: live blackboard values of a NativeTreeAgent read through the host (P11-004 D7), and a tree-list status that says Needs native compile only when generated code is missing; approved by the owner (find the cause, then fix); awaits the orchestrator's acceptance", "status": "in_progress", "kind": "implementation",
+      "id": "P11-005", "phase": 11, "title": "A truthful AIBT Graph for a native agent: live blackboard values of a NativeTreeAgent read through the host (P11-004 D7), and a tree-list status that says Needs native compile only when generated code is missing; approved by the owner (find the cause, then fix); accepted 2026-11-22 (bb56c00)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-005-graph-native-agent.md",
       "dependsOn": ["P11-004", "P11-001", "P11-002"],
       "owns": ["Planning~/Evidence/P11-005/"]

@@ -1216,7 +1216,7 @@ the item is in `Review`. The third item, `P11-003` (the note `AIBT2043` counts w
 `NativeTreeAgent.TryGetValue`; ADR `Documentation~/decisions/ADR-P11-004-native-tree-value-read.md`,
 `AIBT-051`, accepted 2026-11-21), is accepted (`8d03467`) and in `Review`. The fifth item, `P11-005` (a truthful AIBT
 Graph for a native agent: live blackboard values read through the host, and a tree-list status that says
-"Needs native compile" only when generated code is missing), is implemented and awaits the orchestrator's acceptance.
+"Needs native compile" only when generated code is missing), is accepted (`bb56c00`) and in `Review`.
 
 ### Review follow-up scopes (2026-09-04)
 

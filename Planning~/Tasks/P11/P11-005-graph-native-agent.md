@@ -1,7 +1,7 @@
 # P11-005 — A truthful AIBT Graph for a native agent
 
-Status: `In Progress` — implemented on `feature/aibt-consumer-workflow` after `2fff7e5`; awaits the
-orchestrator's acceptance.
+Status: `Review` — implemented on `feature/aibt-consumer-workflow` after `2fff7e5` and accepted by the
+orchestrator after the full run of all nine assemblies on `bb56c00`.
 
 ## Objective
 

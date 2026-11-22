@@ -1,7 +1,7 @@
 # P11-005 evidence — a truthful AIBT Graph for a native agent
 
 Branch `feature/aibt-consumer-workflow`, base `2fff7e5`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-005\`.
-Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Status: implemented; awaits the orchestrator's acceptance.
+Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Status: accepted by the orchestrator on `bb56c00` ("Acceptance run" at the end); the item is in `Review`.
 
 ## Commits
 
@@ -164,3 +164,50 @@ since long before this work. No warning or error comes from the changed files.
 - In the clip intruder-seen and intruder-close did not change; gate-open, sweep-spot and the run did.
 - Refresh time was measured on this project (6 trees) only, not on a large project.
 - A native agent in a subtree window is shown by a test only, not live.
+
+## Acceptance run (orchestrator, 2026-11-22)
+
+Read by the orchestrator on `bb56c00` (clean working tree): the whole code diff `2fff7e5..bb56c00`
+under `Editor/`, the one changed test, this file and four pictures.
+
+- **Scope.** `git diff --stat 2fff7e5 bb56c00` names only `Editor/Graph/` (4 files), `Tests/Editor/`,
+  `Documentation~/editor-and-layout.md`, `CHANGELOG.md` and `Planning~/`. Nothing under `Runtime/`,
+  `Authoring/`, `Agents/`, `MCP/`, `CodeGen~`.
+- **Callers of the status.** `TreeCatalogEntry.Read` has two callers outside tests: the window's list
+  (passes the project facts) and `BehaviorTreeImporter` (built-in registry only, so a tree with a
+  project node ends as "Needs registry" before the native branch). No caller reaches the "not
+  checked here" detail except tests.
+- **Changed expectation.** One, as listed above
+  (`TheGraphTreeList_ShowsANativeTreeAsNeedingNativeCompile_WithoutNotes`: `Valid` with the catalog
+  passed). It follows from the purpose of the item.
+- **Pictures.** `before\blackboard-native-live.png`: run 1, every key `live: —`, First Agent and
+  Native Guard "Needs native compile". `after\blackboard-native-live.png`: run 2, `intruder-close`
+  false, `intruder-seen` true, `gate-open` true, `weapon-ready-at` 12189613, `sweep-spot` -1, all
+  trees Valid. `after\graph-native-live.mp4.stills\t016.0s.png`: run 5, `gate-open` false,
+  `weapon-ready-at` 34471620, `sweep-spot` 2. `after\tree-list-status.png`: Edit Mode, all six Valid.
+- **Full run of all nine assemblies** on `bb56c00`, 19:00-19:16; Editor-log counters: 1 and 3 at the start and at the end (they did not move). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-005\acceptance\full-run-bb56c00.txt`. This run also covers the P11-004 review fix `ac4201c`,
+  which had only the Integration assembly run on it.
+
+| Assembly | `1eb2359` | `bb56c00` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | - |
+| `AIBT.Integration.Tests` | 422/422 | 423/423 | `RefusedReads_AfterTheOneLog_AllocateNoManagedMemory` (P11-004 fix) |
+| `AIBT.Editor.Tests` | 813/814 | 832/833 | `GraphNativeLiveBlackboardTests` 14, `TreeCatalogNativeStatusTests` 5 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | - |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | - |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | - |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | - |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | - |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | - |
+
+The one failure is the known `ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog`.
+
+Not done by the orchestrator: the two new test files were not read line by line; the clip was not
+watched (three stills were opened); the refresh timing was not measured again; the Play Mode
+session was not repeated.
+
+To know: in the window the status "Needs native compile" can no longer appear (its registry holds a
+native project node only when generated code exists), so the list says nothing about a prepared
+asset that is stale; the first list refresh after an `.asset` change pays a 12-18 ms index build on
+this project and loads every `ProductionTreeAsset` once; `README.md:230` still lists the status.
