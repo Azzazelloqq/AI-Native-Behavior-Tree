@@ -11,7 +11,7 @@ namespace AIBT.Editor.Graph
         public override void OnInspectorGUI()
         {
             var asset = (ProductionTreeAsset)target;
-            var state = ProductionTreeAssetStaleness.Evaluate(asset);
+            var state = ProductionTreeAssetStaleness.EvaluateForInspector(asset);
             var sourcePath = ProductionTreeAssetStaleness.SourcePath(asset);
             var catalogType = ProductionTreeAssetStaleness.CatalogType(asset);
 

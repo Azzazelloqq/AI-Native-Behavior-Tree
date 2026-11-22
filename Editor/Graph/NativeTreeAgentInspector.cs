@@ -15,7 +15,7 @@ namespace AIBT.Editor.Graph
                 EditorGUILayout.HelpBox("Assign a runtime asset: open the tree in AIBT > Graph Editor and use Prepare Runtime.", MessageType.Info);
                 return;
             }
-            var state = ProductionTreeAssetStaleness.Evaluate(agent.Tree);
+            var state = ProductionTreeAssetStaleness.EvaluateForInspector(agent.Tree);
             if (state != ProductionTreeAssetState.Current && state != ProductionTreeAssetState.Unknown)
                 EditorGUILayout.HelpBox(ProductionTreeAssetStaleness.Describe(state), MessageType.Warning);
 

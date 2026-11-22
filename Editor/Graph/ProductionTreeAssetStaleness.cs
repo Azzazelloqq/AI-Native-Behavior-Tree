@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using AIBT.Authoring;
 using AIBT.Editor.Registry;
 using UnityEditor;
@@ -44,6 +45,7 @@ namespace AIBT.Editor.Graph
             // writes inside the static constructor; afterAssemblyReload runs once it is, even while
             // the Editor is in the background (delayCall would wait for the next Editor tick).
             AssemblyReloadEvents.afterAssemblyReload += RefreshAfterReload;
+            ProjectNodeCatalogCache.Changed += ForgetInspectorStates;
         }
 
         private static void RefreshAfterReload()
@@ -92,6 +94,61 @@ namespace AIBT.Editor.Graph
                 : ProductionTreeAssetBaker.CurrentSourceHash(path);
             if (current != asset.SourceContentHash) return ProductionTreeAssetState.SourceChanged;
             return ProductionTreeAssetState.Current;
+        }
+
+        // P11-007 (review F3): the inspectors ask on every repaint, and Evaluate reads and hashes the
+        // source (for an asset prepared from subtrees, every tree file in the project). A state is kept
+        // per asset until a tree file is imported, moved or deleted, the node catalog is rediscovered,
+        // or the asset's own snapshot changes (prepared again, reimported); a domain reload starts empty.
+        private static readonly ConditionalWeakTable<ProductionTreeAsset, InspectorState> s_inspectorStates
+            = new ConditionalWeakTable<ProductionTreeAsset, InspectorState>();
+        private static int s_inspectorGeneration;
+
+        /// <summary>
+        /// The state the asset and agent inspectors show on every repaint: <see cref="Evaluate"/>, kept
+        /// until a tree file or the node catalog changes or the asset is prepared again.
+        /// </summary>
+        internal static ProductionTreeAssetState EvaluateForInspector(ProductionTreeAsset asset)
+        {
+            if (asset == null) throw new ArgumentNullException(nameof(asset));
+            if (s_inspectorStates.TryGetValue(asset, out var known) && known.Matches(asset, s_inspectorGeneration)) return known.State;
+            var state = Evaluate(asset);
+            s_inspectorStates.Remove(asset);
+            s_inspectorStates.Add(asset, new InspectorState(asset, s_inspectorGeneration, state));
+            return state;
+        }
+
+        private static void ForgetInspectorStates() => s_inspectorGeneration++;
+
+        private sealed class InspectorState
+        {
+            private readonly int _generation;
+            private readonly string _sourceGuid;
+            private readonly string _catalogTypeName;
+            private readonly string _catalogFingerprint;
+            private readonly string _sourceContentHash;
+            private readonly string[] _subtreeSourceGuids;
+
+            internal InspectorState(ProductionTreeAsset asset, int generation, ProductionTreeAssetState state)
+            {
+                _generation = generation;
+                _sourceGuid = asset.SourceGuid;
+                _catalogTypeName = asset.CatalogTypeName;
+                _catalogFingerprint = asset.CatalogFingerprint;
+                _sourceContentHash = asset.SourceContentHash;
+                _subtreeSourceGuids = asset.SubtreeSourceGuids.ToArray();
+                State = state;
+            }
+
+            internal ProductionTreeAssetState State { get; }
+
+            internal bool Matches(ProductionTreeAsset asset, int generation)
+                => generation == _generation
+                   && string.Equals(asset.SourceGuid, _sourceGuid, StringComparison.Ordinal)
+                   && string.Equals(asset.CatalogTypeName, _catalogTypeName, StringComparison.Ordinal)
+                   && string.Equals(asset.CatalogFingerprint, _catalogFingerprint, StringComparison.Ordinal)
+                   && string.Equals(asset.SourceContentHash, _sourceContentHash, StringComparison.Ordinal)
+                   && asset.SubtreeSourceGuids.SequenceEqual(_subtreeSourceGuids, StringComparer.Ordinal);
         }
 
         public static string Describe(ProductionTreeAssetState state)
@@ -202,6 +259,7 @@ namespace AIBT.Editor.Graph
                     .Where(guid => !string.IsNullOrEmpty(guid)), StringComparer.Ordinal);
                 var treeFilesChanged = guids.Count != 0 || deleted.Concat(moved).Concat(movedFrom).Any(TreeSourcePaths.IsTree);
                 if (!treeFilesChanged) return;
+                ForgetInspectorStates();
                 // Synchronous on purpose: rewriting another asset here is allowed (Unity runs one more
                 // postprocess round for it) and does not depend on Editor ticks.
                 RefreshAll(guids, includeSubtreeDependants: true);

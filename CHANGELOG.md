@@ -25,6 +25,11 @@ All notable changes to this project will be documented here. The project follows
 - **One project scan per tree-list refresh** (review F4). The graph window's tree list walked and
   hashed the project's tree files once for every listed tree that uses subtrees; it now does so at
   most once per refresh, and not at all when no listed tree uses subtrees.
+- **Cheap staleness in the inspectors** (review F3). The `NativeTreeAgent` and
+  `ProductionTreeAsset` inspectors evaluated staleness on every repaint, which for an asset
+  prepared from subtrees walked and hashed every tree file. The state is now kept per asset until a
+  tree file is imported, moved or deleted, the node catalog is rediscovered or the asset is prepared
+  again. An edit on disk shows once Unity imports it.
 
 ### A truthful graph window for native agents (P11-005)
 
