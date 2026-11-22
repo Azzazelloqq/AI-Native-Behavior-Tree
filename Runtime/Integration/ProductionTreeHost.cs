@@ -448,7 +448,9 @@ namespace AIBT
         /// repeated reads from ordinary C# code (ADR-P11-004): any Tree-scope key with a built-in type,
         /// whether nodes write it, a fact sets it or nobody writes it. Refuses an unknown key
         /// (<c>BlackboardUndeclaredAccess</c>), an Agent- or Shared-scope key (<c>BlackboardUnsupportedScope</c>),
-        /// a different type or a <typeparamref name="T"/> of another size (<c>BlackboardTypeMismatch</c>), a
+        /// a different type or a <typeparamref name="T"/> that is not the managed type of <paramref name="expectedType"/>
+        /// (<c>int</c> for Int32, <c>float</c> for Float32, <see cref="Float3Value"/> for Float3 and so on; a type of
+        /// the same size such as <c>uint</c> is refused) (<c>BlackboardTypeMismatch</c>), a
         /// host bootstrapped through a delegate overload (<c>NativeCapacityPlanInvalid</c>) and a host not
         /// bootstrapped or stopped (<c>NativeLifetimeStateInvalid</c>). Legal while the host executes.
         /// </summary>

@@ -344,8 +344,9 @@ namespace AIBT
         /// P11-004 (ADR-P11-004): resolves a Tree-scope, built-in-typed slot for repeated external
         /// reads by <paramref name="stableKeyId"/>. Any Tree-scope key is eligible, whoever writes it.
         /// Refuses an unknown key (<c>BlackboardUndeclaredAccess</c>), a key of another scope
-        /// (<c>BlackboardUnsupportedScope</c>), and a registered type, a different type identity or a
-        /// <typeparamref name="T"/> whose size or alignment differs from the slot (<c>BlackboardTypeMismatch</c>).
+        /// (<c>BlackboardUnsupportedScope</c>), and a registered type, a different type identity, a
+        /// <typeparamref name="T"/> that is not the managed type of <paramref name="expectedType"/> (P11-008)
+        /// or whose size or alignment differs from the slot (<c>BlackboardTypeMismatch</c>).
         /// Reads only the managed binding.
         /// </summary>
         internal bool TryResolveExternalTreeRead<T>(
@@ -378,6 +379,7 @@ namespace AIBT
                     || expectedType.TypeId != candidate.TypeId || expectedType.Version != candidate.TypeVersion
                     || expectedType.Size != candidate.Size || expectedType.Alignment != candidate.Alignment
                     || expectedType.EnumContractId != candidate.EnumContractId
+                    || BuiltInManagedType<T>.TypeId != expectedType.TypeId
                     || UnsafeUtility.SizeOf<T>() != candidate.Size || UnsafeUtility.AlignOf<T>() != candidate.Alignment
                     || (ulong)candidate.Offset + candidate.Size > (uint)_treeValues.Length)
                 {
@@ -393,6 +395,41 @@ namespace AIBT
                 ? NativeRuntimeDiagnosticCodeV1.BlackboardUnsupportedScope
                 : NativeRuntimeDiagnosticCodeV1.BlackboardUndeclaredAccess;
             return false;
+        }
+
+        /// <summary>
+        /// P11-008 (review F8): the built-in blackboard type whose managed type is exactly
+        /// <typeparamref name="T"/>, or 0 when <typeparamref name="T"/> is no built-in's managed type
+        /// (for example <c>uint</c>, a C# enum or a struct of the same layout). Every built-in has one
+        /// managed type of its own (<see cref="BuiltInBlackboardTypes"/>), so the mapping is exact.
+        /// Computed once per <typeparamref name="T"/>; reading it does not allocate.
+        /// </summary>
+        private static class BuiltInManagedType<T> where T : unmanaged
+        {
+            internal static readonly ulong TypeId = Describe();
+
+            private static ulong Describe()
+            {
+                var type = typeof(T);
+                if (type == typeof(bool)) return BuiltInBlackboardTypes.Bool.TypeId;
+                if (type == typeof(int)) return BuiltInBlackboardTypes.Int32.TypeId;
+                if (type == typeof(long)) return BuiltInBlackboardTypes.Int64.TypeId;
+                if (type == typeof(float)) return BuiltInBlackboardTypes.Float32.TypeId;
+                if (type == typeof(double)) return BuiltInBlackboardTypes.Float64.TypeId;
+                if (type == typeof(Float2Value)) return BuiltInBlackboardTypes.Float2.TypeId;
+                if (type == typeof(Float3Value)) return BuiltInBlackboardTypes.Float3.TypeId;
+                if (type == typeof(QuaternionValue)) return BuiltInBlackboardTypes.Quaternion.TypeId;
+                if (type == typeof(Enum32Value)) return BuiltInBlackboardTypes.Enum32.TypeId;
+                if (type == typeof(FixedString32Bytes)) return BuiltInBlackboardTypes.FixedString32.TypeId;
+                if (type == typeof(FixedString64Bytes)) return BuiltInBlackboardTypes.FixedString64.TypeId;
+                if (type == typeof(FixedString128Bytes)) return BuiltInBlackboardTypes.FixedString128.TypeId;
+                if (type == typeof(FixedString512Bytes)) return BuiltInBlackboardTypes.FixedString512.TypeId;
+                if (type == typeof(AgentId)) return BuiltInBlackboardTypes.AgentId.TypeId;
+                if (type == typeof(EntityId)) return BuiltInBlackboardTypes.EntityId.TypeId;
+                if (type == typeof(OperationId)) return BuiltInBlackboardTypes.OperationId.TypeId;
+                if (type == typeof(AssetId)) return BuiltInBlackboardTypes.AssetId.TypeId;
+                return 0;
+            }
         }
 
         /// <summary>

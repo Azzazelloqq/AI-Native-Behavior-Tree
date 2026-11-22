@@ -4,6 +4,17 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Review fixes, batch 2 (P11-008)
+
+- **The host read checks the type argument** (review F8). `ProductionTreeHost.TryResolveExternalTreeRead<T>`
+  compared `expectedType` with the key but only the size and alignment of `T`, so
+  `TryResolveExternalTreeRead<int>(key, Float32)` succeeded and read the float's bits as an `int`.
+  `T` must now be the managed type of `expectedType` (`bool`, `int`, `long`, `float`, `double`,
+  `Float2Value`, `Float3Value`, `QuaternionValue`, `Enum32Value`, `FixedString32Bytes` …
+  `FixedString512Bytes`, `AgentId`, `EntityId`, `OperationId`, `AssetId`); any other type, even of the
+  same size (`uint`, a struct of three floats), is refused with `BlackboardTypeMismatch`. The
+  signature is unchanged and a resolved handle still reads without allocating.
+
 ### Review fixes, batch 1 (P11-007)
 
 - **`NativeTreeAgent.TryGetValue` refuses a faulted run at once** (review W5). It returned true for a

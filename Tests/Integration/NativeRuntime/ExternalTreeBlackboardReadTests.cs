@@ -109,6 +109,35 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        /// <summary>
+        /// P11-008 (review F8): <typeparamref name="T"/> must be the managed type of
+        /// <c>expectedType</c>, not just a type of the same size and alignment. Each case names the
+        /// slot's own type correctly, so only the type argument is wrong.
+        /// </summary>
+        [Test]
+        public void ResolveRefuses_ATypeArgumentThatIsNotTheManagedTypeOfExpectedType()
+        {
+            using (var scenario = Scenario.Create())
+            {
+                var host = scenario.Host;
+                AssertResolveFails<int>(host, "live-target", Float32Type, NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch);
+                AssertResolveFails<uint>(host, "owned-target", Int32Type, NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch);
+                AssertResolveFails<float>(host, "owned-target", Int32Type, NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch);
+                AssertResolveFails<byte>(host, "flag", BoolType, NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch);
+                AssertResolveFails<ThreeFloats>(host, "spot", Float3Type, NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch);
+
+                Assert.That(Read<float>(host, "live-target", Float32Type), Is.EqualTo(0f), "The matching type still resolves.");
+                Assert.That(Read<Float3Value>(host, "spot", Float3Type).Z, Is.EqualTo(3f));
+            }
+        }
+
+        private struct ThreeFloats
+        {
+            public float A;
+            public float B;
+            public float C;
+        }
+
         [Test]
         public void ResolveIsLegalWhileExecuting_ButTheReadIsRefusedAndTouchesNothing()
         {
