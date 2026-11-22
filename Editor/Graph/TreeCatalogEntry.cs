@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AIBT.Agents;
 using AIBT.Authoring;
+using AIBT.Editor.Registry;
+using UnityEditor;
 
 namespace AIBT.Editor.Graph
 {
@@ -34,6 +37,13 @@ namespace AIBT.Editor.Graph
         /// against the project's trees with <paramref name="registry"/>.
         /// </param>
         internal static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion)
+            => Read(path, registry, expansion, null);
+
+        /// <param name="facts">
+        /// The project's generated node code and prepared runtime assets (P11-005), used to describe
+        /// a native tree; when null they are not checked and the entry says so.
+        /// </param>
+        internal static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion, NativeFacts facts)
         {
             var entry = new TreeCatalogEntry { Path = path, Name = System.IO.Path.GetFileName(path), TreeId = "", Status = "Errors" };
             try
@@ -81,16 +91,25 @@ namespace AIBT.Editor.Graph
                     ? ManagedTreeProgram.CreateOptions(path).Policy.CreateValidationOptions(path)
                     : new ValidationOptions(path, supportsAgentScope: true, supportsSharedScope: true);
                 var diagnostics = TreeValidator.Validate(document, registry, options);
+                // Project nodes without a reference handler run only from generated native code.
+                var nativeTypes = managed ? Array.Empty<string>() : document.Nodes
+                    .Where(node => registry.TryGet(node.TypeId, out var item) &&
+                                   item.Source == NodeManifestSource.UserExtension && !item.HasReferenceHandlerBinding)
+                    .Select(node => node.TypeId).Distinct().OrderBy(id => id, StringComparer.Ordinal).ToArray();
+                var withoutCode = facts == null ? Array.Empty<string>() : nativeTypes.Where(id => !facts.HasGeneratedCode(id)).ToArray();
                 entry.Status = diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error) ? "Errors"
                     : diagnostics.Any(d => d.Severity == DiagnosticSeverity.Warning) ? "Warnings"
-                    : !managed && document.Nodes.Any(node => registry.TryGet(node.TypeId, out var item) &&
-                                                 item.Source == NodeManifestSource.UserExtension && !item.HasReferenceHandlerBinding)
-                        ? "Needs native compile" : "Valid";
+                    : withoutCode.Length != 0 ? "Needs native compile" : "Valid";
                 entry.Details = string.Join("\n", diagnostics.Select(d => d.Code.Value + ": " + d.Message));
                 if (entry.Status == "Valid" && managed)
                     entry.Details = "Node contracts validated; managed C# nodes run on a BehaviorTreeAgent.";
                 else if (entry.Status == "Needs native compile")
-                    entry.Details = "Node contracts validated; generated runtime compilation has not been checked here.";
+                    entry.Details = "No generated code in the project for: " + string.Join(", ", withoutCode)
+                        + ". It is written when scripts compile.";
+                else if (entry.Status == "Valid" && nativeTypes.Length != 0)
+                    entry.Details = facts == null
+                        ? "Node contracts validated; generated code and prepared runtime assets are not checked here."
+                        : facts.DescribePrepared(path);
                 else if (entry.Status == "Valid")
                     entry.Details = "Node contracts validated; runtime compilation is a separate step.";
             }
@@ -110,6 +129,77 @@ namespace AIBT.Editor.Graph
         {
             var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
             return errors.Count != 0 && errors.All(d => d.Code == TreeValidationDiagnosticCodes.UnknownNodeType);
+        }
+
+        /// <summary>
+        /// Facts the tree list checks for a native tree (P11-005), gathered once per list refresh:
+        /// which node types have generated code in the project catalog, and which prepared runtime
+        /// assets (<see cref="ProductionTreeAsset"/>) were compiled from which tree, as its source or
+        /// as one of its subtrees. Whether a prepared asset is stale is not checked here.
+        /// </summary>
+        internal sealed class NativeFacts
+        {
+            private readonly IReadOnlyDictionary<string, GeneratedNodeDescriptor> _generated;
+            private readonly IReadOnlyList<(string TreeGuid, string AssetGuid)> _prepared;
+
+            /// <param name="prepared">Pairs of a tree source GUID and the GUID of a runtime asset prepared from it.</param>
+            internal NativeFacts(IReadOnlyDictionary<string, GeneratedNodeDescriptor> generated,
+                IReadOnlyList<(string TreeGuid, string AssetGuid)> prepared)
+            {
+                _generated = generated ?? throw new ArgumentNullException(nameof(generated));
+                _prepared = prepared ?? Array.Empty<(string, string)>();
+            }
+
+            // FindAssets by type costs about 12 ms here, more than the whole list refresh, and the list
+            // refreshes on every project change. The index is kept until an .asset file is imported,
+            // deleted or moved (preparing a runtime asset writes one) or the domain reloads.
+            private static IReadOnlyList<(string, string)> s_preparedIndex;
+
+            /// <summary>The project's generated catalog and the recorded sources of every prepared runtime asset.</summary>
+            internal static NativeFacts FromProject(ProjectNodeCatalog catalog)
+                => new NativeFacts(catalog.Generated, s_preparedIndex ?? (s_preparedIndex = IndexPreparedAssets()));
+
+            private static IReadOnlyList<(string, string)> IndexPreparedAssets()
+            {
+                var prepared = new List<(string, string)>();
+                foreach (var assetGuid in AssetDatabase.FindAssets("t:" + nameof(ProductionTreeAsset)))
+                {
+                    var asset = AssetDatabase.LoadAssetAtPath<ProductionTreeAsset>(AssetDatabase.GUIDToAssetPath(assetGuid));
+                    if (asset == null) continue;
+                    // Assets prepared before provenance was recorded name only their source path.
+                    prepared.Add((string.IsNullOrEmpty(asset.SourceGuid) ? ProjectGuid(asset.SourceId) : asset.SourceGuid, assetGuid));
+                    foreach (var subtree in asset.SubtreeSourceGuids) prepared.Add((subtree, assetGuid));
+                }
+                return prepared;
+            }
+
+            internal bool HasGeneratedCode(string typeId) => _generated.ContainsKey(typeId);
+
+            internal string DescribePrepared(string treePath)
+            {
+                var treeGuid = ProjectGuid(treePath);
+                var assets = string.IsNullOrEmpty(treeGuid) ? Array.Empty<string>() : _prepared
+                    .Where(pair => pair.TreeGuid == treeGuid).Select(pair => AssetDatabase.GUIDToAssetPath(pair.AssetGuid))
+                    .Where(path => !string.IsNullOrEmpty(path)).Distinct().OrderBy(path => path, StringComparer.Ordinal).ToArray();
+                return assets.Length != 0
+                    ? "Native nodes have generated code. Prepared runtime asset: " + string.Join(", ", assets) + "."
+                    : "Native nodes have generated code. No runtime asset is prepared from this tree yet.";
+            }
+
+            // AssetPathToGUID logs a warning for a path outside the project (a test's temporary file).
+            private static string ProjectGuid(string path)
+                => path != null && (path.StartsWith("Assets/", StringComparison.Ordinal) || path.StartsWith("Packages/", StringComparison.Ordinal))
+                    ? AssetDatabase.AssetPathToGUID(path) : string.Empty;
+
+            private sealed class PreparedAssetPostprocessor : AssetPostprocessor
+            {
+                private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
+                {
+                    if (s_preparedIndex == null) return;
+                    if (imported.Concat(deleted).Concat(moved).Concat(movedFrom)
+                        .Any(path => path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase))) s_preparedIndex = null;
+                }
+            }
         }
 
         public bool Matches(string search, string tag, string status)

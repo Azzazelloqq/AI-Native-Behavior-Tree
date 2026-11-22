@@ -111,6 +111,8 @@ namespace AIBT.Editor.Graph
             NativeAgent = null;
             _nativeProgram = null;
             _nativeRunning = Array.Empty<bool>();
+            _nativeText.Clear();
+            _nativeValuesHost = null;
             _instance = null;
             _running.Clear();
             _activeEdges.Clear();
@@ -196,16 +198,90 @@ namespace AIBT.Editor.Graph
             _view.SetActiveEdges(_activeEdges);
         }
 
-        /// <summary>Live blackboard keys of the attached agent's tree.</summary>
+        /// <summary>Live blackboard keys of the attached managed agent's tree (empty for a native agent).</summary>
         internal IReadOnlyList<string> KeyNames => _instance?.KeyNames ?? (IReadOnlyList<string>)Array.Empty<string>();
 
-        internal bool TryFormatValue(string key, out string text)
+        internal bool TryFormatValue(string key, out string text) => TryFormatValue(key, out text, out _);
+
+        /// <summary>
+        /// The current value of program key <paramref name="key"/>, formatted. For a
+        /// <see cref="NativeTreeAgent"/> it is read from the current run's host by the key's ID
+        /// (ADR-P11-004 D7). False when there is no value to show; <paramref name="reason"/> then says
+        /// why for a native agent (null for a managed one).
+        /// </summary>
+        internal bool TryFormatValue(string key, out string text, out string reason)
         {
+            reason = null;
+            if ((object)NativeAgent != null) return TryFormatNative(key, out text, out reason);
             text = null;
             if (_instance == null || !_instance.TryResolveKey(key, out var slot, out _)) return false;
             if (!_instance.TryRead(slot, out var value)) return false;
             text = Format(value);
             return true;
+        }
+
+        // P11-005: the last text shown per key for the current run's host. A host that executes
+        // (PipelinedJobs between frames) refuses reads; the panel keeps these instead of flickering.
+        private readonly Dictionary<string, string> _nativeText = new Dictionary<string, string>(StringComparer.Ordinal);
+        private ProductionTreeHost _nativeValuesHost;
+
+        private bool TryFormatNative(string key, out string text, out string reason)
+        {
+            var host = NativeAgent ? NativeAgent.Host : null;
+            if (!ReferenceEquals(host, _nativeValuesHost))
+            {
+                // A new run has a new host whose values start from the defaults: forget the old texts.
+                _nativeValuesHost = host;
+                _nativeText.Clear();
+            }
+            if (host == null)
+            {
+                text = null;
+                reason = "The agent has no run now.";
+                return false;
+            }
+            if (host.TryReadTreeValue(key, out var value, out var failure))
+            {
+                text = Format(value);
+                _nativeText[key] = text;
+                reason = null;
+                return true;
+            }
+            _nativeText.TryGetValue(key, out var last);
+            var shown = ExplainRefusal(key, failure.Code, host.IsExecuting, last, out text, out reason);
+            if (!shown) _nativeText.Remove(key);
+            return shown;
+        }
+
+        /// <summary>
+        /// What the panel shows when a native host refuses to read <paramref name="key"/>: the last
+        /// text while the host executes, otherwise nothing, with the reason in plain words.
+        /// </summary>
+        internal static bool ExplainRefusal(string key, NativeRuntimeDiagnosticCodeV1 code, bool executing, string last,
+            out string text, out string reason)
+        {
+            text = null;
+            if (code == NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid && executing)
+            {
+                if (last == null)
+                {
+                    reason = "The host is executing a job (PipelinedJobs); no value was read yet.";
+                    return false;
+                }
+                text = last;
+                reason = "The host is executing a job (PipelinedJobs); this is the last value read.";
+                return true;
+            }
+            switch (code)
+            {
+                case NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid: reason = "The host is stopped."; break;
+                case NativeRuntimeDiagnosticCodeV1.BlackboardUndeclaredAccess: reason = "The running program has no key '" + key + "'."; break;
+                case NativeRuntimeDiagnosticCodeV1.BlackboardUnsupportedScope: reason = "Only Tree-scope keys are read from a native agent."; break;
+                case NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch: reason = "Keys of a registered type are not shown for a native agent."; break;
+                case NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid: reason = "The host was not started from a generated catalog."; break;
+                default: reason = "The host refused the read: " + code + "."; break;
+            }
+            return false;
         }
 
         internal string Describe()
@@ -244,6 +320,26 @@ namespace AIBT.Editor.Graph
                 case BlackboardValueType.Float3:
                     value.TryGetFloat3(out var v3);
                     return "(" + N(v3.X) + ", " + N(v3.Y) + ", " + N(v3.Z) + ")";
+                case BlackboardValueType.Quaternion:
+                    value.TryGetQuaternion(out var q);
+                    return "(" + N(q.X) + ", " + N(q.Y) + ", " + N(q.Z) + ", " + N(q.W) + ")";
+                case BlackboardValueType.Enum32:
+                    // The enum contract carries no member names, so the stored number is shown.
+                    value.TryGetEnum32(out var e);
+                    return e.Value.ToString(CultureInfo.InvariantCulture);
+                // A BlackboardValue holds only valid IDs (its factories refuse the empty ones).
+                case BlackboardValueType.AgentId:
+                    value.TryGetAgentId(out var agent);
+                    return "agent " + agent;
+                case BlackboardValueType.EntityId:
+                    value.TryGetEntityId(out var entity);
+                    return "entity " + entity;
+                case BlackboardValueType.OperationId:
+                    value.TryGetOperationId(out var operation);
+                    return "operation " + operation;
+                case BlackboardValueType.AssetId:
+                    value.TryGetAssetId(out var asset);
+                    return "asset " + asset.ToGuidString() + (asset.HasLocalFileId ? ":" + asset.LocalFileId.ToString(CultureInfo.InvariantCulture) : string.Empty);
                 default:
                     return value.TryGetFixedString(out var text) ? "\"" + text + "\"" : value.Type.ToString();
             }

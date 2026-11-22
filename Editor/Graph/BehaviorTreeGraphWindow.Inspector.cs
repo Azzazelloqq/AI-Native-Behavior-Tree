@@ -409,11 +409,19 @@ namespace AIBT.Editor.Graph
             });
         }
 
-        private void RefreshLiveBlackboard()
+        /// <summary>
+        /// Shows the attached agent's current value of each key; a key without one shows
+        /// <c>live: —</c>, with the reason as the tooltip when the agent is native.
+        /// </summary>
+        internal void RefreshLiveBlackboard()
         {
             if (_live == null || !_live.IsAttached) return;
             foreach (var pair in _liveValueLabels)
-                pair.Value.text = _live.TryFormatValue(LiveKeyName(pair.Key), out var text) ? "live: " + text : "live: —";
+            {
+                var shown = _live.TryFormatValue(LiveKeyName(pair.Key), out var text, out var reason);
+                pair.Value.text = shown ? "live: " + text : "live: —";
+                pair.Value.tooltip = reason ?? string.Empty;
+            }
         }
 
         // ---------------------------------------------------------------- generated bindings
