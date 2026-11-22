@@ -2,7 +2,8 @@
 
 Branch `feature/aibt-consumer-workflow`, base `4be2983`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-007\`.
 Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Findings from `Planning~/Evidence/P11-REVIEW/README.md`.
-Status: `In Progress`; the item awaits the orchestrator's acceptance.
+Status: accepted by the orchestrator on `42253ac` ("Acceptance run" at the end); the item is in `Review`.
+One F12 test still fails on the pinned compiled content hash; its cause is not established.
 
 ## Commits
 
@@ -241,3 +242,54 @@ expected logs of tests (`LogAssert.Expect`).
   within a session; checked indirectly (dependency tests green, no re-import needed), not by reading them back.
 - Measurements are from one busy machine; the F3/F4 differences are 10× and more, not small.
 - None of the nine full assemblies was run here (the orchestrator runs them).
+
+## Acceptance run (orchestrator, 2026-11-22)
+
+Read by the orchestrator on `42253ac` (clean working tree): this file and the whole diff
+`4be2983..42253ac` outside `Tests/` and `Planning~/`.
+
+- **Scope.** 15 files outside `Tests/` and `Planning~/`, 207 lines added, 22 removed: the dispatch
+  adapter (11 lines, F1), `GeneratedCompiledProgramV2.CompileDocument` (8 lines, F2),
+  `NativeTreeAgent.TryGetValue` (W5), `McpRuntimeTools.FindHosts` (F7), six files under
+  `Editor/Graph/` (F3, F4, F5), `CHANGELOG.md` and three documentation pages with their generator.
+  `git diff --stat 4be2983..42253ac` is empty for `Tests/Editor/CodeGen/Contracts`, `Tests/Fixtures`,
+  `CodeGen~`, `package.json` and `Documentation~/specifications`.
+- **F1 and F2 are the two changes of behaviour the owner allowed** ("Да, пакет 1", 2026-11-22): a
+  native node with one key on two handles now runs instead of faulting the host; a format-3 document
+  that uses no subtree feature now compiles natively as format 2. Neither changes the compiled
+  format or the ABI file.
+- **Full run of ten assemblies** on `42253ac`, 2026-11-22 21:03-21:21; Editor-log counters did not
+  move (unknown-command 1, main-thread-timeout 15 before and after). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-007\acceptance\full-run-42253ac.txt`. `AIBT.CodeGen.GenerationTests` joins the full run from
+  this item on: it was not part of the nine before, and its two fixture tests could not run when the
+  package is embedded.
+
+| Assembly | `bb56c00` | `42253ac` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | - |
+| `AIBT.Integration.Tests` | 423/423 | 440/440 | `NativeLibraryAliasedKeyTests` 14, `NativeLibraryRandomTests` +2, `NativeTreeAgentValueReadTests` +1 |
+| `AIBT.Editor.Tests` | 832/833 | 842/842 | `SubtreeFormat3WithoutFeaturesTests` 2, `TreeListScanTests` 2, `ProductionTreeAssetInspectorStateTests` 1, `ProjectTreeIndexReloadTests` 2, `McpRuntimeNativeAgentTests` 2 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | - |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | - |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | - |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | - |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | - |
+| `AIBT.CodeGen.GenerationTests` | not run | 13/14 | - |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | - |
+
+`ZeroCustomNodesReturnsExactlyThePhase1BuiltInCatalog` passes, so `AIBT.Editor.Tests` has no failure
+for the first time in this phase.
+
+**Open.** `GeneratedArtifactContractTests.EmittedMetadata_MaterializesConsumerDescriptorAndCompilesCanonicalV2Artifact`
+fails on the pinned content hash of `Tests/Fixtures/P2/CodeGen/generated-compiled-v2.json` (pin
+`60dc5c12...`, actual `426504d3...`). The pin was last written in `567a29c` (2026-11-02); the test
+could not run in this project since then, so nobody saw when the bytes changed. Whether the pin is
+stale or the compiled bytes changed without notice is not known. The fixture is in the protected
+area and was not touched; F12 is therefore two of three.
+
+Not done by the orchestrator: the new test files were not read line by line; the F3, F4 and F5
+measurements were not repeated; nothing was looked at in the Editor window (this batch has no
+change to see there except a faster inspector).
+
+To know: F3 shows an edit made on disk only after Unity imports it; F5 rests on the AssetDatabase
+keeping custom dependency values across a domain reload, checked indirectly.

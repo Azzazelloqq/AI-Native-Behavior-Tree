@@ -1,7 +1,8 @@
 # P11-007 — Review fixes, batch 1 (F1, F2, F3, F4, F5, F7, F12, W5)
 
-Status: `In Progress` — the fixes are committed on `feature/aibt-consumer-workflow`; the item awaits
-the orchestrator's acceptance.
+Status: `Review` — the fixes are committed on `feature/aibt-consumer-workflow` and accepted by the
+orchestrator after the full run of ten assemblies on `42253ac`. Open: the third F12 test fails on the
+pinned compiled content hash; the cause is not established.
 
 ## Objective
 

@@ -1216,7 +1216,7 @@ the item is in `Review`. The third item, `P11-003` (the note `AIBT2043` counts w
 `NativeTreeAgent.TryGetValue`; ADR `Documentation~/decisions/ADR-P11-004-native-tree-value-read.md`,
 `AIBT-051`, accepted 2026-11-21), is accepted (`8d03467`) and in `Review`. The fifth item, `P11-005` (a truthful AIBT
 Graph for a native agent: live blackboard values read through the host, and a tree-list status that says
-"Needs native compile" only when generated code is missing), is accepted (`bb56c00`) and in `Review`. `P11-006`, an independent production-readiness review of P11-001 to P11-005, found no blocker and gives the verdict "ready with conditions" with 14 findings to fix before a release (`Planning~/Evidence/P11-REVIEW/README.md`); it is in `Review`. `P11-007` fixes the review's first batch (F1, F2, F3, F4, F5, F7, F12, W5), one commit per finding with its test (`Planning~/Evidence/P11-007/README.md`); it is `In Progress` and awaits the orchestrator's acceptance.
+"Needs native compile" only when generated code is missing), is accepted (`bb56c00`) and in `Review`. `P11-006`, an independent production-readiness review of P11-001 to P11-005, found no blocker and gives the verdict "ready with conditions" with 14 findings to fix before a release (`Planning~/Evidence/P11-REVIEW/README.md`); it is in `Review`. `P11-007` fixes the review's first batch (F1, F2, F3, F4, F5, F7, F12, W5), one commit per finding with its test (`Planning~/Evidence/P11-007/README.md`); it is accepted (`42253ac`) and in `Review`; one F12 test still fails on the pinned compiled content hash, cause not established.
 
 ### Review follow-up scopes (2026-09-04)
 

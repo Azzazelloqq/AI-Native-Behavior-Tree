@@ -4,7 +4,7 @@
   "sourceBranch": "main",
   "items": [
     {
-      "id": "P11-007", "phase": 11, "title": "Review fixes, batch 1: F1 (one key on two handles of a native node), F2 (format 3 without subtree features compiles natively), F3 (inspector staleness per repaint), F4 (one scan per tree-list refresh), F5 (no AssetDatabase.Refresh after a recompile with nothing changed), F7 (MCP sees NativeTreeAgent hosts), F12 (three stale tests), W5 (TryGetValue refuses a faulted run); awaits the orchestrator's acceptance", "status": "in_progress", "kind": "implementation",
+      "id": "P11-007", "phase": 11, "title": "Review fixes, batch 1: F1 (one key on two handles of a native node), F2 (format 3 without subtree features compiles natively), F3 (inspector staleness per repaint), F4 (one scan per tree-list refresh), F5 (no AssetDatabase.Refresh after a recompile with nothing changed), F7 (MCP sees NativeTreeAgent hosts), F12 (three stale tests), W5 (TryGetValue refuses a faulted run); accepted 2026-11-22 (42253ac), F12 two of three: the pinned compiled hash test still fails", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-007-review-fixes-batch-1.md",
       "dependsOn": ["P11-006"],
       "owns": ["Planning~/Evidence/P11-007/"]
