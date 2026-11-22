@@ -126,7 +126,11 @@ Tree-scope default and adds keys. The Problems list under the graph shows diagno
 selects and frames its node. Notes are informational: `AIBT2043 Input key '<key>'` marks a
 Tree-scope key that no node declares a write for and no managed node binds as a key parameter, which is expected for keys gameplay code sets through
 `BehaviorTreeAgent.Blackboard.Set` or `NativeTreeAgent.SetFact`. The project tree list validates
-managed trees with the managed policy.
+managed trees with the managed policy. A valid tree with native (generated) nodes is `Valid`; its
+tooltip names the prepared runtime asset compiled from it (as its source or as a subtree) or says
+that none is prepared yet. It shows `Needs native compile` only when one of its native node types
+has no generated code in the project catalog. The list does not check whether a prepared asset is
+stale; the asset's inspector does.
 
 **Live debugging.** In Play Mode, selecting a GameObject with a `BehaviorTreeAgent` whose tree is
 open attaches the graph automatically (Debug attaches explicitly and opens the agent's tree when
@@ -138,10 +142,19 @@ starts and finishes between two samples is not shown.
 **Native agents (P9-004).** Selecting a GameObject with a `NativeTreeAgent` (or pressing Debug)
 attaches the same way. The view reads the host's activation stack each frame and maps runtime
 node indexes through the program's debug map: it shows the active path, nodes that just finished
-and the root result. It does not show exit statuses of inner nodes, activations that start and end
-within one frame, or native blackboard values, and it does not read a host while it is driving or
-while a pipelined job is in flight. A raw `ProductionTreeHost` keeps the trace path (**AIBT >
-Attach Selected Host Trace**).
+and the root result. It does not show exit statuses of inner nodes or activations that start and
+end within one frame, and it does not read a host while it is driving or while a pipelined job is
+in flight. A raw `ProductionTreeHost` keeps the trace path (**AIBT > Attach Selected Host Trace**).
+
+**Native blackboard values (P11-005).** With a `NativeTreeAgent` attached, the Blackboard panel shows
+`live: <value>` for every Tree-scope key, read from the current run's host by the key's ID five times
+a second. Without a run it shows `live: —`; when the next run starts the values are that run's, so
+they go back to the defaults. A host that runs `PipelinedJobs` is executing between frames and
+refuses reads: the panel then keeps the last value it read and says so in the tooltip, so values
+freeze while the host executes. A key the running program does not have (for example renamed after
+the asset was prepared), an Agent- or Shared-scope key, or a key of a registered type shows `live: —`
+with the reason in the tooltip. In a subtree window a key of the instance reads the instance's own
+key, and an interface key reads the parent key it is bound to.
 
 **Runtime assets.** More > Prepare Runtime Asset compiles the tree against a generated catalog into a
 `ProductionTreeAsset` and records the source GUID, source hash and catalog type. Saving the source

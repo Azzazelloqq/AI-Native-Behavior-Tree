@@ -4,6 +4,22 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### A truthful graph window for native agents (P11-005)
+
+- **Live values of a `NativeTreeAgent`.** With the graph attached to a native agent, the Blackboard
+  panel shows `live: <value>` for every Tree-scope key instead of `live: —`, read from the current
+  run's host by key ID (all built-in types, including Quaternion, Enum32 as its number and the ID
+  types). Without a run it shows `live: —`; a new run shows its own values, starting from the
+  defaults. A `PipelinedJobs` host refuses reads while it executes: the panel keeps the last value
+  read, so values freeze. Keys the program lacks, other scopes and registered types show `live: —`
+  with the reason as the tooltip. Subtree windows read the instance's keys.
+- **Tree list status.** A valid native tree is no longer shown as `Needs native compile` when its
+  generated code exists. It is `Valid`, and its tooltip names the prepared runtime asset compiled
+  from it or says none is prepared yet. `Needs native compile` remains only for a native node type
+  without generated code in the project catalog. The prepared-asset index is built once and kept
+  until an `.asset` file changes.
+- **Unchanged:** everything outside the editor; ABI v2, the compiled program format, the runtime.
+
 ### Reading a value back from a native tree (P11-004)
 
 - **`NativeTreeAgent.TryGetValue<T>(key, out value)`** and **`TryGetVector3`** read a Tree-scope key
