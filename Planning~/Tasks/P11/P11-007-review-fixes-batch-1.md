@@ -2,7 +2,8 @@
 
 Status: `Review` — the fixes are committed on `feature/aibt-consumer-workflow` and accepted by the
 orchestrator after the full run of ten assemblies on `42253ac`. Open: the third F12 test fails on the
-pinned compiled content hash; the cause is not established.
+pinned compiled content hash; the pin is stale since `5c4bdfe` (approved P10-013 change of the registry
+hash), refreshing it waits for the owner.
 
 ## Objective
 

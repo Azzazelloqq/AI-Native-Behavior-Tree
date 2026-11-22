@@ -3,7 +3,8 @@
 Branch `feature/aibt-consumer-workflow`, base `4be2983`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-007\`.
 Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Findings from `Planning~/Evidence/P11-REVIEW/README.md`.
 Status: accepted by the orchestrator on `42253ac` ("Acceptance run" at the end); the item is in `Review`.
-One F12 test still fails on the pinned compiled content hash; its cause is not established.
+One F12 test still fails on the pinned compiled content hash: the pin is stale since `5c4bdfe`
+("Pinned compiled hash" at the end); refreshing it waits for the owner.
 
 ## Commits
 
@@ -293,3 +294,35 @@ change to see there except a faster inspector).
 
 To know: F3 shows an edit made on disk only after Unity imports it; F5 rests on the AssetDatabase
 keeping custom dependency values across a domain reload, checked indirectly.
+
+## Pinned compiled hash: the pin is stale (investigation, 2026-11-22)
+
+Investigated by the P11-007 session at `c02d92f` without changing a file; checked by the orchestrator.
+Raw files: `C:\UnityProjects\_aibt_acceptance\P11-007\F12\pin\` (`SUMMARY.txt` first).
+
+- **Difference.** Pin and actual stream are both 861 bytes; 32 bytes differ, offsets 54-85. Decoded by
+  the layout of `GeneratedCompiledProgramV2Serializer.Serialize` (121 fields each), the only field
+  that differs is `header.nodeRegistryHash`: pin `f9a1e3c0...dc48`, actual `9c189ffd...7b01`.
+  Semantic hash, policy hash, nodes, accesses, slots, scope layout, blobs and debug map are equal.
+- **Cause.** `5c4bdfe` (P10-013 stage 1) added the built-ins `aibt.core.reactive-sequence-retaining`
+  and `aibt.core.reactive-selector-retaining`. Today's registry of the test without these two hashes
+  to exactly the pin's `f9a1e3c0...dc48` (`registry-without-retaining.json`), so no other commit
+  changed these bytes and the test's inputs are unchanged in effect. No commit touched
+  `Tests/Fixtures/P2/CodeGen` since `567a29c`.
+- **Approved.** ADR-P10-013 (accepted 2026-11-17, AIBT-048) states that the registry hash changes and
+  is part of every compiled program's content hash; `CHANGELOG.md` says the fixtures that pin it
+  were regenerated. `5c4bdfe` regenerated `NodeRegistryHashTests` and
+  `minimal-compiled-v1.golden.json`; this pin was not in the list of P10-013's evidence and was
+  missed, because its test could not reach the assertion in an embedded package and its assembly
+  was not in the full run.
+- **Other pins.** `NodeRegistryHashTests` and `ReferenceCompilerTests`
+  (`minimal-compiled-v1.golden.json`) are in `AIBT.Editor.Tests` and pass in the run on `42253ac`.
+  `generated-compiled-v2.json` is the only pinned compiled stream.
+
+Checked by the orchestrator: the byte difference recomputed from the two JSON files (861/861, 32
+bytes, offsets 54-85, the two hash values); the copy of the pin equals the file in the repository;
+the stat of `5c4bdfe`; the ADR and `CHANGELOG.md` wording. Not checked: the registry reconstruction
+probe was not run again and the decoder was not read.
+
+The pin is not refreshed: the fixture is in the protected area and the owner decides. The refresh
+is `contentHash` plus the 32 bytes at offset 54 of `bytesHex`, nothing else.
