@@ -476,12 +476,30 @@ namespace AIBT.Tests.CodeGen.Generation
         private static string Diagnostics(DiagnosticCollection diagnostics)
             => string.Join(" | ", diagnostics.Select(value => value.Code.Value + ":" + value.Message));
 
+        /// <summary>
+        /// The pinned fixture of the package that owns this test assembly, wherever the package is
+        /// installed (P11-007, review F12): through the Package Manager (its resolved path), or embedded
+        /// under Assets/ as in the package's own host project, where the Package Manager knows no
+        /// package for the assembly (the folder holding package.json above this assembly's asmdef).
+        /// </summary>
         private static string FixturePath(string fileName)
         {
-            var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(
-                typeof(GeneratedArtifactContractTests).Assembly);
-            Assert.That(package, Is.Not.Null, "The CodeGen test assembly must belong to the AIBT package.");
-            return Path.Combine(package.resolvedPath, "Tests", "Fixtures", "P2", "CodeGen", fileName);
+            var assembly = typeof(GeneratedArtifactContractTests).Assembly;
+            var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(assembly);
+            var root = package != null ? package.resolvedPath : EmbeddedPackageRoot(assembly);
+            Assert.That(root, Is.Not.Null, "The CodeGen test assembly must belong to the AIBT package.");
+            Assert.That(File.ReadAllText(Path.Combine(root, "package.json")),
+                Does.Match("\"name\"\\s*:\\s*\"com\\.azzazello\\.aibt\""), "The CodeGen test assembly must belong to the AIBT package.");
+            return Path.Combine(root, "Tests", "Fixtures", "P2", "CodeGen", fileName);
+        }
+
+        private static string EmbeddedPackageRoot(Assembly assembly)
+        {
+            var asmdef = UnityEditor.Compilation.CompilationPipeline.GetAssemblyDefinitionFilePathFromAssemblyName(assembly.GetName().Name);
+            if (string.IsNullOrEmpty(asmdef)) return null;
+            for (var directory = Path.GetDirectoryName(Path.GetFullPath(asmdef)); directory != null; directory = Path.GetDirectoryName(directory))
+                if (File.Exists(Path.Combine(directory, "package.json"))) return directory;
+            return null;
         }
 
         private static string ReplaceOnce(string value, string oldValue, string newValue)

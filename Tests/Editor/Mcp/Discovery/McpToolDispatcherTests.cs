@@ -80,10 +80,70 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
                 .Concat(AIBT.Tests.Editor.Agents.StandardNodeCatalogTests.StandardNativeTypeIds)
                 .OrderBy(id => id, System.StringComparer.Ordinal)
                 .ToArray();
-            Assert.That(typeIds, Is.EqualTo(expectedTypeIds),
+            // P11-007 (review F12): the project this runs in may add nodes of its own (the package's
+            // host project has sample nodes). Only an ID that a type outside the package declares is
+            // set aside; in a project without custom nodes nothing is, and the catalog must be exactly
+            // the built-in set.
+            var hostProjectTypeIds = HostProjectNodeTypeIds();
+            Assert.That(hostProjectTypeIds.Intersect(expectedTypeIds), Is.Empty, "A host project node reuses a package node type ID.");
+            Assert.That(typeIds, Is.Unique);
+            var packageTypeIds = typeIds.Where(id => !hostProjectTypeIds.Contains(id)).ToArray();
+            Assert.That(packageTypeIds, Is.EqualTo(expectedTypeIds),
                 "With no custom nodes registered, the catalog must be exactly the built-in set -- honestly, not padded or trimmed."
-                + " Extra: [" + string.Join(", ", typeIds.Except(expectedTypeIds)) + "]"
-                + " Missing: [" + string.Join(", ", expectedTypeIds.Except(typeIds)) + "]");
+                + " Extra: [" + string.Join(", ", packageTypeIds.Except(expectedTypeIds)) + "]"
+                + " Missing: [" + string.Join(", ", expectedTypeIds.Except(packageTypeIds)) + "]"
+                + " Host project nodes set aside: [" + string.Join(", ", typeIds.Intersect(hostProjectTypeIds)) + "]");
+        }
+
+        // The attributes that declare a native node type, with its type ID as the first argument: the
+        // full form and the short forms (AIBT.Native).
+        private static readonly System.Type[] NativeNodeAttributes =
+        {
+            typeof(AIBT.Burst.AibtBurstNodeAttribute), typeof(AIBT.Native.AibtActionAttribute), typeof(AIBT.Native.AibtConditionAttribute),
+        };
+
+        /// <summary>
+        /// Node type IDs declared ([BtNode] classes, native node structs) by non-test assemblies
+        /// outside the AIBT package, read straight from the attributes. Empty in a consumer project
+        /// without custom nodes. The package is found by its assemblies' asmdef paths, so this works
+        /// both through the Package Manager and with the package embedded under Assets/.
+        /// </summary>
+        private static System.Collections.Generic.HashSet<string> HostProjectNodeTypeIds()
+        {
+            var ids = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
+            var packageRoot = PackageAssetRoot();
+            foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly.IsDynamic || assembly.GetReferencedAssemblies().Any(reference => reference.Name == "nunit.framework")) continue;
+                var asmdef = UnityEditor.Compilation.CompilationPipeline.GetAssemblyDefinitionFilePathFromAssemblyName(assembly.GetName().Name);
+                if (!string.IsNullOrEmpty(asmdef) && asmdef.Replace('\\', '/').StartsWith(packageRoot + "/", System.StringComparison.Ordinal)) continue;
+                System.Type[] types;
+                try { types = assembly.GetTypes(); }
+                catch (System.Reflection.ReflectionTypeLoadException exception) { types = exception.Types.Where(type => type != null).ToArray(); }
+                foreach (var type in types)
+                {
+                    if (!type.IsAbstract && typeof(AIBT.BtNode).IsAssignableFrom(type)
+                        && System.Attribute.GetCustomAttribute(type, typeof(AIBT.BtNodeAttribute), false) is AIBT.BtNodeAttribute managed)
+                        ids.Add(managed.TypeId);
+                    var native = type.GetCustomAttributesData().FirstOrDefault(data => NativeNodeAttributes.Contains(data.AttributeType));
+                    if (native != null) ids.Add((string)native.ConstructorArguments[0].Value);
+                }
+            }
+            return ids;
+        }
+
+        /// <summary>"Packages/&lt;name&gt;" through the Package Manager; the folder holding package.json (for example "Assets/AIBT") when embedded.</summary>
+        private static string PackageAssetRoot()
+        {
+            var agents = typeof(AIBT.BtNode).Assembly;
+            var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(agents);
+            if (package != null) return package.assetPath;
+            var asmdef = UnityEditor.Compilation.CompilationPipeline.GetAssemblyDefinitionFilePathFromAssemblyName(agents.GetName().Name);
+            Assert.That(asmdef, Is.Not.Null.And.Not.Empty, "AIBT.Agents has an asmdef.");
+            for (var directory = Path.GetDirectoryName(asmdef.Replace('\\', '/')); !string.IsNullOrEmpty(directory); directory = Path.GetDirectoryName(directory))
+                if (File.Exists(Path.Combine(directory, "package.json"))) return directory.Replace('\\', '/');
+            Assert.Fail("No package.json above " + asmdef);
+            return null;
         }
 
         internal static string[] PackageManagedNodeTypeIds()
