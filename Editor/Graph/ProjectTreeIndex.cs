@@ -64,6 +64,9 @@ namespace AIBT.Editor.Graph
             allowManagedNodes: true, allowMainThreadNodes: true, requireDeterministicNodes: false,
             supportsAgentScope: true, supportsSharedScope: true);
 
+        /// <summary>Scans since the last domain reload (P11-007: lets tests and probes count disk walks).</summary>
+        internal static int ScanCount { get; private set; }
+
         /// <summary>Reads the current tree files (unchanged files are not parsed again).</summary>
         internal static Snapshot Scan() => Scan(Roots());
 
@@ -73,6 +76,7 @@ namespace AIBT.Editor.Graph
         /// </summary>
         internal static Snapshot Scan(IEnumerable<ScanRoot> roots)
         {
+            ScanCount++;
             var seen = new HashSet<string>(StringComparer.Ordinal);
             var entries = new Dictionary<TreeId, List<KeyValuePair<string, TreeDocument>>>();
             var unreadable = new List<string>();

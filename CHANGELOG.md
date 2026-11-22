@@ -22,6 +22,9 @@ All notable changes to this project will be documented here. The project follows
 - **MCP sees native agents** (review F7). `runtime_hosts` now lists the host of a running
   `NativeTreeAgent` (the agent hides it from scene searches), and `read_trace` reads it by its
   `instanceId`. Nothing was renamed or removed from either tool's output.
+- **One project scan per tree-list refresh** (review F4). The graph window's tree list walked and
+  hashed the project's tree files once for every listed tree that uses subtrees; it now does so at
+  most once per refresh, and not at all when no listed tree uses subtrees.
 
 ### A truthful graph window for native agents (P11-005)
 

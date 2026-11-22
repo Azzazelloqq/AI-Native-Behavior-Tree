@@ -447,11 +447,10 @@ namespace AIBT.Editor.Graph
             _catalogDiagnostics.style.display = _projectCatalog.Problems.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
             _catalog.Clear();
             var facts = TreeCatalogEntry.NativeFacts.FromProject(_projectCatalog);
-            foreach (var path in AssetDatabase.GetAllAssetPaths().Where(TreeSourcePaths.IsTree)
-                         .Where(path => !path.StartsWith("Assets/AIBT/Tests/", StringComparison.OrdinalIgnoreCase) &&
-                                        !path.StartsWith("Packages/com.azzazello.aibt/Tests/", StringComparison.OrdinalIgnoreCase))
-                         .OrderBy(p => p, StringComparer.Ordinal))
-                _catalog.Add(TreeCatalogEntry.Read(path, _projectCatalog.Registry, null, facts));
+            _catalog.AddRange(TreeCatalogEntry.ReadAll(AssetDatabase.GetAllAssetPaths().Where(TreeSourcePaths.IsTree)
+                .Where(path => !path.StartsWith("Assets/AIBT/Tests/", StringComparison.OrdinalIgnoreCase) &&
+                               !path.StartsWith("Packages/com.azzazello.aibt/Tests/", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(p => p, StringComparer.Ordinal), _projectCatalog.Registry, facts));
             var selectedTag = _tag.value;
             _tag.choices = new[] { "All tags" }.Concat(_catalog.SelectMany(e => e.Tags).Distinct().OrderBy(t => t)).ToList();
             _tag.SetValueWithoutNotify(_tag.choices.Contains(selectedTag) ? selectedTag : "All tags");

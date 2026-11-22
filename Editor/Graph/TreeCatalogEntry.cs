@@ -26,6 +26,19 @@ namespace AIBT.Editor.Graph
         /// </summary>
         internal SubtreeExpansion Expansion { get; private set; }
 
+        /// <summary>
+        /// The tree list's entries for <paramref name="paths"/>, in order. The project's tree files are
+        /// read at most once for all of them, and only if one of them uses subtrees (P11-007, review F4).
+        /// </summary>
+        internal static List<TreeCatalogEntry> ReadAll(IEnumerable<string> paths, NodeRegistry registry, NativeFacts facts)
+        {
+            ProjectTreeIndex.Snapshot snapshot = null;
+            Func<ProjectTreeIndex.Snapshot> scan = () => snapshot ?? (snapshot = ProjectTreeIndex.Scan());
+            var entries = new List<TreeCatalogEntry>();
+            foreach (var path in paths) entries.Add(Read(path, registry, null, facts, scan));
+            return entries;
+        }
+
         public static TreeCatalogEntry Read(string path)
             => Read(path, NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry);
 
@@ -44,6 +57,10 @@ namespace AIBT.Editor.Graph
         /// a native tree; when null they are not checked and the entry says so.
         /// </param>
         internal static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion, NativeFacts facts)
+            => Read(path, registry, expansion, facts, ProjectTreeIndex.Scan);
+
+        private static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion, NativeFacts facts,
+            Func<ProjectTreeIndex.Snapshot> scan)
         {
             var entry = new TreeCatalogEntry { Path = path, Name = System.IO.Path.GetFileName(path), TreeId = "", Status = "Errors" };
             try
@@ -58,7 +75,7 @@ namespace AIBT.Editor.Graph
                 entry.NodeCount = document.Nodes.Count;
                 if (SubtreeExpander.RequiresExpansion(document))
                 {
-                    entry.Expansion = expansion ?? ProjectTreeIndex.Expand(path, document, registry, null, ProjectTreeIndex.Scan());
+                    entry.Expansion = expansion ?? ProjectTreeIndex.Expand(path, document, registry, null, scan());
                     if (!entry.Expansion.Success)
                     {
                         entry.Details = string.Join("\n", entry.Expansion.Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
