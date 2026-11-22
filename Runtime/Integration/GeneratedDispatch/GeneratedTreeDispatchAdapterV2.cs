@@ -972,6 +972,17 @@ namespace AIBT
                             failure = BurstContextResult.PhaseViolation;
                             return false;
                         }
+                        // P11-007 (review F1): two handles of one node bound to one key share the
+                        // key's live offset (the request check requires live bindings with one target
+                        // to share an offset). Writes are staged and published after the tick, so
+                        // every read sees the value from before the tick. The region keeps one block
+                        // per binding, as the batched workspace expects; the later handle's is unused.
+                        for (uint previous = 0; previous < local; previous++)
+                        {
+                            if (!resolutions[previous].IsBlackboard || resolutions[previous].TargetOrdinal != slotIndex) continue;
+                            resolution = new BindingResolution(catalogBinding, resolutions[previous].LiveOffset);
+                            break;
+                        }
                         resolution = resolution.WithTarget(slotIndex);
                     }
                     else if (catalogBinding.Kind == NativeBurstDispatchBindingKindV2.EffectCommand)

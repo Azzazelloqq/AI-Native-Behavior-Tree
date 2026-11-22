@@ -9,6 +9,12 @@ All notable changes to this project will be documented here. The project follows
 - **`NativeTreeAgent.TryGetValue` refuses a faulted run at once** (review W5). It returned true for a
   run whose host had failed until the agent's `LateUpdate` cleared the host; it now returns false
   as soon as the host has a failure, as its documentation already said.
+- **One key on two handles of a library node** (review F1). A native library node whose two handles
+  were bound to the same Tree key (for example `center` and `result` of `random-float3-in-radius`,
+  or both sides of a copy or comparison) failed to start with `NativeLifetimeStateInvalid`. The
+  handles now share the key's value: every handle reads the value from before the tick and the
+  write is published after it, so `center == result` steps from the previous point. Covered under
+  immediate, agent-frame, batched-jobs and pipelined-jobs scheduling.
 
 ### A truthful graph window for native agents (P11-005)
 

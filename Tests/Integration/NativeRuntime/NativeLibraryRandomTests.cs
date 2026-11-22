@@ -607,6 +607,40 @@ namespace AIBT.Tests.Integration.NativeRuntime
             return (Center.X + shell * around * Math.Cos(angle), Center.Y + shell * h, Center.Z + shell * around * Math.Sin(angle));
         }
 
+        /// <summary>
+        /// P11-007 (review F1): center and result on one key ("wander from my point"). Each tick reads
+        /// the key as it was before the tick and writes one replayed step from it, so the key walks:
+        /// every new point is the previous point plus the replayed offset.
+        /// </summary>
+        [TestCase(true)]
+        [TestCase(false)]
+        public void RandomFloat3InRadius_CenterAndResultOnOneKey_StepsFromTheValueBeforeTheTick(bool flat)
+        {
+            const float Min = 1f, Radius = 2f;
+            var json = Loop("tests.p11007.random-walk", new[] { Float3("c", Center.X, Center.Y, Center.Z) }, new[] { "roll" },
+                Leaf("roll", S + "random-float3-in-radius",
+                    "\"min-radius\": " + Number(Min) + ", \"radius\": " + Number(Radius) + ", \"flat\": " + (flat ? "true" : "false"),
+                    "\"center\": \"c\", \"result\": \"c\""));
+            var host = _kit.Start(_kit.Prepare(json), randomSeed: Seed);
+            var node = RandomNode(host);
+            var replay = Derived(host, node, Seed);
+            var previous = Center;
+            var travelled = 0.0;
+            Drive(host, node, replay, 200, done =>
+            {
+                var expected = ExpectedPoint(replay, Min, Radius, flat); // Center + the replayed offset
+                var point = host.ReadFloat3("c");
+                Assert.That(point.X, Is.EqualTo(previous.X + (expected.x - Center.X)).Within(1e-4), "step " + done + " x");
+                Assert.That(point.Y, Is.EqualTo(previous.Y + (expected.y - Center.Y)).Within(1e-4), "step " + done + " y");
+                Assert.That(point.Z, Is.EqualTo(previous.Z + (expected.z - Center.Z)).Within(1e-4), "step " + done + " z");
+                if (flat) Assert.That(point.Y, Is.EqualTo(Center.Y), "flat keeps the height exactly");
+                double dx = point.X - Center.X, dz = point.Z - Center.Z;
+                travelled = Math.Max(travelled, Math.Sqrt(dx * dx + dz * dz));
+                previous = point;
+            });
+            Assert.That(travelled, Is.GreaterThan(Radius), "the key walks away from where it started");
+        }
+
         [TestCase(true, 2)]
         [TestCase(false, 3)]
         public void RandomFloat3InRadius_RadiusZero_WritesTheCentre_AndStillDraws(bool flat, int draws)
