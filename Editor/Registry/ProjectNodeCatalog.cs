@@ -47,13 +47,44 @@ namespace AIBT.Editor.Registry
         }
 
         // P11-008 (review F10): a tree that runs in a BehaviorTreeAgent is refused there when it has an
-        // observer block (AIBT2051); the Editor shows the same error.
+        // observer block (AIBT2051); the Editor shows the same error. P11-009 (review F10, native half):
+        // any other tree runs in a native host, which does not re-evaluate observers; the Editor warns
+        // (AIBT2054) and the tree compiles as before.
         private static DiagnosticCollection WithManagedRefusals(DiagnosticCollection diagnostics, bool managed, TreeDocument document,
             ReferenceCompilerOptions options)
         {
-            if (!managed) return diagnostics;
-            var refusals = ManagedTreeProgram.ObserverRefusals(document, options.SourceId);
-            return refusals.Count == 0 ? diagnostics : new DiagnosticCollection(diagnostics.Concat(refusals));
+            var added = managed
+                ? ManagedTreeProgram.ObserverRefusals(document, options.SourceId)
+                : NativeObserverWarnings(document, options.SourceId);
+            return added.Count == 0 ? diagnostics : new DiagnosticCollection(diagnostics.Concat(added));
+        }
+
+        /// <summary>
+        /// P11-009 (review F10, native half): one warning (AIBT2054) per node with an <c>observer</c>
+        /// block in a tree that runs in a native host. Native hosts (<c>NativeTreeAgent</c>,
+        /// <c>ProductionTreeHost</c>, <c>ProductionTreeScheduler</c>, <c>TreeSimulation</c>) do not
+        /// re-evaluate observers, so the block compiles and changes no outcome. Used by the graph and
+        /// MCP edits (<see cref="ValidateAuthoring(TreeDocument, ReferenceCompilerOptions)"/>), the tree
+        /// list, MCP <c>validate</c> and the native bake.
+        /// </summary>
+        internal static List<Diagnostic> NativeObserverWarnings(TreeDocument document, string sourceId)
+        {
+            var result = new List<Diagnostic>();
+            if (document == null) return result;
+            for (var index = 0; index < document.Nodes.Count; index++)
+            {
+                var node = document.Nodes[index];
+                if (node.Observer == null) continue;
+                result.Add(new Diagnostic(TreeValidationDiagnosticCodes.ObserverNotEvaluatedByNativeHost, DiagnosticSeverity.Warning,
+                    "Node '" + node.Id.Value + "' has an 'observer' block, but native hosts (NativeTreeAgent, ProductionTreeHost, "
+                    + "ProductionTreeScheduler, TreeSimulation) do not re-evaluate observers: nothing re-checks the condition when a "
+                    + "watched key changes, so the block changes no outcome. To re-check the condition on every update, make it an "
+                    + "earlier child of '" + BuiltInNodeManifests.ReactiveSequenceTypeId + "' or '" + BuiltInNodeManifests.ReactiveSelectorTypeId
+                    + "' (or their -retaining variants above a wait or a multi-step branch) and remove the block.",
+                    new DiagnosticLocation(sourceId, "/nodes/" + node.Id.Value.Replace("~", "~0").Replace("/", "~1") + "/observer",
+                        treeId: document.TreeId, nodeId: node.Id)));
+            }
+            return result;
         }
 
         /// <summary>

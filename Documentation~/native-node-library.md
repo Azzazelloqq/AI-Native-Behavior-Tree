@@ -170,7 +170,8 @@ counts the timeout from that start.
 ### Guarding a branch
 
 Native hosts do not run observer re-evaluation today: an `observer` block on a native condition
-compiles and changes nothing. Guard a branch with a reactive composite instead. Put the condition
+compiles and changes nothing. The graph, the tree list and MCP `validate` show the warning
+`AIBT2054` on each such block, naming the node. Guard a branch with a reactive composite instead. Put the condition
 first; the composite checks it again at every update and aborts the branch at the next update after
 the key changes.
 

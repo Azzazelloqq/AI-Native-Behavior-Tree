@@ -83,6 +83,15 @@ namespace AIBT.Authoring
         /// changes. Raised by the managed layer's load and by the Editor's managed-policy validation.
         /// </summary>
         public static readonly DiagnosticCode ObserverNotImplementedInManagedAgent = new DiagnosticCode("AIBT2051");
+
+        /// <summary>
+        /// P11-009 (review F10, native half): a node has an <c>observer</c> block in a tree that runs in a
+        /// native host (<c>NativeTreeAgent</c>, <c>ProductionTreeHost</c>, <c>ProductionTreeScheduler</c>,
+        /// <c>TreeSimulation</c>). Native hosts do not re-evaluate observers, so the block compiles and
+        /// changes no outcome. Warning severity: the tree still compiles to the same program. Raised by
+        /// the Editor's validation of native trees (graph, tree list, MCP) and by the native bake.
+        /// </summary>
+        public static readonly DiagnosticCode ObserverNotEvaluatedByNativeHost = new DiagnosticCode("AIBT2054");
     }
 
     public static class TreeValidationDiagnosticCatalog
@@ -134,6 +143,7 @@ namespace AIBT.Authoring
             TreeValidationDiagnosticCodes.SubtreeReferenceRoot,
             TreeValidationDiagnosticCodes.SubtreeInterface,
             TreeValidationDiagnosticCodes.ObserverNotImplementedInManagedAgent,
+            TreeValidationDiagnosticCodes.ObserverNotEvaluatedByNativeHost,
         };
 
         public static DiagnosticCatalog Catalog { get; } = CreateCatalog();
@@ -161,10 +171,14 @@ namespace AIBT.Authoring
                 // Every code defaults to Error except MigrationApplied and TreeScopeSlotNeverWritten:
                 // both describe a document that already compiles/validates successfully, so neither
                 // is a blocking failure -- only Info, a review heads-up (ADR-P7-005/ADR-P7-039).
+                // ObserverNotEvaluatedByNativeHost (P11-009) is a Warning: the tree compiles and runs,
+                // but its observer block does nothing in a native host.
                 var defaultSeverity = Codes[index] == TreeValidationDiagnosticCodes.MigrationApplied
                     || Codes[index] == TreeValidationDiagnosticCodes.TreeScopeSlotNeverWritten
                     ? DiagnosticSeverity.Info
-                    : DiagnosticSeverity.Error;
+                    : Codes[index] == TreeValidationDiagnosticCodes.ObserverNotEvaluatedByNativeHost
+                        ? DiagnosticSeverity.Warning
+                        : DiagnosticSeverity.Error;
                 descriptors[index] = new DiagnosticDescriptor(
                     Codes[index],
                     DiagnosticSubsystem.SemanticValidation,

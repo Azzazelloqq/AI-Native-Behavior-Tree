@@ -44,7 +44,8 @@ namespace AIBT.Mcp.Verification
             var referenced = McpSubtrees.ReferencedTreeIds(document);
             if (referenced.Count == 0)
             {
-                var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options, registeredTypes).Concat(migrationDiagnostics));
+                var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options, registeredTypes)
+                    .Concat(NativeObserverWarnings(document, projectRoot, path)).Concat(migrationDiagnostics));
 
                 return new JObject
                 {
@@ -59,7 +60,7 @@ namespace AIBT.Mcp.Verification
             // references (AIBT3020-3028); a successful expansion is then validated as one tree.
             var expansion = SubtreeExpander.Expand(document, McpSubtrees.Resolver(projectRoot), registry, options, registeredTypes);
             var expandedDiagnostics = new DiagnosticCollection((expansion.Success
-                ? TreeValidator.Validate(expansion.Document, registry, options, registeredTypes)
+                ? TreeValidator.Validate(expansion.Document, registry, options, registeredTypes).Concat(NativeObserverWarnings(expansion.Document, projectRoot, path))
                 : expansion.Diagnostics).Concat(migrationDiagnostics));
             return new JObject
             {
@@ -69,6 +70,13 @@ namespace AIBT.Mcp.Verification
                 ["subtrees"] = new JObject { ["expanded"] = expansion.Success, ["referencedTreeIds"] = new JArray(referenced) },
             };
         }
+
+        // P11-009 (review F10, native half): a tree without managed nodes runs in a native host, which
+        // does not re-evaluate observers; each observer block gets the warning AIBT2054, as in the graph.
+        private static IEnumerable<Diagnostic> NativeObserverWarnings(TreeDocument document, string projectRoot, string path)
+            => ProjectNodeCatalogCache.Current.UsesManagedNodes(document)
+                ? Enumerable.Empty<Diagnostic>()
+                : ProjectNodeCatalog.NativeObserverWarnings(document, ToLogicalSourceId(projectRoot, path));
 
         // ---- compile -------------------------------------------------------------------------
 

@@ -244,7 +244,7 @@ is a validation error: retaining reactive composites do not support observers ye
 > Editor preview). It is not implemented in the managed agent (`BehaviorTreeAgent`), which refuses a
 > tree with an `observer` block when it loads it (AIBT2051), and not in the native runtime
 > (`ProductionTreeHost`, `NativeTreeAgent`, `ProductionTreeScheduler`, `TreeSimulation`), where the
-> block compiles and changes no outcome.
+> block compiles and changes no outcome; the Editor and MCP validation warn about it (AIBT2054, P11-009).
 
 ## Budget suspension
 

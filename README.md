@@ -291,7 +291,8 @@ native counterpart and has recipes (negation, a cooldown shared by key, signals,
 **Native Guard** sample builds a tree from package nodes only. Negations
 and "below" are an `aibt.core.inverter` over an "at least" node; the per-node contracts are in
 [the node catalog](Documentation~/generated/node-catalog.md). Native hosts do not run observer
-re-evaluation today, so an `observer` block on an `aibt.native.*` condition changes nothing. To
+re-evaluation today, so an `observer` block on an `aibt.native.*` condition changes nothing; the
+graph, the tree list and MCP `validate` show the warning `AIBT2054` on it. To
 guard a branch natively, put the condition first under a `reactive-sequence`: the branch is
 aborted at the next update after the key changes. Above waits and multi-step branches use
 `reactive-sequence-retaining` / `reactive-selector-retaining`: a plain reactive composite re-enters

@@ -109,7 +109,10 @@ namespace AIBT.Editor.Graph
                     : new ValidationOptions(path, supportsAgentScope: true, supportsSharedScope: true);
                 var diagnostics = TreeValidator.Validate(document, registry, options);
                 // P11-008 (review F10): BehaviorTreeAgent refuses an observer block when it loads the tree.
-                if (managed) diagnostics = new DiagnosticCollection(diagnostics.Concat(ManagedTreeProgram.ObserverRefusals(document, path)));
+                // P11-009 (review F10, native half): a native host does not re-evaluate observers (warning AIBT2054).
+                diagnostics = new DiagnosticCollection(diagnostics.Concat(managed
+                    ? (IEnumerable<Diagnostic>)ManagedTreeProgram.ObserverRefusals(document, path)
+                    : ProjectNodeCatalog.NativeObserverWarnings(document, path)));
                 // Project nodes without a reference handler run only from generated native code.
                 var nativeTypes = managed ? Array.Empty<string>() : document.Nodes
                     .Where(node => registry.TryGet(node.TypeId, out var item) &&

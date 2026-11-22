@@ -59,7 +59,9 @@ namespace AIBT.Editor.Graph
             var compiled = GeneratedCompiledProgramV2Compiler.Compile(document, catalog.Generated.Values, catalog.RegisteredTypes,
                 new ReferenceCompilerOptions(sourceId, ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 6)),
                 (ISubtreeResolver)recorder ?? resolver);
-            diagnostics = compiled.Diagnostics;
+            // P11-009 (review F10, native half): the program is unchanged; observer blocks get the warning AIBT2054.
+            var observerWarnings = ProjectNodeCatalog.NativeObserverWarnings(document, sourceId);
+            diagnostics = observerWarnings.Count == 0 ? compiled.Diagnostics : new DiagnosticCollection(compiled.Diagnostics.Concat(observerWarnings));
             if (!compiled.Success) return null;
             if (!GeneratedNodeReflectionHarness.TryReflectHandshake(catalogType, out var handshake, out var explanation))
                 throw new InvalidOperationException(explanation);
