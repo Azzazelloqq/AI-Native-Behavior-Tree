@@ -30,6 +30,10 @@ All notable changes to this project will be documented here. The project follows
   prepared from subtrees walked and hashed every tree file. The state is now kept per asset until a
   tree file is imported, moved or deleted, the node catalog is rediscovered or the asset is prepared
   again. An edit on disk shows once Unity imports it.
+- **No asset refresh after a recompile with nothing changed** (review F5). Every domain reload
+  re-registered the subtree dependencies and asked for `AssetDatabase.Refresh()`. Registration is
+  now kept for the Editor session, so a recompile that changed no tree file and no node registry
+  requests no refresh; a project without subtrees registers nothing.
 
 ### A truthful graph window for native agents (P11-005)
 

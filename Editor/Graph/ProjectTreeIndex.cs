@@ -124,35 +124,81 @@ namespace AIBT.Editor.Graph
             return true;
         }
 
+        // P11-007 (review F5): the values registered in this Editor session, kept across domain
+        // reloads. The AssetDatabase keeps registered custom dependencies for the session, and every
+        // tree file imported, moved or deleted since is re-registered by TreeFilePostprocessor, so a
+        // reload restores them instead of scanning, registering and refreshing again.
+        private const string SessionRegisteredKey = "AIBT.Subtrees.ProjectTreeIndex.Registered";
+        private const string SessionUsesSubtreesKey = "AIBT.Subtrees.ProjectTreeIndex.UsesSubtrees";
+        private const string SessionSavedKey = "AIBT.Subtrees.ProjectTreeIndex.Saved";
+
         private static void RegisterAfterReload()
         {
             AssemblyReloadEvents.afterAssemblyReload -= RegisterAfterReload;
+            if (RestoreSession()) return;
             Update(Scan());
         }
 
         private static void Update(Snapshot snapshot)
         {
-            if (RegisterDependencies(snapshot)) ScheduleRefresh();
+            // No importer depends on these values while no tree uses subtrees; the first tree that
+            // does registers them all when it is imported.
+            if ((snapshot.UsesSubtrees || s_registered.Count != 0) && RegisterDependencies(snapshot)) ScheduleRefresh();
             // The node-registry dependency is registered only from a finished catalog discovery
             // (never from the built-ins-only initial catalog), and only while a tree uses subtrees.
-            if (snapshot.UsesSubtrees && !s_registrySubscribed)
-            {
-                s_registrySubscribed = true;
-                ProjectNodeCatalogCache.Changed += RegisterRegistryDependency;
-            }
+            if (snapshot.UsesSubtrees) SubscribeRegistry();
+            SaveSession(snapshot.UsesSubtrees);
+        }
+
+        private static void SubscribeRegistry()
+        {
+            if (s_registrySubscribed) return;
+            s_registrySubscribed = true;
+            ProjectNodeCatalogCache.Changed += RegisterRegistryDependency;
         }
 
         private static void RegisterRegistryDependency()
         {
             var registry = ProjectNodeCatalogCache.Current.Registry;
-            if (registry != null && Register(RegistryDependencyName, Hash128.Compute(registry.Hash))) ScheduleRefresh();
+            if (registry == null || !Register(RegistryDependencyName, Hash128.Compute(registry.Hash))) return;
+            SaveSession(SessionState.GetBool(SessionUsesSubtreesKey, true));
+            ScheduleRefresh();
         }
+
+        private static void SaveSession(bool usesSubtrees)
+        {
+            var text = new StringBuilder();
+            foreach (var pair in s_registered.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                text.Append(pair.Key).Append('\t').Append(pair.Value.ToString()).Append('\n');
+            SessionState.SetString(SessionRegisteredKey, text.ToString());
+            SessionState.SetBool(SessionUsesSubtreesKey, usesSubtrees);
+            SessionState.SetBool(SessionSavedKey, true);
+        }
+
+        private static bool RestoreSession()
+        {
+            // A new Editor session starts without saved values and registers them all once.
+            if (!SessionState.GetBool(SessionSavedKey, false)) return false;
+            var text = SessionState.GetString(SessionRegisteredKey, string.Empty);
+            foreach (var line in text.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var tab = line.LastIndexOf('\t');
+                if (tab <= 0) return false;
+                s_registered[line.Substring(0, tab)] = Hash128.Parse(line.Substring(tab + 1));
+            }
+            if (SessionState.GetBool(SessionUsesSubtreesKey, false)) SubscribeRegistry();
+            return true;
+        }
+
+        /// <summary>AssetDatabase refreshes requested since the last domain reload (P11-007: lets tests and probes count them).</summary>
+        internal static int RefreshRequests { get; private set; }
 
         // A custom dependency change takes effect at the next refresh; one is requested once per batch.
         private static void ScheduleRefresh()
         {
             if (s_refreshScheduled) return;
             s_refreshScheduled = true;
+            RefreshRequests++;
             EditorApplication.delayCall += () =>
             {
                 s_refreshScheduled = false;
