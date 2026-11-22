@@ -466,3 +466,30 @@ All five probes ran on 2026-11-22 against the Modules Editor (6000.6.9f1, Pipeli
 | E | F2: format 3 without references fails, format 2 compiles. W1: expansion growth to 21,845 nodes; error repetition with a broken leaf | `probe-e-v3-and-expansion.cs` | `probe-e-output.txt`, `probe-e-output-unknown-leaf.txt` |
 | G | F3, F4, F5: scan, source-hash and plain-hash costs, 2 × 9 interleaved rounds, CPU load noted | `probe-g-editor-scan-cost.cs` | `probe-g-output.txt` |
 | H | F7: `FindObjectsByType` misses a host with `HideInInspector \| DontSave`; temporary additive scene, closed | `probe-h-hidden-host.cs` | `probe-h-output.txt` |
+
+## Orchestrator's check of this report (2026-11-22)
+
+The orchestrator read the whole report on `88473d9` and checked the findings below against the code
+and the raw probe outputs. Nothing was run again.
+
+| Finding | Checked how | Result |
+|---|---|---|
+| F1 | `probe-c-output.txt`: both controls `root=Success`; `copy-int i to i` and `int-keys-at-least i >= i` compile, then `NativeLifetimeStateInvalid` on updates 1-3 | confirmed |
+| F2 | `probe-e-output.txt`; `TreeDocument.LatestFormatVersion = 2` and the gate in `GeneratedCompiledProgramV2.CompileDocument` | confirmed |
+| F3 | `NativeTreeAgentInspector.cs`: `Evaluate` on every `OnInspectorGUI`, unconditional `Repaint()` in Play Mode; `ProductionTreeAssetStaleness.Evaluate` calls `CurrentSourceHash` when the asset has subtree sources | confirmed by reading; the frame rate was not observed (no such agent in this project) |
+| F4 | `TreeCatalogEntry.cs:61`: `ProjectTreeIndex.Scan()` per tree that requires expansion | confirmed |
+| F5 | `ProjectTreeIndex.cs`: static `s_registered`, `RegisterAfterReload` -> `Update(Scan())` -> `Register` true for every tree ID -> `AssetDatabase.Refresh()` on `delayCall` | confirmed by reading; the refresh cost is not measured |
+| F6 | `TreeSourcePaths.FindFiles` (`AllDirectories` under the root, no skip rule) behind `McpSubtrees.Resolver` | confirmed |
+| F7 | `probe-h-output.txt` (`plainHostFound: true, hiddenHostFound: false`); `McpRuntimeTools.FindHosts` | confirmed |
+| F8 | the adapter's `TryResolveExternalTreeRead<T>` checks `expectedType` against the slot and only size and alignment of `T` | confirmed; missed in the orchestrator's own review of P11-004 |
+| F9 | `probe-b-output.txt` (`AIBT3017 ... Tree-scope blackboard memory ranges overlap`) | confirmed |
+| F12 | the stored failure message of `ZeroCustomNodes...` names five sample node types of the host project; `GeneratedArtifactContractTests.FixturePath` asserts a package for the assembly | confirmed |
+| W5 | `NativeTreeAgent.TryGetValue` returns false only for `Host == null`; a faulted host is cleared in `LateUpdate` | confirmed; missed in the orchestrator's own review of P11-004 |
+| F10, F11, F13, F14 | established earlier in this project (the same facts were reported to the owner before the review) | agree |
+
+Not checked by the orchestrator: W1-W4 and W6-W15, the notes, the unconfirmed list, the Native Guard
+geometry of W14, the count of files and lines read by the reviewers.
+
+The verdict "ready with conditions" is taken as it stands: nothing found is memory-unsafe or loses
+data, and F1 and F2 are defects a first user of the native library or of Unpack will hit. No fix is
+started; the owner decides the order and the open contract questions (F8, F9, F10, F11, F13, F14).
