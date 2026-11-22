@@ -108,6 +108,8 @@ namespace AIBT.Editor.Graph
                     ? ManagedTreeProgram.CreateOptions(path).Policy.CreateValidationOptions(path)
                     : new ValidationOptions(path, supportsAgentScope: true, supportsSharedScope: true);
                 var diagnostics = TreeValidator.Validate(document, registry, options);
+                // P11-008 (review F10): BehaviorTreeAgent refuses an observer block when it loads the tree.
+                if (managed) diagnostics = new DiagnosticCollection(diagnostics.Concat(ManagedTreeProgram.ObserverRefusals(document, path)));
                 // Project nodes without a reference handler run only from generated native code.
                 var nativeTypes = managed ? Array.Empty<string>() : document.Nodes
                     .Where(node => registry.TryGet(node.TypeId, out var item) &&

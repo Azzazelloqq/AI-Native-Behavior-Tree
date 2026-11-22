@@ -119,7 +119,7 @@ namespace AIBT.Agents
                 compilation = ReferenceCompiler.Compile(document, nodes.Registry, options);
             }
 
-            return Bind(document, compilation, nodes, out program, out diagnostics);
+            return Bind(document, sourceId, compilation, nodes, out program, out diagnostics);
         }
 
         /// <summary>
@@ -160,11 +160,12 @@ namespace AIBT.Agents
             nodes = nodes ?? ManagedNodeCatalog.Default;
             var expansion = new SubtreeExpansion(document, document, subtreeNodeSourceIds, null);
             var compilation = ReferenceCompiler.Compile(expansion, nodes.Registry, CreateOptions(sourceId));
-            return Bind(document, compilation, nodes, out program, out diagnostics);
+            return Bind(document, sourceId, compilation, nodes, out program, out diagnostics);
         }
 
         private static bool Bind(
             TreeDocument document,
+            string sourceId,
             ReferenceCompilationResult compilation,
             ManagedNodeSet nodes,
             out ManagedTreeProgram program,
@@ -173,6 +174,14 @@ namespace AIBT.Agents
             program = null;
             diagnostics = compilation.Diagnostics;
             if (!compilation.Success) return false;
+            var refusals = ObserverRefusals(document, NormalizeSourceId(sourceId));
+            if (refusals.Count != 0)
+            {
+                var combined = new List<Diagnostic>(compilation.Diagnostics);
+                combined.AddRange(refusals);
+                diagnostics = new DiagnosticCollection(combined);
+                return false;
+            }
 
             var documentNodes = new Dictionary<NodeId, NodeDocument>();
             for (var index = 0; index < document.Nodes.Count; index++)
@@ -191,6 +200,35 @@ namespace AIBT.Agents
             program = new ManagedTreeProgram(document, compiled, nodes, leaves);
             return true;
         }
+
+        /// <summary>
+        /// P11-008 (review F10): one error (AIBT2051) per node with an <c>observer</c> block. The
+        /// managed agent binds no observer evaluator, so such a tree would load and then stop with
+        /// AIBT4002 the first time a watched key changed; it is refused when it is loaded instead.
+        /// Also used by the Editor's validation of trees that run in a <c>BehaviorTreeAgent</c>.
+        /// </summary>
+        internal static List<Diagnostic> ObserverRefusals(TreeDocument document, string sourceId)
+        {
+            var result = new List<Diagnostic>();
+            if (document == null) return result;
+            for (var index = 0; index < document.Nodes.Count; index++)
+            {
+                var node = document.Nodes[index];
+                if (node.Observer == null) continue;
+                result.Add(TreeValidationDiagnosticCatalog.Create(
+                    TreeValidationDiagnosticCodes.ObserverNotImplementedInManagedAgent,
+                    "Node '" + node.Id.Value + "' has an 'observer' block, but BehaviorTreeAgent does not run observers: "
+                    + "nothing would re-evaluate the condition when a watched key changes, and the agent would stop with AIBT4002. "
+                    + "Remove the block. To re-check the condition on every tick, make it an earlier child of '"
+                    + BuiltInNodeManifests.ReactiveSequenceTypeId + "' or '" + BuiltInNodeManifests.ReactiveSelectorTypeId
+                    + "', or give a BtCondition an 'interrupt' mode.",
+                    new DiagnosticLocation(sourceId, "/nodes/" + EscapePointer(node.Id.Value) + "/observer",
+                        treeId: document.TreeId, nodeId: node.Id)));
+            }
+            return result;
+        }
+
+        private static string EscapePointer(string value) => value.Replace("~", "~0").Replace("/", "~1");
 
         internal static string Describe(DiagnosticCollection diagnostics)
         {

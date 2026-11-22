@@ -330,6 +330,8 @@ need an optional Unity module are compiled only when the module is enabled.
   before the agent is enabled. See the [P9-006 evidence](Planning~/Evidence/P9-006/README.md).
 - MCP `search_nodes` returns 50 nodes per page by default; pass `count` or page with `offset`.
 - Condition interrupts (`ConditionInterrupt`) exist only in the managed layer.
+- `BehaviorTreeAgent` does not run tree `observer` blocks: a tree with one is refused when it is
+  loaded (AIBT2051). Use a condition's `interrupt` field or a reactive composite instead.
 - `NativeTreeAgent.Profile = SchedulingProfile.JobsAgentFrame` runs each agent's whole update in a
   Burst job (no capabilities needed); agents it cannot run fall back to Immediate with a reason on
   their frame entry. Every native update stops after `ProductionTreeHost.MaximumStepsPerUpdate`

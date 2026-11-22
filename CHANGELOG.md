@@ -14,6 +14,14 @@ All notable changes to this project will be documented here. The project follows
   `FixedString512Bytes`, `AgentId`, `EntityId`, `OperationId`, `AssetId`); any other type, even of the
   same size (`uint`, a struct of three floats), is refused with `BlackboardTypeMismatch`. The
   signature is unchanged and a resolved handle still reads without allocating.
+- **`BehaviorTreeAgent` refuses observer blocks when it loads a tree** (review F10, managed half).
+  The managed agent does not run observer re-evaluation: a tree with an `observer` block loaded and
+  then stopped the agent with `AIBT4002` the first time a watched key changed. It is now refused at
+  load with the new error `AIBT2051`, which names the node; the Editor's validation of trees with
+  managed nodes (graph, tree list, MCP) shows the same error. Use a condition's `interrupt` field or
+  a reactive composite instead. Native hosts are unchanged: there an `observer` block still compiles
+  and changes nothing (see Production tree host). The execution-semantics specification notes where
+  observers are implemented (the reference executor only).
 
 ### Review fixes, batch 1 (P11-007)
 

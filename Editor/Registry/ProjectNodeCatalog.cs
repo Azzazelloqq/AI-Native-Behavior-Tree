@@ -35,14 +35,25 @@ namespace AIBT.Editor.Registry
 
         internal DiagnosticCollection ValidateAuthoring(TreeDocument document, ReferenceCompilerOptions options)
         {
-            if (UsesManagedNodes(document)) options = ManagedTreeProgram.CreateOptions(options.SourceId);
+            var managed = UsesManagedNodes(document);
+            if (managed) options = ManagedTreeProgram.CreateOptions(options.SourceId);
             var validation = new DiagnosticCollection(TreeValidator.Validate(document, Registry,
                 options.Policy.CreateValidationOptions(options.SourceId), RegisteredTypes));
-            if (validation.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)) return validation;
+            if (validation.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)) return WithManagedRefusals(validation, managed, document, options);
             var nativeOnly = document.Nodes.Any(node => Registry.TryGet(node.TypeId, out var entry) && !entry.HasReferenceHandlerBinding);
-            return nativeOnly
+            return WithManagedRefusals(nativeOnly
                 ? GeneratedCompiledProgramV2Compiler.Compile(document, Generated.Values, RegisteredTypes, options).Diagnostics
-                : ReferenceCompiler.Compile(document, Registry, options).Diagnostics;
+                : ReferenceCompiler.Compile(document, Registry, options).Diagnostics, managed, document, options);
+        }
+
+        // P11-008 (review F10): a tree that runs in a BehaviorTreeAgent is refused there when it has an
+        // observer block (AIBT2051); the Editor shows the same error.
+        private static DiagnosticCollection WithManagedRefusals(DiagnosticCollection diagnostics, bool managed, TreeDocument document,
+            ReferenceCompilerOptions options)
+        {
+            if (!managed) return diagnostics;
+            var refusals = ManagedTreeProgram.ObserverRefusals(document, options.SourceId);
+            return refusals.Count == 0 ? diagnostics : new DiagnosticCollection(diagnostics.Concat(refusals));
         }
 
         /// <summary>
@@ -59,11 +70,12 @@ namespace AIBT.Editor.Registry
             // nodes the expanded tree has; the compilers below expand again under the real policy.
             var probe = SubtreeExpander.Expand(document, resolver, Registry, StructuralExpansionPolicy.CreateValidationOptions(options.SourceId), RegisteredTypes);
             if (!probe.Success) return probe.Diagnostics;
-            if (UsesManagedNodes(probe.Document)) options = ManagedTreeProgram.CreateOptions(options.SourceId);
+            var managed = UsesManagedNodes(probe.Document);
+            if (managed) options = ManagedTreeProgram.CreateOptions(options.SourceId);
             var nativeOnly = probe.Document.Nodes.Any(node => Registry.TryGet(node.TypeId, out var entry) && !entry.HasReferenceHandlerBinding);
-            return nativeOnly
+            return WithManagedRefusals(nativeOnly
                 ? GeneratedCompiledProgramV2Compiler.Compile(document, Generated.Values, RegisteredTypes, options, resolver).Diagnostics
-                : ReferenceCompiler.Compile(document, Registry, options, resolver).Diagnostics;
+                : ReferenceCompiler.Compile(document, Registry, options, resolver).Diagnostics, managed, probe.Document, options);
         }
 
         private static readonly ReferenceCompilationPolicy StructuralExpansionPolicy = new ReferenceCompilationPolicy(

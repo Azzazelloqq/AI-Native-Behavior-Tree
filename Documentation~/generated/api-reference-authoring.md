@@ -1569,6 +1569,7 @@ Source-container names only; both extensions contain the same canonical JSON.
 - `FIELD AIBT.DiagnosticCode MissingParameter`
 - `FIELD AIBT.DiagnosticCode MissingTreeName`
 - `FIELD AIBT.DiagnosticCode MultipleParents`
+- `FIELD AIBT.DiagnosticCode ObserverNotImplementedInManagedAgent`
 - `FIELD AIBT.DiagnosticCode ParallelThreshold`
 - `FIELD AIBT.DiagnosticCode ParameterConstraint`
 - `FIELD AIBT.DiagnosticCode ParameterType`

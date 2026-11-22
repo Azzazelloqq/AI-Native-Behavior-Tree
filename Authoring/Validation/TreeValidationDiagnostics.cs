@@ -72,6 +72,14 @@ namespace AIBT.Authoring
         /// interface version is below 1, or the document is not format version 3.
         /// </summary>
         public static readonly DiagnosticCode SubtreeInterface = new DiagnosticCode("AIBT2050");
+
+        /// <summary>
+        /// P11-008 (review F10): a node has an <c>observer</c> block in a tree run by a
+        /// <c>BehaviorTreeAgent</c>. The managed agent does not run observer re-evaluation, so the tree
+        /// is refused when it is loaded instead of stopping the agent with AIBT4002 when a watched key
+        /// changes. Raised by the managed layer's load and by the Editor's managed-policy validation.
+        /// </summary>
+        public static readonly DiagnosticCode ObserverNotImplementedInManagedAgent = new DiagnosticCode("AIBT2051");
     }
 
     public static class TreeValidationDiagnosticCatalog
@@ -122,6 +130,7 @@ namespace AIBT.Authoring
             TreeValidationDiagnosticCodes.SubtreeKeyTarget,
             TreeValidationDiagnosticCodes.SubtreeReferenceRoot,
             TreeValidationDiagnosticCodes.SubtreeInterface,
+            TreeValidationDiagnosticCodes.ObserverNotImplementedInManagedAgent,
         };
 
         public static DiagnosticCatalog Catalog { get; } = CreateCatalog();

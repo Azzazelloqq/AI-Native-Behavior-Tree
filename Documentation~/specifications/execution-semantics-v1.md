@@ -239,6 +239,13 @@ The parent of an observer MUST be a v1 reactive composite (`ReactiveSequence` or
 is a validation error: retaining reactive composites do not support observers yet
 (ADR-P10-013 §2.4). Their guard pass already re-evaluates every guard on each eligible update.
 
+> **Implementation status (note, P11-008; no rule above changes).** Observer re-evaluation as
+> described in this section is implemented by the reference executor only (behaviour cases, the
+> Editor preview). It is not implemented in the managed agent (`BehaviorTreeAgent`), which refuses a
+> tree with an `observer` block when it loads it (AIBT2051), and not in the native runtime
+> (`ProductionTreeHost`, `NativeTreeAgent`, `ProductionTreeScheduler`, `TreeSimulation`), where the
+> block compiles and changes no outcome.
+
 ## Budget suspension
 
 Budgets may suspend only between node steps. Suspension preserves activation and cursor state and does not call `Abort` or `Exit`. Budget suspension is internal and MUST NOT be stored as a node result. Exact steps and resume behavior follow `reference-executor-machine-v1.md`.
