@@ -323,6 +323,9 @@ namespace AIBT
         /// <see cref="TryBootstrap(GeneratedTreeRuntimeDefinitionV2, GeneratedBurstCatalogV2, NativeTraceChannelCapacityV1, Func{long}, out NativeRuntimeFailureV1)"/>
         /// overload -- a delegate-based host has no blackboard storage to write into and is refused
         /// structurally. Only built-in (non-registered) blackboard value types are supported.
+        /// <typeparamref name="T"/> must be the managed type of <paramref name="expectedType"/>
+        /// (<c>float</c> for Float32, <c>Float3Value</c> for Float3, …); any other type, even of the
+        /// same size, is refused with <c>BlackboardTypeMismatch</c> (P11-009).
         /// </summary>
         public bool TryResolveExternalTreeWrite<T>(
             string stableKey,
@@ -345,7 +348,7 @@ namespace AIBT
                 return false;
             }
             var stableKeyId = StableHash.Fnv1A64(stableKey);
-            if (!generatedDispatch.TryResolveExternalTreeWrite(
+            if (!generatedDispatch.TryResolveExternalTreeWrite<T>(
                     stableKeyId, expectedType, out var slotIndex, out var slot, out var burstFailure))
             {
                 failure = new NativeRuntimeFailureV1(MapExternalWriteFailure(burstFailure));

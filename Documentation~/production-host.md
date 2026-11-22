@@ -81,7 +81,9 @@ buffers. A participant stages Unity facts, the world flushes them only at the ho
 external-write boundary, then receives already committed `ProductionTreeEffect` values on the main
 thread. `TryResolveExternalTreeWrite<T>` and `TryWriteExternalTreeValue<T>` are deliberately
 limited to the generated-catalog bootstrap path, Tree scope, and slots no tree node writes; see
-`ADR-P7-039` and `blackboard-v1.md`.
+`ADR-P7-039` and `blackboard-v1.md`. `T` must be the managed type of `expectedType` (`float` for
+Float32, `Float3Value` for Float3, …); any other type, even of the same size, is refused with
+`BlackboardTypeMismatch` (P11-009).
 
 The read is the mirror (`ADR-P11-004`): `TryResolveExternalTreeRead<T>` once, then
 `TryReadExternalTreeValue<T>` every frame, with no key lookup and no managed allocation. Any

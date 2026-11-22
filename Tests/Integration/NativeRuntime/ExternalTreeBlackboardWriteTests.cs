@@ -124,6 +124,81 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        /// <summary>
+        /// P11-009 (review F8 twin, write side): the resolve compared <c>expectedType</c> with the key
+        /// but not <typeparamref name="T"/>, so <c>TryResolveExternalTreeWrite&lt;int&gt;(key, Float32)</c>
+        /// succeeded and a later write stored an int's bits as a float. <typeparamref name="T"/> must
+        /// now be the managed type of <c>expectedType</c>; any other type, even of the same size and
+        /// alignment, is refused with BlackboardTypeMismatch.
+        /// </summary>
+        [Test]
+        public void ResolveExternalTreeWrite_TIsNotTheManagedTypeOfTheDeclaredType_Rejects()
+        {
+            using (var scenario = Scenario.Create())
+            {
+                var float32 = NativeBlackboardTypeIdV2.BuiltIn(BuiltInBlackboardTypes.Float32);
+                AssertWriteResolveRefused<int>(scenario.Host, float32, "another built-in's managed type of the same size");
+                AssertWriteResolveRefused<uint>(scenario.Host, float32, "no built-in's managed type, same size");
+                AssertWriteResolveRefused<FloatBits>(scenario.Host, float32, "a struct with the same layout as float");
+
+                Assert.That(scenario.Host.TryResolveExternalTreeWrite<float>("live-target", float32, out var handle, out var failure),
+                    Is.True, failure.Code.ToString());
+                Assert.That(scenario.Host.TryWriteExternalTreeValue(handle, 2.5f, out var changed, out failure), Is.True, failure.Code.ToString());
+                Assert.That(changed, Is.True);
+            }
+        }
+
+        /// <summary>P11-009 (review F8 twin): the adapter's write checks <typeparamref name="T"/> against the slot too.</summary>
+        [Test]
+        public void WriteExternalTreeValue_AtTheAdapter_RefusesATThatIsNotTheSlotsManagedType()
+        {
+            using (var scenario = Scenario.Create())
+            {
+                var adapter = scenario.Host.GeneratedDispatchAdapter;
+                var float32 = NativeBlackboardTypeIdV2.BuiltIn(BuiltInBlackboardTypes.Float32);
+                Assert.That(adapter.TryResolveExternalTreeWrite(StableHash.Fnv1A64("live-target"), float32,
+                    out var slotIndex, out var slot, out var resolveFailure), Is.True, resolveFailure.ToString());
+
+                var bits = new NativeArray<uint>(1, Allocator.Temp);
+                try
+                {
+                    bits[0] = 0x40200000u; // 2.5f
+                    Assert.That(adapter.TryWriteExternalTreeValue(slotIndex, slot, bits, out var changed, out var failure), Is.False,
+                        "uint is not Float32's managed type");
+                    Assert.That(failure, Is.EqualTo(BurstContextResult.TypeMismatch));
+                    Assert.That(changed, Is.False);
+                }
+                finally
+                {
+                    bits.Dispose();
+                }
+
+                var value = new NativeArray<float>(1, Allocator.Temp);
+                try
+                {
+                    value[0] = 2.5f;
+                    Assert.That(adapter.TryWriteExternalTreeValue(slotIndex, slot, value, out var changed, out var failure), Is.True, failure.ToString());
+                    Assert.That(changed, Is.True);
+                }
+                finally
+                {
+                    value.Dispose();
+                }
+            }
+        }
+
+        private struct FloatBits
+        {
+            public float Value;
+        }
+
+        private static void AssertWriteResolveRefused<T>(ProductionTreeHost host, NativeBlackboardTypeIdV2 expectedType, string because) where T : unmanaged
+        {
+            Assert.That(host.TryResolveExternalTreeWrite<T>("live-target", expectedType, out _, out var failure), Is.False,
+                typeof(T).Name + ": " + because);
+            Assert.That(failure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch), typeof(T).Name);
+        }
+
         [Test]
         public void ResolveExternalTreeWrite_KeyANodeWrites_RejectsAsNodeOwned()
         {

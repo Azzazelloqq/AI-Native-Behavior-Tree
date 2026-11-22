@@ -252,6 +252,34 @@ namespace AIBT
             out uint slotIndex,
             out NativeBlackboardSlotBindingV2 slot,
             out BurstContextResult failure)
+            => TryResolveExternalTreeWrite(stableKeyId, expectedType, false, 0, 0, 0, out slotIndex, out slot, out failure);
+
+        /// <summary>
+        /// P11-009 (review F8 twin, write side): <see cref="TryResolveExternalTreeWrite(ulong, NativeBlackboardTypeIdV2, out uint, out NativeBlackboardSlotBindingV2, out BurstContextResult)"/>
+        /// that also refuses (<c>TypeMismatch</c>) a <typeparamref name="T"/> that is not the managed type
+        /// of <paramref name="expectedType"/> or whose size or alignment differs from the slot, as the read
+        /// resolve does (P11-008).
+        /// </summary>
+        internal bool TryResolveExternalTreeWrite<T>(
+            ulong stableKeyId,
+            NativeBlackboardTypeIdV2 expectedType,
+            out uint slotIndex,
+            out NativeBlackboardSlotBindingV2 slot,
+            out BurstContextResult failure)
+            where T : unmanaged
+            => TryResolveExternalTreeWrite(stableKeyId, expectedType, true, BuiltInManagedType<T>.TypeId,
+                UnsafeUtility.SizeOf<T>(), UnsafeUtility.AlignOf<T>(), out slotIndex, out slot, out failure);
+
+        private bool TryResolveExternalTreeWrite(
+            ulong stableKeyId,
+            NativeBlackboardTypeIdV2 expectedType,
+            bool checkManagedType,
+            ulong managedTypeId,
+            int managedSize,
+            int managedAlignment,
+            out uint slotIndex,
+            out NativeBlackboardSlotBindingV2 slot,
+            out BurstContextResult failure)
         {
             slotIndex = 0;
             slot = default;
@@ -272,7 +300,9 @@ namespace AIBT
                 }
                 if (expectedType.TypeId != candidate.TypeId || expectedType.Version != candidate.TypeVersion
                     || expectedType.Size != candidate.Size || expectedType.Alignment != candidate.Alignment
-                    || expectedType.EnumContractId != candidate.EnumContractId)
+                    || expectedType.EnumContractId != candidate.EnumContractId
+                    || checkManagedType && (managedTypeId != expectedType.TypeId
+                        || managedSize != candidate.Size || managedAlignment != candidate.Alignment))
                 {
                     failure = BurstContextResult.TypeMismatch;
                     return false;
@@ -313,6 +343,12 @@ namespace AIBT
                 || (ulong)slot.Offset + slot.Size > (uint)_treeValues.Length)
             {
                 failure = BurstContextResult.InvalidHandle;
+                return false;
+            }
+            // P11-009 (review F8 twin): T must be the managed type of the slot's built-in type.
+            if (BuiltInManagedType<T>.TypeId != slot.TypeId)
+            {
+                failure = BurstContextResult.TypeMismatch;
                 return false;
             }
 
