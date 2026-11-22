@@ -665,18 +665,32 @@ namespace AIBT.Authoring
             var observed = new HashSet<uint>(watchedSlots);
             var canonicalScopeSlots = new List<GeneratedScopeSlot>(scopes.Slots);
             canonicalScopeSlots.Sort((left, right) => Utf8OrdinalComparer.Instance.Compare(left.Key.Id, right.Key.Id));
-            var semanticSlots = new List<CompiledBlackboardSlotRecord>(canonicalScopeSlots.Count);
+            // P11-009 (review F9): the semantic projection labels every key Tree, while each scope keeps
+            // its own zero-based offsets. A tree with Tree keys and Agent or Shared keys therefore had two
+            // "Tree" ranges at offset 0. The projection now places each scope past the previous one
+            // (Tree, then Agent, then Shared, as the host's value buffer does), and its default blob
+            // follows the scope order of the v2 slot table, whose DefaultOffset the host reads from this
+            // blob. With keys of one scope only both are exactly what they were.
+            var scopeBase = ScopeBaseOffsets(scopes.Slots);
             var semanticDefaults = new List<byte>();
+            var defaultOffsets = new Dictionary<string, uint>(StringComparer.Ordinal);
+            for (var slotIndex = 0; slotIndex < scopes.Slots.Count; slotIndex++)
+            {
+                var source = scopes.Slots[slotIndex];
+                var layout = source.Key.Type.RuntimeDescriptor;
+                PadDefaultAlignment(semanticDefaults, (uint)layout.Alignment);
+                defaultOffsets.Add(source.Key.Id, (uint)semanticDefaults.Count);
+                semanticDefaults.AddRange(source.DefaultBytes ?? new byte[layout.Size]);
+            }
+            var semanticSlots = new List<CompiledBlackboardSlotRecord>(canonicalScopeSlots.Count);
             for (var slotIndex = 0; slotIndex < canonicalScopeSlots.Count; slotIndex++)
             {
                 var source = canonicalScopeSlots[slotIndex];
                 var layout = source.Key.Type.RuntimeDescriptor;
                 var flags = template.BlackboardSlots[slotIndex].AccessFlags | (observed.Contains((uint)slotIndex) ? CompiledBlackboardAccessFlags.Observed : 0);
-                PadDefaultAlignment(semanticDefaults, (uint)layout.Alignment);
-                var defaultOffset = (uint)semanticDefaults.Count;
-                semanticDefaults.AddRange(source.DefaultBytes ?? new byte[layout.Size]);
+                var offset = checked(scopeBase[ScopeOrdinal(source.Key.Scope)] + source.Offset);
                 semanticSlots.Add(new CompiledBlackboardSlotRecord(StableHash.Fnv1A64(source.Key.Id), layout.TypeId, layout.Version,
-                    source.Key.Type.EnumContractId, BlackboardScope.Tree, source.Offset, (uint)layout.Size, (uint)layout.Alignment, defaultOffset, flags));
+                    source.Key.Type.EnumContractId, BlackboardScope.Tree, offset, (uint)layout.Size, (uint)layout.Alignment, defaultOffsets[source.Key.Id], flags));
             }
             var header = template.Header;
             var capabilities = header.CapabilityFlags | (uint)registry.Capabilities;
@@ -694,6 +708,32 @@ namespace AIBT.Authoring
             return new CompiledProgram(finalHeader, nodes, template.ChildIndices, template.ReadSlotIndices,
                 template.WriteSlotIndices, semanticSlots, observers, watchedSlots,
                 configBlob, semanticDefaults, template.DebugMap);
+        }
+
+        private static int ScopeOrdinal(BlackboardScope scope)
+            => scope == BlackboardScope.Tree ? 0 : scope == BlackboardScope.Agent ? 1 : 2;
+
+        /// <summary>
+        /// P11-009: where each scope starts in the semantic projection's single offset space: Tree at 0,
+        /// Agent past the end of the Tree range, Shared past the end of the Agent range, each aligned to
+        /// its own strictest slot. A scope with no keys adds nothing, so a tree with one scope keeps base 0.
+        /// </summary>
+        private static uint[] ScopeBaseOffsets(IReadOnlyList<GeneratedScopeSlot> slots)
+        {
+            var ends = new uint[3];
+            var alignments = new uint[] { 1, 1, 1 };
+            for (var index = 0; index < slots.Count; index++)
+            {
+                var slot = slots[index];
+                var layout = slot.Key.Type.RuntimeDescriptor;
+                var ordinal = ScopeOrdinal(slot.Key.Scope);
+                ends[ordinal] = Math.Max(ends[ordinal], checked(slot.Offset + (uint)layout.Size));
+                alignments[ordinal] = Math.Max(alignments[ordinal], (uint)layout.Alignment);
+            }
+            var result = new uint[3];
+            result[1] = checked((uint)Align(ends[0], alignments[1]));
+            result[2] = checked((uint)Align((ulong)result[1] + ends[1], alignments[2]));
+            return result;
         }
 
         private static void BuildProjectedObserverTables(TreeDocument document, IReadOnlyList<CompiledDebugMapEntry> debugMap,
