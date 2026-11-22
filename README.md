@@ -221,7 +221,7 @@ the node's update commits, for Int32, Float32 and Float3/`Vector3`; a throwing h
 and does not block later effects.
 
 A key that no node writes or binds as a key parameter is reported in the graph as the note
-**AIBT2043 Input key '...'**. That is expected for keys gameplay code feeds (native facts always
+**AIBT2053 Input key '...'**. That is expected for keys gameplay code feeds (native facts always
 are such keys); it is a reminder, not a problem.
 
 ## Working in the graph editor

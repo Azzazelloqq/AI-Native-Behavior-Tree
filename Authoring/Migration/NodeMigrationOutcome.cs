@@ -16,7 +16,7 @@ namespace AIBT.Authoring.Migration
     /// <summary>
     /// Records that one node in a document was migrated from <see cref="FromVersion"/> to
     /// <see cref="ToVersion"/>, and exactly what changed -- the shape <c>ADR-P7-005</c>'s proposed
-    /// <c>AIBT2042</c> diagnostic and the Editor/MCP persist surfaces both consume.
+    /// <c>AIBT2052</c> diagnostic and the Editor/MCP persist surfaces both consume.
     /// </summary>
     public sealed class NodeMigrationOutcome
     {

@@ -533,12 +533,12 @@ namespace AIBT.Authoring
         }
 
         /// <summary>
-        /// P11-003: true only for this validator's Info note AIBT2043 <c>TreeScopeSlotNeverWritten</c>.
+        /// P11-003: true only for this validator's Info note AIBT2053 <c>TreeScopeSlotNeverWritten</c>.
         /// The generated compiler validates a semantic projection of a native tree (native nodes
         /// become built-in placeholders without <c>bindings</c>), where every key looks unwritten;
         /// it drops these notes from the projection, because the real document's notes were already
-        /// reported. The compiler's own <c>ScopeContractMismatch</c> error shares the code AIBT2043
-        /// and is not matched (it is an Error).
+        /// reported. The compiler's <c>ScopeContractMismatch</c> error (AIBT2043, the note's code
+        /// until P11-008) is not matched.
         /// </summary>
         internal static bool IsTreeScopeSlotNeverWrittenNote(Diagnostic diagnostic)
             => diagnostic != null

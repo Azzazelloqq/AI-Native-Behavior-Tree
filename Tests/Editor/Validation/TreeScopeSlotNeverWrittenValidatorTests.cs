@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace AIBT.Tests.Editor.Validation
 {
     /// <summary>
-    /// P7-039 (ADR-P7-039): <c>AIBT2043 TreeScopeSlotNeverWritten</c> -- an Info-severity heads-up
+    /// P7-039 (ADR-P7-039): <c>AIBT2053 TreeScopeSlotNeverWritten</c> -- an Info-severity heads-up
     /// for a declared Tree-scope key no node in the tree ever writes, eligible for a native
     /// <c>ProductionTreeHost</c> external write. Never blocks compilation, and never fires for
     /// Agent/Shared-scope keys.

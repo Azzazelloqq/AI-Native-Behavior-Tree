@@ -44,7 +44,7 @@ namespace AIBT.Mcp.Documentation
                 "default) and its manifest `Version` increments, `Authoring/Migration/DocumentMigrator` rewrites " +
                 "an authored document's affected node **in memory only** the next time it is validated or " +
                 "compiled (via `aibt_validate`/`aibt_compile`, or the Editor equivalents) -- the document keeps " +
-                "working, and a structured, non-blocking `AIBT2042` (Info) diagnostic names exactly what changed. " +
+                "working, and a structured, non-blocking `AIBT2052` (Info) diagnostic names exactly what changed. " +
                 "The on-disk file is never rewritten as a side effect; persist the fix explicitly with " +
                 "`aibt_migrate_document`, or via the `AIBT/Migration Notifications` Editor window. A version gap " +
                 "with no registered rule (e.g. a removed field, or a type change) is left untouched and still " +

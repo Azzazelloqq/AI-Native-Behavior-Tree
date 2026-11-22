@@ -12,7 +12,7 @@ using static AIBT.Tests.Integration.NativeRuntime.LibraryTrees;
 namespace AIBT.Tests.Integration.NativeRuntime
 {
     /// <summary>
-    /// P11-003: the note <c>AIBT2043</c> ("Input key ...: no node in this tree writes it") agrees with
+    /// P11-003: the note <c>AIBT2053</c> ("Input key ...: no node in this tree writes it") agrees with
     /// what a native host accepts. For a tree prepared for a <see cref="ProductionTreeHost"/>, the
     /// Tree-scope keys without the note are exactly the keys
     /// <see cref="ProductionTreeHost.TryResolveExternalTreeWrite{T}"/> refuses (a node writes them),

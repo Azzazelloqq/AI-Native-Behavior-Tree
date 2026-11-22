@@ -22,6 +22,13 @@ All notable changes to this project will be documented here. The project follows
   a reactive composite instead. Native hosts are unchanged: there an `observer` block still compiles
   and changes nothing (see Production tree host). The execution-semantics specification notes where
   observers are implemented (the reference executor only).
+- **One meaning per diagnostic code** (review F11). `AIBT2042` and `AIBT2043` each had two meanings.
+  The compiler's errors keep their codes (they are older): `AIBT2042` is a missing or invalid
+  Agent/Shared scope contract (also "requires tree format version 2"), `AIBT2043` a scope contract
+  mismatch. The validator's notes get new codes: the migration note `MigrationApplied` is now
+  **`AIBT2052`** (was `AIBT2042`), and the input-key note `TreeScopeSlotNeverWritten` ("Input key
+  '...': no node in this tree writes it") is now **`AIBT2053`** (was `AIBT2043`). Update filters
+  that match these notes by code. A test now fails if any code is declared with two meanings.
 
 ### Review fixes, batch 1 (P11-007)
 
@@ -87,9 +94,9 @@ All notable changes to this project will be documented here. The project follows
 - **Unchanged:** ABI v2, the compiled program format, generated code, execution semantics and every
   existing member. Decision: `ADR-P11-004` (AIBT-051).
 
-### AIBT2043 counts writes through native bindings (P11-003)
+### AIBT2053 counts writes through native bindings (P11-003)
 
-- **Fewer false input notes.** The info note `AIBT2043` ("Input key ...: no node in this tree
+- **Fewer false input notes.** The info note `AIBT2053` ("Input key ...: no node in this tree
   writes it") no longer appears for a Tree-scope key that a native (generated Burst) node binds
   through a `Write` or `ReadWrite` member of `bindings`, for example the deadline key of
   `aibt.native.set-deadline` or the counter of `aibt.native.increment-int`. A key bound only through
@@ -684,7 +691,7 @@ All notable changes to this project will be documented here. The project follows
   node table, choosing a layer and known limits. Its code is compiled and checked against the
   sources by `UserGuideSnippetTests`. The phase history moved to `Documentation~/roadmap.md`.
 - Generated API reference now covers `AIBT.Agents` (`Documentation~/generated/api-reference-agents.md`).
-- `AIBT2043` names the key and reads as an input-key note ("Input key 'k': no node in this tree
+- `AIBT2053` names the key and reads as an input-key note ("Input key 'k': no node in this tree
   writes it ... game code sets it"). Keys a managed node binds through a `blackboard-key`
   parameter are no longer reported, because such a parameter may be written by the node. Severity
   (Info) and the rule for manifest access declarations are unchanged.
@@ -864,7 +871,7 @@ All notable changes to this project will be documented here. The project follows
   instance's own Tree-scope blackboard, through new `ProductionTreeHost.TryResolveExternalTreeWrite<T>`/
   `TryWriteExternalTreeValue<T>` — gated on no node in the tree ever declaring Write access to the
   key, available only for a host bootstrapped through the generated-catalog dispatch overload.
-  `TreeValidator` gained a new Info diagnostic, `AIBT2043 TreeScopeSlotNeverWritten`, flagging a
+  `TreeValidator` gained a new Info diagnostic, `AIBT2053 TreeScopeSlotNeverWritten`, flagging a
   declared Tree-scope key eligible for this. See `Planning~/Evidence/P7-039/README.md`.
 
 - One optional population-level `ProductionTreeScheduler` replaces per-tree scheduling choices:

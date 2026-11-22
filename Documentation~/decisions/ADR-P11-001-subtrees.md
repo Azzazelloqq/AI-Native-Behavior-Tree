@@ -693,7 +693,8 @@ private keys `r:key` (`AIBT2038`) in MCP validate and compile.
   `MigrationApplied`/`TreeScopeSlotNeverWritten` (`Authoring/Validation/TreeValidationDiagnostics.cs:47`,
   `:55`) and compiler `MissingScopeContract`/`ScopeContractMismatch`
   (`Authoring/Compilation/ReferenceCompilerDiagnostics.cs:17-18`). `diagnostics-v1.md:34` requires
-  one catalog entry per code.
+  one catalog entry per code. Resolved by P11-008 (review F11): the validator's codes, the later
+  ones, became `AIBT2052` and `AIBT2053`.
 - `HotReloadProgramIdentityMap.Build` silently keeps the last entry if two debug-map entries share an
   ID (`Runtime/HotReload/Identity/HotReloadProgramIdentityMap.cs:44-51`); `CompiledProgram`
   validation does not check debug-map ID uniqueness (`Runtime/Compiled/Model/CompiledProgram.cs:325-350`).

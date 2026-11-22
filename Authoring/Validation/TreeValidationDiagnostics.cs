@@ -42,17 +42,20 @@ namespace AIBT.Authoring
         /// P7-006 (ADR-P7-005): a node's authored parameters were rewritten in memory by a
         /// registered migration rule chain to reach the currently-registered manifest version.
         /// Info severity -- the document already compiles/validates successfully; this is a
-        /// heads-up for review, never a blocking failure.
+        /// heads-up for review, never a blocking failure. AIBT2042 until P11-008 (review F11), which
+        /// gave it its own number: AIBT2042 is the compiler's <c>MissingScopeContract</c>.
         /// </summary>
-        public static readonly DiagnosticCode MigrationApplied = new DiagnosticCode("AIBT2042");
+        public static readonly DiagnosticCode MigrationApplied = new DiagnosticCode("AIBT2052");
 
         /// <summary>
         /// P7-039 (ADR-P7-039): a declared Tree-scope blackboard key has zero Write accesses across
         /// the whole tree, making it eligible for a native <c>ProductionTreeHost</c> external write
         /// (a compiled node never claims it). Info severity -- the document already compiles and
-        /// validates successfully; this is a review heads-up, never a blocking failure.
+        /// validates successfully; this is a review heads-up, never a blocking failure. AIBT2043 until
+        /// P11-008 (review F11), which gave it its own number: AIBT2043 is the compiler's
+        /// <c>ScopeContractMismatch</c>.
         /// </summary>
-        public static readonly DiagnosticCode TreeScopeSlotNeverWritten = new DiagnosticCode("AIBT2043");
+        public static readonly DiagnosticCode TreeScopeSlotNeverWritten = new DiagnosticCode("AIBT2053");
 
         /// <summary>
         /// P11-001 (ADR-P11-001 §4.6): a node with <c>subtree</c> also has a type, type version,

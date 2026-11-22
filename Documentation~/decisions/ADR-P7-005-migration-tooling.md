@@ -149,3 +149,5 @@ See `Planning~/Evidence/P7-005/README.md` for the full spike output.
 - The exact new diagnostic code number is not reserved by this ADR — `P7-006` confirms
   `TreeValidationDiagnosticCatalog`'s actual next-free code at implementation time and updates this
   ADR's reference if it differs from `AIBT2042`.
+- Note (P11-008, review F11): `MigrationApplied` shipped as `AIBT2042`, which the compiler's older
+  `MissingScopeContract` already used; it was renumbered to `AIBT2052`.

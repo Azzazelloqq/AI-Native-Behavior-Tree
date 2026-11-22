@@ -77,7 +77,7 @@ binding, and is deliberately narrow:
 
 - Eligible only when no node in the tree declares Write access to the key --
   `(slot.AccessFlags & CompiledBlackboardAccessFlags.Write) == 0`, the exact compile-time signal
-  `TreeValidator`'s `AIBT2043 TreeScopeSlotNeverWritten` (Info) already surfaces. A key any node
+  `TreeValidator`'s `AIBT2053 TreeScopeSlotNeverWritten` (Info) already surfaces. A key any node
   writes is refused, never a silent race between external and node-authored writes.
 - Reachable only for a `ProductionTreeHost` bootstrapped through the generated-catalog overload
   (`GeneratedTreeRuntimeDefinitionV2`/`GeneratedBurstCatalogV2`); a delegate-based

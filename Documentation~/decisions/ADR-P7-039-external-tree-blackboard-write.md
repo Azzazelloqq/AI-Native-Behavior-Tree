@@ -107,8 +107,9 @@ it is tracked separately as `P7-040` and must not be silently fixed or made wors
 A Tree-scope blackboard slot is eligible for external write only when no node in the tree declares
 Write access to it: `(slot.AccessFlags & CompiledBlackboardAccessFlags.Write) == 0`. This is a hard
 runtime precondition on the write path (see below), not merely a warning. `TreeValidator` gains a
-new Info-severity diagnostic, `AIBT2043 TreeScopeSlotNeverWritten`, raised once per Tree-scope key
-that has zero Write accesses across the whole tree — mirroring `AIBT2042 MigrationApplied`'s
+new Info-severity diagnostic, `AIBT2043 TreeScopeSlotNeverWritten` (renumbered `AIBT2053` by
+P11-008: `AIBT2043` was already the compiler's `ScopeContractMismatch`), raised once per Tree-scope key
+that has zero Write accesses across the whole tree — mirroring `AIBT2042 MigrationApplied`'s (now `AIBT2052`)
 established default-severity-override pattern (`ADR-P7-005`): the document already compiles and
 validates successfully; this is a review heads-up, never a blocking failure. Agent- and
 Shared-scope keys are not in scope for this diagnostic or for the write path below.

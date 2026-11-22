@@ -686,7 +686,7 @@ One field-level change a migration rule hop applied, for diagnostic reporting.
 
 ### `AIBT.Authoring.Migration.NodeMigrationOutcome`
 
-Records that one node in a document was migrated from <see cref="FromVersion"/> to <see cref="ToVersion"/>, and exactly what changed -- the shape <c>ADR-P7-005</c>'s proposed <c>AIBT2042</c> diagnostic and the Editor/MCP persist surfaces both consume.
+Records that one node in a document was migrated from <see cref="FromVersion"/> to <see cref="ToVersion"/>, and exactly what changed -- the shape <c>ADR-P7-005</c>'s proposed <c>AIBT2052</c> diagnostic and the Editor/MCP persist surfaces both consume.
 
 - `METHOD System.Void .ctor(AIBT.TreeId,AIBT.NodeId,System.String,System.UInt32,System.UInt32,System.Collections.Generic.IReadOnlyList`1<AIBT.Authoring.Migration.NodeMigrationChange>)`
 - `PROPERTY AIBT.NodeId NodeId`

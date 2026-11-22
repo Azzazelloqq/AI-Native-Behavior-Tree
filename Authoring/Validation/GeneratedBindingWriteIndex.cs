@@ -7,7 +7,7 @@ namespace AIBT.Authoring
     /// <summary>
     /// P11-003: which generated (native) blackboard bindings of a node type write a Tree-scope key,
     /// so <see cref="TreeValidator"/> can tell a key a native node writes through its
-    /// <c>bindings</c> from an input key (AIBT2043). The node manifest has no access data for
+    /// <c>bindings</c> from an input key (AIBT2053). The node manifest has no access data for
     /// bindings (its reads/writes are empty for generated nodes); the access lives only in
     /// <see cref="GeneratedNodeDescriptor.Bindings"/>, and the validator is given only a
     /// <see cref="NodeRegistry"/>. A registry entry built from a descriptor holds the descriptor's

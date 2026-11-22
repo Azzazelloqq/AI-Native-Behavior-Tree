@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace AIBT.Tests.Editor.Validation
 {
     /// <summary>
-    /// P11-003: <c>AIBT2043 TreeScopeSlotNeverWritten</c> for native (generated) nodes. A key bound
+    /// P11-003: <c>AIBT2053 TreeScopeSlotNeverWritten</c> for native (generated) nodes. A key bound
     /// through a <c>bindings</c> member whose declared access is Write or ReadWrite counts as written
     /// (no note); a key bound only through Read members stays an input (note). The access comes from
     /// the generated descriptor, looked up by the registry entry's manifest instance
@@ -193,13 +193,13 @@ namespace AIBT.Tests.Editor.Validation
             Assert.That(note.Severity, Is.EqualTo(DiagnosticSeverity.Info));
             Assert.That(TreeValidator.IsTreeScopeSlotNeverWrittenNote(note), Is.True);
 
-            // The compiler's ScopeContractMismatch shares the code AIBT2043 and is an Error.
+            // The compiler's ScopeContractMismatch is AIBT2043 (the note's code until P11-008) and is an Error.
             var mismatch = ReferenceCompilerDiagnostics.Create(ReferenceCompilerDiagnosticCodes.ScopeContractMismatch, "mismatch", "doc", "/blackboardContracts");
             Assert.That(mismatch.Code.Value, Is.EqualTo("AIBT2043"));
             Assert.That(mismatch.Severity, Is.EqualTo(DiagnosticSeverity.Error));
             Assert.That(TreeValidator.IsTreeScopeSlotNeverWrittenNote(mismatch), Is.False);
 
-            Assert.That(TreeValidator.IsTreeScopeSlotNeverWrittenNote(new Diagnostic(new DiagnosticCode("AIBT2043"), DiagnosticSeverity.Warning, "x", new DiagnosticLocation("doc"))), Is.False);
+            Assert.That(TreeValidator.IsTreeScopeSlotNeverWrittenNote(new Diagnostic(new DiagnosticCode("AIBT2053"), DiagnosticSeverity.Warning, "x", new DiagnosticLocation("doc"))), Is.False);
             Assert.That(TreeValidator.IsTreeScopeSlotNeverWrittenNote(new Diagnostic(TreeValidationDiagnosticCodes.MigrationApplied, DiagnosticSeverity.Info, "x", new DiagnosticLocation("doc"))), Is.False);
             Assert.That(TreeValidator.IsTreeScopeSlotNeverWrittenNote(null), Is.False);
         }
@@ -302,7 +302,7 @@ namespace AIBT.Tests.Editor.Validation
                 var entry = TreeCatalogEntry.Read(path, _catalog.Registry, null,
                     new TreeCatalogEntry.NativeFacts(_catalog.Generated, Array.Empty<(string, string)>()));
                 Assert.That(entry.Status, Is.EqualTo("Valid"), entry.Details);
-                Assert.That(entry.Details, Does.Not.Contain("AIBT2043"), entry.Details);
+                Assert.That(entry.Details, Does.Not.Contain("AIBT2053"), entry.Details);
             }
             finally
             {
@@ -455,7 +455,7 @@ namespace AIBT.Tests.Editor.Validation
 
         private static string[] McpInputs(JObject response)
             => ((JArray)response["result"]["diagnostics"])
-                .Where(item => (string)item["code"] == "AIBT2043" && (string)item["severity"] == "info")
+                .Where(item => (string)item["code"] == "AIBT2053" && (string)item["severity"] == "info")
                 .Select(item => ((string)item["jsonPointer"]).Substring("/blackboard/".Length))
                 .OrderBy(key => key, StringComparer.Ordinal).ToArray();
 

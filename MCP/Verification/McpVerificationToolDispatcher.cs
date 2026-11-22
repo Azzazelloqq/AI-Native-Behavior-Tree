@@ -105,7 +105,7 @@ namespace AIBT.Mcp.Verification
         /// <summary>
         /// Applies every registered migration rule to <paramref name="document"/> in memory only
         /// (per ADR-P7-005 -- the on-disk file is never touched here) and returns the migrated
-        /// document plus one AIBT2042 Info diagnostic per migrated node. <paramref name="rules"/>
+        /// document plus one AIBT2052 Info diagnostic per migrated node. <paramref name="rules"/>
         /// defaults to <see cref="NodeMigrationRegistry.Empty"/> -- no real production migration
         /// rules exist yet (no node type has ever been version-bumped in this project); the
         /// parameter exists so a test can inject a populated registry and prove this exact hook is
