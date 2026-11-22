@@ -4,6 +4,12 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Review fixes, batch 1 (P11-007)
+
+- **`NativeTreeAgent.TryGetValue` refuses a faulted run at once** (review W5). It returned true for a
+  run whose host had failed until the agent's `LateUpdate` cleared the host; it now returns false
+  as soon as the host has a failure, as its documentation already said.
+
 ### A truthful graph window for native agents (P11-005)
 
 - **Live values of a `NativeTreeAgent`.** With the graph attached to a native agent, the Blackboard

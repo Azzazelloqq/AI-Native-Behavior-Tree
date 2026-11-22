@@ -164,7 +164,8 @@ namespace AIBT
                 throw new NotSupportedException("Values of type " + typeof(T).Name + " cannot be read. Use bool, int, long, float, double, Float2Value, Float3Value or QuaternionValue.");
             value = default;
             var host = Host;
-            if (host == null) return false;
+            // A faulted run is refused at once, not only after LateUpdate cleared the host (P11-007, review W5).
+            if (host == null || host.LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None) return false;
             if (_readsByKey == null) _readsByKey = new Dictionary<string, ReadSlot>(StringComparer.Ordinal);
             _readsByKey.TryGetValue(key, out var first);
             var slot = first;

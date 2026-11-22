@@ -120,6 +120,27 @@ namespace AIBT.Tests.Integration.NativeRuntime
             LogAssert.NoUnexpectedReceived();
         }
 
+        /// <summary>
+        /// P11-007 (review W5): the run is refused in the frame of the fault, after the scheduler
+        /// frame and before the agent's LateUpdate has cleared its host.
+        /// </summary>
+        [Test]
+        public void AFaultedRun_ReturnsFalse_InTheFrameOfTheFault_BeforeLateUpdate()
+        {
+            var agent = Spawn(NativeTreeRestartMode.Always, Forced(SchedulingPolicy.BatchedJobsSameFrame, false));
+            Assert.That(agent.TryGetValue("owned-target", out int before) && before == -3, Is.True, "Readable before the fault.");
+            LogAssert.Expect(LogType.Error, new Regex("Forced scheduling policy is not supported"));
+
+            InvokePrivate(_scheduler, "Update"); // the scheduler frame only; LateUpdate has not run yet
+
+            Assert.That(agent.Host, Is.Not.Null, "The agent still holds the faulted host until LateUpdate.");
+            Assert.That(agent.Host.LastFailure.Code, Is.Not.EqualTo(NativeRuntimeDiagnosticCodeV1.None));
+            Assert.That(agent.TryGetValue("owned-target", out int value), Is.False);
+            Assert.That(value, Is.EqualTo(0));
+            Assert.That(agent.TryGetVector3("spot", out _), Is.False);
+            LogAssert.NoUnexpectedReceived();
+        }
+
         [Test]
         public void WrongKeyOrType_IsLoggedOncePerKeyAndType_InAnyCallOrder()
         {
