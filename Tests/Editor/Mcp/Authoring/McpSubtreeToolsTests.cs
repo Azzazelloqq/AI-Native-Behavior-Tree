@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Editor.Graph;
 using AIBT.Editor.Registry;
 using AIBT.Mcp;
 using Newtonsoft.Json.Linq;
@@ -599,6 +600,78 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
             Assert.That(McpOperationCatalog.Describe("extract_subtree")["inputSchema"]["required"].Values<string>(), Is.EqualTo(new[] { "treeId", "expectedHash", "nodeId" }));
             Assert.That(McpOperationCatalog.Describe("inline_subtree")["inputSchema"]["required"].Values<string>(),
                 Is.EqualTo(new[] { "treeId", "expectedHash", "parentId", "subtreeRootId", "nodes" }));
+        }
+
+        // ---- one file set with the Editor (P11-009, review F6) ----------------------------------------
+
+        /// <summary>
+        /// P11-009 (review F6): MCP resolved subtrees against every tree file under Assets, including
+        /// folders Unity does not import ('.' and '~' folders, cvs), while the Editor (ProjectTreeIndex,
+        /// the import) skips them. A copy of a subtree in such a folder made every MCP reference to it
+        /// ambiguous (AIBT3021) while the Editor resolved it. MCP now resolves by the Editor's rule.
+        /// </summary>
+        [TestCase("Old~/strike.aibt")]
+        [TestCase(".backup/strike.aibt")]
+        [TestCase("CVS/strike.aibt")]
+        public void ACopyInAFolderUnityDoesNotImport_IsIgnoredByMcp_AsByTheEditor(string copy)
+        {
+            WriteParentWithReference();
+            Write(copy, Strike);
+
+            var editor = ProjectTreeIndex.Scan(new[] { new ProjectTreeIndex.ScanRoot("Assets", _assetsDir, false) }).Resolve(new TreeId(StrikeId));
+            Assert.That(editor.Status, Is.EqualTo(SubtreeResolutionStatus.Found), "the Editor skips " + copy);
+            var resolved = McpSubtrees.Resolver(_assetsDir).Resolve(new TreeId(StrikeId));
+            Assert.That(resolved.Status, Is.EqualTo(SubtreeResolutionStatus.Found), string.Join(", ", resolved.CandidateSourceIds ?? Array.Empty<string>()));
+            Assert.That(resolved.SourceId, Is.EqualTo("Trees/strike.aibt"));
+
+            var validated = Dispatch("validate", new JObject { ["treeId"] = FightId }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+            Assert.That(Codes(validated), Does.Not.Contain("AIBT3021"));
+            var compiled = Dispatch("compile", new JObject { ["treeId"] = FightId }, "Compilation");
+            Assert.That((bool)compiled["result"]["success"], Is.True, compiled.ToString());
+            var usages = Dispatch("find_subtree_usages", new JObject { ["treeId"] = StrikeId }, "Read");
+            Assert.That(((JArray)usages["result"]["declaredIn"]).Count, Is.EqualTo(1), usages.ToString());
+        }
+
+        /// <summary>
+        /// P11-009 (review F6): a subtree in a package resolved in the Editor but was AIBT3020 in MCP.
+        /// MCP now scans the same roots, so it resolves under the package's asset path.
+        /// </summary>
+        [Test]
+        public void ASubtreeInAPackage_ResolvesForMcp_AsForTheEditor()
+        {
+            WriteParentWithReference();
+            File.Delete(Path.Combine(_assetsDir, "Trees/strike.aibt"));
+            var package = Path.Combine(_projectRoot, "Packages", "com.example.trees");
+            Directory.CreateDirectory(Path.Combine(package, "Trees"));
+            File.WriteAllBytes(Path.Combine(package, "Trees", "strike.aibt"),
+                CanonicalTreeJson.Serialize(CanonicalTreeJson.Parse(Strike, "strike").Document).Utf8);
+            var roots = new[]
+            {
+                new ProjectTreeIndex.ScanRoot("Assets", _assetsDir, false),
+                new ProjectTreeIndex.ScanRoot("Packages/com.example.trees", package, false),
+            };
+
+            var editor = ProjectTreeIndex.Scan(roots).Resolve(new TreeId(StrikeId));
+            Assert.That(editor.Status, Is.EqualTo(SubtreeResolutionStatus.Found));
+            Assert.That(editor.SourceId, Is.EqualTo("Packages/com.example.trees/Trees/strike.aibt"));
+            var resolved = McpSubtrees.Resolver(_assetsDir, roots).Resolve(new TreeId(StrikeId));
+            Assert.That(resolved.Status, Is.EqualTo(SubtreeResolutionStatus.Found));
+            Assert.That(resolved.SourceId, Is.EqualTo("Packages/com.example.trees/Trees/strike.aibt"));
+        }
+
+        /// <summary>P11-009 (review F6): for this project's Assets folder MCP uses the Editor's roots (Assets and every package).</summary>
+        [Test]
+        public void McpRoots_AreTheEditorsRoots_ForThisProjectsAssetsFolder_AndTheFolderAloneElsewhere()
+        {
+            var project = ProjectTreeIndex.RootsFor(UnityEngine.Application.dataPath);
+            var editor = ProjectTreeIndex.Roots();
+            Assert.That(project.Select(root => root.AssetRoot), Is.EqualTo(editor.Select(root => root.AssetRoot)));
+            Assert.That(project.Select(root => Path.GetFullPath(root.Directory)), Is.EqualTo(editor.Select(root => Path.GetFullPath(root.Directory))));
+            var temp = ProjectTreeIndex.RootsFor(_assetsDir);
+            Assert.That(temp.Count, Is.EqualTo(1));
+            Assert.That(temp[0].AssetRoot, Is.EqualTo("Assets"));
+            Assert.That(Path.GetFullPath(temp[0].Directory), Is.EqualTo(Path.GetFullPath(_assetsDir)));
         }
 
         // ---- helpers ---------------------------------------------------------------------------------

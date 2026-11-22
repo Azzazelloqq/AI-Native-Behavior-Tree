@@ -111,8 +111,12 @@ namespace AIBT.Mcp
                 if (McpSubtrees.ReferencedTreeIds(document).Count == 0)
                     prepared = ProductionTreeAssetBaker.Create(document, UnityAssetPath(projectRoot, sourcePath), types[0], out diagnostics);
                 else
+                {
+                    // P11-009 (review F6): the files the Editor resolves against (packages included).
+                    var files = McpSubtrees.SubtreeFiles(projectRoot);
                     prepared = ProductionTreeAssetBaker.Create(document, UnityAssetPath(projectRoot, sourcePath), types[0],
-                        new McpSubtreeResolver(AibtTreeDiscovery.Scan(projectRoot), file => UnityAssetPath(projectRoot, file)), out diagnostics);
+                        new McpSubtreeResolver(files.Scan, files.SourceIds(file => UnityAssetPath(projectRoot, file))), out diagnostics);
+                }
                 var result = new JObject
                 {
                     ["success"] = prepared != null, ["backend"] = "native-generated-v2", ["contentHash"] = sourceHash,

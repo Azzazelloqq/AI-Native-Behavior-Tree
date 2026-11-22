@@ -248,6 +248,27 @@ namespace AIBT.Editor.Graph
             return roots;
         }
 
+        /// <summary>
+        /// P11-009 (review F6): the roots MCP resolves subtree references against for its project folder
+        /// <paramref name="assetsDirectory"/>: <see cref="Roots"/> when it is this project's <c>Assets</c>
+        /// folder (so MCP and the Editor see the same files), otherwise that folder alone as <c>Assets</c>
+        /// (a temporary or another project's folder, whose packages this Editor does not know).
+        /// </summary>
+        internal static IReadOnlyList<ScanRoot> RootsFor(string assetsDirectory)
+        {
+            var folder = Path.GetFullPath(assetsDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var project = Path.GetFullPath(Application.dataPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return string.Equals(folder, project, StringComparison.OrdinalIgnoreCase)
+                ? Roots()
+                : new[] { new ScanRoot(AssetsRoot, folder, false) };
+        }
+
+        /// <summary>
+        /// P11-009 (review F6): asset path and path on disk of every tree file under <paramref name="roots"/>,
+        /// by the import's rule (folders Unity does not import are skipped), for MCP's subtree resolution.
+        /// </summary>
+        internal static IEnumerable<KeyValuePair<string, string>> TreeFiles(IEnumerable<ScanRoot> roots) => FindTreeFiles(roots);
+
         // Tree files of immutable packages, keyed by resolved folder (a new package version has a new folder).
         private static readonly Dictionary<string, List<KeyValuePair<string, string>>> s_immutableFiles
             = new Dictionary<string, List<KeyValuePair<string, string>>>(StringComparer.Ordinal);

@@ -167,7 +167,9 @@ namespace AIBT.Mcp.Authoring
             var actualHash = ComputeSemanticHash(document);
             if (!string.Equals(RequireString(args, "expectedHash"), actualHash, StringComparison.Ordinal)) return HashMismatch(document, (string)args["expectedHash"], actualHash);
             var newPath = ResolveNewTreePath(projectRoot, relativePath);
-            var scan = AibtTreeDiscovery.Scan(projectRoot);
+            // P11-009 (review F6): the tree IDs references resolve against, as in the Editor (packages included).
+            var files = McpSubtrees.SubtreeFiles(projectRoot);
+            var scan = files.Scan;
             if (scan.Trees.Any(tree => tree.TreeId == newTreeId))
                 throw new McpToolException(McpAuthoringDiagnostics.TreeAlreadyExists, "A tree with id '" + newTreeId.Value + "' already exists; a second one would make every reference to it ambiguous (AIBT3021).");
 
@@ -179,7 +181,7 @@ namespace AIBT.Mcp.Authoring
 
             var (_, parentOptions) = BuildRegistryAndOptions(projectRoot, path);
             var (_, subtreeOptions) = BuildRegistryAndOptions(projectRoot, newPath);
-            var resolver = new McpSubtreeResolver(scan, file => ToLogicalSourceId(projectRoot, file))
+            var resolver = new McpSubtreeResolver(scan, files.SourceIds(file => ToLogicalSourceId(projectRoot, file)))
                 .Override(extraction.Subtree, subtreeOptions.SourceId);
             var subtreeDiagnostics = catalog.ValidateAuthoring(extraction.Subtree, subtreeOptions, resolver);
             var result = SemanticPatchTransaction.Apply(document, document.Revision.Value,
@@ -234,13 +236,16 @@ namespace AIBT.Mcp.Authoring
         internal static JObject FindSubtreeUsages(string projectRoot, JObject args)
         {
             var treeId = new TreeId(RequireString(args, "treeId"));
-            var scan = AibtTreeDiscovery.Scan(projectRoot);
+            // P11-009 (review F6): the files references resolve against, as in the Editor (packages included).
+            var files = McpSubtrees.SubtreeFiles(projectRoot);
+            var scan = files.Scan;
+            var sourceId = files.SourceIds(file => ToLogicalSourceId(projectRoot, file));
             var declared = new JArray();
             var usages = new List<JObject>();
             for (var index = 0; index < scan.Trees.Count; index++)
             {
                 var tree = scan.Trees[index];
-                var source = ToLogicalSourceId(projectRoot, scan.TreePaths[index]);
+                var source = sourceId(scan.TreePaths[index]);
                 if (tree.TreeId == treeId)
                     declared.Add(new JObject { ["path"] = source, ["name"] = tree.Name, ["interface"] = McpSubtrees.WriteInterface(tree.Interface) });
                 foreach (var node in tree.Nodes.Where(node => node.Subtree != null && node.Subtree.TreeId == treeId))
@@ -266,7 +271,7 @@ namespace AIBT.Mcp.Authoring
                 ["declaredIn"] = declared,
                 ["usageCount"] = usages.Count,
                 ["usages"] = new JArray(ordered),
-                ["skippedTreeFiles"] = new JArray(scan.SkippedFiles.Select(file => ToLogicalSourceId(projectRoot, file))),
+                ["skippedTreeFiles"] = new JArray(scan.SkippedFiles.Select(sourceId)),
             };
         }
 

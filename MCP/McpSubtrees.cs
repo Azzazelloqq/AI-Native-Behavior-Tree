@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AIBT.Authoring;
+using AIBT.Editor.Graph;
 using Newtonsoft.Json.Linq;
 
 namespace AIBT.Mcp
 {
     /// <summary>
-    /// Resolves subtree references (ADR-P11-001) against the trees <see cref="AibtTreeDiscovery"/>
-    /// found under the project's <c>Assets</c> folder, as every MCP tool addresses trees. A tree ID
+    /// Resolves subtree references (ADR-P11-001) against the project's trees, found by the Editor's
+    /// rule since P11-009 (<see cref="McpSubtrees.SubtreeFiles(string)"/>: <c>Assets</c> and every
+    /// package, folders Unity does not import skipped). A tree ID
     /// declared by several files is ambiguous (<c>AIBT3021</c>). Documents not yet on disk (a tree
     /// being edited, a subtree being extracted) can replace the scanned file of their tree ID.
     /// </summary>
@@ -64,9 +66,70 @@ namespace AIBT.Mcp
         internal static string LogicalSourceId(string projectRoot, string absolutePath)
             => Path.GetRelativePath(projectRoot, absolutePath).Replace('\\', '/');
 
-        /// <summary>A resolver over the project's trees with source IDs relative to <c>Assets</c> (validate, compile, edits).</summary>
+        /// <summary>
+        /// A resolver over the project's trees with source IDs relative to <c>Assets</c> (validate, compile,
+        /// edits); a tree in a package has its asset path (<c>Packages/&lt;name&gt;/…</c>). P11-009 (review F6):
+        /// the trees are the ones the Editor resolves against (<see cref="ProjectTreeIndex.RootsFor"/>).
+        /// </summary>
         internal static McpSubtreeResolver Resolver(string projectRoot)
-            => new McpSubtreeResolver(AibtTreeDiscovery.Scan(projectRoot), path => LogicalSourceId(projectRoot, path));
+            => Resolver(projectRoot, ProjectTreeIndex.RootsFor(projectRoot));
+
+        /// <summary><see cref="Resolver(string)"/> over the given roots.</summary>
+        internal static McpSubtreeResolver Resolver(string projectRoot, IEnumerable<ProjectTreeIndex.ScanRoot> roots)
+        {
+            var files = SubtreeFiles(projectRoot, roots);
+            return new McpSubtreeResolver(files.Scan, files.SourceIds(path => LogicalSourceId(projectRoot, path)));
+        }
+
+        /// <summary>
+        /// P11-009 (review F6): the tree files subtree references resolve against, found by the Editor's
+        /// rule (<see cref="ProjectTreeIndex"/>: <c>Assets</c> plus every package for this project, folders
+        /// Unity does not import skipped), so MCP and the Editor resolve a tree ID to the same file.
+        /// </summary>
+        internal static SubtreeFileSet SubtreeFiles(string projectRoot)
+            => SubtreeFiles(projectRoot, ProjectTreeIndex.RootsFor(projectRoot));
+
+        internal static SubtreeFileSet SubtreeFiles(string projectRoot, IEnumerable<ProjectTreeIndex.ScanRoot> roots)
+        {
+            var assetPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var files = new List<string>();
+            foreach (var file in ProjectTreeIndex.TreeFiles(roots))
+            {
+                var absolute = Path.GetFullPath(file.Value);
+                if (assetPaths.ContainsKey(absolute)) continue;
+                assetPaths.Add(absolute, file.Key);
+                files.Add(absolute);
+            }
+            return new SubtreeFileSet(Path.GetFullPath(projectRoot), AibtTreeDiscovery.Read(files), assetPaths);
+        }
+
+        /// <summary>The tree files of <see cref="SubtreeFiles(string)"/> and the source ID of each.</summary>
+        internal sealed class SubtreeFileSet
+        {
+            private readonly string _assets;
+            private readonly Dictionary<string, string> _assetPaths;
+
+            internal SubtreeFileSet(string assets, AibtTreeDiscovery.ScanResult scan, Dictionary<string, string> assetPaths)
+            {
+                _assets = assets.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                Scan = scan;
+                _assetPaths = assetPaths;
+            }
+
+            internal AibtTreeDiscovery.ScanResult Scan { get; }
+
+            /// <summary>
+            /// Source IDs: <paramref name="insideAssets"/> for a file under the project's <c>Assets</c>
+            /// folder (each tool's own convention), the asset path for a file of a package.
+            /// </summary>
+            internal Func<string, string> SourceIds(Func<string, string> insideAssets)
+                => path =>
+                {
+                    var absolute = Path.GetFullPath(path);
+                    if (absolute.StartsWith(_assets, StringComparison.OrdinalIgnoreCase)) return insideAssets(absolute);
+                    return _assetPaths.TryGetValue(absolute, out var assetPath) ? assetPath : insideAssets(absolute);
+                };
+        }
 
         /// <summary>The resolver for <paramref name="document"/>, or null when it uses no subtree feature (nothing is scanned).</summary>
         internal static McpSubtreeResolver ResolverFor(TreeDocument document, string projectRoot)

@@ -60,8 +60,16 @@ namespace AIBT.Mcp
 
             var files = TreeSourcePaths.FindFiles(rootDirectory);
             System.Array.Sort(files, System.StringComparer.Ordinal);
+            return Read(files);
+        }
 
-            for (var index = 0; index < files.Length; index++)
+        /// <summary>P11-009 (review F6): parses the tree files <paramref name="files"/> (absolute paths), in that order.</summary>
+        internal static ScanResult Read(IReadOnlyList<string> files)
+        {
+            var trees = new List<TreeDocument>();
+            var treePaths = new List<string>();
+            var skipped = new List<string>();
+            for (var index = 0; index < files.Count; index++)
             {
                 string text;
                 try
