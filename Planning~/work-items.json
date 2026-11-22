@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P11-009", "phase": 11, "title": "Review fixes, batch 3: F9 (native trees mix Tree with Agent/Shared keys; semantic projection places scopes one after another, existing bytes unchanged), F10 native half (warning AIBT2054 for observer blocks in native trees), F8 write side (host write resolve checks T against expectedType), F6 (MCP resolves subtrees against the Editor's file set)", "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P11/P11-009-review-fixes-batch-3.md",
+      "dependsOn": ["P11-008"],
+      "owns": ["Planning~/Evidence/P11-009/"]
+    },
+    {
       "id": "P11-008", "phase": 11, "title": "Review fixes, batch 2: stale compiled pin refreshed, F8 (host read checks T against expectedType), F10 managed half (BehaviorTreeAgent refuses observer blocks, AIBT2051), F11 (one meaning per diagnostic code: AIBT2052, AIBT2053), F13 ADR proposed (reproducible random streams); stopped for the owner: F9 (Tree plus Agent/Shared keys is a claimed case with a small cause) and the native half of F10 (a passing test asserts the silent behaviour); accepted 2026-11-22 (7773059)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-008-review-fixes-batch-2.md",
       "dependsOn": ["P11-007"],

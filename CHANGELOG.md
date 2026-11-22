@@ -4,6 +4,35 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Review fixes, batch 3 (P11-009)
+
+- **Native trees may mix Tree keys with Agent or Shared keys** (review F9). A native tree with Tree-scope
+  keys plus Agent- or Shared-scope keys failed to compile with the internal error `AIBT3017` ("Tree-scope
+  blackboard memory ranges overlap"): the compiler's semantic projection put every scope at offset 0. Agent
+  slots now follow the Tree slots and Shared slots follow the Agent slots. Programs that compiled before are
+  unchanged byte for byte. Binding an Agent key to a package library node is still refused (`AIBT3018`):
+  library nodes declare Tree-scope bindings. A native node with a Shared binding still does not run on a
+  host (unchanged).
+- **Observer blocks in native trees are reported** (review F10, native half). Native hosts
+  (`NativeTreeAgent`, `ProductionTreeHost`, `ProductionTreeScheduler`, `TreeSimulation`) do not re-evaluate
+  observers, so an `observer` block in a native tree compiled and did nothing without a word. The graph, MCP
+  edits, the tree list, MCP `validate` and the native bake now give the warning **`AIBT2054`** per block,
+  naming the node and pointing to an earlier child of a reactive composite. The tree compiles and runs as
+  before.
+- **The host write checks the type argument** (review F8, write side). `ProductionTreeHost.TryResolveExternalTreeWrite<T>`
+  compared `expectedType` with the key but not `T`, so `TryResolveExternalTreeWrite<int>(key, Float32)`
+  succeeded and the write stored an int's bits as a float. `T` must now be the managed type of
+  `expectedType`, as for the read (P11-008); any other type, even of the same size, is refused with
+  `BlackboardTypeMismatch`. The signature is unchanged and a resolved handle still writes without
+  allocating. No caller in the package, its samples or `NativeTreeAgent` is affected.
+- **MCP resolves subtrees against the Editor's files** (review F6). MCP looked for subtree files under
+  `Assets` in every folder, also those Unity does not import (`.` and `~` folders, `cvs`), and never in
+  packages; the Editor and the import skip those folders and include packages. A copy of a subtree in a
+  hidden folder made every MCP reference to it ambiguous (`AIBT3021`) while the graph resolved it, and a
+  subtree in a package was `AIBT3020` in MCP. MCP `validate`, `compile`, edits, `prepare_runtime`,
+  `extract_to_subtree` and `find_subtree_usages` now resolve by the Editor's rule; a package tree is named
+  by its `Packages/<name>/…` path. Finding the tree a tool works on by its ID is unchanged.
+
 ### Review fixes, batch 2 (P11-008)
 
 - **The host read checks the type argument** (review F8). `ProductionTreeHost.TryResolveExternalTreeRead<T>`
