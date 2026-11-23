@@ -85,6 +85,22 @@ Decided by the orchestrator under the owner's delegation of 2026-11-23, after an
    restart in `BehaviorTreeAgent`, in `NativeTreeAgent` for Tree keys and for Agent keys, and in
    `TreeSimulation`.
 
+## Amendment 2026-11-24 (P11-014)
+
+What the decision left unstated, from the independent review of P11-013:
+
+- **A start that fails.** A start whose bootstrap fails leaves the memory untouched: the next start
+  restores the values the last run left. A start refused after the bootstrap (no world, or the world
+  refuses the registration) has already restored them into its host; stopping that host captures them
+  again, unchanged. Neither consumes a run index (ADR-P11-008). Pinned by
+  `MixedScopeNativeTreeTests.ABootstrapFailure_ConsumesNoRunIndex_AndLeavesTheAgentMemory`.
+- **A host stopped by user code.** `agent.Host.Stop()` called by the game, then `Restart()`: the stopped
+  host refuses to be read (`CanReadTreeValues` is false), so the capture resets the memory and the next
+  run starts from the Agent defaults. It is one more reset cause next to the four of decision 1.
+- **Handle-like values.** The copy is bytes. An Agent key holding a handle into one host's runtime (an
+  `OperationId`, for example) is copied into a host whose operations are other ones, where it names
+  nothing or something else; keep such values in Tree keys or node memory.
+
 ## What changes for existing users
 
 - A tree with Agent-scope keys on a `NativeTreeAgent` now keeps those values from run to run. A tree that

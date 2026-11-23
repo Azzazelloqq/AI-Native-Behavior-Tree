@@ -110,10 +110,10 @@ namespace AIBT
         public ulong RandomStreamId { get => _randomStreamId; set => _randomStreamId = value; }
 
         /// <summary>
-        /// P11-012: the index of the current run, or of the last run that started: 0 for the first run
-        /// after the component is enabled, +1 for each run that starts while it stays enabled (automatic
-        /// restart, <see cref="Restart"/>, a change of <see cref="Tree"/>). A start that fails does not
-        /// count. 0 again after a disable and enable, so a pooled agent re-enabled with the same
+        /// P11-012: the index of the current run, or of the last run that started: 0 before any run started
+        /// and for the first run after the component is enabled, +1 for each run that starts while it stays
+        /// enabled (automatic restart, <see cref="Restart"/>, a change of <see cref="Tree"/>). A start that
+        /// fails does not count. 0 again after a disable and enable, so a pooled agent re-enabled with the same
         /// <see cref="RandomStreamId"/> repeats run 0. A bug report can carry
         /// (<see cref="RandomSeed"/>, <see cref="RandomStreamId"/>, <see cref="RunIndex"/>).
         /// </summary>

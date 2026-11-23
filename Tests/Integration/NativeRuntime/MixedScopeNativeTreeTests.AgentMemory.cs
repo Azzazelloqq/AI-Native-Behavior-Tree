@@ -411,6 +411,41 @@ namespace AIBT.Tests.Integration.NativeRuntime
             LogAssert.NoUnexpectedReceived();
         }
 
+        /// <summary>
+        /// Item 13 (ADR-P11-013 amendment): a start the world refuses after the bootstrap keeps the Agent
+        /// memory; a host stopped by user code cannot be read, so the next run starts from the defaults.
+        /// </summary>
+        [Test]
+        public void AWorldRefusalKeepsTheAgentMemory_AHostStoppedByUserCodeResetsIt()
+        {
+            var agent = Spawn(PrepareAsset(MixedTree), ProfileFor("interactive"));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            RunOnce(agent, "run 0");
+            agent.Restart();
+            RunOnce(agent, "run 1");
+            Assert.That(Counter(agent, "run 1"), Is.EqualTo(42));
+
+            var refusing = Track(new GameObject("AIBT.Tests.P11014.WorldWithoutScheduler")).AddComponent<ProductionTreeWorld>();
+            agent.World = refusing;
+            LogAssert.Expect(LogType.Error, new Regex("could not join its world"));
+            agent.Restart();
+            Assert.That(agent.LastError, Does.Contain("could not join its world"));
+            Assert.That(agent.Host, Is.Null);
+            agent.World = _world;
+            agent.Restart();
+            Assert.That(Counter(agent, "after the refused start"), Is.EqualTo(42), "The refused start re-captured the values unchanged.");
+
+            RunOnce(agent, "run 2");
+            Assert.That(Counter(agent, "run 2"), Is.EqualTo(43));
+            var errorBefore = agent.LastError; // Restart() keeps the refused start's error
+            agent.Host.Stop();
+            agent.Restart();
+            Assert.That(agent.LastError, Is.EqualTo(errorBefore), "No new fault.");
+            Assert.That(agent.Host, Is.Not.Null);
+            Assert.That(Counter(agent, "after Host.Stop()"), Is.EqualTo(40), "A host stopped by user code is not read: defaults.");
+            LogAssert.NoUnexpectedReceived();
+        }
+
         /// <summary>11c: a tree with only Agent keys (the Agent range at offset 0) keeps them across runs.</summary>
         [TestCaseSource(nameof(Kinds))]
         public void AnAgentOnlyTree_KeepsItsAgentKeys(string kind)

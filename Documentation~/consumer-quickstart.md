@@ -80,8 +80,11 @@ start at their defaults when the component is enabled and keep their values acro
 restarts, `Restart()`, `Stop()` followed by `Restart()`, and a change of `Tree` to a tree with the
 same Agent contract (contract id, version, schema and layout). They return to their defaults when
 the component is disabled, after a run whose host faulted (its values may be mid-update), when
-`Tree` changes to another Agent contract, and on `Restart(true)`. Tree-scope keys start from their
-defaults in every run; facts are written again.
+`Tree` changes to another Agent contract, on `Restart(true)`, and when your code stopped the host
+itself (`agent.Host.Stop()`, then `Restart()`: a stopped host cannot be read). Tree-scope keys start
+from their defaults in every run; facts are written again. The values are copied as bytes, so do not
+keep a handle into one run's runtime (an `OperationId`, for example) in an Agent key: the next run's
+host does not know it.
 
 | What happens | `BehaviorTreeAgent` (all keys) | `NativeTreeAgent`, Tree keys | `NativeTreeAgent`, Agent keys | `TreeSimulation` agent |
 | --- | --- | --- | --- | --- |
@@ -91,6 +94,7 @@ defaults in every run; facts are written again.
 | `Stop()`, then `Restart()` | kept | defaults | kept | defaults |
 | Disable, then enable | kept (ticking pauses) | defaults | defaults | — |
 | A run whose host faulted, then `Restart()` | — | defaults | defaults | — |
+| Your code calls `agent.Host.Stop()`, then `Restart()` | — | defaults | defaults | — |
 | Another tree assigned | defaults (the agent is rebuilt) | defaults | kept with the same Agent contract, defaults otherwise | — |
 
 Agent memory lives in the agent's own value buffer: it is not shared with other agents and is not
