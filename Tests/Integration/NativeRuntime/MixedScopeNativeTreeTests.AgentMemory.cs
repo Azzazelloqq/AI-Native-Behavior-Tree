@@ -473,6 +473,10 @@ namespace AIBT.Tests.Integration.NativeRuntime
         {
             var agent = Spawn(PrepareAsset(SizedAgentTree), ProfileFor(kind));
             agent.RestartMode = NativeTreeRestartMode.Never;
+            // Item 15: the one Bool Tree key ends at 1 and the Agent range is not padded, so the Agent
+            // values (an Int32, a Float64) sit at odd addresses; TryGetValue loads them typed.
+            var offset = typeof(GeneratedTreeDispatchAdapterV2).GetField("_agentBaseOffset", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(offset.GetValue(agent.Host.GeneratedDispatchAdapter), Is.EqualTo(1u), "The Agent range starts at offset 1.");
             for (var run = 1; run <= 3; run++)
             {
                 RunOnce(agent, kind + " run " + run);
