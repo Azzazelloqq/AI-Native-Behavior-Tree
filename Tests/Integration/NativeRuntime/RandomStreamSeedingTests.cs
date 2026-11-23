@@ -44,12 +44,13 @@ namespace AIBT.Tests.Integration.NativeRuntime
             Assert.That(RandomStreamSeeding.CombineStreamIdentity(1UL, 0x0fa0ecdca6488920UL), Is.EqualTo(0x414942545354524dUL));
         }
 
-        /// <summary>Unlike id + run or id ^ run, neighbouring (id, run) pairs do not collide; none is 0.</summary>
+        /// <summary>
+        /// Unlike id + run or id ^ run, neighbouring (id, run) pairs do not collide, here (1, 1) against (2, 0)
+        /// and (3, 1) against (2, 0), where the sum or the xor would; none of a 256 x 256 grid is 0 or collides.
+        /// </summary>
         [Test]
         public void TheCombineFunction_HasNoCollisionOrZeroOnAGrid_WhereSumAndXorCollide()
         {
-            Assert.That(1UL + 1UL, Is.EqualTo(2UL + 0UL), "the sum collides");
-            Assert.That(3UL ^ 1UL, Is.EqualTo(2UL ^ 0UL), "the xor collides");
             Assert.That(RandomStreamSeeding.CombineStreamIdentity(1UL, 1UL), Is.Not.EqualTo(RandomStreamSeeding.CombineStreamIdentity(2UL, 0UL)));
             Assert.That(RandomStreamSeeding.CombineStreamIdentity(3UL, 1UL), Is.Not.EqualTo(RandomStreamSeeding.CombineStreamIdentity(2UL, 0UL)));
             var seen = new HashSet<ulong>();
@@ -60,6 +61,23 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     Assert.That(identity, Is.Not.Zero);
                     Assert.That(seen.Add(identity), Is.True, "collision at id " + id + ", run " + run);
                 }
+        }
+
+        /// <summary>
+        /// P11-014 item 12 (review N1): what the function does not promise. For one id the only shared value is
+        /// the domain constant: the run whose mix is 0 is mapped to it, and another run reaches it by itself.
+        /// Across ids collisions exist and are not adjacent: id 1 with run r equals id 2 with run
+        /// r + (Mix64(1 xor D) - Mix64(2 xor D)), for every r.
+        /// </summary>
+        [Test]
+        public void TheCombineFunction_SharesTheConstantForOneId_AndCollidesAcrossIdsAtAFixedOffset()
+        {
+            Assert.That(RandomStreamSeeding.CombineStreamIdentity(1UL, 0x0fa0ecdca6488920UL), Is.EqualTo(0x414942545354524dUL), "mix 0, mapped");
+            Assert.That(RandomStreamSeeding.CombineStreamIdentity(1UL, 0x7d6af27209acafb0UL), Is.EqualTo(0x414942545354524dUL), "mix equals the constant");
+            const ulong Offset = 0x5bb7ebdb0fec06feUL;
+            foreach (var run in new[] { 0UL, 1UL, 5UL, 123456789UL, ulong.MaxValue })
+                Assert.That(RandomStreamSeeding.CombineStreamIdentity(1UL, run),
+                    Is.EqualTo(RandomStreamSeeding.CombineStreamIdentity(2UL, unchecked(run + Offset))), "run " + run);
         }
 
         /// <summary>The full published stream row: seed, hash 00..1f, identity of (7, 2), node 42.</summary>

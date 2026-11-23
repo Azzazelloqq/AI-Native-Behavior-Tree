@@ -309,6 +309,28 @@ namespace AIBT.Tests.Integration.NativeRuntime
             }
         }
 
+        /// <summary>
+        /// P11-014 item 11c (review N14): a change of <see cref="NativeTreeAgent.RandomStreamId"/> leaves the
+        /// running host's streams alone and applies from the next run.
+        /// </summary>
+        [Test]
+        public void ARandomStreamIdChange_AppliesFromTheNextRun()
+        {
+            const ulong Seed = 0xBEEFUL;
+            var agent = SpawnWithId(Track(PrepareAsset(DrawTree)), NativeTreeRestartMode.Never, Seed, 5UL);
+            var first = agent.Host;
+            Assert.That(first.RandomStreamIdentity, Is.EqualTo(RandomStreamSeeding.CombineStreamIdentity(5UL, 0UL)));
+            agent.RandomStreamId = 9UL;
+            Assert.That(agent.Host, Is.SameAs(first), "Setting the id does not restart.");
+            Assert.That(first.RandomStreamIdentity, Is.EqualTo(RandomStreamSeeding.CombineStreamIdentity(5UL, 0UL)), "The running host keeps its streams.");
+            agent.Restart();
+            Assert.That(agent.RunIndex, Is.EqualTo(1UL));
+            Assert.That(agent.Host.RandomStreamIdentity, Is.EqualTo(RandomStreamSeeding.CombineStreamIdentity(9UL, 1UL)), "The next run uses the new id.");
+            agent.RandomStreamId = 0UL;
+            agent.Restart();
+            Assert.That(agent.Host.RandomStreamIdentity, Is.EqualTo(agent.Host.InstanceId), "Id 0 is automatic again from the next run.");
+        }
+
         private static void AssertSameDraw(Draw actual, Draw expected, string what)
         {
             Assert.That(actual.First, Is.EqualTo(expected.First), what + ": 'first'");

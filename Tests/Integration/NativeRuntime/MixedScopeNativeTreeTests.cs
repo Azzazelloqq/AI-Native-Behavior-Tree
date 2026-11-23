@@ -309,6 +309,9 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     return Forced(SchedulingPolicy.PipelinedJobs, true);
                 case "forced-agent-frame":
                     _scheduler.SetJobsCapabilities(JobsCapabilities(pipelined: false));
+                    // P11-014 item 11b: below the minimum batch (64) a JobsAgentFrame batch runs each member
+                    // in place, so a handful of test agents never reached the job.
+                    _scheduler.AgentFrameMinimumBatchSize = 1;
                     return Forced(SchedulingPolicy.JobsAgentFrame, false);
                 default: throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }

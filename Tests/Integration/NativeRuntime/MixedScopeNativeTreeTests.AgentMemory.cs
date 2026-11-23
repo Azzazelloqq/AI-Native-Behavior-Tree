@@ -257,6 +257,259 @@ namespace AIBT.Tests.Integration.NativeRuntime
             Assert.That(agent.LastError, Is.Null);
         }
 
+        // ------------------------------------------------------------------ P11-014 item 11
+
+        /// <summary><see cref="MixedTree"/> with one more Agent key of type <paramref name="type"/>, same Agent contract id and version.</summary>
+        private static string SpareAgentKeyTree(string type, string value) => MixedTree
+            .Replace("\"treeId\": \"tests.p11009.mixed-scope\"", "\"treeId\": \"tests.p11014.spare-" + type.ToLowerInvariant() + "\"")
+            .Replace("\"ready\": { \"type\"", "\"agent-spare\": { \"type\": \"" + type + "\", \"typeVersion\": 1, \"scope\": \"agent\", \"default\": " + value + " },\n    \"ready\": { \"type\"");
+
+        /// <summary>Only Agent keys: the Agent range starts at offset 0 of the value buffer.</summary>
+        private const string AgentOnlyTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p11014.agent-only"", ""name"": ""P11-014 agent only"",
+  ""root"": ""root"",
+  ""blackboardContracts"": { ""agent"": { ""contractId"": ""tests.p11014.agent-only"", ""contractVersion"": 1 } },
+  ""blackboard"": {
+    ""agent-counter"": { ""type"": ""Int32"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": 40 }
+  },
+  ""nodes"": {
+    ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""bump""] },
+    ""bump"": { ""type"": ""aibt.tests.agent-bump"", ""typeVersion"": 1, ""bindings"": { ""agent-counter"": ""agent-counter"" } }
+  }
+}";
+
+        /// <summary>An Agent contract of keys of 1, 4, 8 and 4 bytes; two of them count up, the others keep their defaults.</summary>
+        private const string SizedAgentTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p11014.agent-sizes"", ""name"": ""P11-014 agent sizes"",
+  ""root"": ""root"",
+  ""blackboardContracts"": { ""agent"": { ""contractId"": ""tests.p11014.agent-sizes"", ""contractVersion"": 1 } },
+  ""blackboard"": {
+    ""a-flag"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": true },
+    ""agent-counter"": { ""type"": ""Int32"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": 40 },
+    ""b-wide"": { ""type"": ""Float64"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": 2.5 },
+    ""c-second"": { ""type"": ""Int32"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": 100 },
+    ""tree-flag"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": true }
+  },
+  ""nodes"": {
+    ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""bump"", ""bump-second""] },
+    ""bump"": { ""type"": ""aibt.tests.agent-bump"", ""typeVersion"": 1, ""bindings"": { ""agent-counter"": ""agent-counter"" } },
+    ""bump-second"": { ""type"": ""aibt.tests.agent-bump"", ""typeVersion"": 1, ""bindings"": { ""agent-counter"": ""c-second"" } }
+  }
+}";
+
+        /// <summary>
+        /// 11a (review S2): a tree with the same Agent contract id and version but another Agent layout starts
+        /// from the defaults. The Float32 case has the Int32 case's range size and slot count, so only the
+        /// schema and layout hashes tell the two apart.
+        /// </summary>
+        [TestCaseSource(nameof(Kinds))]
+        public void TheSameContractIdAndVersion_WithAnotherLayout_StartsFromTheDefaults(string kind)
+        {
+            var agent = Spawn(PrepareAsset(MixedTree), ProfileFor(kind));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            RunOnce(agent, kind + " run 1");
+            Assert.That(Counter(agent, "run 1"), Is.EqualTo(41));
+
+            agent.Tree = PrepareAsset(SpareAgentKeyTree("Int32", "7"));
+            Assert.That(agent.LastError, Is.Null, kind);
+            Assert.That(Counter(agent, "an extra Agent key"), Is.EqualTo(40), "An extra Agent key is another layout: defaults.");
+            RunOnce(agent, kind + " extra key");
+            Assert.That(Counter(agent, "extra key, run"), Is.EqualTo(41));
+            agent.Restart();
+            Assert.That(Counter(agent, "extra key, restart"), Is.EqualTo(41), "The same layout again keeps them.");
+            RunOnce(agent, kind + " extra key, run 2");
+            Assert.That(Counter(agent, "extra key, run 2"), Is.EqualTo(42));
+
+            agent.Tree = PrepareAsset(SpareAgentKeyTree("Float32", "7.0"));
+            Assert.That(agent.LastError, Is.Null, kind);
+            Assert.That(Counter(agent, "another type"), Is.EqualTo(40),
+                "The same range size and slot count with another key type is another layout: defaults.");
+            Assert.That(agent.TryGetValue("agent-spare", out float spare) && spare == 7f, Is.True, kind + ": the Float32 default");
+            RunOnce(agent, kind + " another type");
+            Assert.That(Counter(agent, "another type, run"), Is.EqualTo(41));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        /// <summary>11b: which execution path each scheduling kind of these tests takes (frame entries of one run).</summary>
+        [TestCaseSource(nameof(Kinds))]
+        public void EachKind_TakesItsExecutionPath(string kind)
+        {
+            var agent = Spawn(PrepareAsset(MixedTree), ProfileFor(kind));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            var paths = new System.Collections.Generic.SortedSet<string>();
+            var host = agent.Host;
+            for (var frame = 0; frame < 80 && agent.CompletedRuns == 0; frame++)
+            {
+                Frame();
+                for (var index = 0; index < _scheduler.FrameEntryCount; index++)
+                {
+                    if (!_scheduler.TryGetFrameEntry(index, out var entry) || entry.HostInstanceId != host.InstanceId) continue;
+                    paths.Add(entry.SelectedPolicy + (entry.SelectedPolicy == SchedulingPolicy.JobsAgentFrame
+                        ? (entry.AgentFrameRanInPlace ? " in place" : " job") : string.Empty));
+                }
+            }
+            Assert.That(agent.CompletedRuns, Is.EqualTo(1), kind);
+            Assert.That(string.Join(", ", paths), Is.EqualTo(ExpectedPath(kind)), kind);
+        }
+
+        private static string ExpectedPath(string kind)
+        {
+            switch (kind)
+            {
+                case "interactive":
+                case "background": // one small agent: the automatic selection picks Immediate
+                case "forced-immediate": return "Immediate";
+                case "forced-budgeted": return "Budgeted";
+                case "forced-batched-jobs": return "BatchedJobsSameFrame";
+                case "forced-pipelined-jobs": return "PipelinedJobs";
+                case "forced-agent-frame": return "JobsAgentFrame job";
+                default: throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
+            }
+        }
+
+        /// <summary>
+        /// 11c (review N11, N14): a start whose bootstrap fails consumes no run index and leaves the Agent
+        /// memory as the stopped run left it. The bootstrap is made to fail with a program whose catalog was
+        /// disposed.
+        /// </summary>
+        [Test]
+        public void ABootstrapFailure_ConsumesNoRunIndex_AndLeavesTheAgentMemory()
+        {
+            var asset = PrepareAsset(MixedTree);
+            var agent = Spawn(asset, ProfileFor("interactive"));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            RunOnce(agent, "run 0");
+            agent.Restart();
+            RunOnce(agent, "run 1");
+            Assert.That(agent.RunIndex, Is.EqualTo(1UL));
+            Assert.That(Counter(agent, "run 1"), Is.EqualTo(42));
+
+            Assert.That(asset.TryCreateProgram(MixedScopeFixtureCatalog.TryCreateRuntimeCatalog, out var disposed, out var createFailure),
+                Is.True, createFailure.ToString());
+            disposed.Dispose();
+            var programField = typeof(NativeTreeAgent).GetField("_program", BindingFlags.Instance | BindingFlags.NonPublic);
+            var program = programField.GetValue(agent);
+            programField.SetValue(agent, disposed);
+            try
+            {
+                LogAssert.Expect(LogType.Error, new Regex("could not start"));
+                agent.Restart();
+            }
+            finally
+            {
+                programField.SetValue(agent, program);
+            }
+            Assert.That(agent.LastError, Does.Contain("could not start"));
+            Assert.That(agent.Host, Is.Null);
+            Assert.That(agent.RunIndex, Is.EqualTo(1UL), "The failed bootstrap did not take run 2.");
+
+            agent.Restart();
+            Assert.That(agent.RunIndex, Is.EqualTo(2UL), "The next start is run 2.");
+            Assert.That(Counter(agent, "after the failed bootstrap"), Is.EqualTo(42), "The failed bootstrap left the Agent memory.");
+            RunOnce(agent, "run 2");
+            Assert.That(Counter(agent, "run 2"), Is.EqualTo(43));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        /// <summary>11c: a tree with only Agent keys (the Agent range at offset 0) keeps them across runs.</summary>
+        [TestCaseSource(nameof(Kinds))]
+        public void AnAgentOnlyTree_KeepsItsAgentKeys(string kind)
+        {
+            var agent = Spawn(PrepareAsset(AgentOnlyTree), ProfileFor(kind));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            var offset = typeof(GeneratedTreeDispatchAdapterV2).GetField("_agentBaseOffset", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(offset.GetValue(agent.Host.GeneratedDispatchAdapter), Is.EqualTo(0u), "The Agent range starts at 0.");
+            RunOnce(agent, kind + " run 1");
+            agent.Restart();
+            Assert.That(Counter(agent, "restart"), Is.EqualTo(41));
+            RunOnce(agent, kind + " run 2");
+            agent.Stop();
+            agent.Restart();
+            RunOnce(agent, kind + " run 3");
+            Assert.That(Counter(agent, "run 3"), Is.EqualTo(43));
+            agent.Restart(true);
+            Assert.That(Counter(agent, "Restart(true)"), Is.EqualTo(40));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        /// <summary>11c: an Agent contract of keys of several sizes; the copy keeps each at its own offset.</summary>
+        [TestCaseSource(nameof(Kinds))]
+        public void AnAgentContractOfSeveralSizes_KeepsEveryKey(string kind)
+        {
+            var agent = Spawn(PrepareAsset(SizedAgentTree), ProfileFor(kind));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            for (var run = 1; run <= 3; run++)
+            {
+                RunOnce(agent, kind + " run " + run);
+                if (run == 2) agent.Stop();
+                agent.Restart();
+                Assert.That(Counter(agent, "run " + run), Is.EqualTo(40 + run), kind);
+                Assert.That(Int(agent, "c-second", "run " + run), Is.EqualTo(100 + run), kind);
+                Assert.That(agent.TryGetValue("a-flag", out bool flag) && flag, Is.True, kind + ": a-flag");
+                Assert.That(agent.TryGetValue("b-wide", out double wide) && wide == 2.5, Is.True, kind + ": b-wide");
+            }
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        /// <summary>11c: Restart(true) and a change of Tree while the agent is stopped.</summary>
+        [TestCaseSource(nameof(Kinds))]
+        public void WhileStopped_RestartTrueResets_AndATreeChangeKeepsOrResetsByContract(string kind)
+        {
+            var agent = Spawn(PrepareAsset(MixedTree), ProfileFor(kind));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            RunOnce(agent, kind + " run 1");
+            agent.Stop();
+            agent.Restart(true);
+            Assert.That(Counter(agent, "Restart(true) while stopped"), Is.EqualTo(40), kind);
+            RunOnce(agent, kind + " run 2");
+            agent.Restart();
+            RunOnce(agent, kind + " run 3");
+            Assert.That(Counter(agent, "run 3"), Is.EqualTo(42), kind);
+            agent.Stop();
+            agent.Tree = PrepareAsset(WideTree);
+            Assert.That(agent.Host, Is.Null, kind + ": a stopped agent stays stopped when Tree changes");
+            agent.Restart();
+            Assert.That(Counter(agent, "same contract while stopped"), Is.EqualTo(42), kind);
+            agent.Stop();
+            agent.Tree = PrepareAsset(OtherContractTree);
+            Assert.That(agent.Host, Is.Null, kind);
+            agent.Restart();
+            Assert.That(Counter(agent, "another contract while stopped"), Is.EqualTo(40), kind);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        /// <summary>
+        /// 11d (review): what a warmed restart allocates. Capture and restore alone reuse the agent's buffers
+        /// and allocate nothing; a whole Restart() creates a host component and its dispatch, which do. The
+        /// count is logged for the evidence, not bounded.
+        /// </summary>
+        [Test]
+        public void AWarmedRestart_CaptureAndRestoreAllocateNothing_TheWholeRestartIsMeasured()
+        {
+            var agent = Spawn(PrepareAsset(MixedTree), ProfileFor("interactive"));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            RunOnce(agent, "run 0");
+            for (var warm = 0; warm < 5; warm++) agent.Restart();
+            var memory = new NativeAgentScopeMemory();
+            var host = agent.Host;
+            Assert.That(host.TryCaptureAgentMemory(memory), Is.True);
+            Assert.That(host.TryRestoreAgentMemory(memory), Is.True);
+            TestDelegate copy = () =>
+            {
+                host.TryCaptureAgentMemory(memory);
+                host.TryRestoreAgentMemory(memory);
+            };
+            var copySamples = GcAllocations(copy);
+            Assert.That(copySamples, Is.Zero, "capture + restore, GC.Alloc samples");
+            Assert.That(copy, GcAllocIs.Not.AllocatingGCMemory());
+
+            const int Restarts = 20;
+            var restartSamples = GcAllocations(() => { for (var index = 0; index < Restarts; index++) agent.Restart(); });
+            Debug.Log("P11-014 11d: a warmed Restart() makes " + (restartSamples / (double)Restarts)
+                + " GC.Alloc samples on average (" + restartSamples + " over " + Restarts + "); capture + restore alone " + copySamples + ".");
+            Assert.That(Counter(agent, "after the restarts"), Is.EqualTo(41));
+        }
+
         // ------------------------------------------------------------------ helpers (P11-013)
 
         private ProductionTreeAsset PrepareAsset(string json)
