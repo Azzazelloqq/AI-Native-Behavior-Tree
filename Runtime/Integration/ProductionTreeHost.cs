@@ -498,6 +498,19 @@ namespace AIBT
             out ExternalTreeReadHandle<T> handle,
             out NativeRuntimeFailureV1 failure)
             where T : unmanaged
+            => TryResolveExternalTreeRead(stableKey, expectedType, false, out handle, out failure);
+
+        /// <summary>
+        /// P11-013 (ADR-P11-013 D4): the same, and with <paramref name="includeAgentScope"/> an Agent-scope
+        /// key too, for <see cref="NativeTreeAgent.TryGetValue{T}"/>. The public read above stays Tree-only.
+        /// </summary>
+        internal bool TryResolveExternalTreeRead<T>(
+            string stableKey,
+            NativeBlackboardTypeIdV2 expectedType,
+            bool includeAgentScope,
+            out ExternalTreeReadHandle<T> handle,
+            out NativeRuntimeFailureV1 failure)
+            where T : unmanaged
         {
             handle = default;
             if (string.IsNullOrEmpty(stableKey)) throw new ArgumentException("A stable blackboard key is required.", nameof(stableKey));
@@ -513,7 +526,7 @@ namespace AIBT
                 return false;
             }
             if (!generatedDispatch.TryResolveExternalTreeRead<T>(
-                    StableHash.Fnv1A64(stableKey), expectedType, out _, out var slot, out var code))
+                    StableHash.Fnv1A64(stableKey), expectedType, includeAgentScope, out _, out var slot, out var code))
             {
                 failure = new NativeRuntimeFailureV1(code);
                 return false;
@@ -552,6 +565,13 @@ namespace AIBT
         /// live view of a native agent. Allocates; same gate and failure codes as the typed read.
         /// </summary>
         internal bool TryReadTreeValue(string stableKey, out BlackboardValue value, out NativeRuntimeFailureV1 failure)
+            => TryReadTreeValue(stableKey, false, out value, out failure);
+
+        /// <summary>
+        /// P11-013: the same, and with <paramref name="includeAgentScope"/> an Agent-scope key too: the graph's
+        /// live view of a <see cref="NativeTreeAgent"/> (ADR-P11-013 D4, amending ADR-P11-004 D3 for the agent).
+        /// </summary>
+        internal bool TryReadTreeValue(string stableKey, bool includeAgentScope, out BlackboardValue value, out NativeRuntimeFailureV1 failure)
         {
             value = default;
             if (string.IsNullOrEmpty(stableKey)) throw new ArgumentException("A stable blackboard key is required.", nameof(stableKey));
@@ -565,13 +585,42 @@ namespace AIBT
                 failure = InvalidLifetime();
                 return false;
             }
-            if (!_core.GeneratedDispatch.TryReadTreeValue(StableHash.Fnv1A64(stableKey), out value, out var code))
+            if (!_core.GeneratedDispatch.TryReadTreeValue(StableHash.Fnv1A64(stableKey), includeAgentScope, out value, out var code))
             {
                 failure = new NativeRuntimeFailureV1(code);
                 return false;
             }
             failure = default;
             return true;
+        }
+
+        /// <summary>
+        /// P11-013 (ADR-P11-013): copies this host's Agent-scope values and slot versions into
+        /// <paramref name="memory"/>. Refused, reading nothing and leaving <paramref name="memory"/> reset,
+        /// while <see cref="CanReadTreeValues"/> is false (executing: a drive or a job may write the buffer;
+        /// stopped; not generated) and when the program has no Agent key. Main thread only.
+        /// </summary>
+        internal bool TryCaptureAgentMemory(NativeAgentScopeMemory memory)
+        {
+            if (memory == null) throw new ArgumentNullException(nameof(memory));
+            if (!CanReadTreeValues)
+            {
+                memory.Reset();
+                return false;
+            }
+            return _core.GeneratedDispatch.TryCaptureAgentMemory(memory);
+        }
+
+        /// <summary>
+        /// P11-013 (ADR-P11-013): writes <paramref name="memory"/> into this host's Agent range when it holds
+        /// the program's exact Agent contract. Only between bootstrap and the first update, while the host is
+        /// not executing; false, touching nothing, otherwise. Main thread only.
+        /// </summary>
+        internal bool TryRestoreAgentMemory(NativeAgentScopeMemory memory)
+        {
+            if (memory == null) throw new ArgumentNullException(nameof(memory));
+            if (!CanReadTreeValues || _core.HasExecuted || _core.UpdateOpen) return false;
+            return _core.GeneratedDispatch.TryRestoreAgentMemory(memory);
         }
 
         internal bool TryRegisterOwner(ProductionTreeScheduler owner)

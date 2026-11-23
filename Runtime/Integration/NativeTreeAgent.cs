@@ -55,6 +55,8 @@ namespace AIBT
         private bool _stopped;
         // P11-012: the run index the next run that starts gets; 0 on enable.
         private ulong _nextRunIndex;
+        // P11-013: the Agent-scope values carried from one run's host to the next; reset on enable.
+        private readonly NativeAgentScopeMemory _agentMemory = new NativeAgentScopeMemory();
         private SchedulingProfile _profile = SchedulingProfile.Normal;
         // P11-004: created on the first TryGetValue, so agents that never read pay nothing.
         private Dictionary<string, ReadSlot> _readsByKey;
@@ -68,7 +70,8 @@ namespace AIBT
 
         /// <summary>
         /// The prepared runtime asset. Changing it while enabled restarts on the new tree; the new run
-        /// takes the next <see cref="RunIndex"/>.
+        /// takes the next <see cref="RunIndex"/>. Agent-scope keys keep their values when the new tree has
+        /// the same Agent contract (id, version, schema and layout) and start from its defaults otherwise.
         /// </summary>
         public ProductionTreeAsset Tree
         {
@@ -156,8 +159,8 @@ namespace AIBT
         public string LastError { get; private set; }
 
         /// <summary>
-        /// Sets a Tree-scope blackboard fact by key. The value is written at the scheduler's next
-        /// safe boundary and kept across restarts. Supported: bool, int, long, float, double,
+        /// Sets a Tree-scope blackboard fact by key (not an Agent-scope key). The value is written at the
+        /// scheduler's next safe boundary and kept across restarts. Supported: bool, int, long, float, double,
         /// <see cref="Float2Value"/>, <see cref="Float3Value"/>, <see cref="QuaternionValue"/>.
         /// No managed allocation after the first call for a key.
         /// </summary>
@@ -179,14 +182,16 @@ namespace AIBT
         public void SetFact(string key, Vector3 value) => SetFact(key, new Float3Value(value.x, value.y, value.z));
 
         /// <summary>
-        /// Reads the current value of a Tree-scope key of the current run (ADR-P11-004): a key nodes
-        /// write, a fact, or a key nobody writes. Supported: the <see cref="SetFact{T}"/> types. Returns
-        /// false when the agent has no run (stopped, faulted, disabled), when the key cannot be read as
-        /// <typeparamref name="T"/> (logged once per key and type), and while the host is executing (a
-        /// <c>PipelinedJobs</c> host between frames; one warning per agent). Before the first update a
-        /// key reads its default, and every run starts again from the defaults; with
-        /// <see cref="NativeTreeRestartMode.Always"/> the final values of a run are readable in
-        /// <see cref="Completed"/>. No managed allocation after the first read of a key.
+        /// Reads the current value of a Tree-scope or Agent-scope key of the current run (ADR-P11-004,
+        /// ADR-P11-013): a key nodes write, a fact, or a key nobody writes. Supported: the
+        /// <see cref="SetFact{T}"/> types. Returns false when the agent has no run (stopped, faulted,
+        /// disabled), when the key cannot be read as <typeparamref name="T"/> (logged once per key and
+        /// type), and while the host is executing (a <c>PipelinedJobs</c> host between frames; one warning
+        /// per agent). Before the first update a Tree key reads its default, and every run starts again
+        /// from the Tree defaults; an Agent key reads the value the agent carried over (see
+        /// <see cref="Restart(bool)"/>). With <see cref="NativeTreeRestartMode.Always"/> the final values
+        /// of a run are readable in <see cref="Completed"/>. No managed allocation after the first read of
+        /// a key.
         /// </summary>
         public bool TryGetValue<T>(string key, out T value) where T : unmanaged
         {
@@ -215,7 +220,7 @@ namespace AIBT
                     {
                         slot.LoggedFor = _program;
                         Debug.LogError("AIBT NativeTreeAgent '" + name + "': value '" + key + "' (" + typeof(T).Name
-                            + ") cannot be read: " + refusal + ". The tree must declare a Tree-scope key of this type.", this);
+                            + ") cannot be read: " + refusal + ". The tree must declare a Tree- or Agent-scope key of this type.", this);
                     }
                     return false;
                 case ReadOutcome.Executing:
@@ -261,16 +266,40 @@ namespace AIBT
         /// <summary>Removes the handler for an effect name.</summary>
         public bool RemoveEffect(string name) => _effects.Remove(StableHash.Fnv1A64(name ?? string.Empty));
 
-        /// <summary>Stops the current run (cancelling active nodes) and starts a fresh one. Facts are kept.</summary>
-        public void Restart()
+        /// <summary>
+        /// Stops the current run (cancelling active nodes) and starts a fresh one. Facts are kept, and so are
+        /// the Agent-scope keys (ADR-P11-013); Tree-scope keys start from their defaults. Same as
+        /// <c>Restart(false)</c>.
+        /// </summary>
+        public void Restart() => Restart(false);
+
+        /// <summary>
+        /// P11-013 (ADR-P11-013): stops the current run (cancelling active nodes) and starts a fresh one.
+        /// Facts are kept. Agent-scope keys belong to the agent, not to a run: they start at their defaults
+        /// when the component is enabled and keep their values across runs (automatic restarts,
+        /// <see cref="Restart()"/>, <see cref="Stop"/> then <see cref="Restart()"/>, a change of
+        /// <see cref="Tree"/> to a tree with the same Agent contract). With
+        /// <paramref name="resetAgentMemory"/> true they return to their defaults, as they do on disable,
+        /// after a run whose host faulted and on a change of <see cref="Tree"/> to another Agent contract.
+        /// Tree-scope keys start from their defaults in every run.
+        /// </summary>
+        public void Restart(bool resetAgentMemory)
         {
             _stopped = false;
-            if (!_active) return;
+            if (!_active)
+            {
+                if (resetAgentMemory) _agentMemory.Reset();
+                return;
+            }
             StopHost();
+            if (resetAgentMemory) _agentMemory.Reset();
             StartHost();
         }
 
-        /// <summary>Stops the current run, cancelling active nodes. <see cref="Restart"/> starts again.</summary>
+        /// <summary>
+        /// Stops the current run, cancelling active nodes. <see cref="Restart()"/> starts again; the Agent-scope
+        /// keys keep their values.
+        /// </summary>
         public void Stop()
         {
             _stopped = true;
@@ -294,6 +323,7 @@ namespace AIBT
             {
                 _nextRunIndex = 0;
                 RunIndex = 0;
+                _agentMemory.Reset(); // P11-013: a new agent life starts from the Agent defaults
             }
             CompletedRuns = 0;
             LastResult = null;
@@ -357,6 +387,9 @@ namespace AIBT
                 Fault("The native host could not start: " + failure.Code + ".");
                 return;
             }
+            // P11-013: the Agent values of the previous run, before the first update; another Agent
+            // contract (or none) starts from the new tree's defaults.
+            if (_agentMemory.HasValues && !host.TryRestoreAgentMemory(_agentMemory)) _agentMemory.Reset();
             Host = host;
             _resultReported = false;
             for (var index = 0; index < _facts.Count; index++) _facts[index].Rebind(host);
@@ -380,11 +413,37 @@ namespace AIBT
         {
             var host = Host;
             if (host == null) return;
+            // Unregistering completes an in-flight PipelinedJobs round on the main thread
+            // (ProductionTreeScheduler.TryUnregister drains it and releases the drive lock), so the
+            // host is idle below and no job writes its buffer any more.
             if (_joinedWorld != null) _joinedWorld.TryUnregister(this);
             _joinedWorld = null;
+            CaptureAgentMemory(host);
             host.Stop();
             Host = null;
             DestroyComponent(host);
+        }
+
+        /// <summary>
+        /// P11-013: keeps the Agent values of a run that ends, unless its host faulted (they may be
+        /// mid-update). A host that still executed would not be read: the memory is reset instead, with a
+        /// warning (not expected: see <see cref="StopHost"/>).
+        /// </summary>
+        private void CaptureAgentMemory(ProductionTreeHost host)
+        {
+            if (host.LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None)
+            {
+                _agentMemory.Reset();
+                return;
+            }
+            if (host.IsExecuting)
+            {
+                _agentMemory.Reset();
+                Debug.LogWarning("AIBT NativeTreeAgent '" + name + "': the run's host was still executing when it stopped,"
+                    + " so its Agent-scope values were not read; the next run starts from the Agent defaults.", this);
+                return;
+            }
+            host.TryCaptureAgentMemory(_agentMemory);
         }
 
         private void Fault(string error)
@@ -587,7 +646,7 @@ namespace AIBT
                 {
                     if (!ReferenceEquals(_refusedFor, host))
                     {
-                        if (!host.TryResolveExternalTreeRead(Key, FactSlot<T>.BlackboardType, out _handle, out var failure))
+                        if (!host.TryResolveExternalTreeRead(Key, FactSlot<T>.BlackboardType, true, out _handle, out var failure))
                         {
                             if (failure.Code == NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid) return ReadOutcome.NoRun;
                             _refusedFor = host;

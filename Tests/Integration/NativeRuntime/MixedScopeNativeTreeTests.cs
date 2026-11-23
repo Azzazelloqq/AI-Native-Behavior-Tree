@@ -23,7 +23,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
     /// tree-in, tree-out) differs from the scope order (ready, tree-in, tree-out | agent-counter),
     /// and gives every key a distinct default, so a default read from the wrong place shows.
     /// </summary>
-    public sealed class MixedScopeNativeTreeTests
+    public sealed partial class MixedScopeNativeTreeTests
     {
         private const string MixedTree = @"{
   ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p11009.mixed-scope"", ""name"": ""P11-009 mixed scope"",
@@ -180,13 +180,14 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 agent.SetFact("tree-in", 5 + index);
                 var slot = index;
                 finals[slot] = new List<string>();
-                // Every run starts from the defaults on a fresh host; the final values of a run are read here.
+                // Tree keys start from their defaults in every run; the Agent key belongs to the agent and keeps
+                // counting across the automatic restarts (P11-013). The final values of a run are read here.
                 agent.Completed += result =>
                 {
                     var ok = agent.TryGetValue<bool>("ready", out var ready) & agent.TryGetValue<int>("tree-in", out var treeIn)
-                        & agent.TryGetValue<int>("tree-out", out var treeOut);
+                        & agent.TryGetValue<int>("tree-out", out var treeOut) & agent.TryGetValue<int>("agent-counter", out var counter);
                     finals[slot].Add(result + " " + ok + " ready=" + ready + " tree-in=" + treeIn + " tree-out=" + treeOut
-                        + " agent-counter=" + ReadInt(agent.Host, compiled, "agent-counter"));
+                        + " agent-counter=" + counter);
                 };
                 agents.Add(agent);
             }
@@ -216,8 +217,12 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 Assert.That(agent.CompletedRuns, Is.GreaterThanOrEqualTo(minimumRuns), kind);
                 Assert.That(finals[index].Count, Is.EqualTo(agent.CompletedRuns), kind);
                 // The first run may finish before the fact is flushed (tree-in still 7 then); every later run sees it.
-                var expected = "Success True ready=True tree-in=" + (5 + index) + " tree-out=" + (41_000 + 5 + index) + " agent-counter=41";
-                Assert.That(finals[index].Skip(1), Is.All.EqualTo(expected), kind + "\n" + string.Join("\n", finals[index]));
+                // Run n (1-based) bumps the Agent counter from 40 + n - 1 to 40 + n (P11-013).
+                var treeIn = 5 + index;
+                var expected = Enumerable.Range(2, finals[index].Count - 1).Select(run =>
+                    "Success True ready=True tree-in=" + treeIn + " tree-out=" + ((40 + run) * 1000 + treeIn) + " agent-counter=" + (40 + run));
+                Assert.That(finals[index].Skip(1), Is.EqualTo(expected), kind + "\n" + string.Join("\n", finals[index]));
+                Assert.That(finals[index][0], Does.EndWith(" agent-counter=41"), kind);
             }
             Assert.That(_world.LastWorldFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None), kind);
         }

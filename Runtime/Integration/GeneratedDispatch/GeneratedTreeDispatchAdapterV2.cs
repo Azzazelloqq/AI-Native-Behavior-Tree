@@ -236,6 +236,72 @@ namespace AIBT
             return true;
         }
 
+        /// <summary>P11-013: the program's Agent contract, or null when it declares no Agent key.</summary>
+        internal NativeBlackboardScopeBindingV2 AgentScope
+        {
+            get
+            {
+                var scopes = _definition.Binding.Scopes;
+                for (var index = 0; index < scopes.Count; index++)
+                    if (scopes[index].Scope == BlackboardScope.Agent) return scopes[index];
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// P11-013 (ADR-P11-013): copies the Agent range of the value buffer (past the Tree range) and the
+        /// Agent slots' versions into <paramref name="memory"/>. False, leaving <paramref name="memory"/>
+        /// reset, when the program has no Agent key. Main thread only; the caller guarantees that no drive
+        /// or job touches this instance (the host's <c>_driving</c> gate).
+        /// </summary>
+        internal bool TryCaptureAgentMemory(NativeAgentScopeMemory memory)
+        {
+            if (memory == null) throw new ArgumentNullException(nameof(memory));
+            memory.Reset();
+            var scope = AgentScope;
+            if (_disposed || scope == null) return false;
+            var count = _treeValues.Length - (int)_agentBaseOffset;
+            memory.BeginCapture(scope, count);
+            var values = memory.Values;
+            for (var index = 0; index < count; index++) values[index] = _treeValues[(int)_agentBaseOffset + index];
+            var slots = _definition.Binding.Slots;
+            for (var index = 0; index < slots.Count; index++)
+            {
+                var slot = slots[index];
+                if (slot.Scope != BlackboardScope.Agent) continue;
+                if (slot.ScopeSlotIndex >= (uint)memory.SlotCount)
+                {
+                    memory.Reset();
+                    return false;
+                }
+                memory.Versions[slot.ScopeSlotIndex] = _treeVersions[index];
+            }
+            memory.EndCapture();
+            return true;
+        }
+
+        /// <summary>
+        /// P11-013 (ADR-P11-013): replaces the Agent range and the Agent slots' versions with
+        /// <paramref name="memory"/> when it holds this program's exact Agent contract (id, version, schema
+        /// hash, layout hash, range size, slot count). False, touching nothing, otherwise. Main thread only,
+        /// after bootstrap and before the first update.
+        /// </summary>
+        internal bool TryRestoreAgentMemory(NativeAgentScopeMemory memory)
+        {
+            if (memory == null) throw new ArgumentNullException(nameof(memory));
+            var scope = AgentScope;
+            var count = _treeValues.Length - (int)_agentBaseOffset;
+            if (_disposed || scope == null || !memory.Matches(scope, count)) return false;
+            var slots = _definition.Binding.Slots;
+            for (var index = 0; index < slots.Count; index++)
+                if (slots[index].Scope == BlackboardScope.Agent && slots[index].ScopeSlotIndex >= (uint)memory.SlotCount) return false;
+            var values = memory.Values;
+            for (var index = 0; index < count; index++) _treeValues[(int)_agentBaseOffset + index] = values[index];
+            for (var index = 0; index < slots.Count; index++)
+                if (slots[index].Scope == BlackboardScope.Agent) _treeVersions[index] = memory.Versions[slots[index].ScopeSlotIndex];
+            return true;
+        }
+
         /// <summary>
         /// Resolves a Tree-scope, built-in-typed slot for repeated external writes from ordinary C#
         /// code (ADR-P7-039), addressed by <paramref name="stableKeyId"/> instead of a compiled
@@ -392,6 +458,20 @@ namespace AIBT
             out NativeBlackboardSlotBindingV2 slot,
             out NativeRuntimeDiagnosticCodeV1 failure)
             where T : unmanaged
+            => TryResolveExternalTreeRead<T>(stableKeyId, expectedType, false, out slotIndex, out slot, out failure);
+
+        /// <summary>
+        /// P11-013: the same, and with <paramref name="includeAgentScope"/> an Agent-scope key too (for
+        /// <see cref="NativeTreeAgent.TryGetValue{T}"/>, ADR-P11-013 D4). The public host read passes false.
+        /// </summary>
+        internal bool TryResolveExternalTreeRead<T>(
+            ulong stableKeyId,
+            NativeBlackboardTypeIdV2 expectedType,
+            bool includeAgentScope,
+            out uint slotIndex,
+            out NativeBlackboardSlotBindingV2 slot,
+            out NativeRuntimeDiagnosticCodeV1 failure)
+            where T : unmanaged
         {
             slotIndex = 0;
             slot = default;
@@ -406,7 +486,7 @@ namespace AIBT
             {
                 var candidate = slots[index];
                 if (candidate.StableKeyId != stableKeyId) continue;
-                if (candidate.Scope != BlackboardScope.Tree)
+                if (!IsReadableScope(candidate.Scope, includeAgentScope))
                 {
                     otherScope = true;
                     continue;
@@ -417,7 +497,7 @@ namespace AIBT
                     || expectedType.EnumContractId != candidate.EnumContractId
                     || BuiltInManagedType<T>.TypeId != expectedType.TypeId
                     || UnsafeUtility.SizeOf<T>() != candidate.Size || UnsafeUtility.AlignOf<T>() != candidate.Alignment
-                    || (ulong)candidate.Offset + candidate.Size > (uint)_treeValues.Length)
+                    || (ulong)ValueOffset(candidate) + candidate.Size > (uint)_treeValues.Length)
                 {
                     failure = NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch;
                     return false;
@@ -469,24 +549,37 @@ namespace AIBT
         }
 
         /// <summary>
-        /// P11-004: reads the Tree-scope slot <paramref name="slot"/> already resolved by
-        /// <see cref="TryResolveExternalTreeRead{T}"/>. No allocation; the caller guarantees no
-        /// drive or job touches this instance (the host's <c>_driving</c> gate).
+        /// P11-004: reads the slot <paramref name="slot"/> already resolved by
+        /// <see cref="TryResolveExternalTreeRead{T}"/> (a Tree-scope slot, or since P11-013 an Agent-scope
+        /// slot, which lives past the Tree range). No allocation; the caller guarantees no drive or job
+        /// touches this instance (the host's <c>_driving</c> gate).
         /// </summary>
         internal bool TryReadExternalTreeValue<T>(NativeBlackboardSlotBindingV2 slot, out T value) where T : unmanaged
         {
             value = default;
+            var offset = (ulong)ValueOffset(slot);
             if (_disposed || UnsafeUtility.SizeOf<T>() != slot.Size
-                || (ulong)slot.Offset + slot.Size > (uint)_treeValues.Length) return false;
-            value = _treeValues.ReinterpretLoad<T>((int)slot.Offset);
+                || offset + slot.Size > (uint)_treeValues.Length) return false;
+            value = _treeValues.ReinterpretLoad<T>((int)offset);
             return true;
         }
+
+        /// <summary>P11-013: where a Tree- or Agent-scope slot's bytes start in the value buffer.</summary>
+        private uint ValueOffset(NativeBlackboardSlotBindingV2 slot)
+            => slot.Scope == BlackboardScope.Agent ? _agentBaseOffset + slot.Offset : slot.Offset;
+
+        private static bool IsReadableScope(BlackboardScope scope, bool includeAgentScope)
+            => scope == BlackboardScope.Tree || (includeAgentScope && scope == BlackboardScope.Agent);
 
         /// <summary>
         /// P11-004: type-erased read of a built-in-typed Tree-scope key for the editor. Allocates
         /// (it copies the slot's bytes and may decode a string); never used on a per-frame game path.
         /// </summary>
         internal bool TryReadTreeValue(ulong stableKeyId, out BlackboardValue value, out NativeRuntimeDiagnosticCodeV1 failure)
+            => TryReadTreeValue(stableKeyId, false, out value, out failure);
+
+        /// <summary>P11-013: the same, and with <paramref name="includeAgentScope"/> an Agent-scope key too (the graph's live view of a native agent).</summary>
+        internal bool TryReadTreeValue(ulong stableKeyId, bool includeAgentScope, out BlackboardValue value, out NativeRuntimeDiagnosticCodeV1 failure)
         {
             value = default;
             if (_disposed)
@@ -500,18 +593,19 @@ namespace AIBT
             {
                 var candidate = slots[index];
                 if (candidate.StableKeyId != stableKeyId) continue;
-                if (candidate.Scope != BlackboardScope.Tree)
+                if (!IsReadableScope(candidate.Scope, includeAgentScope))
                 {
                     otherScope = true;
                     continue;
                 }
                 failure = NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch;
+                var start = ValueOffset(candidate);
                 if (candidate.RegisteredTypeIndex != CompiledIndex.Invalid
                     || !TryFindBuiltInDescriptor(candidate, out var descriptor)
-                    || (ulong)candidate.Offset + candidate.Size > (uint)_treeValues.Length) return false;
+                    || (ulong)start + candidate.Size > (uint)_treeValues.Length) return false;
                 var bytes = new byte[candidate.Size];
                 for (var offset = 0; offset < bytes.Length; offset++)
-                    bytes[offset] = _treeValues[(int)candidate.Offset + offset];
+                    bytes[offset] = _treeValues[(int)start + offset];
                 if (!BlackboardBuiltInCodec.TryDecode(descriptor, bytes, out value))
                 {
                     failure = NativeRuntimeDiagnosticCodeV1.BlackboardInvalidValue;
