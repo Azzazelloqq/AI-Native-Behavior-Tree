@@ -28,6 +28,26 @@ namespace AIBT.Tests.Editor.Graph
     public sealed class GraphNativeLiveBlackboardTests
     {
         private const string CatalogTypeName = "AIBT.Tests.Integration.NativeRuntime.ExternalTreeWriteFixtureCatalog";
+        private const string MixedCatalogTypeName = "AIBT.Tests.Integration.NativeRuntime.MixedScopeFixtureCatalog";
+
+        // P11-013: the P11-009 mixed tree (MixedScopeNativeTreeTests): "bump" adds one to the Agent key
+        // "agent-counter" (default 40), "report" writes agent * 1000 + tree-in to the Tree key "tree-out".
+        private const string MixedTreeJson = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p11013.graph-mixed"", ""name"": ""P11-013 graph mixed"", ""root"": ""root"",
+  ""blackboardContracts"": { ""agent"": { ""contractId"": ""tests.p11009.agent"", ""contractVersion"": 1 } },
+  ""blackboard"": {
+    ""agent-counter"": { ""type"": ""Int32"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": 40 },
+    ""ready"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": true },
+    ""tree-in"": { ""type"": ""Int32"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": 7 },
+    ""tree-out"": { ""type"": ""Int32"", ""typeVersion"": 1, ""scope"": ""tree"", ""default"": 3 }
+  },
+  ""nodes"": {
+    ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""bump"", ""report""] },
+    ""bump"": { ""type"": ""aibt.tests.agent-bump"", ""typeVersion"": 1, ""bindings"": { ""agent-counter"": ""agent-counter"" } },
+    ""report"": { ""type"": ""aibt.tests.mixed-report"", ""typeVersion"": 1,
+      ""bindings"": { ""ready"": ""ready"", ""tree-in"": ""tree-in"", ""agent-counter"": ""agent-counter"", ""tree-out"": ""tree-out"" } }
+  }
+}";
 
         internal const string TreeJson = @"{
   ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p11005.native-live"", ""name"": ""P11-005 native live"", ""root"": ""root"",
@@ -321,6 +341,34 @@ namespace AIBT.Tests.Editor.Graph
             Assert.That(Live(child, "distance"), Is.EqualTo("live: 1.25"), "The bound interface key reads the parent's key.");
         }
 
+        [UnityTest]
+        public IEnumerator AnAgentScopeKey_ShowsItsValue_WhichARestartKeeps()
+        {
+            var mixedCatalog = FindType(MixedCatalogTypeName);
+            var agent = Spawn(MixedTreeJson, NativeTreeRestartMode.Never, catalogType: mixedCatalog);
+            var window = OpenWindow(MixedTreeJson, mixedCatalog);
+            yield return null;
+            window.ShowLive(agent);
+            window.RefreshLiveBlackboard();
+            Assert.That(Live(window, "agent-counter"), Is.EqualTo("live: 40"), "The Agent default: " + Label(window, "agent-counter").tooltip);
+            Assert.That(window.LiveDebugger.TryFormatValue("agent-counter", out var text, out var reason), Is.True, reason);
+            Assert.That(text, Is.EqualTo("40"));
+
+            Frames(1);
+            window.RefreshLiveBlackboard();
+            Assert.That(agent.LastResult, Is.EqualTo(NodeStatus.Success));
+            Assert.That(Live(window, "agent-counter"), Is.EqualTo("live: 41"));
+            Assert.That(Live(window, "tree-out"), Is.EqualTo("live: 41007"));
+
+            agent.Restart();
+            window.RefreshLiveBlackboard();
+            Assert.That(Live(window, "agent-counter"), Is.EqualTo("live: 41"), "The new run keeps the agent's Agent values.");
+            Assert.That(Live(window, "tree-out"), Is.EqualTo("live: 3"), "Tree keys start from their defaults.");
+            Frames(1);
+            window.RefreshLiveBlackboard();
+            Assert.That(Live(window, "agent-counter"), Is.EqualTo("live: 42"));
+        }
+
         // ---------------------------------------------------------------- pure rules
 
         [Test]
@@ -338,7 +386,7 @@ namespace AIBT.Tests.Editor.Graph
         }
 
         [TestCase(NativeRuntimeDiagnosticCodeV1.BlackboardUndeclaredAccess, "The running program has no key 'k'.")]
-        [TestCase(NativeRuntimeDiagnosticCodeV1.BlackboardUnsupportedScope, "Only Tree-scope keys are read from a native agent.")]
+        [TestCase(NativeRuntimeDiagnosticCodeV1.BlackboardUnsupportedScope, "Only Tree- and Agent-scope keys are read from a native agent.")]
         [TestCase(NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch, "Keys of a registered type are not shown for a native agent.")]
         [TestCase(NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid, "The host was not started from a generated catalog.")]
         [TestCase(NativeRuntimeDiagnosticCodeV1.BlackboardInvalidValue, "The host refused the read: BlackboardInvalidValue.")]
@@ -396,7 +444,7 @@ namespace AIBT.Tests.Editor.Graph
     'root': { 'type': 'aibt.core.memory-sequence', 'typeVersion': 1, 'children': ['use'] },
     'use': { 'subtree': { 'treeId': 'tests.p11005.child', 'interfaceVersion': 1, 'keys': { 'distance': 'distance' } } } } }";
 
-        private BehaviorTreeGraphWindow OpenWindow(string json)
+        private BehaviorTreeGraphWindow OpenWindow(string json, Type catalogType = null)
         {
             var directory = Path.Combine(Path.GetTempPath(), "aibt-p11005-live", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
@@ -405,7 +453,7 @@ namespace AIBT.Tests.Editor.Graph
             File.WriteAllText(path, json);
             var window = ScriptableObject.CreateInstance<BehaviorTreeGraphWindow>();
             window.Show();
-            window.OpenFromPath(path, ProjectNodeCatalog.ForCatalog(_catalogType).Registry);
+            window.OpenFromPath(path, ProjectNodeCatalog.ForCatalog(catalogType ?? _catalogType).Registry);
             return window;
         }
 
@@ -425,18 +473,18 @@ namespace AIBT.Tests.Editor.Graph
             return parsed;
         }
 
-        private ProductionTreeAsset Bake(TreeDocument document, string sourceId)
+        private ProductionTreeAsset Bake(TreeDocument document, string sourceId, Type catalogType = null)
         {
-            var asset = ProductionTreeAssetBaker.Create(document, sourceId, _catalogType, out var diagnostics);
+            var asset = ProductionTreeAssetBaker.Create(document, sourceId, catalogType ?? _catalogType, out var diagnostics);
             Assert.That(asset, Is.Not.Null, string.Join("; ", diagnostics.Select(d => d.Code.Value + ": " + d.Message)));
             return Track(asset);
         }
 
-        private NativeTreeAgent Spawn(string json, NativeTreeRestartMode restart, SchedulingProfile profile = null)
+        private NativeTreeAgent Spawn(string json, NativeTreeRestartMode restart, SchedulingProfile profile = null, Type catalogType = null)
         {
             var parsed = CanonicalTreeJson.Parse(json, "tests/p11005/tree.aibt.json");
             Assert.That(parsed.Success, Is.True, string.Join("; ", parsed.Diagnostics.Select(d => d.Code.Value + " " + d.Message)));
-            return Spawn(Bake(parsed.Document, "tests/p11005/tree.aibt.json"), restart, profile);
+            return Spawn(Bake(parsed.Document, "tests/p11005/tree.aibt.json", catalogType), restart, profile);
         }
 
         private NativeTreeAgent Spawn(ProductionTreeAsset asset, NativeTreeRestartMode restart, SchedulingProfile profile = null)

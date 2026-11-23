@@ -206,7 +206,7 @@ namespace AIBT.Editor.Graph
         /// <summary>
         /// The current value of program key <paramref name="key"/>, formatted. For a
         /// <see cref="NativeTreeAgent"/> it is read from the current run's host by the key's ID
-        /// (ADR-P11-004 D7). False when there is no value to show; <paramref name="reason"/> then says
+        /// (ADR-P11-004 D7), a Tree- or Agent-scope key (ADR-P11-013 D4). False when there is no value to show; <paramref name="reason"/> then says
         /// why for a native agent (null for a managed one).
         /// </summary>
         internal bool TryFormatValue(string key, out string text, out string reason)
@@ -230,7 +230,7 @@ namespace AIBT.Editor.Graph
             var host = NativeAgent ? NativeAgent.Host : null;
             if (!ReferenceEquals(host, _nativeValuesHost))
             {
-                // A new run has a new host whose values start from the defaults: forget the old texts.
+                // A new run has a new host: its Tree keys start from the defaults (Agent keys may carry over, P11-013); forget the old texts.
                 _nativeValuesHost = host;
                 _nativeText.Clear();
             }
@@ -240,7 +240,7 @@ namespace AIBT.Editor.Graph
                 reason = "The agent has no run now.";
                 return false;
             }
-            if (host.TryReadTreeValue(key, out var value, out var failure))
+            if (host.TryReadTreeValue(key, true, out var value, out var failure))
             {
                 text = Format(value);
                 _nativeText[key] = text;
@@ -276,7 +276,7 @@ namespace AIBT.Editor.Graph
             {
                 case NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid: reason = "The host is stopped."; break;
                 case NativeRuntimeDiagnosticCodeV1.BlackboardUndeclaredAccess: reason = "The running program has no key '" + key + "'."; break;
-                case NativeRuntimeDiagnosticCodeV1.BlackboardUnsupportedScope: reason = "Only Tree-scope keys are read from a native agent."; break;
+                case NativeRuntimeDiagnosticCodeV1.BlackboardUnsupportedScope: reason = "Only Tree- and Agent-scope keys are read from a native agent."; break;
                 case NativeRuntimeDiagnosticCodeV1.BlackboardTypeMismatch: reason = "Keys of a registered type are not shown for a native agent."; break;
                 case NativeRuntimeDiagnosticCodeV1.NativeCapacityPlanInvalid: reason = "The host was not started from a generated catalog."; break;
                 default: reason = "The host refused the read: " + code + "."; break;
