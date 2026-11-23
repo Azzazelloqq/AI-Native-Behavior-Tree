@@ -1,7 +1,7 @@
 # P11-010 — A native node that reads and writes one key through one ReadWrite binding can stop the host
 
-Status: `in_progress` — the fix is committed on `feature/aibt-consumer-workflow`; acceptance (the full run
-of ten assemblies) is the orchestrator's.
+Status: `Review` — the fix is committed on `feature/aibt-consumer-workflow` and accepted by the
+orchestrator after the full run of ten assemblies on `0c2b541` (all green).
 
 ## Objective
 

@@ -2,7 +2,7 @@
 
 Branch `feature/aibt-consumer-workflow`, base `1db104a`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-010\`.
 Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Follow-up 1 of `Planning~/Evidence/P11-009/README.md`
-("Not verified", F9). Status: `in_progress`; acceptance (the ten assemblies) is the orchestrator's.
+("Not verified", F9). Status: accepted by the orchestrator on `0c2b541` ("Acceptance run" at the end); the item is in `Review`.
 
 ## Commits
 
@@ -137,3 +137,45 @@ catalog set (for example `StandardNativeShard`), or read and write through separ
 - Group dispatch in `ProductionTreeScheduler` waves outside `NativeTreeAgent` (direct scheduler registration)
   was not run separately; it uses the same group workspace as the two jobs policies.
 - No Player build.
+
+## Acceptance run (orchestrator, 2026-11-23)
+
+Read by the orchestrator on `0c2b541` (clean working tree): this file, the session's report, the
+whole diff `1db104a..0c2b541` outside `Planning~/` except the new test file, and
+`CreateWorkspaceCapacity` in full.
+
+- **Scope.** One production file, `Runtime/Integration/GeneratedDispatch/GeneratedBurstCatalogV2.cs`
+  (+7 -2): a `BlackboardReadWrite` binding counts two sessions and twice its value size. `git diff
+  --stat 1db104a..0c2b541` is empty for `Tests/Editor/CodeGen/Contracts`, `Tests/Fixtures`,
+  `CodeGen~`, `package.json` and `Documentation~/specifications`.
+- **Raw files.** `fix.diff` equals the committed change. `probe-capacity-before-final.txt` lists
+  `aibt.native.increment-int`, `increment-float` and `toggle-bool` as cases that need 2 sessions and
+  fit only by the spare room of a larger case. `native-guard-bytes-compare.txt`: Native Guard has
+  the bytes of P11-009 (`1546cb72...f826`, 5451 bytes).
+- **Full run of ten assemblies** on `0c2b541`, 2026-11-23 22:23-22:44; Editor-log counters: did not move (unknown-command 0, main-thread-timeout 1 before and after). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-010\acceptance\full-run-0c2b541.txt`.
+
+| Assembly | `3d16480` | `0c2b541` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | - |
+| `AIBT.Integration.Tests` | 454/454 | 465/465 | `ReadWriteBindingSessionTests` 11 |
+| `AIBT.Editor.Tests` | 857/857 | 857/857 | - |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | - |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | - |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | - |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | - |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | - |
+| `AIBT.CodeGen.GenerationTests` | 14/14 | 14/14 | - |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | - |
+
+Not done by the orchestrator: the new test file was not read line by line; no probe was run again;
+the "before" run (2/11 with the fix removed) was not repeated.
+
+To know (reported to the owner):
+- The limit is lifted for one read and one write per ReadWrite binding. A node that reads one
+  binding twice, or reads again after a write, can still exceed the room when it is the largest
+  case of its catalog set. The session read this from the code and did not probe it. A full fix
+  needs session reuse in the bridge or an access count from the generator; both are protected
+  areas.
+- Validation cannot warn about such a node today: the number of accesses is in the node's method
+  body.

@@ -6,8 +6,8 @@
     {
       "id": "P11-010",
       "phase": 11,
-      "title": "A native node that reads and writes one key through one ReadWrite binding could stop the host (P11-009 follow-up): every TryRead and TryWrite opens a value session, the catalog sized one session and one value per binding of its largest case; the catalog now counts two for a ReadWrite binding (runtime only, no byte, ABI or generator change)",
-      "status": "in_progress",
+      "title": "A native node that reads and writes one key through one ReadWrite binding could stop the host (P11-009 follow-up): every TryRead and TryWrite opens a value session, the catalog sized one session and one value per binding of its largest case; the catalog now counts two for a ReadWrite binding (runtime only, no byte, ABI or generator change); accepted 2026-11-23 (0c2b541)",
+      "status": "review",
       "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-010-readwrite-binding-sessions.md",
       "dependsOn": [
