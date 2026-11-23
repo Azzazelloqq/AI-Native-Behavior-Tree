@@ -1,7 +1,8 @@
 # P11-013 — Agent-scope memory of `NativeTreeAgent` (ADR-P11-013, AIBT-053)
 
-Status: `In progress` — committed on `feature/aibt-consumer-workflow`, waiting for the orchestrator's
-acceptance run.
+Status: `Review` — committed on `feature/aibt-consumer-workflow` and accepted by the orchestrator after
+the full run of ten assemblies on `e70dbea` (all green) and an independent review (no blocker); its
+follow-ups are in P11-014.
 
 ## Objective
 

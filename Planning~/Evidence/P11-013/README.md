@@ -2,8 +2,8 @@
 
 Branch `feature/aibt-consumer-workflow`, base `d46fe21`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-013\`.
 Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Another project's batch-mode Unity was running on
-the machine; no conclusion is drawn from timings. Status: `in_progress`, waiting for the orchestrator's
-acceptance run.
+the machine; no conclusion is drawn from timings. Status: accepted by the orchestrator on `e70dbea`
+("Acceptance run" at the end); the item is in `Review`. The review's follow-ups are in P11-014.
 
 ## Commits
 
@@ -156,3 +156,66 @@ New and changed tests (all through `TryGetValue`, `Restart`, `Stop`, `Tree`, ena
   and no Agent copy happen on that path; it was seen in this task's test (`tests-run3.txt`) and not
   reproduced against the old code. The lifecycle test skips the "finished run stays readable" check under
   that policy.
+
+## Acceptance run (orchestrator, 2026-11-24)
+
+Read by the orchestrator on `e70dbea` (clean working tree): this file and the P11-012 evidence, the
+session's report, the whole diff `0aa9a6a..e70dbea` under `Runtime/` and `Editor/`, the amendment of
+`Documentation~/specifications/time-and-random-v1.md`, and `ProductionTreeScheduler.TryUnregister`. The run
+covers P11-012 and P11-013 together.
+
+- **Protected paths.** `git diff --stat 0aa9a6a..e70dbea` is empty for `Tests/Editor/CodeGen/Contracts`,
+  `Tests/Fixtures`, `CodeGen~` and `package.json`. Under `Documentation~/specifications` one file,
+  `time-and-random-v1.md` (+72 -8): the amendment ADR-P11-008 decided. The word `TreeInstanceId` becomes
+  "stream identity" in four existing sentences and a section "Stream identity" is added; the combiner's byte
+  stream, its order and the name `AIBT-PCG-XSH-RR32-v1` are unchanged.
+- **Vectors.** The six `CombineStreamIdentity` vectors and the identity `89076cda0e1cdaaf` of the derived
+  row were recomputed by the orchestrator with a separate Python script: all equal the specification.
+- **Decision 3 of ADR-P11-013** (a restart while a `PipelinedJobs` job is in flight) is implemented without a
+  deferral: `ProductionTreeScheduler.TryUnregister` drains the in-flight run (`DrainPipelinedRunContaining`)
+  before `StopHost` captures the values. Read by the orchestrator and, independently, by the review below.
+  This is another mechanism than the decision named and reaches the same guarantee; accepted.
+- **Independent review.** A reader that was given the code, the ADRs and neutral questions (not the
+  orchestrator's view) reviewed the range: no blocker, three should-fix findings, sixteen notes. Full text:
+  `C:\UnityProjects\_aibt_acceptance\P11-013\acceptance\independent-review.md`. The orchestrator read the code of S1 and confirms it.
+  - S1: under a forced `PipelinedJobs` profile a host whose root finished and that stays registered
+    (`RestartMode.Never`) is failed by the scheduler one frame later (`ProductionTreeScheduler.cs:682-690`
+    treats a pipelined start that opened no host as a failure). The agent does not report it, `TryGetValue`
+    returns false, and the next `Restart()` resets the Agent memory. This is the "finding outside this task"
+    above; it is inside ADR-P11-013 decision 1 once a `Restart()` follows. The scheduler code is older than
+    this range.
+  - S2: the schema-hash, layout-hash, range-size and slot-count comparisons of "same contract" have no test.
+  - S3: the `forced-agent-frame` case runs in place (batch below `AgentFrameMinimumBatchSize`), so the seven
+    scheduling kinds are about four execution paths.
+  - Notes that lead to a change: the combine function cannot be a bijection of the run index and never yield
+    0 (the text is wrong, the code is right); "every bootstrap, including one that fails" is not true for a
+    bootstrap refused before the counter; `agent.Host.Stop()` then `Restart()` resets the memory and is not in
+    the ADR's list; the failed-start rules are in this file and not in the ADR; tests missing for an
+    Agent-only tree, several Agent keys, a bootstrap failure and the run index, a stream-id change; the
+    allocation test never restarts; the inspector hint cache is keyed by the asset reference.
+- **Decision (orchestrator, under the owner's delegation of 2026-11-23).** Both items are accepted into
+  `Review`. S1 does not block: no value is corrupted, the cause is an older scheduler defect on one
+  configuration (forced `PipelinedJobs`, a finished host that stays registered), and its fix with a
+  failing-before test, S2, S3 and the notes above are items 10-15 of P11-014. Neither item is set to `Done`
+  before P11-014 is accepted.
+- **Full run of ten assemblies** on `e70dbea`, 2026-11-23 23:47 - 2026-11-24 00:04; Editor-log counters did
+  not move (unknown-command 0, main-thread-timeout 5 before and after). Raw output:
+  `C:\UnityProjects\_aibt_acceptance\P11-013\acceptance\full-run-e70dbea.txt`.
+
+| Assembly | `0c2b541` | `e70dbea` | New tests |
+|---|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 | - |
+| `AIBT.Integration.Tests` | 465/465 | 510/510 | 45 in `RandomStreamSeedingTests`, `NativeTreeAgentRandomSeedTests` (stream id), `HostRandomSeedingTests`, `MixedScopeNativeTreeTests` (Agent memory) |
+| `AIBT.Editor.Tests` | 857/857 | 859/859 | 2: `NativeTreeAgentRandomStreamHintTests` and `GraphNativeLiveBlackboardTests` together, net |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 | - |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 | - |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 | - |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 | - |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 | - |
+| `AIBT.CodeGen.GenerationTests` | 14/14 | 14/14 | - |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 | - |
+
+Not done by the orchestrator: the test files and the documentation pages outside the specification were
+not read line by line (the review read the tests); no probe was run again; the split of the new tests
+between the two items and between classes was not counted; nothing was looked at in the Editor window or in
+Play Mode; the Native Guard sample with its two edited files was not imported.

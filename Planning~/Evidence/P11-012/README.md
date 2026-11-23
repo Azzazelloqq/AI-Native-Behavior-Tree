@@ -2,8 +2,8 @@
 
 Branch `feature/aibt-consumer-workflow`, base `0aa9a6a`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-012\`.
 Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). Another project's batch-mode Unity was running on
-the machine; no conclusion is drawn from timings. Status: `in_progress`, waiting for the orchestrator's
-acceptance run.
+the machine; no conclusion is drawn from timings. Status: accepted by the orchestrator on `e70dbea`
+("Acceptance run" at the end); the item is in `Review`. The review's follow-ups are in P11-014.
 
 ## Commits
 
@@ -142,3 +142,19 @@ second published row; output `stream-identity-vectors.txt`).
   `CompletedRuns` is still reset by it, as before.
 - Besides the brief's list, `Documentation~/production-host.md` described the old seeding rule and was
   updated too.
+
+## Acceptance run (orchestrator, 2026-11-24)
+
+Accepted together with P11-013 on `e70dbea`: the diff read, the protected paths, the recomputed vectors,
+the independent review and the table of the ten assemblies (all green) are in
+`Planning~/Evidence/P11-013/README.md`, "Acceptance run". For this item:
+
+- The amendment of `time-and-random-v1.md` is the one ADR-P11-008 decided; the combiner's bytes and the
+  derivation name are unchanged, and with `RandomStreamId` 0 the seeding is the same word as before
+  (`ProductionTreeHost.TryBootstrap`: `randomSeeding.IsAutomatic ? treeInstanceId.Value : ...`, read by the
+  orchestrator and confirmed by the review).
+- Follow-ups in P11-014: the sentence that calls the combine function a bijection of the run index and also
+  says it never yields 0 (false as written; the code is right), "every bootstrap, including one that fails",
+  the `RunIndex` doc comment before the first run, tests for a bootstrap failure and for a stream-id change,
+  a test that asserts constant arithmetic, and the inspector hint's cache key.
+- Not done by the orchestrator: as listed there; the inspector help box was not looked at.

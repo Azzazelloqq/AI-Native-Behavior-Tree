@@ -4,13 +4,13 @@
   "sourceBranch": "main",
   "items": [
     {
-      "id": "P11-013", "phase": 11, "title": "Agent-scope memory of NativeTreeAgent (ADR-P11-013 accepted, AIBT-053): Agent keys belong to the component (defaults on enable; kept across automatic restarts, Restart(), Stop then Restart and a Tree with the same Agent contract; reset on disable, after a faulted run, on another contract and on new Restart(bool resetAgentMemory) with true); copied out of the idle host after leaving the world and into the next host before its first update; TryGetValue and the graph read Agent keys (ADR-P11-004 D3 amended for the agent); public host read, SetFact, library nodes and TreeSimulation unchanged", "status": "in_progress", "kind": "implementation",
+      "id": "P11-013", "phase": 11, "title": "Agent-scope memory of NativeTreeAgent (ADR-P11-013 accepted, AIBT-053): Agent keys belong to the component (defaults on enable; kept across automatic restarts, Restart(), Stop then Restart and a Tree with the same Agent contract; reset on disable, after a faulted run, on another contract and on new Restart(bool resetAgentMemory) with true); copied out of the idle host after leaving the world and into the next host before its first update; TryGetValue and the graph read Agent keys (ADR-P11-004 D3 amended for the agent); public host read, SetFact, library nodes and TreeSimulation unchanged; accepted 2026-11-24 (e70dbea)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-013-native-agent-memory.md",
       "dependsOn": ["P11-009", "P11-012"],
       "owns": ["Planning~/Evidence/P11-013/"]
     },
     {
-      "id": "P11-012", "phase": 11, "title": "Reproducible random streams (ADR-P11-008 accepted, AIBT-052): NativeTreeAgent.RandomStreamId (0 automatic, nonzero: stream identity = CombineStreamIdentity(id, run index)) and read-only RunIndex (0 on enable, +1 per started run); RandomStreamSeeding overloads on ProductionTreeHost and ProductionTreeProgram (additive); time-and-random-v1 names the stream identity and defines the combine function; TreeSimulation unchanged", "status": "in_progress", "kind": "implementation",
+      "id": "P11-012", "phase": 11, "title": "Reproducible random streams (ADR-P11-008 accepted, AIBT-052): NativeTreeAgent.RandomStreamId (0 automatic, nonzero: stream identity = CombineStreamIdentity(id, run index)) and read-only RunIndex (0 on enable, +1 per started run); RandomStreamSeeding overloads on ProductionTreeHost and ProductionTreeProgram (additive); time-and-random-v1 names the stream identity and defines the combine function; TreeSimulation unchanged; accepted 2026-11-24 (e70dbea)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-012-reproducible-random-streams.md",
       "dependsOn": ["P11-008"],
       "owns": ["Planning~/Evidence/P11-012/"]
