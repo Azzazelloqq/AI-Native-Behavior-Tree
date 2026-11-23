@@ -5,6 +5,8 @@
 - Decision ID: AIBT-051
 - Task: `Planning~/Tasks/P11/P11-004-*.md` (written in phase B)
 - Mirror of: [ADR P7-039](ADR-P7-039-external-tree-blackboard-write.md) (external Tree-scope write).
+- Amended by: [ADR P11-013](ADR-P11-013-native-agent-memory.md) (AIBT-053, 2026-11-23): D3 for
+  `NativeTreeAgent` and the graph, which also read Agent-scope keys.
 
 File references are relative to the package root at commit `0038a3b`.
 
@@ -88,6 +90,12 @@ Shared scope are out: Shared has no storage in the host, and Agent scope on a ho
 "sole agent" approximation (`GeneratedTreeDispatchAdapterV2.cs:640-647`) that the write path also excludes, and no
 native library node uses it. Registered (non-built-in) types are out, as for the write: their identity check needs
 the registered-type tables the adapter does not hold. Each refusal returns a code (D6), never a wrong value.
+
+*Amended by ADR-P11-013 (AIBT-053), decided by the orchestrator under the owner's delegation of 2026-11-23:*
+`NativeTreeAgent.TryGetValue` and the graph's live view of a native agent also read Agent-scope keys with a
+built-in type. Agent keys now belong to the agent and keep their values across its runs, so they are worth
+reading. The public host read (`ProductionTreeHost.TryResolveExternalTreeRead`) stays Tree-only, the write path
+(`SetFact`) stays Tree-only, and Shared scope stays out.
 
 ### D4. Lifetime
 
@@ -180,7 +188,8 @@ open to the owner's revision. None needs a protected change.
   scheduler frame. The user guide says so in plain words.
 - Q2. `PipelinedJobs` hosts are refused for most of a frame because they hold the drive lock across frames;
   accepted and documented in the user guide. A "last committed copy" would be a separate task.
-- Q3. Agent scope stays out (D3); the storage exists, so adding it later is small.
+- Q3. Agent scope stays out (D3); the storage exists, so adding it later is small. (Added for the agent and the
+  graph by ADR-P11-013.)
 - Q4. Agent misuse is logged once and returns false (D2); no `out` failure overload. The host API gives codes.
 
 Orchestrator changes folded in on acceptance: a second `T` for one key is a type mismatch, not an exception (D2);
