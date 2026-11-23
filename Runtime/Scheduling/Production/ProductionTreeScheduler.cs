@@ -679,7 +679,36 @@ namespace AIBT
                     groupHosts, explanation.BatchSize, workspace, out var driver, out _);
                 _stopwatch.Stop();
                 var schedulingMicroseconds = _stopwatch.Elapsed.TotalMilliseconds * 1000.0;
-                if (!started || driver == null)
+                if (started && driver == null)
+                {
+                    // No member could take part this frame (a finished, disabled or not yet ready host left
+                    // registered): nothing to run is not a failure. Record it as the same-frame path records
+                    // a group that ran no step (P11-014 item 10).
+                    LastFrameConsumedMicroseconds += schedulingMicroseconds;
+                    if (!unbounded)
+                    {
+                        remaining -= schedulingMicroseconds;
+                        if (remaining < 0.0) LastFrameOverran = true;
+                    }
+                    var perMember = schedulingMicroseconds / groupCount;
+                    for (var member = startIndex; member < groupEnd; member++)
+                    {
+                        var idle = _due[member];
+                        idle.LastMeasuredMicroseconds = perMember;
+                        if (!unbounded && idle.Profile.MaximumBudgetShare.HasValue)
+                        {
+                            _consumedByProfileThisFrame.TryGetValue(idle.Profile, out var consumedSoFar);
+                            _consumedByProfileThisFrame[idle.Profile] = consumedSoFar + perMember;
+                        }
+                        idle.Urgent = false;
+                        idle.Eligible = false;
+                        idle.NextEligibleFrame = _frame + idle.Profile.UpdateCadence;
+                        AddJobsEntry(idle, explanation, hasWorkEstimate,
+                            SchedulerFrameDisposition.Executed, perMember, 0, 0);
+                    }
+                    return groupEnd;
+                }
+                if (!started)
                 {
                     for (var member = startIndex; member < groupEnd; member++)
                     {

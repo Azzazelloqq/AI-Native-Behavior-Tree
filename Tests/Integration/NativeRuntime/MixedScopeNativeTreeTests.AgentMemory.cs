@@ -99,15 +99,9 @@ namespace AIBT.Tests.Integration.NativeRuntime
             Assert.That(Counter(agent, "disable and enable"), Is.EqualTo(40), "A disable ends the agent's memory.");
             RunOnce(agent, kind + " after enable");
             Assert.That(Counter(agent, "after enable"), Is.EqualTo(41));
-            if (kind != "forced-pipelined-jobs")
-            {
-                // Not under forced PipelinedJobs: there a finished host left registered faults on later frames
-                // (NativeCapacityPlanInvalid from the scheduler's forced-policy check), with no restart and no
-                // Agent copy involved; reported as a finding of P11-013, outside its scope.
-                for (var frame = 0; frame < 20; frame++) Frame();
-                Assert.That(agent.CompletedRuns, Is.EqualTo(1), kind);
-                Assert.That(Counter(agent, "Never keeps the finished run"), Is.EqualTo(41), "RestartMode.Never: no new run, the finished run's values.");
-            }
+            for (var frame = 0; frame < 20; frame++) Frame();
+            Assert.That(agent.CompletedRuns, Is.EqualTo(1), kind);
+            Assert.That(Counter(agent, "Never keeps the finished run"), Is.EqualTo(41), "RestartMode.Never: no new run, the finished run's values.");
             agent.Restart();
             RunOnce(agent, kind + " second run after enable");
             Assert.That(Counter(agent, "second run after enable"), Is.EqualTo(42));
@@ -123,6 +117,53 @@ namespace AIBT.Tests.Integration.NativeRuntime
             RunOnce(agent, kind + " back to v1");
             Assert.That(Counter(agent, "back to v1 run"), Is.EqualTo(41));
             Assert.That(_world.LastWorldFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None), kind);
+        }
+
+        /// <summary>
+        /// P11-014 item 10: a host whose run finished stays registered (RestartMode.Never). Under a profile
+        /// that forces PipelinedJobs the scheduler found no eligible member in the group and failed it with
+        /// NativeCapacityPlanInvalid one frame later: an error in the log, TryGetValue false, and the next
+        /// Restart() reset the Agent memory. A group with nothing to run is not a failure.
+        /// </summary>
+        [TestCaseSource(nameof(Kinds))]
+        public void AFinishedHostThatStaysRegistered_IsNotFailed_StaysReadable_AndKeepsTheAgentMemory(string kind)
+        {
+            var agent = Spawn(PrepareAsset(MixedTree), ProfileFor(kind));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            RunOnce(agent, kind + " run 1");
+            var host = agent.Host;
+            var failure = NativeRuntimeDiagnosticCodeV1.None;
+            var failedEntries = 0;
+            var entries = 0;
+            for (var frame = 0; frame < 30; frame++)
+            {
+                Frame();
+                if (failure == NativeRuntimeDiagnosticCodeV1.None) failure = host.LastFailure.Code;
+                for (var index = 0; index < _scheduler.FrameEntryCount; index++)
+                {
+                    if (!_scheduler.TryGetFrameEntry(index, out var entry) || entry.HostInstanceId != host.InstanceId) continue;
+                    entries++;
+                    if (entry.Disposition == SchedulerFrameDisposition.Failed) failedEntries++;
+                }
+            }
+            var readable = agent.TryGetValue("agent-counter", out int finished);
+            var hostKept = ReferenceEquals(agent.Host, host);
+            var lastError = agent.LastError;
+            agent.Restart();
+            var readableAfterRestart = agent.TryGetValue("agent-counter", out int afterRestart);
+            var wrong = new System.Collections.Generic.List<string>();
+            if (failure != NativeRuntimeDiagnosticCodeV1.None) wrong.Add("the finished host failed with " + failure);
+            if (failedEntries != 0) wrong.Add(failedEntries + " of " + entries + " frame entries are Failed");
+            if (!hostKept) wrong.Add("the agent replaced the finished host");
+            if (lastError != null) wrong.Add("LastError " + lastError);
+            if (!readable || finished != 41) wrong.Add("TryGetValue after the run gave " + readable + " (" + finished + ")");
+            if (!readableAfterRestart || afterRestart != 41)
+                wrong.Add("the Agent memory after Restart() is " + readableAfterRestart + " (" + afterRestart + "), not 41");
+            Assert.That(wrong, Is.Empty, kind + ": LastError " + (lastError ?? "null") + "; " + string.Join("; ", wrong));
+            RunOnce(agent, kind + " run 2");
+            Assert.That(Counter(agent, "run 2"), Is.EqualTo(42));
+            Assert.That(_world.LastWorldFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None), kind);
+            LogAssert.NoUnexpectedReceived();
         }
 
         [TestCaseSource(nameof(Kinds))]
