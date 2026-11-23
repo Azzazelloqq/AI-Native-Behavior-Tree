@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P11-012", "phase": 11, "title": "Reproducible random streams (ADR-P11-008 accepted, AIBT-052): NativeTreeAgent.RandomStreamId (0 automatic, nonzero: stream identity = CombineStreamIdentity(id, run index)) and read-only RunIndex (0 on enable, +1 per started run); RandomStreamSeeding overloads on ProductionTreeHost and ProductionTreeProgram (additive); time-and-random-v1 names the stream identity and defines the combine function; TreeSimulation unchanged", "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P11/P11-012-reproducible-random-streams.md",
+      "dependsOn": ["P11-008"],
+      "owns": ["Planning~/Evidence/P11-012/"]
+    },
+    {
       "id": "P11-010",
       "phase": 11,
       "title": "A native node that reads and writes one key through one ReadWrite binding could stop the host (P11-009 follow-up): every TryRead and TryWrite opens a value session, the catalog sized one session and one value per binding of its largest case; the catalog now counts two for a ReadWrite binding (runtime only, no byte, ABI or generator change); accepted 2026-11-23 (0c2b541)",
