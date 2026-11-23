@@ -19,7 +19,7 @@ Deterministic random uses PCG-XSH-RR 32 with 64-bit state and 64-bit odd stream 
 Rules:
 
 - Project/host supplies a 64-bit root seed.
-- Every random-consuming runtime node index derives its initial stream deterministically from root seed, all 32 raw tree semantic-hash bytes, `TreeInstanceId`, and runtime node index using the combiner below.
+- Every random-consuming runtime node index derives its initial stream deterministically from root seed, all 32 raw tree semantic-hash bytes, the stream identity, and runtime node index using the combiner below. Which 64-bit word is the stream identity is the host's policy (see [Stream identity](#stream-identity)).
 - Each random-consuming runtime node index owns explicit Runtime-private stream
   state separate from public `TMemory`; no global Unity random state is used.
 - Bounded integers use rejection sampling and are unbiased.
@@ -34,11 +34,11 @@ The combiner input is this exact byte stream:
 ASCII "AIBT-PCG-XSH-RR32-v1" followed by one zero byte
 root seed as unsigned 64-bit little-endian
 all 32 raw semantic SHA-256 bytes in displayed hexadecimal order
-TreeInstanceId as unsigned 64-bit little-endian
+stream identity as unsigned 64-bit little-endian
 runtime node index as unsigned 32-bit little-endian
 ```
 
-Zero is invalid for `TreeInstanceId`; `0xffffffff` is invalid for runtime node
+Zero is invalid for the stream identity; `0xffffffff` is invalid for runtime node
 index. The combiner processes every byte in order, with unsigned 64-bit wrap:
 
 ```text
@@ -100,12 +100,12 @@ leave the committed stream unchanged. A copied context is bit-identical; only
 the first matching completion may claim the live frame, and every later claim
 through either copy is stale. A terminal `Exit`, aborted `Exit`, and ordinary
 re-entry of the node do not reseed or reset it. Tree `Restart` and explicit tree reset derive
-fresh streams from the unchanged root seed, semantic hash, tree instance ID,
+fresh streams from the unchanged root seed, semantic hash, stream identity,
 and runtime node indices using the exact initial sequence above. Restart does
-not change `TreeInstanceId`; therefore the post-restart sequence intentionally
+not change the stream identity; therefore the post-restart sequence intentionally
 matches a newly created instance with the same derivation inputs. A host that
-requires a distinct sequence supplies a distinct root seed or tree instance
-identity according to its lifecycle policy.
+requires a distinct sequence supplies a distinct root seed or stream identity
+according to its lifecycle policy ([Stream identity](#stream-identity)).
 
 Abort, cancellation, Exit, observer evaluation, budget suspension/resume,
 rejected context operations, failed/rejected frame completion, diagnostics,
@@ -113,12 +113,76 @@ and trace capture never advance the committed stream. Hot reload preserves a str
 contract accepts the same node identity/version and random-state layout;
 otherwise subtree restart applies the derivation above.
 
+### Stream identity
+
+The stream identity is the 64-bit word mixed after the semantic hash. Until
+P11-012 this word was named `TreeInstanceId`; the bytes, their position and the
+derivation name `AIBT-PCG-XSH-RR32-v1` are unchanged, so every stream derived
+from the same four inputs is unchanged. Each host states its policy:
+
+- `TreeSimulation`: the agent's container-local `TreeInstanceId`, 1, 2, ... in
+  the order agents are added or restarted in that container.
+- `ProductionTreeHost`, default (a bootstrap without a stream identity, or with
+  identity 0): its own `InstanceId`, assigned from one process-wide counter by
+  every bootstrap, including one that fails. It is unique within the process,
+  so no two hosts share streams, but it is not repeatable across sessions: it
+  depends on how many hosts were bootstrapped before (start order, other
+  hosts, Enter Play Mode without a domain reload).
+- `ProductionTreeHost` bootstrapped with a nonzero stream identity
+  (`RandomStreamSeeding`): that identity, as given. `InstanceId` stays
+  process-wide for its other uses (handles, traces, scheduler order).
+- `NativeTreeAgent`: with `RandomStreamId` 0, the host default. With a nonzero
+  `RandomStreamId`, the identity of a run is
+  `CombineStreamIdentity(RandomStreamId, runIndex)`. The run index is 0 for
+  the first run after the component is enabled and +1 for each run that starts
+  while it stays enabled (automatic restart, `Restart`, a change of `Tree`); a
+  start that fails does not consume one. One agent life lasts from enable to
+  disable, so an agent disabled and enabled again with the same id repeats run 0.
+
+The combine function maps a stream id and a run index to a nonzero stream
+identity, with unsigned 64-bit wrap and `Mix64` as above:
+
+```text
+CombineStreamIdentity(streamId, runIndex):
+    z = Mix64(Mix64(streamId xor 0x414942545354524d) + runIndex)
+    if z == 0: return 0x414942545354524d
+    return z
+```
+
+`0x414942545354524d` is ASCII `AIBTSTRM`. `Mix64` is a bijection, so for one
+stream id the function is a bijection of the run index, and only the single
+input whose mix is 0 is mapped to the constant. Unlike `streamId + runIndex` or
+`streamId xor runIndex`, neighbouring pairs such as (1, 1) and (2, 0) do not
+collide. Test vectors (from an independent reference implementation):
+
+| stream id | run index | stream identity |
+| --- | --- | --- |
+| `0000000000000001` | `0000000000000000` | `17c7da942a926088` |
+| `0000000000000001` | `0000000000000001` | `380638fd2ee43a95` |
+| `0000000000000002` | `0000000000000000` | `4b94756ef81e1100` |
+| `00000000075bcd15` | `0000000000000003` | `8f47c4ae40c92095` |
+| `ffffffffffffffff` | `ffffffffffffffff` | `bd8b4b5991a381ef` |
+| `0000000000000001` | `0fa0ecdca6488920` | `414942545354524d` (the mix is 0) |
+
+A derived stream with a combined identity: root seed `0123456789abcdef`,
+semantic hash `000102...1e1f`, stream id 7, run index 2 (stream identity
+`89076cda0e1cdaaf`), node index 42: initial state `89ad669f83b79db7`, increment
+`31325367a6526d8f`, seeded state `061ebb045d6c22dd`, outputs `c3d7507e 7ba12ba7
+b2818e51 bb6beb1c e8a5545c 327c490f`.
+
+Equal streams are not equal behaviour. A stream identity makes the numbers a
+node can draw repeatable; it does not make a session repeat. Hosts driven by a
+`ProductionTreeScheduler` update in an order that follows start order (its last
+tie-break is `InstanceId`), and nodes draw as frame time lets them run, so the
+same streams can be consumed at other updates. A lockstep replay with a fixed
+tick and inputs is `TreeSimulation`'s job.
+
 ### Published vectors
 
 Hexadecimal fields are fixed-width and lowercase. `outputs` lists the first six
 observable `NextUInt32` values after the two discarded seeding advances.
 
-| root seed | semantic hash | instance | node index | initial state | increment | seeded state | outputs |
+| root seed | semantic hash | stream identity | node index | initial state | increment | seeded state | outputs |
 | --- | --- | ---: | ---: | --- | --- | --- | --- |
 | `0000000000000000` | `0000000000000000000000000000000000000000000000000000000000000000` | 1 | 0 | `114fca7ce1cd0d61` | `364142da8f45ed0b` | `cd0663b1aab38607` | `650f0350 19bf2775 93792ebd f8d15448 80f1bd3c 1312f9f2` |
 | `0123456789abcdef` | `000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f` | 1 | 42 | `25f040c812858258` | `8d9ea478a3f51455` | `b63505dd96f263be` | `94286b1a 4ff48da5 ce86bc0d 55e6545a 8ba0f814 83be6712` |
