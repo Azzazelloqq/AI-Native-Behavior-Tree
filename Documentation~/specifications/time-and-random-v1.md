@@ -123,8 +123,12 @@ from the same four inputs is unchanged. Each host states its policy:
 - `TreeSimulation`: the agent's container-local `TreeInstanceId`, 1, 2, ... in
   the order agents are added or restarted in that container.
 - `ProductionTreeHost`, default (a bootstrap without a stream identity, or with
-  identity 0): its own `InstanceId`, assigned from one process-wide counter by
-  every bootstrap, including one that fails. It is unique within the process,
+  identity 0): its own `InstanceId`, assigned from one process-wide counter.
+  A bootstrap the host refuses at once (already bootstrapped, disposed, or
+  called while it drives an update) takes no id; one that fails later (the
+  catalog cannot be retained or does not match, instance or trace capacity
+  cannot be allocated) has taken one; the managed-dispatch overload takes its
+  id first. It is unique within the process,
   so no two hosts share streams, but it is not repeatable across sessions: it
   depends on how many hosts were bootstrapped before (start order, other
   hosts, Enter Play Mode without a domain reload).
@@ -149,11 +153,15 @@ CombineStreamIdentity(streamId, runIndex):
     return z
 ```
 
-`0x414942545354524d` is ASCII `AIBTSTRM`. `Mix64` is a bijection, so for one
-stream id the function is a bijection of the run index, and only the single
-input whose mix is 0 is mapped to the constant. Unlike `streamId + runIndex` or
-`streamId xor runIndex`, neighbouring pairs such as (1, 1) and (2, 0) do not
-collide. Test vectors (from an independent reference implementation):
+`0x414942545354524d` is ASCII `AIBTSTRM`; the function never yields 0. For one
+stream id two run indexes give one value only at that constant: the run whose
+mix is 0 is mapped to it, and one other run reaches it by itself (for stream
+id 1, runs `0fa0ecdca6488920` and `7d6af27209acafb0`). Across stream ids values
+collide, but not between neighbouring pairs: (a, r) equals
+(b, r + Mix64(a xor D) - Mix64(b xor D)) for every r, with D the constant (id 1
+and id 2 are `5bb7ebdb0fec06fe` runs apart), whereas `streamId + runIndex` or
+`streamId xor runIndex` collide at (1, 1) and (2, 0). (Amended 2026-11-24,
+P11-014: this paragraph called the function a bijection of the run index.) Test vectors (from an independent reference implementation):
 
 | stream id | run index | stream identity |
 | --- | --- | --- |

@@ -54,8 +54,12 @@ namespace AIBT
         /// <summary>
         /// The combine function of <c>time-and-random-v1</c>: a nonzero stream identity from a stream id
         /// and a run index, <c>z = Mix64(Mix64(streamId xor 0x414942545354524d) + runIndex)</c> with
-        /// unsigned wrap, and <c>0x414942545354524d</c> when <c>z</c> is 0. For one id it is a bijection of
-        /// the run index; unlike <c>id + run</c> or <c>id xor run</c>, neighbouring pairs do not collide.
+        /// unsigned wrap, and <c>0x414942545354524d</c> when <c>z</c> is 0, so it never yields 0. For one id,
+        /// two run indexes give one value only at that constant: the run whose mix is 0 is mapped to it, and
+        /// one other run reaches it by itself. Across ids values do collide, but not between neighbouring
+        /// pairs: (id, run) equals (id', run + Mix64(id xor D) - Mix64(id' xor D)) for every run, with
+        /// <c>D = 0x414942545354524d</c> (id 1 and id 2 are 0x5bb7ebdb0fec06fe runs apart), whereas
+        /// <c>id + run</c> or <c>id xor run</c> collide at (1, 1) and (2, 0).
         /// </summary>
         public static ulong CombineStreamIdentity(ulong streamId, ulong runIndex)
         {

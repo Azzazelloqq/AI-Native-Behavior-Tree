@@ -84,7 +84,8 @@ Decided by the orchestrator under the owner's delegation of 2026-11-23, after an
    agent's policy, and defines the combine function (id, run) to a nonzero word with test vectors:
    `z = Mix64(Mix64(id xor 0x414942545354524d) + run)`, and `0x414942545354524d` (ASCII `AIBTSTRM`)
    when `z` is 0. It is neither `id + run` nor `id xor run`, which collide ((1, 1) and (2, 0)); for one
-   id it is a bijection of the run index, and it never yields 0. Public as
+   id it is a bijection of the run index, and it never yields 0 (the bijection claim is corrected by
+   the amendment of 2026-11-24 below). Public as
    `RandomStreamSeeding.CombineStreamIdentity`, and `RandomStreamSeeding.ForRun(seed, id, run)` gives
    a bare host the agent's rule.
 6. **Stated non-goals** (here, in the specification and in the user guide): the scheduler's update
@@ -93,6 +94,26 @@ Decided by the orchestrator under the owner's delegation of 2026-11-23, after an
 
 The Native Tree Agent inspector shows a help box when the assigned tree has random nodes and the id
 is 0.
+
+## Amendment 2026-11-24 (P11-014)
+
+Decision 5 called the combine function a bijection of the run index for one id. It is not quite one:
+`Mix64(Mix64(id xor D) + run)` is, but the one run whose mix is 0 is mapped to `D`, which one other
+run reaches by itself, so for one id exactly two run indexes share a value (for id 1, runs
+`0x0fa0ecdca6488920` and `0x7d6af27209acafb0` both give `0x414942545354524d`). Across ids, collisions
+exist and are not adjacent: (a, r) equals (b, r + Mix64(a xor D) - Mix64(b xor D)) for every r, so id
+1 with run r equals id 2 with run r + `0x5bb7ebdb0fec06fe`. The decision stands: the function never
+yields 0, neighbouring pairs do not collide, and a game reaches neither case by counting runs. The
+specification's "Stream identity" and the doc comment of `RandomStreamSeeding.CombineStreamIdentity`
+are corrected, and `RandomStreamSeedingTests` pins both examples.
+
+The specification also said a host's `InstanceId` is assigned by every bootstrap, including one that
+fails. A bootstrap the host refuses at once (already bootstrapped, disposed, or called while it drives
+an update) returns before the counter and takes no id; a failure after it (the catalog cannot be
+retained or does not match, instance, scheduling or trace capacity cannot be allocated) has taken one.
+The managed-dispatch overload takes its id first, so it consumes one even when refused, and a refused
+effect-delivery configuration in `ProductionTreeProgram.TryBootstrap` fails before the host bootstrap
+and takes none.
 
 ## What changes for existing users
 
