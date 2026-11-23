@@ -6,8 +6,9 @@ namespace AIBT.Tests.CodeGen.GenerationP11009
     // Two nodes use Tree-scope and Agent-scope keys in one tree: "agent-bump" reads and increments an
     // Int32 Agent key; "mixed-report" reads a Bool and an Int32 Tree key and the Agent key, and writes
     // a Tree key that encodes both (agent * 1000 + tree), so a test can check every scope's value after
-    // a run. Each node opens at most as many value sessions per tick as the largest node has bindings
-    // (the catalog's per-frame session capacity).
+    // a run. The two nodes stay apart on purpose: the Agent value written by one node is read by the next
+    // (P11-010 lifted the session-capacity limit that first caused the split: a ReadWrite binding read and
+    // written in one tick now counts as two sessions, so a single node would fit as well).
     [AibtCatalogShard("aibt.tests.p11009.mixed-scope", 1u)]
     public partial struct MixedScopeFixtureShard { }
 

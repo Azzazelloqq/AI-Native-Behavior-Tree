@@ -179,10 +179,15 @@ namespace AIBT
                 for (uint local = 0; local < dispatchCase.BindingCount; local++)
                 {
                     var binding = _bindings[(int)(dispatchCase.FirstBinding + local)];
-                    sessions = checked(sessions + (binding.Kind == NativeBurstDispatchBindingKindV2.AsyncOperation ? 2u : 1u));
+                    // P11-010: every TryRead and every TryWrite opens its own value session with its own
+                    // staging bytes, so a ReadWrite binding read and then written in one tick (the
+                    // increment-int shape) needs two of each; an async operation needs its start and cancel.
+                    var readWrite = binding.Kind == NativeBurstDispatchBindingKindV2.BlackboardReadWrite;
+                    sessions = checked(sessions
+                        + (binding.Kind == NativeBurstDispatchBindingKindV2.AsyncOperation || readWrite ? 2u : 1u));
                     var bytes = checked(binding.PrimaryValueSize
                         + (binding.Kind == NativeBurstDispatchBindingKindV2.AsyncOperation ? binding.SecondaryValueSize : 0u));
-                    staging = checked(staging + bytes);
+                    staging = checked(staging + bytes + (readWrite ? binding.PrimaryValueSize : 0u));
                     if (binding.Kind == NativeBurstDispatchBindingKindV2.EffectCommand
                         || binding.Kind == NativeBurstDispatchBindingKindV2.AsyncOperation)
                     {
