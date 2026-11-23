@@ -72,6 +72,34 @@ namespace AIBT.Tests.Editor.Graph
             Assert.That(NativeTreeAgentInspector.RandomStreamHint(agent, catalog), Is.Null, "no tree");
         }
 
+        /// <summary>
+        /// P11-014 item 14 (review): the inspector caches the answer per asset. An asset prepared again in
+        /// place (the Graph's Prepare Runtime copies the new content into the existing asset) must be
+        /// looked at again.
+        /// </summary>
+        [Test]
+        public void TheInspectorsCache_FollowsAnAssetPreparedAgainInPlace()
+        {
+            var catalog = ProjectNodeCatalogCache.Current;
+            var agent = _gameObject.AddComponent<NativeTreeAgent>();
+            var asset = Prepare(PlainTree);
+            agent.Tree = asset;
+            var inspector = (NativeTreeAgentInspector)UnityEditor.Editor.CreateEditor(agent, typeof(NativeTreeAgentInspector));
+            try
+            {
+                Assert.That(inspector.TreeHasRandomNodes(asset, catalog), Is.False, "plain tree");
+                UnityEditor.EditorUtility.CopySerialized(_random, asset);
+                Assert.That(inspector.TreeHasRandomNodes(asset, catalog), Is.True, "the same asset, prepared again with a random node");
+                UnityEditor.EditorUtility.CopySerialized(_plain, asset);
+                Assert.That(inspector.TreeHasRandomNodes(asset, catalog), Is.False, "and back");
+            }
+            finally
+            {
+                Object.DestroyImmediate(inspector);
+                Object.DestroyImmediate(asset);
+            }
+        }
+
         private static ProductionTreeAsset Prepare(string json)
         {
             var catalog = ProjectNodeCatalogCache.Current;

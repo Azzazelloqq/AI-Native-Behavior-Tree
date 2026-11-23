@@ -30,6 +30,9 @@ namespace AIBT
         /// <summary>Lowercase hexadecimal catalog fingerprint this snapshot was compiled against.</summary>
         public string CatalogFingerprint => _catalogFingerprint ?? string.Empty;
 
+        /// <summary>SHA-256 of the serialized payload: changes whenever the asset is prepared with other content.</summary>
+        internal string PayloadHash => _payloadHash ?? string.Empty;
+
         /// <summary>Records where the snapshot came from so the Editor can detect and repair stale assets.</summary>
         internal void RecordPreparation(string sourceGuid, string sourceContentHash, string catalogTypeName)
         {

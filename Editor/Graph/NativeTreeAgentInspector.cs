@@ -11,6 +11,7 @@ namespace AIBT.Editor.Graph
         private static ProjectNodeCatalog s_randomTypesCatalog;
         private static HashSet<(ulong TypeId, uint Version)> s_randomTypes;
         private ProductionTreeAsset _hintAsset;
+        private string _hintPayloadHash;
         private ProjectNodeCatalog _hintCatalog;
         private bool _hintAssetHasRandomNodes;
 
@@ -26,14 +27,7 @@ namespace AIBT.Editor.Graph
             var state = ProductionTreeAssetStaleness.EvaluateForInspector(agent.Tree);
             if (state != ProductionTreeAssetState.Current && state != ProductionTreeAssetState.Unknown)
                 EditorGUILayout.HelpBox(ProductionTreeAssetStaleness.Describe(state), MessageType.Warning);
-            var catalog = ProjectNodeCatalogCache.Current;
-            if (!ReferenceEquals(_hintAsset, agent.Tree) || !ReferenceEquals(_hintCatalog, catalog))
-            {
-                _hintAsset = agent.Tree;
-                _hintCatalog = catalog;
-                _hintAssetHasRandomNodes = HasRandomNodes(agent.Tree, catalog);
-            }
-            if (_hintAssetHasRandomNodes && agent.RandomStreamId == 0)
+            if (TreeHasRandomNodes(agent.Tree, ProjectNodeCatalogCache.Current) && agent.RandomStreamId == 0)
                 EditorGUILayout.HelpBox(RandomStreamHintText, MessageType.Info);
 
             if (!EditorApplication.isPlaying) return;
@@ -61,6 +55,24 @@ namespace AIBT.Editor.Graph
                 }
             }
             Repaint();
+        }
+
+        /// <summary>
+        /// Whether the agent's tree has random nodes, cached per inspector so it is not decoded every repaint.
+        /// The key includes the payload hash: Prepare Runtime copies new content into the existing asset.
+        /// </summary>
+        internal bool TreeHasRandomNodes(ProductionTreeAsset asset, ProjectNodeCatalog catalog)
+        {
+            var payloadHash = asset == null ? null : asset.PayloadHash;
+            if (!ReferenceEquals(_hintAsset, asset) || !ReferenceEquals(_hintCatalog, catalog)
+                || !string.Equals(_hintPayloadHash, payloadHash, System.StringComparison.Ordinal))
+            {
+                _hintAsset = asset;
+                _hintPayloadHash = payloadHash;
+                _hintCatalog = catalog;
+                _hintAssetHasRandomNodes = HasRandomNodes(asset, catalog);
+            }
+            return _hintAssetHasRandomNodes;
         }
 
         private const string RandomStreamHintText =
