@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-325 public type(s).
+326 public type(s).
 
 ---
 
@@ -3146,6 +3146,8 @@ One component that runs a prepared native (Burst) tree: it shares one program pe
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastResult`
 - `PROPERTY System.String LastError`
 - `PROPERTY System.UInt64 RandomSeed`
+- `PROPERTY System.UInt64 RandomStreamId`
+- `PROPERTY System.UInt64 RunIndex`
 
 ---
 
@@ -3332,6 +3334,7 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLeaf,AIBT.NativeTraceChannelCapacityV1,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.CompiledProgram,AIBT.ProductionTreeHost+DispatchLifecycle,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.NativeRuntimeFailureV1&)`
+- `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,AIBT.RandomStreamSeeding,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryBootstrap(AIBT.GeneratedTreeRuntimeDefinitionV2,AIBT.GeneratedBurstCatalogV2,AIBT.NativeTraceChannelCapacityV1,System.Func`1<System.Int64>,System.UInt64,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryConfigureEffectDelivery(System.Int32,AIBT.NativeRuntimeFailureV1&)`
 - `METHOD System.Boolean TryDrainEffects(AIBT.IProductionTreeEffectReceiver,AIBT.NativeRuntimeFailureV1&)`
@@ -3352,6 +3355,7 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `PROPERTY System.UInt32 MaximumStepsPerUpdate`
 - `PROPERTY System.UInt64 InstanceId`
 - `PROPERTY System.UInt64 RandomSeed`
+- `PROPERTY System.UInt64 RandomStreamIdentity`
 - `PROPERTY System.UInt64 TotalUpdates`
 
 ---
@@ -3361,6 +3365,7 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 Shared compiled definition and generated catalog. Dispose after its hosts are destroyed.
 
 - `METHOD System.Boolean TryBootstrap(AIBT.ProductionTreeHost,AIBT.NativeRuntimeFailureV1&,System.Int32,System.Func`1<System.Int64>,System.Nullable`1<AIBT.NativeTraceChannelCapacityV1>)`
+- `METHOD System.Boolean TryBootstrap(AIBT.ProductionTreeHost,AIBT.RandomStreamSeeding,AIBT.NativeRuntimeFailureV1&,System.Int32,System.Func`1<System.Int64>,System.Nullable`1<AIBT.NativeTraceChannelCapacityV1>)`
 - `METHOD System.Boolean TryBootstrap(AIBT.ProductionTreeHost,System.UInt64,AIBT.NativeRuntimeFailureV1&,System.Int32,System.Func`1<System.Int64>,System.Nullable`1<AIBT.NativeTraceChannelCapacityV1>)`
 - `METHOD System.Boolean TryDispose(AIBT.Burst.BurstContextResult&)`
 - `METHOD System.Void Dispose()`
@@ -3420,6 +3425,24 @@ Optional Unity-facing frame bridge for one <see cref="ProductionTreeScheduler"/>
 - `PROPERTY System.Single X`
 - `PROPERTY System.Single Y`
 - `PROPERTY System.Single Z`
+
+---
+
+### `AIBT.RandomStreamSeeding`
+
+P11-012 (ADR-P11-008, AIBT-052): how a native host seeds the random streams of nodes that declare one (<c>[AibtRandomStream]</c>): a root seed and a stream identity, the word that <c>Documentation~/specifications/time-and-random-v1.md</c> mixes in after the semantic hash. <para> <see cref="StreamIdentity"/> 0 means automatic: the host uses its own <see cref="ProductionTreeHost.InstanceId"/>, which is process-wide, so two hosts never share streams but a run is not repeatable across sessions (another start order, another host bootstrapped first, Enter Play Mode without a domain reload). A nonzero identity is used as given: the same seed, program and identity give the same streams in any session. Equal streams do not make two sessions behave identically by themselves: the scheduler still orders hosts by start order and nodes draw as frame time lets them run; lockstep replay is <c>TreeSimulation</c>'s job. </para>
+
+- `METHOD AIBT.RandomStreamSeeding Automatic(System.UInt64)`
+- `METHOD AIBT.RandomStreamSeeding ForRun(System.UInt64,System.UInt64,System.UInt64)`
+- `METHOD System.Boolean Equals(AIBT.RandomStreamSeeding)`
+- `METHOD System.Boolean Equals(System.Object)`
+- `METHOD System.Int32 GetHashCode()`
+- `METHOD System.String ToString()`
+- `METHOD System.UInt64 CombineStreamIdentity(System.UInt64,System.UInt64)`
+- `METHOD System.Void .ctor(System.UInt64,System.UInt64)`
+- `PROPERTY System.Boolean IsAutomatic`
+- `PROPERTY System.UInt64 RootSeed`
+- `PROPERTY System.UInt64 StreamIdentity`
 
 ---
 

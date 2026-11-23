@@ -103,12 +103,17 @@ may deliver and accept new facts at their next idle barrier, never into an in-fl
 
 The generated bootstrap seeds the random stream of every node that declares one
 (`[AibtRandomStream]`, for example the `Native/Random` library nodes) from a root seed, the
-program's semantic hash, the host's `InstanceId` and the node index, as `TreeSimulation` does
+program's semantic hash, a stream identity and the node index, as `TreeSimulation` does
 (`time-and-random-v1.md`). The seed is an argument of the
 `TryBootstrap(..., randomSeed, out failure)` overloads (default `DefaultRandomSeed`, 0) and is
 reported by `RandomSeed`; `NativeTreeAgent.RandomSeed` passes it for every run. A tree without such
-nodes has no stream and is not affected. Instance ids are process-wide, so two hosts with one seed
-draw different sequences. The stream advances the same way under every scheduling policy, including
+nodes has no stream and is not affected. Those overloads use the host's `InstanceId` as the stream
+identity. Instance ids are process-wide, so two hosts with one seed draw different sequences, and a
+seed alone is not repeatable across sessions: the id depends on how many hosts were bootstrapped
+before. For repeatable streams pass a `RandomStreamSeeding` (seed and a nonzero stream identity) to
+`TryBootstrap(..., randomSeeding, out failure)`; `RandomStreamIdentity` reports the word used, and
+`InstanceId` keeps its other uses (handles, traces, scheduler order). `NativeTreeAgent.RandomStreamId`
+does this for every run (ADR-P11-008). The stream advances the same way under every scheduling policy, including
 the grouped job waves of a forced `BatchedJobsSameFrame` or `PipelinedJobs` profile; see the
 Randomness recipe in [Native node library](native-node-library.md#randomness).
 

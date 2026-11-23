@@ -4,6 +4,28 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Repeatable random streams (P11-012)
+
+- **`NativeTreeAgent.RandomStreamId` makes random draws repeatable across sessions** (ADR-P11-008,
+  AIBT-052). Every random node's stream was derived from the seed and the host's process-wide instance id,
+  so the same seed drew other numbers after another start order, another host, a failed bootstrap or Enter
+  Play Mode without a domain reload. The new serialized field (Inspector: *Random Stream Id*, default 0)
+  keeps that behaviour at 0. A nonzero id makes each run's draws depend only on the seed, the tree, the id
+  and the run index, exposed read-only as `NativeTreeAgent.RunIndex`: 0 on every enable, +1 for each run
+  that starts while the agent stays enabled (automatic restart, `Restart`, a change of `Tree`); a start
+  that fails does not count. Agents that share an id and a seed draw the same numbers, so a spawner gives
+  each agent its own id. The inspector shows a hint when the tree has random nodes and the id is 0.
+- **Hosts take a stream identity** through new overloads `ProductionTreeHost.TryBootstrap(..., RandomStreamSeeding, out failure)`
+  and `ProductionTreeProgram.TryBootstrap(host, RandomStreamSeeding, out failure, ...)`; identity 0 is
+  automatic, and `ProductionTreeHost.RandomStreamIdentity` reports the word used. `RandomStreamSeeding.ForRun`
+  and `CombineStreamIdentity` give a bare host the agent's rule. The existing overloads are unchanged;
+  `InstanceId` keeps its other uses.
+- `time-and-random-v1` names the mixed word the "stream identity", states each host's policy and defines
+  the combine function with test vectors; the derivation name, its layout and every existing stream are
+  unchanged. Repeatable streams do not make two sessions behave identically: agents update in start order
+  and draws follow frame time; lockstep replay is `TreeSimulation`'s job. The Native Guard sample sets
+  stream id 1 and shows the seed, the id and the run.
+
 ### A ReadWrite binding read and written in one tick (P11-010)
 
 - **A native node may read and write a key through one `ReadWrite` binding in any catalog.** Every

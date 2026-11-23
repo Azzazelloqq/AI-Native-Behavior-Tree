@@ -195,9 +195,9 @@ reactive guard as above.
 ### Randomness
 
 The five `Native/Random` nodes draw from a random stream of their own. The host derives each
-node's stream from a **root seed**, the tree's semantic hash, the **tree instance id** and the
-node's index, as `TreeSimulation` does (`specifications/time-and-random-v1.md`). The nodes are
-declared deterministic, so they pass the default `Phase1` policy: one seed, one instance id and one
+node's stream from a **root seed**, the tree's semantic hash, a **stream identity** and the node's
+index, as `TreeSimulation` does (`specifications/time-and-random-v1.md`). The nodes are declared
+deterministic, so they pass the default `Phase1` policy: one seed, one stream identity and one
 sequence of updates and facts give one sequence of results.
 
 The Native Guard patrol picks one of three spots, whistles 40 % of the time and rests 1 to 3 s.
@@ -213,24 +213,39 @@ spot), because game code reads signals, not keys:
 `random-float` and `random-float3-in-radius` write Float32 and Float3 keys for later nodes, for
 example `float-at-least` on a random threshold or `float3-within-distance` against a random point.
 
-Where the seed lives and what it means:
+Where the seed and the stream identity live and what they mean:
 
 - **`NativeTreeAgent.RandomSeed`** (Inspector: *Random Seed*, serialized, default `0`). It is read
   when a run starts (enable, `Restart`, an automatic restart); a change applies from the next run.
+- **`NativeTreeAgent.RandomStreamId`** (Inspector: *Random Stream Id*, serialized, default `0`),
+  read when a run starts. `0` is automatic: every run uses its host's process-wide instance id, so
+  agents and runs differ, but nothing repeats across sessions. A nonzero id makes the draws of a run
+  depend only on the seed, the tree, the id and the run's index (`NativeTreeAgent.RunIndex`, read
+  only): run 0 after the agent is enabled, then +1 for each run that starts while it stays enabled
+  (an automatic restart, `Restart`, a change of `Tree`; a start that fails does not count). Disable
+  and enable start again at run 0, so a pooled agent re-enabled with the same id repeats run 0.
 - **`ProductionTreeHost`**: `ProductionTreeProgram.TryBootstrap(host, randomSeed, out failure, ...)`
-  or the generated `ProductionTreeHost.TryBootstrap(..., randomSeed, out failure)`. The overloads
-  without a seed use `ProductionTreeHost.DefaultRandomSeed` (`0`); `host.RandomSeed` reports it.
-- **`TreeSimulation`**: `TreeSimulationSettings.RandomSeed` (default `0`), as before.
+  or the generated `ProductionTreeHost.TryBootstrap(..., randomSeed, out failure)` use the host's
+  instance id (automatic). Pass a `RandomStreamSeeding` instead, for example
+  `new RandomStreamSeeding(seed, streamIdentity)` or `RandomStreamSeeding.ForRun(seed, id, run)` (the
+  agent's rule), to choose the identity; `0` is automatic. The overloads without a seed use
+  `ProductionTreeHost.DefaultRandomSeed` (`0`); `host.RandomSeed` and `host.RandomStreamIdentity`
+  report what was used.
+- **`TreeSimulation`**: `TreeSimulationSettings.RandomSeed` (default `0`), as before; its instance
+  ids are local to the container (1, 2, ... in the order agents are added or restarted).
 
-Every run of a `NativeTreeAgent` is a new host with a new tree instance id, so a restart draws a
-new sequence, and two agents with one seed draw different sequences. Host instance ids are
-process-wide and given in start order from 1 after a domain reload: entering Play Mode with domain
-reload and starting the same agents in the same order repeats the results, as long as every run
-also ends at the same point. Without a domain reload (Enter Play Mode Options), in another start
-order, or when game timing changes when runs end (for example an interruption timed by an object
-that moves with frame time), the ids and so the later sequences differ. For a
-replay that never depends on start order use `TreeSimulation`, whose instance ids are local to the
-container.
+Agents that share a nonzero id and a seed draw the same numbers. Prefab instances share their
+serialized values, so a spawner that wants different agents sets a distinct id per agent from code
+(an entity number, a save-game id): only the game knows what "the same agent" is. With id `0` the
+automatic id is process-wide and given in start order from 1 after a domain reload, so sequences
+change with another start order, without a domain reload (Enter Play Mode Options), or after another
+host started first; the inspector shows a hint when the tree has random nodes and the id is `0`.
+
+Repeatable streams do not make a session repeat. Agents still update in start order, and nodes draw
+as frame time lets them run: a branch that runs earlier or later, for example after an interruption
+timed by an object that moves with frame time, consumes the same stream at another moment, and from
+then on the run differs. For a replay that repeats exactly, tick by tick, use `TreeSimulation`
+(lockstep is its job). A bug report can carry the seed, the stream id and the run index.
 
 Each node's draws per tick are fixed, so tuning a range does not shift later draws: one draw for
 `random-chance`, `random-float` and `random-int` (a bounded draw repeats only on the spec's
@@ -242,7 +257,7 @@ for `random-int`) fails without writing and without drawing.
 Random nodes work in every dispatch mode: the default profiles, `Immediate`, `JobsAgentFrame`, a
 profile that forces `BatchedJobsSameFrame` or `PipelinedJobs` (where agents of one catalog share a
 job wave), a lone `ProductionTreeHost`, and `TreeSimulation` in place and with Jobs. One tree, seed
-and instance id draw the same sequence under every scheduling policy.
+and stream identity draw the same sequence under every scheduling policy.
 
 `aibt.stdlib.random-condition` (a whole-percent chance) is a built-in leaf declared
 non-deterministic: the default `Phase1` policy refuses it (AIBT2040). Use `random-chance` in native

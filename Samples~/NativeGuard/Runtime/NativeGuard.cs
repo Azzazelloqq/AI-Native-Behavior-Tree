@@ -7,7 +7,7 @@ namespace AIBT.Samples.NativeGuard
     /// (aibt.core.* and aibt.native.*); this component writes facts (where the intruder is, whether
     /// the gate is open) and turns aibt.native.signal codes into something visible. The patrol's
     /// random choices (which spot to light, whether to whistle, how long to rest) come from the
-    /// tree's Native/Random nodes, seeded by the agent's Random Seed.
+    /// tree's Native/Random nodes, seeded by the agent's Random Seed and Random Stream Id.
     /// </summary>
     [RequireComponent(typeof(NativeTreeAgent))]
     public sealed class NativeGuard : MonoBehaviour
@@ -141,7 +141,7 @@ namespace AIBT.Samples.NativeGuard
             style.normal.textColor = Color.white;
             GUI.Label(new Rect(16, 12, 1400, 34), "Signals (newest first): " + _log, style);
             GUI.Label(new Rect(16, 44, 1400, 34), "Facts: intruder-seen=" + _seen + "  intruder-close=" + _close + "  gate-open=" + _gateOpen, style);
-            GUI.Label(new Rect(16, 76, 1400, 34), "Random Seed " + _agent.RandomSeed + " (tree instance " + (_agent.Host != null ? _agent.Host.InstanceId : 0UL) + "): spots " + _choices + "   (" + _patrols + " patrols, " + _whistles + " whistles)", style);
+            GUI.Label(new Rect(16, 76, 1400, 34), "Random Seed " + _agent.RandomSeed + ", stream id " + _agent.RandomStreamId + ", run " + _agent.RunIndex + ": spots " + _choices + "   (" + _patrols + " patrols, " + _whistles + " whistles)", style);
         }
     }
 }

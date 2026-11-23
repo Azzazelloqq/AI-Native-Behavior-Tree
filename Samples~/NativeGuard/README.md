@@ -13,12 +13,15 @@ A native (Burst) tree built only from package nodes: `aibt.core.*` composites an
    random), sweeps (cyan) and closes it, whistles (green) 40 % of the time, then rests a random
    1 to 3 s. The third line of the overlay lists the spots picked so far (`+w` = a whistle).
 4. Randomness is seeded: select the tower and change **Random Seed** on its Native Tree Agent, then
-   press Play again. Another seed picks another sequence of spots. The same seed picks the same
-   sequence again while the runs line up: every finished patrol ends the run, and the agent restarts
-   it as a new tree instance (the id shown on screen) with a new stream. An intruder that interrupts
-   a patrol makes it start over, with new draws, in the same run. The intruder moves with frame time,
-   so an interruption can come a little earlier or later; from that point the runs, and so the later
-   choices, can differ even with one seed.
+   press Play again. Another seed picks another sequence of spots. The demo sets **Random Stream Id**
+   to 1, so each run's draws depend only on the seed, that id and the run index (shown on screen):
+   every finished patrol ends the run, and the agent restarts it as the next run with new draws, the
+   same ones in every session. Set the id to 0 and the draws depend on the host's process-wide
+   instance id instead, which changes with start order and Enter Play Mode settings. An intruder that
+   interrupts a patrol makes it start over, with new draws, in the same run. The intruder moves with
+   frame time, so an interruption can come a little earlier or later; from that point the runs, and
+   so the later choices, can differ even with one seed and one id: repeatable streams do not make a
+   session repeat.
    How many patrols you see depends on where the intruder walks, so compare the order, not the count.
 5. Open `native-guard.aibt.json` in **AIBT > Graph Editor** and select the tower during Play: the
    graph highlights the running node live.

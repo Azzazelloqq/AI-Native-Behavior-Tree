@@ -60,6 +60,8 @@ namespace AIBT.Samples.NativeGuard.Editor
             var agent = tower.AddComponent<NativeTreeAgent>();
             var serializedAgent = new SerializedObject(agent);
             serializedAgent.FindProperty("_tree").objectReferenceValue = asset;
+            // Repeatable draws: each run's streams depend on the seed, this id and the run index only.
+            serializedAgent.FindProperty("_randomStreamId").ulongValue = 1UL;
             serializedAgent.ApplyModifiedPropertiesWithoutUndo();
             if (agent.Tree == null) throw new InvalidOperationException("The demo agent did not retain its runtime tree reference.");
             var game = new SerializedObject(tower.AddComponent<NativeGuard>());
