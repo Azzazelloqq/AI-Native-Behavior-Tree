@@ -29,8 +29,10 @@ namespace AIBT.Editor.Registry
         /// True when the tree uses a managed (main-thread) node, so it runs in a BehaviorTreeAgent
         /// and is validated with the managed layer's policy instead of the native one.
         /// </summary>
-        internal bool UsesManagedNodes(TreeDocument document)
-            => document.Nodes.Any(node => Registry.TryGet(node.TypeId, out var entry)
+        internal bool UsesManagedNodes(TreeDocument document) => UsesManagedNodes(document, Registry);
+
+        internal static bool UsesManagedNodes(TreeDocument document, NodeRegistry registry)
+            => document.Nodes.Any(node => registry.TryGet(node.TypeId, out var entry)
                 && entry.Manifest.ExecutionDomain != NodeExecutionDomain.Burst);
 
         internal DiagnosticCollection ValidateAuthoring(TreeDocument document, ReferenceCompilerOptions options)
@@ -49,14 +51,49 @@ namespace AIBT.Editor.Registry
         // P11-008 (review F10): a tree that runs in a BehaviorTreeAgent is refused there when it has an
         // observer block (AIBT2051); the Editor shows the same error. P11-009 (review F10, native half):
         // any other tree runs in a native host, which does not re-evaluate observers; the Editor warns
-        // (AIBT2054) and the tree compiles as before.
-        private static DiagnosticCollection WithManagedRefusals(DiagnosticCollection diagnostics, bool managed, TreeDocument document,
+        // (AIBT2054) and the tree compiles as before. P11-014: one rule, ObserverDiagnostics.
+        private DiagnosticCollection WithManagedRefusals(DiagnosticCollection diagnostics, bool managed, TreeDocument document,
             ReferenceCompilerOptions options)
         {
-            var added = managed
-                ? ManagedTreeProgram.ObserverRefusals(document, options.SourceId)
-                : NativeObserverWarnings(document, options.SourceId);
+            var added = ObserverDiagnostics(document, Registry, options.SourceId);
             return added.Count == 0 ? diagnostics : new DiagnosticCollection(diagnostics.Concat(added));
+        }
+
+        /// <summary>
+        /// P11-014 (items 1-3): what the hosts do with the <c>observer</c> blocks of a tree, given as the
+        /// expanded tree (a subtree's nodes count as the parent's). A tree with a managed node runs only in a
+        /// <c>BehaviorTreeAgent</c>, which refuses it: one error AIBT2051 per block
+        /// (<see cref="ManagedTreeProgram.ObserverRefusals"/>, the agent's own rule). A tree of built-in nodes
+        /// only runs in either host: one warning AIBT2054 per block that says what each does. Any other tree
+        /// runs only in a native host: the warning AIBT2054 of <see cref="NativeObserverWarnings"/>. Used by
+        /// the graph and MCP edits, the tree list, MCP <c>validate</c> and <c>compile</c>, and the bake.
+        /// </summary>
+        internal static List<Diagnostic> ObserverDiagnostics(TreeDocument document, NodeRegistry registry, string sourceId)
+        {
+            if (document == null || registry == null || document.Nodes.All(node => node.Observer == null)) return new List<Diagnostic>();
+            if (UsesManagedNodes(document, registry)) return ManagedTreeProgram.ObserverRefusals(document, sourceId);
+            return RunsInEitherHost(document, registry) ? ObserverWarnings(document, sourceId, true) : NativeObserverWarnings(document, sourceId);
+        }
+
+        /// <summary>
+        /// Every node is a built-in (an <c>aibt.core.*</c> composite or decorator, or a built-in leaf such
+        /// as <c>aibt.stdlib.wait</c>): a <c>BehaviorTreeAgent</c> binds these too, so either host loads the tree.
+        /// </summary>
+        private static bool RunsInEitherHost(TreeDocument document, NodeRegistry registry)
+            => document.Nodes.All(node => !node.IsSubtreeReference && registry.TryGet(node.TypeId, out var entry)
+                && entry.Source == NodeManifestSource.BuiltIn);
+
+        /// <summary>
+        /// P11-014 (item 2): the tree as the observer rule sees it: the document itself, or its structural
+        /// expansion when it references subtrees and <paramref name="resolver"/> is given (as
+        /// <see cref="ValidateAuthoring(TreeDocument, ReferenceCompilerOptions, ISubtreeResolver)"/> does).
+        /// Null when the expansion fails; its errors are the compiler's to report.
+        /// </summary>
+        internal TreeDocument ExpandForObserverRule(TreeDocument document, ISubtreeResolver resolver, string sourceId)
+        {
+            if (document == null || resolver == null || !SubtreeExpander.RequiresExpansion(document)) return document;
+            var probe = SubtreeExpander.Expand(document, resolver, Registry, StructuralExpansionPolicy.CreateValidationOptions(sourceId), RegisteredTypes);
+            return probe.Success ? probe.Document : null;
         }
 
         /// <summary>
@@ -68,6 +105,9 @@ namespace AIBT.Editor.Registry
         /// list, MCP <c>validate</c> and the native bake.
         /// </summary>
         internal static List<Diagnostic> NativeObserverWarnings(TreeDocument document, string sourceId)
+            => ObserverWarnings(document, sourceId, false);
+
+        private static List<Diagnostic> ObserverWarnings(TreeDocument document, string sourceId, bool eitherHost)
         {
             var result = new List<Diagnostic>();
             if (document == null) return result;
@@ -75,10 +115,16 @@ namespace AIBT.Editor.Registry
             {
                 var node = document.Nodes[index];
                 if (node.Observer == null) continue;
+                var what = eitherHost
+                    ? "Node '" + node.Id.Value + "' has an 'observer' block, and no host runs it. This tree has only built-in nodes, so it "
+                      + "can run in either host: a BehaviorTreeAgent refuses it when it loads (AIBT2051), and native hosts (NativeTreeAgent, "
+                      + "ProductionTreeHost, ProductionTreeScheduler, TreeSimulation) run it without re-evaluating observers: nothing "
+                      + "re-checks the condition when a watched key changes, so the block changes no outcome."
+                    : "Node '" + node.Id.Value + "' has an 'observer' block, but native hosts (NativeTreeAgent, ProductionTreeHost, "
+                      + "ProductionTreeScheduler, TreeSimulation) do not re-evaluate observers: nothing re-checks the condition when a "
+                      + "watched key changes, so the block changes no outcome.";
                 result.Add(new Diagnostic(TreeValidationDiagnosticCodes.ObserverNotEvaluatedByNativeHost, DiagnosticSeverity.Warning,
-                    "Node '" + node.Id.Value + "' has an 'observer' block, but native hosts (NativeTreeAgent, ProductionTreeHost, "
-                    + "ProductionTreeScheduler, TreeSimulation) do not re-evaluate observers: nothing re-checks the condition when a "
-                    + "watched key changes, so the block changes no outcome. To re-check the condition on every update, make it an "
+                    what + " To re-check the condition on every update, make it an "
                     + "earlier child of '" + BuiltInNodeManifests.ReactiveSequenceTypeId + "' or '" + BuiltInNodeManifests.ReactiveSelectorTypeId
                     + "' (or their -retaining variants above a wait or a multi-step branch) and remove the block.",
                     new DiagnosticLocation(sourceId, "/nodes/" + node.Id.Value.Replace("~", "~0").Replace("/", "~1") + "/observer",

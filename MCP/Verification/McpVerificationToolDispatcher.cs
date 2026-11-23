@@ -45,7 +45,7 @@ namespace AIBT.Mcp.Verification
             if (referenced.Count == 0)
             {
                 var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options, registeredTypes)
-                    .Concat(NativeObserverWarnings(document, projectRoot, path)).Concat(migrationDiagnostics));
+                    .Concat(ObserverDiagnostics(document, registry, projectRoot, path)).Concat(migrationDiagnostics));
 
                 return new JObject
                 {
@@ -60,7 +60,7 @@ namespace AIBT.Mcp.Verification
             // references (AIBT3020-3028); a successful expansion is then validated as one tree.
             var expansion = SubtreeExpander.Expand(document, McpSubtrees.Resolver(projectRoot), registry, options, registeredTypes);
             var expandedDiagnostics = new DiagnosticCollection((expansion.Success
-                ? TreeValidator.Validate(expansion.Document, registry, options, registeredTypes).Concat(NativeObserverWarnings(expansion.Document, projectRoot, path))
+                ? TreeValidator.Validate(expansion.Document, registry, options, registeredTypes).Concat(ObserverDiagnostics(expansion.Document, registry, projectRoot, path))
                 : expansion.Diagnostics).Concat(migrationDiagnostics));
             return new JObject
             {
@@ -71,12 +71,11 @@ namespace AIBT.Mcp.Verification
             };
         }
 
-        // P11-009 (review F10, native half): a tree without managed nodes runs in a native host, which
-        // does not re-evaluate observers; each observer block gets the warning AIBT2054, as in the graph.
-        private static IEnumerable<Diagnostic> NativeObserverWarnings(TreeDocument document, string projectRoot, string path)
-            => ProjectNodeCatalogCache.Current.UsesManagedNodes(document)
-                ? Enumerable.Empty<Diagnostic>()
-                : ProjectNodeCatalog.NativeObserverWarnings(document, ToLogicalSourceId(projectRoot, path));
+        // P11-009 (review F10, native half) and P11-014 (item 1): what the host does with each observer
+        // block, as in the graph: AIBT2051 for a tree a BehaviorTreeAgent runs (it refuses the tree when it
+        // loads it), the warning AIBT2054 for a tree a native host runs.
+        private static IEnumerable<Diagnostic> ObserverDiagnostics(TreeDocument document, NodeRegistry registry, string projectRoot, string path)
+            => ProjectNodeCatalog.ObserverDiagnostics(document, registry, ToLogicalSourceId(projectRoot, path));
 
         // ---- compile -------------------------------------------------------------------------
 
@@ -98,12 +97,16 @@ namespace AIBT.Mcp.Verification
             // features compiles through the unchanged overload.
             var resolver = McpSubtrees.ResolverFor(document, projectRoot);
             var result = resolver == null ? ReferenceCompiler.Compile(document, registry, options) : ReferenceCompiler.Compile(document, registry, options, resolver);
-            var diagnostics = new DiagnosticCollection(result.Diagnostics.Concat(migrationDiagnostics));
+            // P11-014 (item 1): a tree a BehaviorTreeAgent would refuse (AIBT2051) does not compile here either.
+            var observed = ProjectNodeCatalogCache.Current.ExpandForObserverRule(document, resolver, options.SourceId);
+            var observerDiagnostics = observed == null ? new List<Diagnostic>() : ProjectNodeCatalog.ObserverDiagnostics(observed, registry, options.SourceId);
+            var success = result.Success && observerDiagnostics.All(diagnostic => diagnostic.Severity != DiagnosticSeverity.Error);
+            var diagnostics = new DiagnosticCollection(result.Diagnostics.Concat(observerDiagnostics).Concat(migrationDiagnostics));
 
             return new JObject
             {
-                ["success"] = result.Success,
-                ["contentHash"] = result.Success ? result.Program.Header.CompiledContentHash.HexadecimalValue : null,
+                ["success"] = success,
+                ["contentHash"] = success ? result.Program.Header.CompiledContentHash.HexadecimalValue : null,
                 ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(diagnostics),
             };
         }

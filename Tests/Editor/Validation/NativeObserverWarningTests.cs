@@ -141,6 +141,141 @@ namespace AIBT.Tests.Editor.Validation
             }
         }
 
+        // ---- P11-014 items 1-3 -------------------------------------------------------------
+
+        /// <summary>A managed tree (package node aibt.unity.is-true) whose guard has an observer block.</summary>
+        private static string ManagedGuardTree(string treeId)
+            => "{ \"format\": \"aibt.tree\", \"formatVersion\": 2, \"treeId\": \"" + treeId + "\", \"name\": \"Managed observer\", \"root\": \"root\", "
+               + "\"blackboard\": { "
+               + "\"alarm\": { \"type\": \"Bool\", \"typeVersion\": 1, \"scope\": \"tree\", \"default\": false }, "
+               + "\"flag\": { \"type\": \"Bool\", \"typeVersion\": 1, \"scope\": \"tree\", \"default\": false } }, "
+               + "\"nodes\": { "
+               + "\"root\": { \"type\": \"aibt.core.reactive-sequence\", \"typeVersion\": 1, \"children\": [\"guard\", \"set\"] }, "
+               + "\"guard\": { \"type\": \"aibt.unity.is-true\", \"typeVersion\": 1, \"parameters\": { \"key\": \"alarm\" }, "
+               + "\"observer\": { \"mode\": \"self\", \"watchedKeys\": [\"alarm\"] } }, "
+               + "\"set\": { \"type\": \"aibt.unity.set-bool\", \"typeVersion\": 1, \"parameters\": { \"key\": \"flag\" } } } }";
+
+        /// <summary>Only built-in nodes: the random-condition guard and a wait. Either host can run it.</summary>
+        private const string BuiltInGuardTree = "{ \"format\": \"aibt.tree\", \"formatVersion\": 2, \"treeId\": \"tests.p11014.builtin-observer\", "
+            + "\"name\": \"Built-in observer\", \"root\": \"root\", "
+            + "\"blackboard\": { \"alarm\": { \"type\": \"Bool\", \"typeVersion\": 1, \"scope\": \"tree\", \"default\": false } }, "
+            + "\"nodes\": { "
+            + "\"root\": { \"type\": \"aibt.core.reactive-sequence\", \"typeVersion\": 1, \"children\": [\"guard\", \"hold\"] }, "
+            + "\"guard\": { \"type\": \"aibt.stdlib.random-condition\", \"typeVersion\": 1, \"parameters\": { \"success-chance-percent\": 50 }, "
+            + "\"observer\": { \"mode\": \"self\", \"watchedKeys\": [\"alarm\"] } }, "
+            + "\"hold\": { \"type\": \"aibt.stdlib.wait\", \"typeVersion\": 1, \"parameters\": { \"ticks\": 2 } } } }";
+
+        /// <summary>Item 1: MCP validate reports what BehaviorTreeAgent does with a managed tree: AIBT2051, not valid.</summary>
+        [Test]
+        public void McpValidate_AManagedTreeWithAnObserver_IsRefusedAsTheAgentRefusesIt()
+        {
+            Assume.That(ProjectNodeCatalogCache.Current.Registry.TryGet("aibt.unity.is-true", out _), Is.True);
+            WithMcpProject("p11014-managed-observer", ManagedGuardTree("tests.p11014.managed-observer"), assets =>
+            {
+                var validated = Dispatch(assets, "validate", new JObject { ["treeId"] = "tests.p11014.managed-observer" }, "Compilation");
+                var result = validated["result"];
+                Assert.That((bool)result["valid"], Is.False, validated.ToString());
+                var refusal = ((JArray)result["diagnostics"]).Where(item => (string)item["code"] == "AIBT2051").ToArray();
+                Assert.That(refusal.Length, Is.EqualTo(1), validated.ToString());
+                Assert.That((string)refusal[0]["severity"], Is.EqualTo("error"), validated.ToString());
+                Assert.That((string)refusal[0]["jsonPointer"], Is.EqualTo("/nodes/guard/observer"), validated.ToString());
+                Assert.That(((JArray)result["diagnostics"]).Any(item => (string)item["code"] == Code), Is.False, "no native warning for a managed tree");
+            });
+        }
+
+        /// <summary>Item 1: MCP compile does not report success for a tree the agent refuses.</summary>
+        [Test]
+        public void McpCompile_AManagedTreeWithAnObserver_DoesNotSucceed()
+        {
+            Assume.That(ProjectNodeCatalogCache.Current.Registry.TryGet("aibt.unity.is-true", out _), Is.True);
+            WithMcpProject("p11014-managed-observer-compile", ManagedGuardTree("tests.p11014.managed-observer-compile"), assets =>
+            {
+                var compiled = Dispatch(assets, "compile", new JObject { ["treeId"] = "tests.p11014.managed-observer-compile" }, "Compilation");
+                var result = compiled["result"];
+                Assert.That((bool)result["success"], Is.False, compiled.ToString());
+                Assert.That(((JArray)result["diagnostics"]).Count(item => (string)item["code"] == "AIBT2051"), Is.EqualTo(1), compiled.ToString());
+            });
+        }
+
+        /// <summary>Item 2: the bake warns for an observer inside a subtree (the expanded tree, as the graph sees it).</summary>
+        [Test]
+        public void ThePreparePath_TheBaker_WarnsForAnObserverInsideASubtree()
+        {
+            const string ChildId = "Tests/P11014/guard-child.aibt";
+            var child = Parse(GuardTree(true, "tests.p11014.guard-child")
+                .Replace("\"formatVersion\": 2", "\"formatVersion\": 3")
+                .Replace("\"root\": \"root\", ", "\"root\": \"root\", \"interface\": { \"version\": 1, \"keys\": [\"alarm\", \"flag\"] }, "));
+            var parent = Parse("{ \"format\": \"aibt.tree\", \"formatVersion\": 2, \"treeId\": \"tests.p11014.guard-parent\", \"name\": \"Parent\", \"root\": \"root\", "
+                + "\"blackboard\": { "
+                + "\"alarm\": { \"type\": \"Bool\", \"typeVersion\": 1, \"scope\": \"tree\", \"default\": false }, "
+                + "\"flag\": { \"type\": \"Bool\", \"typeVersion\": 1, \"scope\": \"tree\", \"default\": false } }, "
+                + "\"nodes\": { \"root\": { \"type\": \"aibt.core.memory-sequence\", \"typeVersion\": 1, \"children\": [] } } }");
+            var withReference = SubtreeGraphEdits.AddReference(parent, SubtreeGraphEdits.CreateReference(parent, child, new NodeId("use")), new NodeId("root"));
+            var resolver = new InMemorySubtreeResolver().Add(child, ChildId);
+            var asset = ProductionTreeAssetBaker.Create(withReference, SourceId,
+                FindType("AIBT.Tests.Integration.NativeRuntime.NativeLibraryCatalog"), resolver, out var diagnostics);
+            try
+            {
+                Assert.That(asset, Is.Not.Null, Describe(diagnostics));
+                var warning = diagnostics.Where(d => d.Code.Value == Code).ToArray();
+                Assert.That(warning.Length, Is.EqualTo(1), Describe(diagnostics));
+                Assert.That(warning[0].Severity, Is.EqualTo(DiagnosticSeverity.Warning));
+                Assert.That(warning[0].Message, Does.Contain("native"));
+            }
+            finally
+            {
+                if (asset != null) UnityEngine.Object.DestroyImmediate(asset);
+            }
+        }
+
+        /// <summary>
+        /// Item 3: a tree of built-in nodes runs in either host. The warning keeps its code and says what
+        /// each host does: BehaviorTreeAgent refuses the tree (AIBT2051), a native host ignores the block.
+        /// </summary>
+        [Test]
+        public void ABuiltInOnlyTree_TheWarningSaysWhatEachHostDoes()
+        {
+            var options = new ReferenceCompilerOptions(SourceId, new ReferenceCompilationPolicy(requireDeterministicNodes: false),
+                new CompiledCompilerVersion(1, 0, 0, 6));
+            var diagnostics = _catalog.ValidateAuthoring(Parse(BuiltInGuardTree), options);
+            var warning = diagnostics.Where(d => d.Code.Value == Code).ToArray();
+            Assert.That(warning.Length, Is.EqualTo(1), Describe(diagnostics));
+            Assert.That(warning[0].Severity, Is.EqualTo(DiagnosticSeverity.Warning));
+            Assert.That(warning[0].Message, Does.Contain("BehaviorTreeAgent").And.Contain("AIBT2051").And.Contain("native"), warning[0].Message);
+            Assert.That(diagnostics.Select(d => d.Code.Value), Does.Not.Contain("AIBT2051"), "the Editor does not refuse a tree a native host can run");
+
+            var nativeWarning = _catalog.ValidateAuthoring(Parse(GuardTree(true)), CompilerOptions()).Single(d => d.Code.Value == Code);
+            Assert.That(nativeWarning.Message, Does.Not.Contain("AIBT2051"), "a tree with native library nodes runs only in a native host");
+        }
+
+        private static void WithMcpProject(string name, string json, Action<string> body)
+        {
+            var projectRoot = Path.Combine(Path.GetTempPath(), "aibt-" + name + "-" + Guid.NewGuid().ToString("N"));
+            var assets = Path.Combine(projectRoot, "Assets");
+            Directory.CreateDirectory(assets);
+            try
+            {
+                File.WriteAllText(Path.Combine(assets, name + ".aibt"), json);
+                // A project whose policy admits managed, main-thread and nondeterministic nodes, as one that
+                // runs trees in a BehaviorTreeAgent has: only the observer block stands in the way.
+                Directory.CreateDirectory(Path.Combine(projectRoot, ".aibt"));
+                File.WriteAllText(Path.Combine(projectRoot, ".aibt", "policy.json"), new JObject
+                {
+                    ["format"] = "aibt.policy", ["formatVersion"] = 1, ["allowManagedNodes"] = true, ["allowMainThreadNodes"] = true,
+                    ["requireTreeDescription"] = false, ["requireNodeDescriptions"] = false, ["blackboardNaming"] = "any",
+                    ["requireDeterministicNodes"] = false, ["allowSideEffects"] = true, ["unreachableNodes"] = "error",
+                    ["supportsAgentScope"] = false, ["supportsSharedScope"] = false,
+                    ["forbiddenNodeTypes"] = new JArray(), ["warningsAsErrors"] = new JArray(),
+                    ["performance"] = new JObject { ["forbidUnboundedRepeaters"] = false, ["requireEventDrivenServices"] = false },
+                }.ToString());
+                body(assets);
+            }
+            finally
+            {
+                if (Directory.Exists(projectRoot)) Directory.Delete(projectRoot, recursive: true);
+            }
+        }
+
         private static void AssertWarning(Diagnostic warning)
         {
             Assert.That(warning.Severity, Is.EqualTo(DiagnosticSeverity.Warning));

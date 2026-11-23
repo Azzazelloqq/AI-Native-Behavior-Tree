@@ -60,7 +60,9 @@ namespace AIBT.Editor.Graph
                 new ReferenceCompilerOptions(sourceId, ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 6)),
                 (ISubtreeResolver)recorder ?? resolver);
             // P11-009 (review F10, native half): the program is unchanged; observer blocks get the warning AIBT2054.
-            var observerWarnings = ProjectNodeCatalog.NativeObserverWarnings(document, sourceId);
+            // P11-014 (item 2): of the expanded tree, so a block inside a subtree is reported too.
+            var observed = catalog.ExpandForObserverRule(document, (ISubtreeResolver)recorder ?? resolver, sourceId) ?? document;
+            var observerWarnings = ProjectNodeCatalog.ObserverDiagnostics(observed, catalog.Registry, sourceId);
             diagnostics = observerWarnings.Count == 0 ? compiled.Diagnostics : new DiagnosticCollection(compiled.Diagnostics.Concat(observerWarnings));
             if (!compiled.Success) return null;
             if (!GeneratedNodeReflectionHarness.TryReflectHandshake(catalogType, out var handshake, out var explanation))
