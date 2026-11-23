@@ -4,6 +4,18 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### A ReadWrite binding read and written in one tick (P11-010)
+
+- **A native node may read and write a key through one `ReadWrite` binding in any catalog.** Every
+  `TryRead` and `TryWrite` opens its own value session, but the generated catalog sized the per-frame room
+  at one session and one value per binding of its largest node. A node that reads and then writes one key
+  through a single `ReadWrite` handle (the shape of `aibt.native.increment-int`) stopped the host with
+  `NativeLifetimeStateInvalid` ("Callback rejected: CapacityExceeded") when it was the largest node of its
+  catalog set, on `ProductionTreeHost` and on `NativeTreeAgent` outside BatchedJobsSameFrame and
+  PipelinedJobs. The catalog now counts two sessions and two values per `ReadWrite` binding. Catalogs that
+  list the package library (and every sample) keep their size; no program bytes, ABI or generated code
+  change. A node that reads or writes one binding more than once per tick is still limited as before.
+
 ### Review fixes, batch 3 (P11-009)
 
 - **Native trees may mix Tree keys with Agent or Shared keys** (review F9). A native tree with Tree-scope
