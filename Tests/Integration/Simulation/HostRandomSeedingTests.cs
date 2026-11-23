@@ -17,11 +17,6 @@ namespace AIBT.Tests.Integration.Simulation
     /// </summary>
     public sealed class HostRandomSeedingTests
     {
-        private static readonly FieldInfo HostInstanceCounter =
-            typeof(ProductionTreeHost).GetField("s_nextTreeInstanceId", BindingFlags.NonPublic | BindingFlags.Static);
-        private static readonly FieldInfo ContainerInstanceCounter =
-            typeof(TreeSimulation).GetField("_nextTreeInstanceId", BindingFlags.NonPublic | BindingFlags.Instance);
-
         private readonly List<Object> _objects = new List<Object>();
         private readonly List<ProductionTreeProgram> _programs = new List<ProductionTreeProgram>();
 
@@ -186,53 +181,46 @@ namespace AIBT.Tests.Integration.Simulation
         }
 
         /// <summary>
-        /// Reproducibility across runs: a host's tree instance id is the process-wide bootstrap counter,
-        /// which a domain reload resets. Emulating that (the counter set back to one value before each
-        /// run; the first run's host is destroyed first, then the counter is restored), two runs with one
-        /// seed give the same results and the same stream words update by update.
+        /// Reproducibility across runs: two hosts bootstrapped one after the other with one seed and one
+        /// stream identity (P11-012, <see cref="RandomStreamSeeding"/>) give the same results and the same
+        /// stream words update by update, although their process-wide instance ids differ. Before P11-012
+        /// the test set the host's private instance counter back by reflection to get this.
         /// </summary>
         [Test]
-        public void TwoRunsWithTheSameSeedAndInstanceId_GiveTheSameResults()
+        public void TwoRunsWithTheSameSeedAndStreamIdentity_GiveTheSameResults()
         {
-            const ulong Seed = 0xA1B7UL;
+            const ulong Seed = 0xA1B7UL, Identity = 0x51DEUL;
             var program = Program(RollerTree);
             var path = new List<uint>();
-            var saved = (long)HostInstanceCounter.GetValue(null);
             var runs = new List<ulong>[2];
-            ulong lastId = 0;
-            try
+            var ids = new ulong[2];
+            for (var run = 0; run < 2; run++)
             {
-                for (var run = 0; run < 2; run++)
+                long now = 0;
+                var gameObject = new GameObject("AIBT.Tests.P11002.Rerun" + run);
+                try
                 {
-                    HostInstanceCounter.SetValue(null, saved);
-                    long now = 0;
-                    var gameObject = new GameObject("AIBT.Tests.P11002.Rerun" + run);
-                    try
+                    var host = gameObject.AddComponent<ProductionTreeHost>();
+                    Assert.That(program.TryBootstrap(host, new RandomStreamSeeding(Seed, Identity), out var failure, clock: () => now),
+                        Is.True, failure.ToString());
+                    ids[run] = host.InstanceId;
+                    runs[run] = new List<ulong>();
+                    for (var update = 1; update <= 90; update++)
                     {
-                        var host = gameObject.AddComponent<ProductionTreeHost>();
-                        Assert.That(program.TryBootstrap(host, Seed, out var failure, clock: () => now), Is.True, failure.ToString());
-                        lastId = host.InstanceId;
-                        runs[run] = new List<ulong>();
-                        for (var update = 1; update <= 90; update++)
-                        {
-                            now = update * (long)TickMicroseconds;
-                            Drive(host);
-                            var digest = Fnv.Create();
-                            AppendHost(host, ref digest, path);
-                            runs[run].Add(digest.Value);
-                        }
-                    }
-                    finally
-                    {
-                        DestroyHostObject(gameObject);
+                        now = update * (long)TickMicroseconds;
+                        Drive(host);
+                        var digest = Fnv.Create();
+                        AppendHost(host, ref digest, path);
+                        runs[run].Add(digest.Value);
                     }
                 }
+                finally
+                {
+                    DestroyHostObject(gameObject);
+                }
             }
-            finally
-            {
-                if ((long)HostInstanceCounter.GetValue(null) < (long)lastId) HostInstanceCounter.SetValue(null, (long)lastId);
-            }
-            Assert.That(runs[1], Is.EqualTo(runs[0]), "Same seed and same instance id: the same update-by-update results.");
+            Assert.That(ids[1], Is.Not.EqualTo(ids[0]), "The instance ids differ.");
+            Assert.That(runs[1], Is.EqualTo(runs[0]), "Same seed and same stream identity: the same update-by-update results.");
         }
 
         /// <summary>Root, failure, update count, active path, every Tree byte and every stream word.</summary>
@@ -259,11 +247,12 @@ namespace AIBT.Tests.Integration.Simulation
         }
 
         /// <summary>
-        /// ADR-P11-002 §7 stage 3: a host with seed S and instance id I gives the same node results as a
-        /// TreeSimulation agent with the same derivation inputs. The container's instance ids are
-        /// container-local (1, 2, ...), the host's process-wide, so the container's next id is set to I
-        /// before the agent is added; the container seeds it with S. Both run the same clock, in place and
-        /// with Jobs; the root completion policy is Stop (a host keeps its root result).
+        /// ADR-P11-002 §7 stage 3: a host with seed S gives the same node results as a TreeSimulation
+        /// agent with the same derivation inputs. The container's instance ids are container-local
+        /// (1, 2, ...); since P11-012 the host is bootstrapped with stream identity 1 (before, the test set
+        /// the container's private counter to the host's instance id); the container seeds its agent with
+        /// S. Both run the same clock, in place and with Jobs; the root completion policy is Stop (a host
+        /// keeps its root result).
         /// </summary>
         [TestCase(false)]
         [TestCase(true)]
@@ -344,7 +333,13 @@ namespace AIBT.Tests.Integration.Simulation
             {
                 var program = Program(json);
                 long now = 0;
-                var host = Host(program, Seed, () => now);
+                // The container's first agent gets container-local tree instance id 1 (P11-012: the host takes
+                // that identity through the seeding overload; no private counter is set).
+                var gameObject = new GameObject("AIBT.Tests.P11002.SeededHost");
+                _objects.Add(gameObject);
+                var host = gameObject.AddComponent<ProductionTreeHost>();
+                Assert.That(program.TryBootstrap(host, new RandomStreamSeeding(Seed, 1UL), out var failure, clock: () => now),
+                    Is.True, failure.ToString());
                 var settings = TreeSimulationSettings.Default(TickMicroseconds);
                 settings.RandomSeed = Seed;
                 settings.UseJobs = useJobs;
@@ -354,10 +349,9 @@ namespace AIBT.Tests.Integration.Simulation
                 using (var simulation = new TreeSimulation(settings))
                 {
                     Assert.That(simulation.TryAddGroup(program, groupSettings, out var group), Is.EqualTo(SimulationResult.Success));
-                    ContainerInstanceCounter.SetValue(simulation, host.InstanceId - 1);
                     Assert.That(group.TryAdd(ThinkSchedule.Every(1, 0), out _), Is.EqualTo(SimulationResult.Success));
                     var core = group.CoreForTests(0);
-                    Assert.That(core.InstanceId, Is.EqualTo(host.InstanceId), "Same tree instance id.");
+                    Assert.That(core.InstanceId, Is.EqualTo(host.RandomStreamIdentity), "Same stream identity.");
                     var rolled = false;
                     for (uint tick = 1; tick <= 90; tick++)
                     {
@@ -373,7 +367,7 @@ namespace AIBT.Tests.Integration.Simulation
                             + " (host root " + host.LastRootResult + ", failure " + host.LastFailure.Code
                             + "; container root " + core.LastRootResult + ", failure " + core.LastFailure.Code + ")");
                         var node = RandomNodes(program, host.GeneratedDispatchAdapter)[0];
-                        if (DrawsSinceDerivation(program, host.GeneratedDispatchAdapter, Seed, host.InstanceId, node) > 0) rolled = true;
+                        if (DrawsSinceDerivation(program, host.GeneratedDispatchAdapter, Seed, host.RandomStreamIdentity, node) > 0) rolled = true;
                     }
                     Assert.That(rolled, Is.True, "The tree rolled at least once.");
                     Assert.That(host.LastFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None));

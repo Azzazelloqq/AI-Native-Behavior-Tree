@@ -40,8 +40,10 @@ namespace AIBT
         [SerializeField, Min(1)] private int _effectCapacity = 16;
         [Tooltip("Optional world to join. Empty: a shared world named '" + SharedWorldName + "' is created on demand.")]
         [SerializeField] private ProductionTreeWorld _world;
-        [Tooltip("Root seed of the random streams of the tree's random nodes. Read when a run starts; each run is a new tree instance with its own streams.")]
+        [Tooltip("Root seed of the random streams of the tree's random nodes. Read when a run starts.")]
         [SerializeField] private ulong _randomSeed = ProductionTreeHost.DefaultRandomSeed;
+        [Tooltip("0: automatic (every agent and every run draws differently; not repeatable across sessions). Nonzero: the draws of each run depend only on the seed, this id and the run index, so they repeat in every session. Agents that share an id and a seed draw the same numbers (prefab instances share the serialized value: set a distinct id per agent from code).")]
+        [SerializeField] private ulong _randomStreamId;
 
         private readonly Dictionary<string, FactSlot> _factsByKey = new Dictionary<string, FactSlot>(StringComparer.Ordinal);
         private readonly List<FactSlot> _facts = new List<FactSlot>();
@@ -51,6 +53,8 @@ namespace AIBT
         private bool _active;
         private bool _resultReported;
         private bool _stopped;
+        // P11-012: the run index the next run that starts gets; 0 on enable.
+        private ulong _nextRunIndex;
         private SchedulingProfile _profile = SchedulingProfile.Normal;
         // P11-004: created on the first TryGetValue, so agents that never read pay nothing.
         private Dictionary<string, ReadSlot> _readsByKey;
@@ -62,7 +66,10 @@ namespace AIBT
         /// <summary>Raised once when the agent cannot start or its host faults. The agent then stays stopped.</summary>
         public event Action<string> Faulted;
 
-        /// <summary>The prepared runtime asset. Changing it while enabled restarts on the new tree.</summary>
+        /// <summary>
+        /// The prepared runtime asset. Changing it while enabled restarts on the new tree; the new run
+        /// takes the next <see cref="RunIndex"/>.
+        /// </summary>
         public ProductionTreeAsset Tree
         {
             get => _tree;
@@ -70,7 +77,7 @@ namespace AIBT
             {
                 if (_tree == value) return;
                 _tree = value;
-                if (_active) { Deactivate(); Activate(); }
+                if (_active) { Deactivate(); Activate(newLife: false); }
             }
         }
 
@@ -79,11 +86,35 @@ namespace AIBT
         /// <summary>
         /// P11-002: root seed of the random streams of nodes that declare one (<c>[AibtRandomStream]</c>),
         /// default <see cref="ProductionTreeHost.DefaultRandomSeed"/>. Read when a run starts (enable,
-        /// <see cref="Restart"/>, automatic restart); a change applies from the next run. Every run gets a
-        /// new host, so a new tree instance id and new streams: two agents, or two runs of one agent,
-        /// draw different sequences with the same seed (see <see cref="ProductionTreeHost.RandomSeed"/>).
+        /// <see cref="Restart"/>, automatic restart); a change applies from the next run. With
+        /// <see cref="RandomStreamId"/> 0 every run's streams also depend on its host's process-wide
+        /// instance id: two agents, or two runs of one agent, draw different sequences with the same seed,
+        /// and a seed alone is not repeatable across sessions.
         /// </summary>
         public ulong RandomSeed { get => _randomSeed; set => _randomSeed = value; }
+
+        /// <summary>
+        /// P11-012 (ADR-P11-008): the stream id that makes this agent's random draws repeatable. 0 (the
+        /// default) is automatic: each run's streams use its host's process-wide instance id, so agents
+        /// differ but a run is not repeatable across sessions. Nonzero: the stream identity of a run is
+        /// <see cref="RandomStreamSeeding.CombineStreamIdentity"/>(id, <see cref="RunIndex"/>), so the same
+        /// seed, tree, id and run index draw the same numbers in any session, whatever else started first.
+        /// Read when a run starts; a change applies from the next run. Agents with one id and one seed draw
+        /// the same numbers: prefab instances share the serialized value, so give each agent its own id
+        /// (the game knows what "the same agent" is). Repeatable streams do not make a session repeat:
+        /// agents still update in start order and nodes draw as frame time lets them run.
+        /// </summary>
+        public ulong RandomStreamId { get => _randomStreamId; set => _randomStreamId = value; }
+
+        /// <summary>
+        /// P11-012: the index of the current run, or of the last run that started: 0 for the first run
+        /// after the component is enabled, +1 for each run that starts while it stays enabled (automatic
+        /// restart, <see cref="Restart"/>, a change of <see cref="Tree"/>). A start that fails does not
+        /// count. 0 again after a disable and enable, so a pooled agent re-enabled with the same
+        /// <see cref="RandomStreamId"/> repeats run 0. A bug report can carry
+        /// (<see cref="RandomSeed"/>, <see cref="RandomStreamId"/>, <see cref="RunIndex"/>).
+        /// </summary>
+        public ulong RunIndex { get; private set; }
 
         /// <summary>
         /// Optional explicit catalog (<c>YourCatalog.TryCreateRuntimeCatalog</c>). Null resolves the
@@ -252,10 +283,18 @@ namespace AIBT
 
         private void LateUpdate() => ProcessRootResult();
 
-        internal void Activate()
+        /// <summary>The component's enable: a new agent life, whose first run is run 0.</summary>
+        internal void Activate() => Activate(newLife: true);
+
+        private void Activate(bool newLife)
         {
             if (_active) return;
             _active = true;
+            if (newLife)
+            {
+                _nextRunIndex = 0;
+                RunIndex = 0;
+            }
             CompletedRuns = 0;
             LastResult = null;
             LastError = null;
@@ -310,7 +349,8 @@ namespace AIBT
             var world = ResolveWorld();
             var host = gameObject.AddComponent<ProductionTreeHost>();
             host.hideFlags = HideFlags.HideInInspector | HideFlags.DontSave;
-            if (!_program.TryBootstrap(host, _randomSeed, out var failure, _effectCapacity))
+            var runIndex = _nextRunIndex;
+            if (!_program.TryBootstrap(host, RandomStreamSeeding.ForRun(_randomSeed, _randomStreamId, runIndex), out var failure, _effectCapacity))
             {
                 host.Stop();
                 DestroyComponent(host);
@@ -331,6 +371,9 @@ namespace AIBT
                 return;
             }
             _joinedWorld = world;
+            // P11-012: only a run that started consumes its index; a failed start leaves it to the next one.
+            RunIndex = runIndex;
+            _nextRunIndex = runIndex + 1;
         }
 
         private void StopHost()

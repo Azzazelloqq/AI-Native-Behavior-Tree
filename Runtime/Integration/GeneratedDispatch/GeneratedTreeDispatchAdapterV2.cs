@@ -788,15 +788,22 @@ namespace AIBT
         /// <summary>
         /// P10-009: seeds every random-capable generated leaf's stream as
         /// <c>Documentation~/specifications/time-and-random-v1.md</c> requires (root seed, semantic
-        /// hash, this instance's tree instance id, runtime node index). Called by the simulation
-        /// container for every fresh instance and, since P11-002 stage 3, by
-        /// <see cref="ProductionTreeHost"/> once at generated bootstrap.
+        /// hash, this instance's tree instance id as the stream identity, runtime node index). Called by
+        /// the simulation container for every fresh instance.
         /// </summary>
         internal void SeedRandomStreams(ulong rootSeed, NativeHash256V1 semanticHash)
+            => SeedRandomStreams(rootSeed, semanticHash, _treeInstanceId.Value);
+
+        /// <summary>
+        /// P11-012: the same with an explicit, nonzero stream identity (ADR-P11-008). Called by
+        /// <see cref="ProductionTreeHost"/> once at generated bootstrap with its instance id (automatic)
+        /// or the identity its caller passed.
+        /// </summary>
+        internal void SeedRandomStreams(ulong rootSeed, NativeHash256V1 semanticHash, ulong streamIdentity)
         {
             if (_disposed) return;
             for (var index = 0; index < _slots.Length; index++)
-                _slots[index]?.SeedRandomStream(rootSeed, semanticHash, _treeInstanceId);
+                _slots[index]?.SeedRandomStream(rootSeed, semanticHash, streamIdentity);
         }
 
         internal TreeInstanceId TreeInstanceId => _treeInstanceId;
@@ -1532,10 +1539,10 @@ namespace AIBT
                 return true;
             }
 
-            internal void SeedRandomStream(ulong rootSeed, NativeHash256V1 semanticHash, TreeInstanceId treeInstanceId)
+            internal void SeedRandomStream(ulong rootSeed, NativeHash256V1 semanticHash, ulong streamIdentity)
             {
                 if (_disposed || _randomStates.Length == 0) return;
-                if (!NativeRandomStreamDerivationV1.TryDerive(rootSeed, semanticHash, treeInstanceId.Value, _nodeIndex, out var stream))
+                if (!NativeRandomStreamDerivationV1.TryDerive(rootSeed, semanticHash, streamIdentity, _nodeIndex, out var stream))
                     return;
                 _randomStates[0] = stream.State;
                 _randomIncrements[0] = stream.Increment;

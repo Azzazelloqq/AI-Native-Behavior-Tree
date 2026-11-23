@@ -106,9 +106,16 @@ namespace AIBT
         /// P11-002: root seed of this host's random streams, fixed at generated bootstrap
         /// (<see cref="DefaultRandomSeed"/> unless the bootstrap passed one). Every node that declares
         /// a random stream derives it from this seed, the program's semantic hash,
-        /// <see cref="InstanceId"/> and its runtime node index (<c>time-and-random-v1</c>).
+        /// <see cref="RandomStreamIdentity"/> and its runtime node index (<c>time-and-random-v1</c>).
         /// </summary>
         public ulong RandomSeed { get; private set; }
+
+        /// <summary>
+        /// P11-012 (ADR-P11-008): the stream identity this host's random streams were derived from, fixed at
+        /// generated bootstrap: the identity the bootstrap passed in a <see cref="RandomStreamSeeding"/>, or
+        /// <see cref="InstanceId"/> when it passed none or 0 (automatic). 0 before a generated bootstrap.
+        /// </summary>
+        public ulong RandomStreamIdentity { get; private set; }
 
         /// <summary>Null selects Immediate; otherwise limits native steps per frame. Zero pauses progress.</summary>
         public uint? StepBudget
@@ -250,8 +257,14 @@ namespace AIBT
         /// P11-002: the generated bootstrap with a root seed for the random streams of nodes that
         /// declare one (<c>[AibtRandomStream]</c>). Each such node's stream is derived before the first
         /// update from <paramref name="randomSeed"/>, the program's semantic hash, this host's
-        /// <see cref="InstanceId"/> and the node's runtime index, as <c>TreeSimulation</c> does. A tree
-        /// without such nodes has no stream and is not affected.
+        /// <see cref="InstanceId"/> and the node's runtime index. A tree without such nodes has no stream
+        /// and is not affected.
+        /// <para>
+        /// A seed alone is not repeatable across sessions: <see cref="InstanceId"/> is process-wide, so the
+        /// same seed draws other numbers when another host was bootstrapped first, in another start order,
+        /// or after Enter Play Mode without a domain reload. For repeatable streams pass a
+        /// <see cref="RandomStreamSeeding"/> with a nonzero stream identity (P11-012).
+        /// </para>
         /// </summary>
         public bool TryBootstrap(
             GeneratedTreeRuntimeDefinitionV2 definition,
@@ -259,6 +272,26 @@ namespace AIBT
             NativeTraceChannelCapacityV1 traceCapacity,
             Func<long> clock,
             ulong randomSeed,
+            out NativeRuntimeFailureV1 failure)
+            => TryBootstrap(definition, catalog, traceCapacity, clock, RandomStreamSeeding.Automatic(randomSeed), out failure);
+
+        /// <summary>
+        /// P11-012 (ADR-P11-008): the generated bootstrap with a root seed and a stream identity. Each
+        /// random node's stream is derived before the first update from the seed, the program's semantic
+        /// hash, <see cref="RandomStreamSeeding.StreamIdentity"/> and the node's runtime index, so the same
+        /// seed, program and nonzero identity give the same streams in any session, whatever else was
+        /// bootstrapped. Identity 0 is automatic: this host's <see cref="InstanceId"/>, as the seed-only
+        /// overload. <see cref="InstanceId"/> stays process-wide for its other uses (handles, traces,
+        /// scheduler order); two hosts with one identity draw the same numbers. Equal streams do not make
+        /// two sessions behave identically: hosts update in start order and nodes draw as frame time lets
+        /// them run (lockstep replay is <c>TreeSimulation</c>'s job).
+        /// </summary>
+        public bool TryBootstrap(
+            GeneratedTreeRuntimeDefinitionV2 definition,
+            GeneratedBurstCatalogV2 catalog,
+            NativeTraceChannelCapacityV1 traceCapacity,
+            Func<long> clock,
+            RandomStreamSeeding randomSeeding,
             out NativeRuntimeFailureV1 failure)
         {
             if (definition == null) throw new ArgumentNullException(nameof(definition));
@@ -271,9 +304,11 @@ namespace AIBT
             var treeInstanceId = new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId));
             if (!_core.TryBootstrapGenerated(definition, catalog, traceCapacity, treeInstanceId, _driving, out failure))
                 return false;
-            _core.GeneratedDispatch.SeedRandomStreams(
-                randomSeed, new NativeHash256V1(definition.Binding.SemanticProgram.Header.CanonicalSemanticHash));
-            RandomSeed = randomSeed;
+            var streamIdentity = randomSeeding.IsAutomatic ? treeInstanceId.Value : randomSeeding.StreamIdentity;
+            _core.GeneratedDispatch.SeedRandomStreams(randomSeeding.RootSeed,
+                new NativeHash256V1(definition.Binding.SemanticProgram.Header.CanonicalSemanticHash), streamIdentity);
+            RandomSeed = randomSeeding.RootSeed;
+            RandomStreamIdentity = streamIdentity;
             _clock = clock ?? ReadScaledTime;
             return true;
         }
