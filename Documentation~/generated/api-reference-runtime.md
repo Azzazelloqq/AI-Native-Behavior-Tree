@@ -3131,6 +3131,7 @@ One component that runs a prepared native (Burst) tree: it shares one program pe
 - `METHOD System.Void OnEffect(System.String,System.Action`1<System.Single>)`
 - `METHOD System.Void OnEffect(System.String,System.Action`1<UnityEngine.Vector3>)`
 - `METHOD System.Void Restart()`
+- `METHOD System.Void Restart(System.Boolean)`
 - `METHOD System.Void SetFact(System.String,)`
 - `METHOD System.Void SetFact(System.String,UnityEngine.Vector3)`
 - `METHOD System.Void Stop()`

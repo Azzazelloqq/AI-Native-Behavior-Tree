@@ -4,6 +4,24 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Agent memory of NativeTreeAgent (P11-013)
+
+- **Agent-scope keys of a `NativeTreeAgent` now last across runs** (ADR-P11-013, AIBT-053). Every run
+  is a new host, so Agent keys used to start from their defaults in every run, like Tree keys. They
+  now belong to the component: defaults when it is enabled, then kept across automatic restarts,
+  `Restart()`, `Stop()` followed by `Restart()` and a change of `Tree` to a tree with the same Agent
+  contract. They return to their defaults on disable, after a run whose host faulted, on a change to
+  another Agent contract, and on the new **`Restart(bool resetAgentMemory)`** called with true.
+  Tree-scope keys still start from their defaults in every run; `Restart()` is unchanged in signature.
+  A tree that relied on Agent keys being reset each run calls `Restart(true)` or uses a Tree key.
+- **`TryGetValue` reads Agent-scope keys**, and the AIBT Graph shows their live values for a native
+  agent (it showed "Only Tree-scope keys are read"). The public host read
+  (`ProductionTreeHost.TryResolveExternalTreeRead`), `SetFact` and the library nodes stay Tree-only.
+- A restart asked for while a `PipelinedJobs` host executes is safe: leaving the world completes the
+  round on the main thread before the values are copied. No format, ABI or generator change; a warmed
+  update still allocates nothing. The quickstart has a table of what a restart keeps in
+  `BehaviorTreeAgent`, `NativeTreeAgent` (Tree and Agent keys) and `TreeSimulation`.
+
 ### Repeatable random streams (P11-012)
 
 - **`NativeTreeAgent.RandomStreamId` makes random draws repeatable across sessions** (ADR-P11-008,

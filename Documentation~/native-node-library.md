@@ -125,9 +125,11 @@ The flare branch has the same shape with its own signal code. After a zap, no fl
 fact, as long as no node in the tree writes the same key (a key a node writes refuses external
 writes).
 
-A key that nodes write lives as long as the run. Every run of a `NativeTreeAgent` is a new host
-that starts from the tree's key defaults (facts the game set are applied again), so the cooldown
-ends with the run. `zap-hold` (`idle`) keeps the run going after a zap: the reactive sequence drops
+A Tree-scope key that nodes write lives as long as the run. Every run of a `NativeTreeAgent` is a
+new host that starts from the tree's Tree-key defaults (facts the game set are applied again), so
+the cooldown ends with the run. (Agent-scope keys keep their values across runs, but library nodes
+bind Tree keys only; a project node can keep such state in an Agent key: see "What a restart keeps"
+in the [quickstart](consumer-quickstart.md#what-a-restart-keeps).) `zap-hold` (`idle`) keeps the run going after a zap: the reactive sequence drops
 the branch at the next update, when `zap-ready` fails, and the guard goes on with the cooldown
 running. Without the hold the root would succeed, the agent would start a new run with
 `weapon-ready-at` = 0, and the zap would fire at every update while the intruder is close.

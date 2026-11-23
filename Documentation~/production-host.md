@@ -94,7 +94,8 @@ whatever the storage held and may be mid-update), except while it is executing: 
 memory. A `PipelinedJobs` host executes between frames, so it is mostly unreadable. Other refusals:
 an unknown key (`BlackboardUndeclaredAccess`), an Agent- or Shared-scope key
 (`BlackboardUnsupportedScope`), another type (`BlackboardTypeMismatch`) and a delegate-bootstrapped
-host (`NativeCapacityPlanInvalid`). `NativeTreeAgent.TryGetValue` is the by-name form.
+host (`NativeCapacityPlanInvalid`). `NativeTreeAgent.TryGetValue` is the by-name form; it also reads
+Agent-scope keys (ADR-P11-013), which this public host read keeps refusing.
 
 `TryConfigureEffectDelivery` must be called before generated bootstrap when the consumer needs
 typed effects. The host's bounded queue is drained by `TryDrainEffects`; effect delivery is a
@@ -117,9 +118,11 @@ does this for every run (ADR-P11-008). The stream advances the same way under ev
 the grouped job waves of a forced `BatchedJobsSameFrame` or `PipelinedJobs` profile; see the
 Randomness recipe in [Native node library](native-node-library.md#randomness).
 
-`NativeTreeAgent` is a ready-made world participant built only from these public pieces: it
+`NativeTreeAgent` is a ready-made world participant built from these pieces: it
 creates a hidden host per run, restarts it by `NativeTreeRestartMode`, flushes `SetFact` values at
 the same safe boundary and routes effects to handlers registered by command name (see
-`ADR-P9-004`). The host itself still never restarts; pooling and migration/hot-reload wiring remain
+`ADR-P9-004`). It also carries the Agent-scope values from one run's host to the next (`ADR-P11-013`):
+it copies them out of the idle host after leaving the world, which completes a `PipelinedJobs`
+round in flight, and into the new host before its first update, through internal methods. The host itself still never restarts; pooling and migration/hot-reload wiring remain
 separate work. A delegate-based host still requires its caller-owned adapter; it does not itself
 provide gameplay Actions.

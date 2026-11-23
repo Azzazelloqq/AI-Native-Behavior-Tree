@@ -65,18 +65,45 @@ agent.SetFact("distance", Vector3.Distance(transform.position, goal.position));
 ```
 
 A fact must be a Tree-scope key of the same type that no node writes; a wrong key is logged once
-and ignored. Facts are kept across restarts; keys that nodes write start each run from their
-defaults, because every run is a new host. A throwing effect handler is logged and does not block
+and ignored. Facts are kept across restarts; Tree-scope keys that nodes write start each run from
+their defaults, because every run is a new host, while Agent-scope keys belong to the agent and keep
+their values from run to run (see "What a restart keeps" below). A throwing effect handler is logged and does not block
 later effects. The agent resolves the catalog from the type recorded in the asset; assign
 `CatalogFactory` from code (for example `ProjectCatalog.TryCreateRuntimeCatalog`) when code
 stripping may remove that type in a Player build (see "Player builds" below). Disabling the agent stops its host, leaves the
 world and releases the program; the last agent disposes it.
 
+### What a restart keeps
+
+Agent-scope keys of a `NativeTreeAgent` belong to the component, not to a run (ADR-P11-013). They
+start at their defaults when the component is enabled and keep their values across automatic
+restarts, `Restart()`, `Stop()` followed by `Restart()`, and a change of `Tree` to a tree with the
+same Agent contract (contract id, version, schema and layout). They return to their defaults when
+the component is disabled, after a run whose host faulted (its values may be mid-update), when
+`Tree` changes to another Agent contract, and on `Restart(true)`. Tree-scope keys start from their
+defaults in every run; facts are written again.
+
+| What happens | `BehaviorTreeAgent` (all keys) | `NativeTreeAgent`, Tree keys | `NativeTreeAgent`, Agent keys | `TreeSimulation` agent |
+| --- | --- | --- | --- | --- |
+| The root finishes and the tree restarts | kept | defaults (facts written again) | kept | defaults (`RootCompletionPolicy.Restart` makes a fresh instance) |
+| `Restart()` (`TryRestart` in a group) | kept | defaults | kept | defaults |
+| `Restart(true)` | defaults | defaults | defaults | — |
+| `Stop()`, then `Restart()` | kept | defaults | kept | defaults |
+| Disable, then enable | kept (ticking pauses) | defaults | defaults | — |
+| A run whose host faulted, then `Restart()` | — | defaults | defaults | — |
+| Another tree assigned | defaults (the agent is rebuilt) | defaults | kept with the same Agent contract, defaults otherwise | — |
+
+Agent memory lives in the agent's own value buffer: it is not shared with other agents and is not
+saved. `SetFact` writes Tree keys only, and the library nodes (`aibt.native.*`) bind Tree keys only
+(an Agent key bound to one is refused with AIBT3018), so Agent keys are read and written by your
+project's nodes. A counter or cooldown that only library nodes use lasts as long as the run; loop
+inside one run to keep it (see [Native node library](native-node-library.md#a-cooldown-shared-by-several-branches)).
+
 ### Reading a value back
 
-`TryGetValue` reads a Tree-scope key of the running tree, for UI, animation or debugging: a key
-nodes write, a fact, or a key nobody writes. It takes the same types as `SetFact`; `TryGetVector3`
-reads a Float3 key as a `Vector3`.
+`TryGetValue` reads a Tree-scope or Agent-scope key of the running tree, for UI, animation or
+debugging: a key nodes write, a fact, or a key nobody writes. It takes the same types as `SetFact`;
+`TryGetVector3` reads a Float3 key as a `Vector3`.
 
 ```csharp
 // The current run's value; false while the agent has no run.
@@ -90,9 +117,10 @@ A read shows the current run's tree: its defaults before the first update, its l
 runs, its final values until the next run starts, and false when the agent has no run (stopped,
 faulted or disabled).
 
-- Every run is a new tree, so a new run starts from the defaults. With Restart Mode `Always` the
-  next run starts right after the root finishes, so read a run's final values in `Completed`; with
-  `Never` they stay readable until `Restart`.
+- Every run is a new tree, so a new run starts from the Tree defaults (Agent keys carry their
+  values over, see above). With Restart Mode `Always` the next run starts right after the root
+  finishes, so read a run's final Tree values in `Completed`; with `Never` they stay readable until
+  `Restart`.
 - A fact is written at the world's next update, not when you call `SetFact`. Until then the key
   still reads its old value, and right after an automatic restart it reads its default for up to
   one frame.
