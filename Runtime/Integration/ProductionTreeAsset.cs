@@ -93,6 +93,13 @@ namespace AIBT
             return true;
         }
 
+        /// <summary>P11-012: the compiled program of the snapshot, for Editor checks (the inspector's random-node hint).</summary>
+        internal bool TryReadSemanticProgram(out CompiledProgram program)
+        {
+            program = TryRead(out var binding) ? binding.SemanticProgram : null;
+            return program != null;
+        }
+
         private bool TryRead(out NativeProgramBlackboardBindingV2 binding)
         {
             binding = null;
