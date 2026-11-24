@@ -99,8 +99,10 @@ Over stage 1, native per agent at N = 1000:
 | `first` | 6,398 | 6,287 | 5,726 | 6,234 | 6,259 |
 | `native100` | 143,553 | 143,745 | 142,950 | 143,512 | 143,778 |
 
-Stage 1 does not change managed memory. The differences of a few hundred bytes are within the passes'
-spread.
+Stage 1 leaves the managed memory of the 75-leaf kinds where it was (within 0.5 %). For the one-leaf kinds
+the table shows a move that is larger than the passes' spread: `hosts` 3,858 -> 3,355 with item 2 and back to
+3,793 with item 3 (`first` 6,287 -> 5,726 -> 6,234). A reading, not measured: item 2 removes the trace
+owner and recorder objects, item 3 adds the shared struct and the map handle to every adapter.
 
 ### Private bytes per agent, N = 1000 (pass 1)
 
@@ -319,6 +321,7 @@ Not implemented, as the brief asks: the orchestrator decides on a second round f
   (no channel) shows in the memory drop, not in an assertion on `TraceChannelOwner`. The Editor tests
   cover both branches of the pure functions.
 - A development build: not measured.
+- Simulation-container agents (`TreeGroup`): their memory was not measured at any stage.
 - The Player size of `AgentFrameSlotV1` and of the shared struct; only the Editor sizes were read.
 - Why item 3's first commit raised `native100` at N = 100.
 - Any timing.
@@ -400,3 +403,129 @@ and a second round of memory follow.
 
 Not done by the orchestrator: the new test files were read by the independent reviewer, not by the
 orchestrator; no Player was run with a trace channel on; nothing was measured in a development build.
+
+## Stage 1 follow-up (`26c803e..cbe4a3f`, 2026-11-24)
+
+The findings of the independent review of stage 1, given back by the orchestrator as A1-A7. This section and
+the three after it were written by the orchestrator from the session's report, its hand-over note and the raw
+files: the session stopped at its usage limit before writing records.
+
+- **A1** (`26c803e`). The public summary of `ProductionTreeHost.TraceChannelOwner` says when it is null.
+- **A2** (`ec9bd3f`). The sentence added to `specifications/native-runtime-v1.md` names the hosts that have
+  no channel by default (`ProductionTreeProgram.TryBootstrap` without a capacity and `NativeTreeAgent` on
+  Auto, in a Player) instead of "by default in a Player". Same amendment of ADR-P7-010.
+- **A3.** The managed-memory sentence and the missing "not measured" line, corrected above (orchestrator).
+- **A4** (`0aadd7e`). One measured per-leaf figure for item 1, with its catalog: 8,880 B with the Native
+  Guard sample catalog, 376 B with First Agent's.
+- **A5** (`d6f6d66`), tests only. `BorrowedCatalogMetadataTests` 4/4: identity of all eight arrays; a
+  mismatch from another catalog and from a cases set one short. `JobsPolicyEquivalenceTests`: a new test
+  runs two hosts of one catalog in one parallel agent-frame job with the job debugger on.
+- **A6** (`d1b6d1a`), behaviour change, test first. The per-agent agent-frame trace list is created only
+  while a recorder records. Native bytes per agent at N = 1000 (Player `D-Minimals1f`, two passes equal to
+  the byte; checked by the orchestrator in `C:\UnityProjects\_aibt_f14\size\run16\stage1-followup-a6-table.txt`):
+
+  | Kind | `72db77b` | `d1b6d1a` |
+  | --- | --- | --- |
+  | `first` | 11,272 | 7,209 |
+  | `native100` | 176,292 | 172,229 |
+  | `hosts`, `hosts100` (never run the job) | 3,211 / 119,603 | unchanged |
+
+  Also: the trace menu's message for a live host without a channel; the cost of a trace record (168 B) in
+  the tooltip, the XML documentation and the quickstart. Tests as reported by the session:
+  `JobsPolicyEquivalenceTests` 30/30, `TreeSimulationDebugTests` 16/16, `TreeSimulationActionTests` 46/46,
+  `AgentFrameSlotTableTests` 5/5, `TraceTimelineWindowTests` 5/5, `McpDocumentationGeneratorsTests` 14/14.
+- **A7** (`cbe4a3f`). `performance.md` and the PlayerPerf README say that runs before and after `a02d2f4`
+  are not comparable (the Player has no trace channel by default now).
+
+## Stage 2, items 4 and 5 (`24de026`, `9fe4529`, `8b4ff3f`, 2026-11-24)
+
+- **Item 4** (`24de026`). `JsonStringLiteralV1.Quote` replaces the six `JsonConvert.ToString` calls of
+  `NativeCompiledProgramV2Verifier`; `AIBT.Runtime` no longer references Newtonsoft.Json.
+  `JsonStringLiteralParityTests` 5/5 (all 65,536 code units in three positions, null and empty, every
+  surrogate, 20,000 seeded strings, every value type the verifier writes, and "no Newtonsoft reference"
+  with a source scan); `NativeBlackboardProgramBindingTests` 11/11.
+- **Item 5** (`9fe4529` ADR-P9-004 amendment, `8b4ff3f`). The generated link.xml writes the `AIBT.Agents`
+  element with `ignoreIfUnreferenced="1"`; the scripting define `AIBT_LINKXML_KEEP_MANAGED_NODES` restores
+  the previous output. `AibtLinkXmlProcessorTests` 21/21.
+- **Players built from `8b4ff3f`** (`C:\UnityProjects\_aibt_f14\size\run16\stage2-builds.log`; every build and run exited 0, nothing
+  was stopped). Windows x64, IL2CPP, release:
+
+  | Player | Before (`N0`, stage 0) | After (`-s2`) | Verdict of the run |
+  | --- | --- | --- | --- |
+  | Native only, Minimal: shipped | 92,065,500 | 76,564,733 | PASS |
+  | Native only, Minimal: `GameAssembly.dll` | 26,074,624 | 13,916,160 | |
+  | Native only, High: shipped | 84,706,476 | 70,153,845 | PASS |
+  | Native only, High: `GameAssembly.dll` | 20,640,256 | 9,011,712 | |
+  | Scene-only managed game (`S0`), High: shipped | | 84,489,839 | PASS (the agent turned 131.7 degrees) |
+  | Managed Simple Agent game (`C`), Minimal / High: shipped | 91,959,937 (P11-015) | 91,997,665 / 84,608,561 | PASS / PASS (3 agents) |
+
+  The same project without AIBT at Minimal ships 69,491,211 B with a `GameAssembly.dll` of 8,764,416 B
+  (P11-015 build A), so a native-only game now pays 7.07 MB at Minimal (5.15 MB of it in `GameAssembly.dll`)
+  instead of 22.6 MB. The baseline without AIBT at High was not built, so the High row has no like-for-like
+  difference. The stripped native-only Player at Minimal no longer contains `AIBT.Agents`, `AIBT.Authoring`,
+  `Newtonsoft.Json` or `System.Data`; `System.Xml` is 6,656 B of IL. A managed game is as large as before.
+- **The override.** With the define, project D's generated link.xml has the md5 of the file before item 5
+  (`e0496da5f6598989c229ee4e13ee73ee`); without it the file differs by the one attribute
+  (`C:\UnityProjects\_aibt_f14\size\out16\D\Minimal-s2keep-link.xml.txt`, `Minimal-s2-link.xml.txt`; md5 recomputed by the orchestrator).
+
+## Postponed by the owner (2026-11-24)
+
+The owner stopped the task here: "leave it for later, push what there is, time to do features". Not done, and
+moved to work item P11-017:
+
+- Item 5a: where the rest of AIBT's weight in `GameAssembly.dll` and `il2cpp_data` is. A tool was started
+  (`C:\UnityProjects\_aibt_f14\size\tools\pdb_weight.py`: section contributions from `GameAssembly.pdb`, 19.03 of 20.64 MB attributed
+  for `N0` at High; the modules are not yet mapped to assemblies).
+- The baseline without AIBT at High, and the full size table.
+- The rewrite of "Size and memory" in `Documentation~/performance.md` (a note at its top gives the new
+  figures), the two corrections of the P11-015 evidence (the preimage is not verified at load; its build B
+  was not native-only), the Swarm Arena notes of the P11-014/P11-015 review.
+- The second round of memory: one dispatch workspace per adapter instead of per leaf. Decided by the
+  orchestrator after an independent options read, not started (`C:\UnityProjects\_aibt_acceptance\P11-016\decision-second-round.md`,
+  `C:\UnityProjects\_aibt_acceptance\P11-016\second-round-read.md`). It starts with measurements: simulation-container agents and a same-catalog pair
+  of trees.
+- Stage 3: the prepared-asset envelope version 2.
+
+## Acceptance of the follow-up and of items 4 and 5 (orchestrator, 2026-11-24)
+
+- **Read by the orchestrator.** The session's report and hand-over note; the diff `cbe4a3f..8b4ff3f` under
+  `Runtime/` and `Editor/` (items 4 and 5); the build log, the list of assemblies left in the native-only
+  Player and the two link.xml files; the A6 table. The diffs of A1-A7 were read by the independent reader,
+  not by the orchestrator.
+- **Protected paths.** `git diff --name-status f8ad6b9..8b4ff3f` is empty for
+  `Tests/Editor/CodeGen/Contracts/ExpectedPublicAbiV2.txt`, `CodeGen~`, `package.json` and `Tests/Fixtures`.
+  Under `Documentation~/specifications`: `native-runtime-v1.md`, the sentence of A2.
+- **Independent read** of `f8ad6b9..8b4ff3f`. A reader given the code and neutral questions; its
+  session ended at a usage limit after it had written its full report, which the orchestrator read:
+  `C:\UnityProjects\_aibt_acceptance\P11-016\acceptance\independent-review-followup-stage2.md`. No blocker.
+  Checked and found correct: no read or write of a non-created trace list on any path and its disposal;
+  `JsonStringLiteralV1.Quote` against Newtonsoft's per-code-unit rules (no differing input found) and that
+  the parity test covers what it claims; the unconditional link.xml rows are unchanged; no public line
+  changed; the specification sentence matches the code. Four should-fix findings, none in executed runtime
+  code: the link.xml override is read from Player Settings only and its glue is untested; the consumer
+  documents did not mention the change (corrected in this commit: `README.md`, `consumer-quickstart.md`,
+  `known-limitations.md`, CHANGELOG); the ADR-P9-004 amendment speaks of what the linker counts as a
+  reference more widely than was measured; three new tests prove less than their names say. The review
+  could not see the Player results (they were not in the repository yet): they are in "Stage 2" above. The
+  open findings are carried to P11-017.
+- **Full run of ten assemblies on `8b4ff3f`** (22:34-22:53, Editor started at 17:02), all green; Editor-log counters: unknown-command 0, main-thread-timeout 13 before and after.
+  Raw: `C:\UnityProjects\_aibt_acceptance\P11-016\acceptance\full-run-8b4ff3f.txt`.
+
+| Assembly | `2f1c0d7` | `8b4ff3f` |
+|---|---|---|
+| `AIBT.Runtime.Tests` | 821/821 | 821/821 |
+| `AIBT.Integration.Tests` | 601/601 | 604/604 |
+| `AIBT.Editor.Tests` | 893/893 | 917/917 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 |
+| `AIBT.CodeGen.GenerationTests` | 14/14 | 14/14 |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 |
+
+- **Decision.** P11-016 goes to `Review` with what was delivered: stages 0 and 1, the follow-up, items 4
+  and 5. The rest is P11-017, `Ready`, not started, waiting for the owner's word.
+
+Not done by the orchestrator: no Player was built or run again; the override was checked by md5 only; a
+development build and a Player with tracing on were measured by nobody.

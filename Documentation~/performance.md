@@ -301,6 +301,15 @@ a tree sooner.
 
 ## Size and memory (P11-015)
 
+> The figures of this section were measured in P11-015 and are out of date in two places after P11-016
+> (the section has not been rewritten yet). **Build size:** a Player that uses native trees only now adds
+> 7.1 MB at `Minimal` stripping (5.2 MB of it in `GameAssembly.dll`) instead of 22.6 MB, and ships 70.2 MB
+> at `High`; it no longer contains `AIBT.Agents`, `AIBT.Authoring` or Newtonsoft. A managed game is
+> unchanged. **Memory per agent:** a `NativeTreeAgent` of a 75-leaf tree costs about 172 KB of native and
+> 144 KB of managed memory (was 964 KB native), a First Agent 7.2 KB native and 6.3 KB managed (was 60 KB
+> native); a Player host has no trace channel unless asked. The one-time block of about 74 MB reported
+> below is Unity's job-worker allocator, not AIBT's. Source: P11-016 evidence, in the AIBT repository only.
+
 Windows x64, IL2CPP, release build, Unity 6000.6.9f1, Built-in pipeline, managed stripping `Minimal`
 unless named. Compared with the same project without AIBT. Raw data and method:
 `Planning~/Evidence/P11-015/README.md`, section "Size and memory".

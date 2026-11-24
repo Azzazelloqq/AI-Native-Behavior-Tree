@@ -4,7 +4,14 @@
   "sourceBranch": "main",
   "items": [
     {
-      "id": "P11-016", "phase": 11, "title": "Memory per agent and build weight (owner request after P11-015 item 8): stage 0 measurements accepted (the ~74 MB block is Unity job-worker allocator state; native-only build; link.xml variants); stage 1: leaf dispatch workspaces borrow the catalog metadata, no trace channel by default in a Player (ADR-P7-010 amended 2026-11-24, NativeTraceChannelCapacityV1.None, NativeTreeAgent Trace Auto/Off/On), leaf-only agent-frame slot table; stages 2 (build weight) and 3 (prepared asset envelope 2) pending", "status": "in_progress", "kind": "implementation",
+      "id": "P11-017", "phase": 11, "title": "Postponed by the owner on 2026-11-24, not started: attribution of the remaining build weight (item 5a) and the size table, the Size and memory rewrite of performance.md, the second round of memory per agent (one dispatch workspace per adapter, decided), prepared-asset envelope version 2",
+      "status": "ready", "kind": "implementation",
+      "card": "Planning~/Tasks/P11/P11-017-postponed-memory-and-weight.md",
+      "dependsOn": ["P11-016"],
+      "owns": ["Planning~/Evidence/P11-017/"]
+    },
+    {
+      "id": "P11-016", "phase": 11, "title": "Memory per agent and build weight (owner request after P11-015 item 8): stage 0 measurements accepted (the ~74 MB block is Unity job-worker allocator state; native-only build; link.xml variants); stage 1: leaf dispatch workspaces borrow the catalog metadata, no trace channel by default in a Player (ADR-P7-010 amended 2026-11-24, NativeTraceChannelCapacityV1.None, NativeTreeAgent Trace Auto/Off/On), leaf-only agent-frame slot table; stage 1 follow-up (no agent-frame trace list without a recorder); stage 2 items 4 and 5: AIBT.Runtime no longer references Newtonsoft, link.xml rows of AIBT.Agents only when the Player references it (ADR-P9-004 amended 2026-11-24), a native-only Player at Minimal pays 7.1 MB instead of 22.6 MB; the rest postponed by the owner to P11-017; accepted 2026-11-24 (8b4ff3f)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-016-memory-and-build-weight.md",
       "dependsOn": ["P11-015"],
       "owns": ["Planning~/Evidence/P11-016/"]

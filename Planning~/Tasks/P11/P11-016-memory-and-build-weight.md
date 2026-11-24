@@ -1,8 +1,11 @@
 # P11-016 — Memory per agent and build weight
 
-Status: `In progress`. Stage 0 (measurements) is accepted. Stage 1 (memory per agent) is committed on
-`feature/aibt-consumer-workflow` (local commits only) and waits for the orchestrator's full run. Stages 2
-and 3 have not started.
+Status: `Review` — accepted by the orchestrator on `8b4ff3f` (full run of ten assemblies green, two
+independent reads) with what was delivered: stage 0 (measurements), stage 1 (memory per agent) with its
+follow-up, and items 4 and 5 of stage 2 (no Newtonsoft reference in `AIBT.Runtime`; link.xml rows of
+`AIBT.Agents` only when the Player references it). On 2026-11-24 the owner postponed the rest; it is
+P11-017: item 5a, the size table and the `performance.md` rewrite, the second round of memory, stage 3
+(prepared-asset envelope 2).
 
 ## Objective
 

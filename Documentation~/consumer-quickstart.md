@@ -182,6 +182,9 @@ from JSON at run time, as Swarm Arena's low-level path does.
 `BehaviorTreeAgent` creates `[BtNode]` classes by reflection, so a Player with managed code
 stripping would lose them. The package's build step `AibtLinkXmlProcessor` writes an additional
 link.xml for every `[BtNode]` class and `[AibtCatalogSet]` catalog in the Player's assemblies.
+Since P11-016 the rows of the package's own managed nodes (`AIBT.Agents`) apply only when the Player
+references that assembly, so a game that uses native trees only does not carry it; the scripting define
+`AIBT_LINKXML_KEEP_MANAGED_NODES` (Player Settings) keeps them always.
 P9-006 verified a Windows IL2CPP Player with stripping level High: without that step every managed
 tree failed with unknown node types and the native agent reported its catalog as stripped; with
 it both samples ran. Assigning `CatalogFactory` from code remains the explicit alternative.

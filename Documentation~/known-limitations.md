@@ -32,6 +32,14 @@ Limits that a guide already explains are linked, not repeated.
   emissions); after that the recorder still takes its lease and appends every update. A channel cannot be
   attached to a host that is already running: choose it at bootstrap (a capacity, or a `NativeTreeAgent`'s
   **Trace** setting). See ADR-P7-010, amendment 2026-11-24.
+- **Managed nodes of the package are kept in a Player only when it references `AIBT.Agents`.** Measured:
+  a scene with a `BehaviorTreeAgent` (IL2CPP, High) and the Simple Agent game (Minimal and High) keep
+  them; a native-only game drops the assembly. Not measured: a `BehaviorTreeAgent` reachable only through
+  a prefab, through Addressables or AssetBundles built separately, or by a type name; stripping levels Low
+  and Medium; the Mono backend; platforms other than Windows x64. If such a Player reports `AIBT2021`
+  (unknown node type), add the scripting define `AIBT_LINKXML_KEEP_MANAGED_NODES` in Player Settings.
+  The define is read from Player Settings only, not from a Build Profile's own list or a build script's
+  extra defines (ADR-P9-004, amendment 2026-11-24).
 - **Every generated leaf costs its own allocations.** Each leaf of a native tree owns about 25 small native
   allocations (its dispatch slot and workspace) and two managed objects, whatever the node does; part of
   the scratch is sized by the largest node of the catalog, not by the leaf. Measured figures:

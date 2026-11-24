@@ -352,7 +352,11 @@ need an optional Unity module are compiled only when the module is enabled.
 - Player builds with managed code stripping: AIBT creates `[BtNode]` classes and resolves the
   native catalog recorded in a runtime asset by reflection. The package adds a build step
   (`AibtLinkXmlProcessor`) that preserves every `[BtNode]` class and `[AibtCatalogSet]` catalog in
-  the Player's assemblies, verified with IL2CPP and stripping level High. If you load node or
+  the Player's assemblies, verified with IL2CPP and stripping level High. Since P11-016 the rows of the
+  package's own managed nodes (`AIBT.Agents`) apply only when the Player references that assembly (a
+  scene with a `BehaviorTreeAgent`, or code), so a native-only game does not carry it; if your managed
+  agents are reachable only through separately built content or by a type name, add the scripting define
+  `AIBT_LINKXML_KEEP_MANAGED_NODES` in Player Settings to keep them always. If you load node or
   catalog types some other way, assign `NativeTreeAgent.CatalogFactory = YourCatalog.TryCreateRuntimeCatalog`
   before the agent is enabled. The Player verification is recorded in `Planning~/Evidence/P9-006/README.md`
   (in the AIBT repository only, not in the package).

@@ -4,7 +4,22 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Build weight (P11-016 stage 2)
+
+- **`AIBT.Runtime` no longer references Newtonsoft.Json.** The verifier of a compiled native program writes
+  its JSON string literals itself, byte for byte as before. A game that uses native trees only no longer
+  carries Newtonsoft because of the runtime.
+- **The link.xml rows of the package's managed nodes apply only when the Player references `AIBT.Agents`**
+  (`ignoreIfUnreferenced="1"`; ADR-P9-004, amendment 2026-11-24). A native-only Player no longer keeps
+  `AIBT.Agents` and `AIBT.Authoring`: at Minimal stripping it ships 76.6 MB instead of 92.1 MB (the same
+  project without AIBT: 69.5 MB), at High 70.2 MB instead of 84.7 MB. A managed game is unchanged. The
+  scripting define `AIBT_LINKXML_KEEP_MANAGED_NODES` restores the previous file.
+
 ### Memory per agent (P11-016 stage 1)
+
+- **No agent-frame trace list without a recorder.** A `NativeTreeAgent` whose host has no trace channel no
+  longer allocates the job's trace list: 4 KB less per agent (a First Agent is 7.2 KB of native memory in a
+  Player, a 75-leaf agent 172 KB).
 
 - **A host has no trace channel by default in a Player.** In the Editor nothing changes (256 records, 512
   emissions). In any Player build, development builds included, a host bootstrapped without a trace
