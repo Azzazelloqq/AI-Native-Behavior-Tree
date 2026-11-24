@@ -1,6 +1,8 @@
 # P12-001 — Durations in ticks and reactive interrupts in the simulation container
 
-Status: `Review` — done 2026-11-24 from the orchestrator's brief
+Status: `Review` — accepted by the orchestrator on `1cb8628` (2026-11-25: full run of ten assemblies green,
+numbers recomputed, independent read without a blocker, its five findings fixed); done 2026-11-24 from the
+orchestrator's brief
 (`C:\UnityProjects\_aibt_acceptance\SweetKingdom\brief-P12-001.md`), local commits on
 `feature/aibt-consumer-workflow`; acceptance is the orchestrator's. Evidence: `Planning~/Evidence/P12-001/README.md`.
 

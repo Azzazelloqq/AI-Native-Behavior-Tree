@@ -1222,9 +1222,10 @@ Status on 2026-11-24 (Phase 12). Phase 12 answers the open requests of the Sweet
 agents in the simulation container). The orchestrator's decisions, under the owner's delegation, are in
 `C:\UnityProjects\_aibt_acceptance\SweetKingdom\plan-2026-11-24.md`. `P12-001` (durations in ticks and
 reactive interrupts: tests, documentation, the wake-on-change cost at 500 agents; no new node, no ABI
-change) is in `Review`: 105 duration cases and 7 reactive-pattern tests, two documentation sections, and the
-cost of wake on change measured in the Editor (`Planning~/Evidence/P12-001/README.md`). `P12-002` (an indexed input channel: group or squad data read by every member)
-is `Blocked` on the decision about its independent design read. `P12-003` (read-only game arrays in nodes)
+change) is accepted (`1cb8628`, all ten assemblies green, independent read without a blocker) and in `Review`:
+122 duration cases and 8 reactive-pattern tests, two documentation sections, and the cost of wake on change
+measured in the Editor (`Planning~/Evidence/P12-001/README.md`). `P12-002` (an indexed input channel: group or
+squad data read by every member) is `Ready`: its shape is decided (`Planning~/Evidence/P12-002/decision.md`). `P12-003` (read-only game arrays in nodes)
 is `Draft`: an ADR and a prototype first, after `P12-002`.
 
 Phase 12 candidates, recorded and not started (no work item until they are taken up):

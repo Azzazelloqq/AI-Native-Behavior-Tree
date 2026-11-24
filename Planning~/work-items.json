@@ -11,11 +11,10 @@
       "owns": ["Planning~/Evidence/P12-003/"]
     },
     {
-      "id": "P12-002", "phase": 12, "title": "Indexed input channel: group or squad data read by every member (SweetKingdom request 1): a rows array of any length and a per-agent row index read through the ordinary [AibtInput] handle; waits for the decision on its independent design read",
-      "status": "blocked", "kind": "implementation",
+      "id": "P12-002", "phase": 12, "title": "Indexed input channel: group or squad data read by every member (SweetKingdom request 1): a rows array of any length and a per-agent row index read through the ordinary [AibtInput] handle; shape decided on 2026-11-24 (TryBindInput with a rowOfSlot array, Planning~/Evidence/P12-002/decision.md)",
+      "status": "ready", "kind": "implementation",
       "card": "Planning~/Tasks/P12/P12-002-indexed-input-channel.md",
-      "blockedBy": ["decision on the independent design read of the API shape (index type and ownership, bounds and faults, wake through the index, a group-level row, when the game writes)"],
-      "dependsOn": [],
+      "dependsOn": ["P12-001"],
       "owns": ["Planning~/Evidence/P12-002/"]
     },
     {

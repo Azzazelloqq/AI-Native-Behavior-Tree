@@ -1,7 +1,7 @@
 # P12-002 — Indexed input channel: group or squad data read by every member
 
-Status: `Blocked` — waits for a design decision: an independent design read of the API shape is running
-(2026-11-24). Implementation does not start before the orchestrator records the decision.
+Status: `Ready` — the shape is decided (2026-11-24, `Planning~/Evidence/P12-002/decision.md`, after the
+independent design read `Planning~/Evidence/P12-002/design-read.md`); starts after P12-001's acceptance.
 
 ## Objective
 
@@ -21,12 +21,20 @@ the facts; the game writes rows and indices between steps; same values in place 
 
 ## Depends on
 
-- No work item. It waits for the design read and the orchestrator's decision on it.
+- P12-001 (one writer in the checkout; its documentation sections are extended here).
 
-## Open before implementation (the design read)
+## Decided shape
 
-- Index type and ownership; bounds and faults; wake on change through the index; a single group-level row;
-  when the game may write rows and indices.
+One additive overload `TreeGroup.TryBindInput<T>(InputChannel<T> channel, NativeArray<T> rows,
+NativeArray<int> rowOfSlot)`; the two-argument method keeps "row = slot". The nine semantics items of
+`Planning~/Evidence/P12-002/decision.md` are the specification: rows of any length copied whole at the start
+of the step; indices at least `Capacity` long, copied at the start of the step; a negative index reads zeros;
+an index beyond the rows in a live agent's slot refuses the step with `InvalidArgument`; wake on change is the
+existing value compare through the index; one routine chooses the row for jobs, in place, wake and trace;
+the trace and MCP name the row if that is additive; an amendment to ADR-P10-008 comes with the code.
+
+## Still open (asked of the consumer, not blocking)
+
 - Whether squad facts must also be readable by standard library nodes through blackboard keys (asked of the
   consumer in the reply of 2026-11-24).
 

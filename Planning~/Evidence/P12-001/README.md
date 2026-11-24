@@ -329,4 +329,36 @@ Local, on `feature/aibt-consumer-workflow`, not pushed:
 | `7303f62` | tests, the fixture assembly and the asmdef reference |
 | `d81c74a` | `simulation-container.md`, `native-node-library.md`, `CHANGELOG.md` |
 | `85bd41a` | P12-001…P12-003 cards, work items, `MASTER_PLAN.md`, this evidence |
-| the commit that adds "Review fixes round 1" | the review fixes: tests, `simulation-container.md`, `CHANGELOG.md`, this evidence |
+| `1cb8628` | the review fixes: tests, `simulation-container.md`, `CHANGELOG.md`, this evidence |
+
+## Acceptance (orchestrator, 2026-11-25)
+
+Accepted on `1cb8628`; the status stays `Review` as for every item of phases 11 and 12.
+
+- **Diff read.** Four commits (`7303f62`, `d81c74a`, `85bd41a`, `1cb8628`): tests, one test-only fixture
+  assembly, documents, planning. Nothing under `Runtime/`, `Editor/`, `Authoring/`, `MCP/`, `CodeGen~`,
+  `package.json`, `Tests/Fixtures`, `Tests/Editor/CodeGen/Contracts` or `Documentation~/specifications`
+  (`git diff --stat fb7eb89 1cb8628` over those paths is empty).
+- **Full run of the ten assemblies on `1cb8628`, 2026-11-25 00:34–00:52:** Runtime 821/821, Integration 734 passed and 1 ignored (the opt-in benchmark),
+  Editor 917/917, BehaviorCases 65/65, NativeBurstDispatch 79/79, NativeTreeAgentBlackboard 33/33,
+  NativeSharedBlackboard 36/36, CodeGen.ContractTests 6/6, CodeGen.GenerationTests 14/14, PlayMode 2/2;
+  noise unknown-command=0, main-thread-timeout=13 (unchanged). Raw: `C:\UnityProjects\_aibt_acceptance\P12-001\acceptance\full-run-1cb8628.txt` (and
+  `full-run-85bd41a.txt` for the run before the review fixes: Integration 716 passed, 1 ignored).
+- **Numbers recomputed** from both `steps.csv` files with a script of the orchestrator's own (per round, path
+  and variant the median of 300 steps; the median of the seven round medians; differences paired inside a
+  round): jobs A 326.8 / 327.2, B 480.5 / 480.0, C 478.4 / 480.4, D 2801.8 / 2770.0 µs; B − A 148.3
+  [137.4, 165.0] / 151.0 [143.0, 171.5]; C − B −0.2 [−15.3, 9.5] / 0.7 [−8.0, 24.9]; in place B − A and C − B
+  change sign between rounds. They equal the table of section 5. Thinks per step 100 (A, B, C) and 500 (D),
+  woken by input 0 and 400, in every block.
+- **Independent read** (a reader given the two commits, the claims and neutral questions; it ran nothing):
+  `C:\UnityProjects\_aibt_acceptance\P12-001\acceptance\independent-review.md`. No blocker: no added
+  sentence is false by the runtime code, and no test passes regardless of its claim (exact `End − Start == n`,
+  a not-due agent for the same-step preemption, job batches asserted in every jobs case). Five should-fix
+  findings, all handled in "Review fixes round 1" (S5 by a stated caveat, not a rerun). The orchestrator checked
+  S1 in the code before sending it back (`NativeDecoratorPolicyV1.cs:71,83`).
+- **What the acceptance does not cover.** The cost numbers are Editor numbers with Burst safety checks and the
+  jobs debugger on; the comparison of wake on change runs on the calling thread in code that is managed in the
+  Editor, so the 0.4 µs per compared agent says little about a Player. No Player measurement exists.
+- **Follow-ups kept open** (none started): the four of "Open follow-ups" above. The `InvalidCastException` of
+  `CanonicalTreeJson` for an integer above `long.MaxValue` is a real authoring defect (an exception where a
+  diagnostic belongs); it is small and has no consumer impact known today.
