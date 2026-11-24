@@ -124,6 +124,65 @@ namespace AIBT.Tests.Integration.NativeRuntime
             foreach (var (key, value) in values) NativeLibraryNodeTests.AssertValue(host, key, value, node);
         }
 
+        /// <summary>
+        /// P11-014 item 9. A self-copy writes the value the key already holds, and a self-compare reads one
+        /// value twice, so the cases above give the same result whether the aliased handles see the
+        /// current value or a stale one, and whether a write is applied or lost. Here an earlier node
+        /// changes the key in the same run first. A self-copy that read or wrote a stale value would undo
+        /// that write (the final value would be the old one). A self-compare whose left handle saw the value
+        /// from before the raise, or whose right handle saw it from before the drop, fails
+        /// (old &gt;= high and low &gt;= high are false). A lost raise or drop leaves a value other than "low".
+        /// </summary>
+        private static IEnumerable<TestCaseData> AfterAWriteCases()
+        {
+            TestCaseData Case(string name, string node, string[] keys, string[] nodes, (string, object) final)
+                => new TestCaseData(Tree("tests.p11014." + name, "root", keys, nodes), node, final).SetName("Host_AfterAWrite_" + name);
+            string Copy(string id, string type, string from, string to) => Leaf(id, S + type, null, "\"from\": \"" + from + "\", \"to\": \"" + to + "\"");
+            string AtLeast(string id, string type) => Leaf(id, S + type, null, "\"left\": \"k\", \"right\": \"k\"");
+            string[] CopyNodes(string type) => new[]
+            {
+                Composite("root", "aibt.core.memory-sequence", "up", "self-up", "down", "self-down"),
+                Copy("up", type, "high", "k"), Copy("self-up", type, "k", "k"),
+                Copy("down", type, "low", "k"), Copy("self-down", type, "k", "k"),
+            };
+
+            yield return Case("copy-bool", S + "copy-bool",
+                new[] { Bool("k", false), Bool("high", true), Bool("low", true) }, CopyNodes("copy-bool"), ("k", true));
+            yield return Case("copy-int", S + "copy-int",
+                new[] { Int("k", -7), Int("high", 11), Int("low", -20) }, CopyNodes("copy-int"), ("k", -20));
+            yield return Case("copy-float", S + "copy-float",
+                new[] { Float("k", -1.25f), Float("high", 2.5f), Float("low", -6f) }, CopyNodes("copy-float"), ("k", -6f));
+            yield return Case("copy-float3", S + "copy-float3",
+                new[] { Float3("k", P.X, P.Y, P.Z), Float3("high", Home.X, Home.Y, Home.Z), Float3("low", -3f, 0.5f, 8f) },
+                CopyNodes("copy-float3"), ("k", new Float3Value(-3f, 0.5f, 8f)));
+            yield return Case("int-keys-at-least", S + "int-keys-at-least",
+                new[] { Int("k", -7), Int("high", 11), Int("low", -20) },
+                new[]
+                {
+                    Composite("root", "aibt.core.memory-sequence", "up", "after-up", "down", "after-down"),
+                    Copy("up", "copy-int", "high", "k"), AtLeast("after-up", "int-keys-at-least"),
+                    Copy("down", "copy-int", "low", "k"), AtLeast("after-down", "int-keys-at-least"),
+                }, ("k", -20));
+            yield return Case("float-keys-at-least", S + "float-keys-at-least",
+                new[] { Float("k", -1.25f), Float("high", 2.5f), Float("low", -6f) },
+                new[]
+                {
+                    Composite("root", "aibt.core.memory-sequence", "up", "after-up", "down", "after-down"),
+                    Copy("up", "copy-float", "high", "k"), AtLeast("after-up", "float-keys-at-least"),
+                    Copy("down", "copy-float", "low", "k"), AtLeast("after-down", "float-keys-at-least"),
+                }, ("k", -6f));
+        }
+
+        [TestCaseSource(nameof(AfterAWriteCases))]
+        public void OneKeyOnBothHandles_AfterAnEarlierWrite_KeepsThatWrite_OnProductionTreeHost(string json, string node, (string Key, object Value) final)
+        {
+            var host = _kit.Start(_kit.Prepare(json));
+            NodeStatus? status = null;
+            for (var update = 0; update < 16 && (status == null || status == NodeStatus.Running); update++) status = host.Update();
+            Assert.That(status, Is.EqualTo(NodeStatus.Success), node);
+            NativeLibraryNodeTests.AssertValue(host, final.Key, final.Value, node);
+        }
+
         /// <summary>Every aliasable node in one tree; three agents per policy so the job paths run groups.</summary>
         private static string EveryAliasTree()
             => Tree("tests.p11007.every-alias", "root",
