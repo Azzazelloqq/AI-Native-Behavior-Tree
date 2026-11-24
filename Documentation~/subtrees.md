@@ -179,6 +179,10 @@ Extra arguments (a description for `tree extract`, `connectSameNamedKeys`) go in
 - Expanded IDs (`r:n`, `r1:r2:n`, `r:key`) are at most 128 characters and must not collide with
   other IDs of the parent (`AIBT3027`).
 - The root of a tree cannot be a reference node.
+- Each subtree is validated on its own before it is combined with the parent. Its root then has
+  no parent, so an `observer` block on a subtree's root is refused (`AIBT2034`: an observer must be a
+  condition child of a reactive composite), even when the reference sits under one. Put the guard
+  in the parent, or wrap the subtree's root condition in a reactive composite inside the subtree.
 - Tree IDs must be unique in the project; a second file with the same tree ID makes every reference
   to it an error (`AIBT3021`).
 - Interface keys bind only to the parent's Tree-scope keys. Node parameters are not passed through

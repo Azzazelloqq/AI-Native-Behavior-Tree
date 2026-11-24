@@ -369,6 +369,8 @@ assets and read a running host's trace through the same Editor operations. See
 - [Simulation container](Documentation~/simulation-container.md) (experimental): trees stepped by
   the game with `Step(tick)`, without GameObjects.
 - [Hot reload](Documentation~/hot-reload.md)
+- [Known limitations](Documentation~/known-limitations.md): what is known and not yet fixed, with
+  where to look.
 - [Data formats](Documentation~/data-formats.md): `.aibt` / `.aibt.json` trees, `.aibt.layout.json`
   layouts, `.aibt/policy.json`, `.aibtcase.json` behavior cases.
 - Generated reference: [node catalog](Documentation~/generated/node-catalog.md), API for

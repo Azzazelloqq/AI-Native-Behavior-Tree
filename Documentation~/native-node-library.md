@@ -194,6 +194,13 @@ over.
 `deadline-passed` reads time as well as a key, so it is not an observer condition. Use it as a
 reactive guard as above.
 
+Random nodes draw each time they run, and a reactive composite runs its guard at every update.
+`random-chance` as a reactive guard therefore rolls again at every update, so the branch it guards
+is aborted on the first failed roll. `wait-random-microseconds` directly under a v1 reactive
+composite is re-entered at every update and draws a new duration each time, so it never finishes.
+Roll once before the guarded part (a memory composite) and keep the result in a key, or use a
+retaining reactive composite.
+
 ### Randomness
 
 The five `Native/Random` nodes draw from a random stream of their own. The host derives each

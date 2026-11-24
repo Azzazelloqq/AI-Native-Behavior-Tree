@@ -35,7 +35,9 @@ A native (Burst) tree built only from package nodes: `aibt.core.*` composites an
     update and take over from the patrol when they succeed or run;
   - `aibt.native.bool-is-true` on the facts `intruder-close` and `intruder-seen`;
   - `aibt.native.set-deadline` / `aibt.native.deadline-passed` on the Int64 key `weapon-ready-at`,
-    shared by the zap and flare branches;
+    shared by the zap and flare branches. It is a Tree key, so the cooldown lasts one run: a new run
+    starts it from 0 (see the table in "What a restart keeps" in
+    `Documentation~/consumer-quickstart.md`);
   - `aibt.native.wait-until-true` on the fact `gate-open` (timeout 3 s);
   - `aibt.native.random-int` (`pick-spot`, 0 to 2, both included) on the Int32 key `sweep-spot`,
     read back by `aibt.native.int-equals`; `aibt.native.random-chance` (`whistle-chance`, 0.4);
