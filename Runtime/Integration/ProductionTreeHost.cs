@@ -83,7 +83,13 @@ namespace AIBT
 
         internal void FailStepLimit() => _core.FailStepLimit();
 
-        /// <summary>The instance-owned trace channel, available until destruction.</summary>
+        /// <summary>
+        /// The instance-owned trace channel, available until destruction when the host has one. Null before
+        /// bootstrap and when the host was bootstrapped without a channel: with
+        /// <see cref="NativeTraceChannelCapacityV1.None"/>, through <see cref="ProductionTreeProgram"/> without a
+        /// capacity in a Player, or by a <see cref="NativeTreeAgent"/> whose trace is Off (or Auto in a Player)
+        /// (ADR-P7-010, amendment 2026-11-24). Check for null.
+        /// </summary>
         public NativeTraceChannelOwnerV1 TraceChannelOwner => _core.TraceChannelOwner;
         /// <summary>The exact immutable program used by this host, including its source debug map.</summary>
         public CompiledProgram Program => _core.Program;
