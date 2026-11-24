@@ -375,15 +375,12 @@ namespace AIBT.Mcp.Verification
 
         /// <summary>
         /// The Editor's policy for <paramref name="document"/> without a policy file
-        /// (<see cref="ProjectNodeCatalog.DefaultPolicy"/>), decided on the expanded tree when the tree
-        /// references subtrees and they resolve.
+        /// (<see cref="ProjectNodeCatalog.DefaultPolicy(TreeDocument, ISubtreeResolver, string)"/>): decided on
+        /// the expanded tree when the tree references subtrees and they resolve, otherwise on the parent and
+        /// the subtrees that do resolve.
         /// </summary>
         private static ReferenceCompilationPolicy EditorDefaultPolicy(TreeDocument document, ISubtreeResolver resolver, string sourceId)
-        {
-            var catalog = ProjectNodeCatalogCache.Current;
-            var expanded = catalog.ExpandForObserverRule(document, resolver, sourceId) ?? document;
-            return ProjectNodeCatalog.DefaultPolicy(expanded, catalog.Registry);
-        }
+            => ProjectNodeCatalogCache.Current.DefaultPolicy(document, resolver, sourceId);
 
         /// <summary>
         /// ReferenceCompilerOptions.SourceId / ValidationOptions.documentId must be a relative,

@@ -674,6 +674,42 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
             Assert.That(Path.GetFullPath(temp[0].Directory), Is.EqualTo(Path.GetFullPath(_assetsDir)));
         }
 
+        /// <summary>
+        /// P11-015 review follow-up (item 5): without a policy file the default is chosen on the expanded tree.
+        /// When the expansion fails, it is chosen on the parent as written. A parent whose only managed nodes sit
+        /// in a subtree then gets the native default, and the result must still name the expansion's own cause,
+        /// not a managed node refused by the native policy.
+        /// </summary>
+        [Test]
+        public void WithoutAPolicyFile_AFailedExpansion_ReportsItsCause_NotTheNativeDefaultRefusingTheSubtreesManagedNodes()
+        {
+            File.Delete(Path.Combine(_projectRoot, ".aibt", "policy.json"));
+            Write("Trees/strike.aibt", Strike);
+            Write("Trees/fight.aibt", @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 3, ""treeId"": ""tests.p11.mcp.fight"", ""name"": ""Fight"", ""root"": ""fight"",
+  ""blackboard"": { ""hits"": { ""type"": ""Int32"", ""default"": 0 } },
+  ""nodes"": {
+    ""fight"": { ""displayName"": ""Fight"", ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""left"", ""gone""] },
+    ""left"": { ""displayName"": ""Left strike"", ""subtree"": { ""treeId"": ""tests.p11.mcp.strike"", ""interfaceVersion"": 1, ""keys"": { ""hits"": ""hits"" } } },
+    ""gone"": { ""displayName"": ""Missing"", ""subtree"": { ""treeId"": ""tests.p11.mcp.no-such-tree"", ""interfaceVersion"": 1, ""keys"": { } } }
+  }
+}");
+
+            var validated = Dispatch("validate", new JObject { ["treeId"] = FightId }, "Compilation");
+            var compiled = Dispatch("compile", new JObject { ["treeId"] = FightId }, "Compilation");
+            UnityEngine.Debug.Log("P11-015 item 5, failed expansion without a policy file. validate: "
+                + validated["result"]["diagnostics"].ToString(Newtonsoft.Json.Formatting.None)
+                + " compile: " + compiled["result"]["diagnostics"].ToString(Newtonsoft.Json.Formatting.None));
+
+            Assert.That((bool)validated["result"]["valid"], Is.False, validated.ToString());
+            Assert.That((bool)validated["result"]["policyApplied"], Is.False);
+            Assert.That(Codes(validated), Does.Contain("AIBT3020"));
+            Assert.That((bool)compiled["result"]["success"], Is.False, compiled.ToString());
+            Assert.That(Codes(compiled), Does.Contain("AIBT3020"));
+            Assert.That(Codes(validated).Concat(Codes(compiled)).Distinct(), Is.EquivalentTo(new[] { "AIBT3020" }),
+                "only the missing subtree, nothing about the strike's managed nodes");
+        }
+
         // ---- helpers ---------------------------------------------------------------------------------
 
         private void WriteParentWithReference(string extraNode = "", string referenceId = "left")

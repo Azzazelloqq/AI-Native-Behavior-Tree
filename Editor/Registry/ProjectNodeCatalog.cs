@@ -39,12 +39,50 @@ namespace AIBT.Editor.Registry
         /// ADR-P9-001 (amendment 2026-11-24, P11-015): the policy a tree is checked with when the project
         /// has no <c>.aibt/policy.json</c>. A tree with a managed node runs in a <c>BehaviorTreeAgent</c> and
         /// gets the managed layer's policy (<see cref="ManagedTreeProgram.Policy"/>); any other tree runs in a
-        /// native host and gets <see cref="NativeDefaultPolicy"/>. The tree list and MCP <c>validate</c>,
-        /// <c>compile</c> and <c>prepare_runtime</c> take it from here. Give the expanded tree when the tree
-        /// uses subtrees (<see cref="ExpandForObserverRule"/>), so a subtree's nodes count as the parent's.
+        /// native host and gets <see cref="NativeDefaultPolicy"/>. The tree list and MCP <c>validate</c> and
+        /// <c>compile</c> take it from here; <c>prepare_runtime</c> only through its <c>validate</c> gate: the bake
+        /// itself compiles every native tree with <see cref="ReferenceCompilationPolicy.Phase1"/>
+        /// (<c>ProductionTreeAssetBaker</c>), whose scope flags the native compiler does not apply. Give the
+        /// expanded tree when the tree uses subtrees (<see cref="ExpandForObserverRule"/>), so a subtree's nodes
+        /// count as the parent's.
         /// </summary>
         internal static ReferenceCompilationPolicy DefaultPolicy(TreeDocument document, NodeRegistry registry)
             => UsesManagedNodes(document, registry) ? ManagedTreeProgram.Policy : NativeDefaultPolicy;
+
+        /// <summary>
+        /// <see cref="DefaultPolicy(TreeDocument, NodeRegistry)"/> for a tree that may reference subtrees:
+        /// decided on the expanded tree when the expansion succeeds. P11-015 review follow-up (item 5): when
+        /// it fails (a missing, ambiguous or mismatched subtree), on the parent and every subtree that does
+        /// resolve, so a parent whose managed nodes all sit in a subtree still gets the managed policy and the
+        /// result names the expansion's cause, not the native default refusing the subtree's managed nodes
+        /// (AIBT2039/AIBT2040).
+        /// </summary>
+        internal ReferenceCompilationPolicy DefaultPolicy(TreeDocument document, ISubtreeResolver resolver, string sourceId)
+        {
+            var expanded = ExpandForObserverRule(document, resolver, sourceId);
+            if (expanded != null) return DefaultPolicy(expanded, Registry);
+            return UsesManagedNodesInResolvedTrees(document, resolver) ? ManagedTreeProgram.Policy : NativeDefaultPolicy;
+        }
+
+        private bool UsesManagedNodesInResolvedTrees(TreeDocument document, ISubtreeResolver resolver)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal) { document.TreeId.Value };
+            var pending = new Queue<TreeDocument>();
+            pending.Enqueue(document);
+            while (pending.Count != 0)
+            {
+                var tree = pending.Dequeue();
+                if (UsesManagedNodes(tree)) return true;
+                foreach (var node in tree.Nodes)
+                {
+                    if (!node.IsSubtreeReference || !seen.Add(node.Subtree.TreeId.Value)) continue;
+                    var resolution = resolver.Resolve(node.Subtree.TreeId);
+                    if (resolution != null && resolution.Status == SubtreeResolutionStatus.Found && resolution.Document != null)
+                        pending.Enqueue(resolution.Document);
+                }
+            }
+            return false;
+        }
 
         /// <summary>
         /// The native default without a policy file: the built-in defaults (no managed or main-thread
