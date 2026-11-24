@@ -5,7 +5,7 @@ For the Editor-prepared asset and shared-program route, start with
 permanent, idempotent cancellation/release path as destruction. Stop hosts before disposing their
 shared program; reentrant cleanup finishes after the current callback.
 
-`ProductionTreeHost` owns one compiled native tree and its trace channel on a GameObject.
+`ProductionTreeHost` owns one compiled native tree and, when it has one, its trace channel on a GameObject.
 Call `TryBootstrap` once before its first Update. Runtime does not compile authored JSON or depend
 on Editor/Authoring; supply an already compiled program and a caller-owned dispatch adapter.
 
@@ -66,7 +66,11 @@ bootstrap is rejected without replacing the live instance.
 
 The existing debugger can attach to `TraceChannelOwner`. The host's Detailed channel includes
 BudgetYielded/ExecutionResumed and actual leaf Exit/Abort reasons. Writer leases are released
-between budget segments. Capacity remains caller-supplied and trace overflow follows the existing
+between budget segments. The host overloads take the capacity from the caller;
+`NativeTraceChannelCapacityV1.None` bootstraps without a channel (`TraceChannelOwner` is null).
+`ProductionTreeProgram.TryBootstrap` without a capacity gives a channel of 256 records and 512
+emissions in the Editor and no channel in a Player, development builds included (ADR-P7-010
+amendment 2026-11-24); pass a capacity to trace in a Player. Trace overflow follows the existing
 channel contract; tracing does not change tree outcomes.
 
 ## Generated catalog, external facts and effects

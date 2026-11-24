@@ -379,7 +379,8 @@ need an optional Unity module are compiled only when the module is enabled.
 ## AI tools and command line
 
 Agents and scripts can inspect node contracts, edit and validate trees, compile, prepare runtime
-assets and read a running host's trace through the same Editor operations. See
+assets and read a running host's trace through the same Editor operations (a host traces in the
+Editor by default and not in a Player unless given a trace capacity). See
 [CLI and MCP setup](Documentation~/cli.md) and [AI and MCP integration](Documentation~/ai-and-mcp.md).
 
 ## Documentation

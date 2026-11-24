@@ -21,7 +21,11 @@ namespace AIBT
         internal GeneratedTreeRuntimeDefinitionV2 Definition => _definition;
         internal GeneratedBurstCatalogV2 Catalog => _catalog;
 
-        /// <summary>Bootstraps a host with bounded tracing, optionally enabling its committed-effect queue.</summary>
+        /// <summary>
+        /// Bootstraps a host, optionally enabling its committed-effect queue. Without <paramref name="traceCapacity"/>
+        /// the host traces into a bounded channel in the Editor (256 records, 512 emissions) and has no channel in
+        /// a Player (P11-016); <see cref="NativeTraceChannelCapacityV1.None"/> means no channel everywhere.
+        /// </summary>
         public bool TryBootstrap(ProductionTreeHost host, out NativeRuntimeFailureV1 failure, int effectCapacity = 0,
             Func<long> clock = null, NativeTraceChannelCapacityV1? traceCapacity = null)
             => TryBootstrap(host, ProductionTreeHost.DefaultRandomSeed, out failure, effectCapacity, clock, traceCapacity);
@@ -48,8 +52,10 @@ namespace AIBT
             if (host == null) throw new ArgumentNullException(nameof(host));
             if (effectCapacity < 0) throw new ArgumentOutOfRangeException(nameof(effectCapacity));
             if (effectCapacity > 0 && !host.TryConfigureEffectDelivery(effectCapacity, out failure)) return false;
+            // P11-016: no capacity is the Editor default in the Editor and no channel in a Player.
+            var resolved = NativeTraceDefaultsV1.Resolve(traceCapacity, UnityEngine.Application.isEditor);
             return host.TryBootstrap(_definition, _catalog,
-                traceCapacity ?? new NativeTraceChannelCapacityV1(256, 0, 0, 512), clock, randomSeeding, out failure);
+                resolved ?? NativeTraceChannelCapacityV1.None, clock, randomSeeding, out failure);
         }
 
         /// <summary>Refuses disposal while live hosts retain the shared catalog; the caller can retry.</summary>

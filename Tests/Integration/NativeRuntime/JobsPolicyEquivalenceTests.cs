@@ -1146,7 +1146,9 @@ namespace AIBT.Tests.Integration.NativeRuntime
 
         private static void CaptureTrace(ProductionTreeHost host, string prefix, List<string> lines)
         {
-            if (host == null || host.TraceChannelOwner == null) { lines.Add(prefix + " no-host"); return; }
+            if (host == null) { lines.Add(prefix + " no-host"); return; }
+            // P11-016: a host without a channel would make both sides equal and the check hollow.
+            Assert.That(host.TraceChannelOwner, Is.Not.Null, prefix + ": the host has no trace channel.");
             var owner = host.TraceChannelOwner;
             Assert.That(owner.TryGetSnapshot(out var snapshot, out var failure), Is.True, failure.ToString());
             for (var index = 0; index < snapshot.RecordCount; index++)

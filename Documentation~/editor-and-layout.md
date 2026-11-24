@@ -144,7 +144,9 @@ attaches the same way. The view reads the host's activation stack each frame and
 node indexes through the program's debug map: it shows the active path, nodes that just finished
 and the root result. It does not show exit statuses of inner nodes or activations that start and
 end within one frame, and it does not read a host while it is driving or while a pipelined job is
-in flight. A raw `ProductionTreeHost` keeps the trace path (**AIBT > Attach Selected Host Trace**).
+in flight. A raw `ProductionTreeHost` keeps the trace path (**AIBT > Attach Selected Host Trace**)
+when it has a trace channel, which it has in the Editor unless it was bootstrapped with
+`NativeTraceChannelCapacityV1.None` or belongs to a `NativeTreeAgent` set to Off.
 
 **Native blackboard values (P11-005).** With a `NativeTreeAgent` attached, the Blackboard panel shows
 `live: <value>` for every Tree-scope key, read from the current run's host by the key's ID five times

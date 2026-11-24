@@ -153,8 +153,11 @@ if (!program.TryBootstrap(host, out var hostFailure, effectCapacity: 4))
 
 `ProjectCatalog` is your source-generated catalog class. Choose effect capacity to cover your
 node's command burst; 4 is the small example's choice, not a scheduler setting. Additional hosts
-use the same program. The default host clock is scaled Unity time; the optional clock and trace
-capacity arguments retain the existing host contracts. Catalog mismatch is an explicit failure.
+use the same program. The default host clock is scaled Unity time. Without a trace capacity the
+host traces in the Editor (256 records, 512 emissions) and has no trace channel in a Player;
+`NativeTraceChannelCapacityV1.None` turns tracing off everywhere and any other capacity is used as
+given. A `NativeTreeAgent` has the same choice as its **Trace** field (Auto, Off, On). Catalog
+mismatch is an explicit failure.
 
 Implement `IProductionTreeWorldParticipant`: resolve typed input handles once, stage Unity facts
 in `SampleInputs`, flush them in `TryFlushInputs`, and apply committed values in `Receive`. Register
@@ -193,7 +196,8 @@ active path, nodes that just finished and the root result; exit statuses of inne
 start and finish within one frame and native blackboard values are not shown. A mismatched source is refused. Trace
 scrubbing and live highlighting preserve graph node objects and layout. Editing/reloading the
 document or closing the graph detaches highlighting; it never changes the running agent.
-**AIBT > Attach Selected Host Trace** remains available for unmapped raw trace. Dropped trace
+**AIBT > Attach Selected Host Trace** remains available for unmapped raw trace of a host that has a
+trace channel (in the Editor by default; not a `NativeTreeAgent` set to Off). Dropped trace
 events remain visibly marked as incomplete history.
 
 ## Derived asset format

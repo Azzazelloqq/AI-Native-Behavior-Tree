@@ -213,6 +213,10 @@ namespace AIBT
             return true;
         }
 
+        /// <summary>P11-016: <see cref="NativeTraceChannelCapacityV1.None"/> bootstraps without a trace channel.</summary>
+        private static NativeTraceChannelCapacityV1? ChannelOrNull(NativeTraceChannelCapacityV1 traceCapacity)
+            => traceCapacity.IsNone ? (NativeTraceChannelCapacityV1?)null : traceCapacity;
+
         /// <summary>Bootstraps a Tick-only integration with scaled Unity time and no-op lifecycle callbacks.</summary>
         public bool TryBootstrap(CompiledProgram program, DispatchLeaf dispatch,
             NativeTraceChannelCapacityV1 traceCapacity, out NativeRuntimeFailureV1 failure)
@@ -235,7 +239,7 @@ namespace AIBT
             NativeTraceChannelCapacityV1 traceCapacity, Func<long> clock, out NativeRuntimeFailureV1 failure)
         {
             var treeInstanceId = new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId));
-            if (!_core.TryBootstrapCore(program, dispatch, traceCapacity, treeInstanceId, _driving, out failure))
+            if (!_core.TryBootstrapCore(program, dispatch, ChannelOrNull(traceCapacity), treeInstanceId, _driving, out failure))
                 return false;
             _clock = clock ?? ReadScaledTime;
             return true;
@@ -302,7 +306,7 @@ namespace AIBT
                 return false;
             }
             var treeInstanceId = new TreeInstanceId((ulong)Interlocked.Increment(ref s_nextTreeInstanceId));
-            if (!_core.TryBootstrapGenerated(definition, catalog, traceCapacity, treeInstanceId, _driving, out failure))
+            if (!_core.TryBootstrapGenerated(definition, catalog, ChannelOrNull(traceCapacity), treeInstanceId, _driving, out failure))
                 return false;
             var streamIdentity = randomSeeding.IsAutomatic ? treeInstanceId.Value : randomSeeding.StreamIdentity;
             _core.GeneratedDispatch.SeedRandomStreams(randomSeeding.RootSeed,

@@ -18,6 +18,20 @@ namespace AIBT
     }
 
     /// <summary>
+    /// P11-016 (ADR-P7-010 amendment 2026-11-24): whether a <see cref="NativeTreeAgent"/>'s host gets a
+    /// trace channel (what <c>read_trace</c> and the Trace Viewer read).
+    /// </summary>
+    public enum NativeTreeAgentTraceMode
+    {
+        /// <summary>A channel in the Editor, none in a Player (development builds included). The default.</summary>
+        Auto = 0,
+        /// <summary>No channel anywhere.</summary>
+        Off = 1,
+        /// <summary>A channel in the Editor and in a Player.</summary>
+        On = 2,
+    }
+
+    /// <summary>
     /// One component that runs a prepared native (Burst) tree: it shares one program per
     /// (runtime asset, catalog), creates the world and scheduler when the scene has none assigned,
     /// writes named facts at the scheduler's safe boundary, and calls named effect handlers. It is
@@ -44,6 +58,10 @@ namespace AIBT
         [SerializeField] private ulong _randomSeed = ProductionTreeHost.DefaultRandomSeed;
         [Tooltip("0: automatic (every agent and every run draws differently; not repeatable across sessions). Nonzero: the draws of each run depend only on the seed, this id and the run index, so they repeat in every session. Agents that share an id and a seed draw the same numbers (prefab instances share the serialized value: set a distinct id per agent from code).")]
         [SerializeField] private ulong _randomStreamId;
+        [Tooltip("Trace channel of the host (what read_trace and the Trace Viewer read). Auto: on in the Editor, off in a Player. Read when a run starts.")]
+        [SerializeField] private NativeTreeAgentTraceMode _trace = NativeTreeAgentTraceMode.Auto;
+        [Tooltip("Records the trace channel holds when it is on (the first records - 1 are kept); it stops after twice as many emissions.")]
+        [SerializeField, Min(MinimumTraceRecords)] private int _traceRecords = DefaultTraceRecords;
 
         private readonly Dictionary<string, FactSlot> _factsByKey = new Dictionary<string, FactSlot>(StringComparer.Ordinal);
         private readonly List<FactSlot> _facts = new List<FactSlot>();
@@ -108,6 +126,34 @@ namespace AIBT
         /// agents still update in start order and nodes draw as frame time lets them run.
         /// </summary>
         public ulong RandomStreamId { get => _randomStreamId; set => _randomStreamId = value; }
+
+        /// <summary>Default of <see cref="TraceRecordCapacity"/>: with it a channel is the Editor default (256 records, 512 emissions).</summary>
+        public const int DefaultTraceRecords = 256;
+        /// <summary>Smallest <see cref="TraceRecordCapacity"/>.</summary>
+        public const int MinimumTraceRecords = 2;
+        private const int MaximumTraceRecords = 1 << 20;
+
+        /// <summary>
+        /// P11-016: whether the host gets a trace channel. <see cref="NativeTreeAgentTraceMode.Auto"/> (the
+        /// default, and what scenes and prefabs saved before the field read as): in the Editor, none in a
+        /// Player. Read when a run starts; a change applies from the next run.
+        /// </summary>
+        public NativeTreeAgentTraceMode TraceMode { get => _trace; set => _trace = value; }
+
+        /// <summary>
+        /// P11-016: records of the trace channel when there is one; the channel keeps the first records - 1
+        /// and stops after twice as many emissions. Clamped to [<see cref="MinimumTraceRecords"/>, 1048576].
+        /// Read when a run starts.
+        /// </summary>
+        public int TraceRecordCapacity { get => _traceRecords; set => _traceRecords = value; }
+
+        /// <summary>P11-016: the trace capacity of a run; null is no channel. Pure, so both branches are tested in the Editor.</summary>
+        internal static NativeTraceChannelCapacityV1? ResolveTraceCapacity(NativeTreeAgentTraceMode mode, int records, bool isEditor)
+        {
+            if (mode == NativeTreeAgentTraceMode.Off || (mode == NativeTreeAgentTraceMode.Auto && !isEditor)) return null;
+            var clamped = (uint)Math.Min(Math.Max(records, MinimumTraceRecords), MaximumTraceRecords);
+            return new NativeTraceChannelCapacityV1(clamped, 0, 0, clamped * 2);
+        }
 
         /// <summary>
         /// P11-012: the index of the current run, or of the last run that started: 0 before any run started
@@ -380,7 +426,9 @@ namespace AIBT
             var host = gameObject.AddComponent<ProductionTreeHost>();
             host.hideFlags = HideFlags.HideInInspector | HideFlags.DontSave;
             var runIndex = _nextRunIndex;
-            if (!_program.TryBootstrap(host, RandomStreamSeeding.ForRun(_randomSeed, _randomStreamId, runIndex), out var failure, _effectCapacity))
+            var traceCapacity = ResolveTraceCapacity(_trace, _traceRecords, Application.isEditor) ?? NativeTraceChannelCapacityV1.None;
+            if (!_program.TryBootstrap(host, RandomStreamSeeding.ForRun(_randomSeed, _randomStreamId, runIndex), out var failure,
+                    _effectCapacity, traceCapacity: traceCapacity))
             {
                 host.Stop();
                 DestroyComponent(host);

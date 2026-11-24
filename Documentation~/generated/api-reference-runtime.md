@@ -3,7 +3,7 @@
 Source: live reflection over `AIBT.Runtime`'s own compiled public surface (`P7-014`). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command. Do not hand-edit -- edits are overwritten on the next regeneration.
 
 A type's own summary line is shown where an XML-doc `<summary>` exists in source; member-level doc-comment text is not yet correlated here (see this document's own generator comment for why) -- every member still gets its own full signature line regardless of whether prose exists for it.
-326 public type(s).
+327 public type(s).
 
 ---
 
@@ -2947,6 +2947,8 @@ An immutable, non-owning job view of one snapshot revision. Payload bytes use th
 ### `AIBT.NativeTraceChannelCapacityV1`
 
 - `METHOD System.Void .ctor(System.UInt32,System.UInt32,System.UInt32,System.UInt32)`
+- `PROPERTY AIBT.NativeTraceChannelCapacityV1 None`
+- `PROPERTY System.Boolean IsNone`
 - `PROPERTY System.UInt32 EmissionCapacity`
 - `PROPERTY System.UInt32 MaximumPayloadBytes`
 - `PROPERTY System.UInt32 OrdinaryRecordCapacity`
@@ -3122,6 +3124,8 @@ An immutable, non-owning job view of one snapshot revision. Payload bytes use th
 
 One component that runs a prepared native (Burst) tree: it shares one program per (runtime asset, catalog), creates the world and scheduler when the scene has none assigned, writes named facts at the scheduler's safe boundary, and calls named effect handlers. It is a facade over <see cref="ProductionTreeAsset"/>, <see cref="ProductionTreeProgram"/>, <see cref="ProductionTreeHost"/> and <see cref="ProductionTreeWorld"/>, which stay available for full control. See ADR-P9-004.
 
+- `FIELD System.Int32 DefaultTraceRecords`
+- `FIELD System.Int32 MinimumTraceRecords`
 - `METHOD System.Boolean RemoveEffect(System.String)`
 - `METHOD System.Boolean TryGetValue(System.String,)`
 - `METHOD System.Boolean TryGetVector3(System.String,UnityEngine.Vector3&)`
@@ -3136,6 +3140,7 @@ One component that runs a prepared native (Burst) tree: it shares one program pe
 - `METHOD System.Void SetFact(System.String,UnityEngine.Vector3)`
 - `METHOD System.Void Stop()`
 - `PROPERTY AIBT.CompiledProgram Program`
+- `PROPERTY AIBT.NativeTreeAgentTraceMode TraceMode`
 - `PROPERTY AIBT.NativeTreeRestartMode RestartMode`
 - `PROPERTY AIBT.ProductionTreeAsset Tree`
 - `PROPERTY AIBT.ProductionTreeCatalogFactory CatalogFactory`
@@ -3144,11 +3149,23 @@ One component that runs a prepared native (Burst) tree: it shares one program pe
 - `PROPERTY AIBT.SchedulingProfile Profile`
 - `PROPERTY System.Boolean IsRunning`
 - `PROPERTY System.Int32 CompletedRuns`
+- `PROPERTY System.Int32 TraceRecordCapacity`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastResult`
 - `PROPERTY System.String LastError`
 - `PROPERTY System.UInt64 RandomSeed`
 - `PROPERTY System.UInt64 RandomStreamId`
 - `PROPERTY System.UInt64 RunIndex`
+
+---
+
+### `AIBT.NativeTreeAgentTraceMode`
+
+P11-016 (ADR-P7-010 amendment 2026-11-24): whether a <see cref="NativeTreeAgent"/>'s host gets a trace channel (what <c>read_trace</c> and the Trace Viewer read).
+
+- `FIELD AIBT.NativeTreeAgentTraceMode Auto`
+- `FIELD AIBT.NativeTreeAgentTraceMode Off`
+- `FIELD AIBT.NativeTreeAgentTraceMode On`
+- `FIELD System.Int32 value__`
 
 ---
 

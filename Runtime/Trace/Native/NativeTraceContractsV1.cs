@@ -160,6 +160,36 @@ namespace AIBT
         public uint MaximumPayloadBytes { get; }
         public uint EmissionCapacity { get; }
         public uint OrdinaryRecordCapacity => RecordCapacity == 0 ? 0 : RecordCapacity - 1;
+
+        /// <summary>
+        /// P11-016 (ADR-P7-010 amendment 2026-11-24): "no trace channel". A host bootstrapped with it owns
+        /// no channel and records nothing, in the Editor and in a Player. Equal to the all-zero capacity.
+        /// </summary>
+        public static NativeTraceChannelCapacityV1 None => default;
+
+        /// <summary>True when every capacity is zero: a host bootstrapped with it gets no trace channel.</summary>
+        public bool IsNone => RecordCapacity == 0 && PayloadCapacity == 0 && MaximumPayloadBytes == 0 && EmissionCapacity == 0;
+    }
+
+    /// <summary>
+    /// P11-016 (ADR-P7-010 amendment 2026-11-24): the default trace channel of a production host, as one
+    /// pure function so that the Editor and the Player branch are both testable in the Editor.
+    /// </summary>
+    internal static class NativeTraceDefaultsV1
+    {
+        /// <summary>The Editor default: the first 255 records, faulted after 512 emissions.</summary>
+        internal static NativeTraceChannelCapacityV1 EditorDefault => new NativeTraceChannelCapacityV1(256, 0, 0, 512);
+
+        /// <summary>
+        /// The capacity a host is bootstrapped with; null means no channel. No request: the Editor default
+        /// in the Editor, no channel in any Player (development builds included).
+        /// <see cref="NativeTraceChannelCapacityV1.None"/>: no channel everywhere. Any other capacity is used as it is.
+        /// </summary>
+        internal static NativeTraceChannelCapacityV1? Resolve(NativeTraceChannelCapacityV1? requested, bool isEditor)
+        {
+            if (requested.HasValue) return requested.Value.IsNone ? (NativeTraceChannelCapacityV1?)null : requested.Value;
+            return isEditor ? EditorDefault : (NativeTraceChannelCapacityV1?)null;
+        }
     }
 
     public enum NativeTraceAppendResultV1 : byte

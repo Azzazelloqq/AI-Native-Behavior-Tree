@@ -71,6 +71,17 @@ namespace AIBT.Tests.Editor.Mcp
         }
 
         [Test]
+        public void ReadTrace_OfAnAgentWithTraceOff_IsNotAvailable()
+        {
+            // P11-016: an agent set to Off has a host but no trace channel.
+            var agent = Spawn(NativeTreeAgentTraceMode.Off);
+            Assert.That(agent.Host.TraceChannelOwner, Is.Null);
+            var trace = McpRuntimeTools.Trace(new JObject { ["instanceId"] = agent.Host.InstanceId });
+            Assert.That((ulong)trace["instanceId"], Is.EqualTo(agent.Host.InstanceId), trace.ToString());
+            Assert.That((bool)trace["available"], Is.False, trace.ToString());
+        }
+
+        [Test]
         public void AStoppedAgent_HasNoListedHost()
         {
             var agent = Spawn();
@@ -81,7 +92,7 @@ namespace AIBT.Tests.Editor.Mcp
             Assert.That(hosts.Any(item => (ulong)item["instanceId"] == instanceId), Is.False, hosts.ToString());
         }
 
-        private NativeTreeAgent Spawn()
+        private NativeTreeAgent Spawn(NativeTreeAgentTraceMode trace = NativeTreeAgentTraceMode.Auto)
         {
             var asset = ProductionTreeAssetBaker.Create(ProductionConsumerWorkflowTests.Tree(SemanticValue.FromNumber(1.5)),
                 "Assets/p11007-mcp-agent.aibt.json", typeof(ConsumerCatalog), out var diagnostics);
@@ -93,6 +104,7 @@ namespace AIBT.Tests.Editor.Mcp
             agent.World = _world;
             agent.RestartMode = NativeTreeRestartMode.Never;
             agent.CatalogFactory = ConsumerCatalog.TryCreateRuntimeCatalog;
+            agent.TraceMode = trace;
             _agents.Add(agent);
             agent.Activate();
             Assert.That(agent.Host, Is.Not.Null, agent.LastError);

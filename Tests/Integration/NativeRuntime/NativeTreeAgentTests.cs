@@ -16,7 +16,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
     /// handlers, the restart policy is applied, agents share one program and teardown releases
     /// every host and the shared native catalog. Frames are driven through the real scheduler.
     /// </summary>
-    public sealed class NativeTreeAgentTests
+    public sealed partial class NativeTreeAgentTests
     {
         private const string ReaderTree = @"{
   ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tests.p9004.reader"", ""name"": ""P9-004 reader"",

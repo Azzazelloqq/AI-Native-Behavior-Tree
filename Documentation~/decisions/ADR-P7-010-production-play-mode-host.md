@@ -257,6 +257,9 @@ Consequences:
   explicit opt-in: pass a capacity, or set a `NativeTreeAgent` to On.
 - No execution-semantics, compiled-format, ABI or generator change; existing public signatures are
   unchanged (`None`, the agent setting and its properties are additions).
+- `specifications/native-runtime-v1.md` gains one clarifying sentence after its `AIBT4310` rule: a
+  host that requests no trace level has no trace buffer and is not subject to that rule. The rule
+  itself is unchanged; a channel created at a trace level with zero capacity still fails.
 
 Not in this amendment (open findings): the recorder keeps taking a lease and appending after the
 channel is faulted; enabling or disabling a trace on a live host (the container-only
