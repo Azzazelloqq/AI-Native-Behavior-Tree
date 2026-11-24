@@ -76,7 +76,7 @@ makes the node fail without writing. A key that cannot be read makes the node fa
 | `aibt.unity.succeed` | `succeed` | Native/Flow | |
 | `aibt.unity.fail` | `fail` | Native/Flow | |
 | `aibt.unity.idle` | `idle` | Native/Flow | runs until a parent aborts it |
-| `aibt.unity.wait-seconds` | `wait-microseconds` | Native/Flow | host time; `aibt.stdlib.wait` counts ticks |
+| `aibt.unity.wait-seconds` | `wait-microseconds` | Native/Flow | host time; `aibt.stdlib.wait` counts the agent's own updates (thinks in `TreeSimulation`), not time |
 | `aibt.unity.wait-until` | `wait-until-true` | Native/Timing | waits for `true`; `timeout-microseconds` (0 = none) fails it |
 | `aibt.unity.start-cooldown` | `set-deadline` | Native/Timing | Int64 key := now + `duration-microseconds` |
 | `aibt.unity.is-cooldown-ready` | `deadline-passed` | Native/Timing | now >= Int64 key; a key never set (0) has passed |
@@ -88,7 +88,7 @@ makes the node fail without writing. A key that cannot be read makes the node fa
 | `aibt.unity.random-point` | `random-float3-in-radius` | Native/Random | Float3 `result` := `center` key + offset with `min-radius` <= distance <= `radius`; `flat` keeps Y; the centre is a key, not the transform |
 
 These 33 nodes are the whole library today. Managed nodes with no native counterpart:
-`wait-frames` (use `aibt.stdlib.wait`), `time-since-changed`, and everything that touches the scene
+`wait-frames` (use `aibt.stdlib.wait`, which counts the agent's updates), `time-since-changed`, and everything that touches the scene
 (movement, navigation, animation, audio, GameObject, `line-of-sight`, `log`).
 
 ## Recipes

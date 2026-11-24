@@ -255,6 +255,100 @@ void OnArrived(ActionHandle action, bool reached, float distance)
 - **Hosts** (`ProductionTreeHost`, `ProductionTreeScheduler`) are unchanged: they still refuse
   programs with external actions at bootstrap.
 
+## Durations in ticks
+
+Every time node and decorator turns its duration into a deadline, `deadline = now + d`, and ends at
+the first think where `now >= deadline`. In the container `now` is `tick × TickMicroseconds`. Two
+recipes give exact durations in ticks with the library as it is:
+
+- **A multiple of `TickMicroseconds`.** `d = n × TickMicroseconds` ends exactly n ticks after the
+  think that started it, not n − 1 and not n + 1. At 30 Hz (`TickMicroseconds = 33 333`), 30 ticks is
+  `999 990`.
+- **`TickMicroseconds = 1`.** The clock is then the tick index, and every "microseconds" parameter
+  is a tick count: `"duration-microseconds": 30` is 30 ticks.
+
+Both hold for `aibt.native.wait-microseconds`, the timeout of `aibt.native.wait-until-true`,
+`aibt.native.set-deadline` with `aibt.native.deadline-passed`, `aibt.native.wait-random-microseconds`
+(a range `[a × T, b × T]` ends between a and b ticks), `aibt.core.timeout`, and `aibt.core.cooldown`
+(both start policies), in place and in jobs alike
+(`SimulationTickDurationTests.ExactMultipleOfTickMicroseconds_EndsAfterExactlyNTicks_EveryThink`,
+`WaitRandomRange_EndsInsideTheRangeInTicks`).
+
+- **A duration that is not a multiple rounds up** to `ceil(d / TickMicroseconds)` ticks. At 30 Hz,
+  `1 000 000` ("one second") is 31 ticks; `7 × 33 333 − 1` is still 7 ticks, `7 × 33 333 + 1` is 8
+  (`NonMultiple_RoundsUpToTheNextTick`).
+- **A duration ends at a think.** The check runs only when the agent thinks, so the duration ends at
+  the agent's first think at or after its deadline: never earlier, and with `Spread(5)` up to 4 ticks
+  later (1 tick ends after 5, 7 after 10, 10 after 10). Units do not change this; only a wake makes
+  the agent think in between (`UnderSpread5_EndsAtTheFirstThinkAtOrAfterTheDeadline`).
+- **Limits.** The native nodes take `UInt32` microseconds: at 30 Hz the longest exact duration is
+  128 850 ticks (`4 294 957 050`); with `TickMicroseconds = 1` it is 4 294 967 295 ticks, the whole
+  tick range. A larger value does not compile. `aibt.core.timeout` and `aibt.core.cooldown` take
+  `UInt64`: durations up to the end of the tick range are exact in both recipes (tested at
+  4 294 967 294 ticks), and a deadline past the largest `Int64` microsecond count faults the agent
+  (`LargestUInt32Duration_IsExactInBothRecipes`, `NativeDurationAboveUInt32_DoesNotCompile`,
+  `LargeUInt64Duration_IsExact_AndADeadlineBeyondInt64FaultsTheAgent`).
+- **`aibt.stdlib.wait` counts thinks, not ticks.** It counts its own Tick calls, and the think that
+  enters it is the first: `"ticks": 6` ends 5 ticks after it started for an agent that thinks every
+  tick, and 25 ticks after (its 6th think) under `Spread(5)`. Every extra think counts too: a wake
+  shortens it, while a microsecond wait still ends at its deadline. Do not use it for durations in
+  the container (`StdlibWait_CountsThinks_NotTicks`,
+  `StdlibWait_IsShortenedByAnExtraWake_AMicrosecondWaitIsNot`).
+
+## Reactive interrupts
+
+To interrupt a long-running branch as soon as the game raises a trigger (`TriggerRow` and
+`PositionRow` are the game's own `[AibtBurstValue]` row types):
+
+```csharp
+static readonly InputChannel<TriggerRow> Trigger = InputChannel<TriggerRow>.Create("trigger");     // the flag only
+static readonly InputChannel<PositionRow> Position = InputChannel<PositionRow>.Create("position"); // rewritten every tick
+
+guards.TryBindInput(Trigger, triggers);
+guards.TryBindInput(Position, positions);
+guards.TrySetWakeOnChange(Trigger, true);   // wake on the trigger channel only
+```
+
+```text
+aibt.core.reactive-selector-retaining
+├─ alert   (memory-sequence: [triggered] → flee → ...)   the guard: a Burst condition reading Trigger
+└─ walk    (the long-running action; reads Position)
+```
+
+- **Latency.** A trigger row written before `Step(t)` preempts inside `Step(t)`: the agent is woken,
+  the guard pass runs the guard first, the kept branch is aborted (its external action ends with one
+  `Cancelled`, `Preempted`) and the guard's branch runs in that same step. Only that agent thinks off
+  its schedule. Without wake the guard runs at the agent's next scheduled think
+  (`TreeSimulationReactivePatternTests.TriggerWrittenBeforeStep_PreemptsTheWalkInsideThatStep`).
+- **Wake is per channel.** The whole canonical row of a wake channel is compared, so a field that
+  changes every tick wakes the agent every tick. Keep the trigger in its own channel and leave wake
+  off on the positions channel: positions rewritten every tick then wake no one, and every agent
+  thinks only on its schedule (`PositionsRewrittenEveryTick_WakeNoOne_ThinksFollowTheSchedule`).
+- **`aibt.core.reactive-sequence-retaining`** works the same way with a guard that must hold (for
+  example `inverter [triggered]` before the walk): when it fails the sequence ends and the walk is
+  preempted in the same step (`RetainingSequence_TriggerWrittenBeforeStep_PreemptsInsideThatStep`).
+- **`TryWakeMany`** is the alternative when the game already knows whom to wake: write the trigger,
+  wake those slots, and the walk is preempted inside the next step with no row comparison and wake off
+  on every channel (`TryWakeMany_WithoutWakeOnChange_PreemptsInsideThatStep`).
+- **Conditions.**
+  - The agent must have thought once since wake was turned on and since it was added; until then a
+    changed row does not wake it
+    (`NotWoken_BeforeTheAgentThoughtSinceItWasAdded_OrSinceWakeWasEnabled`).
+  - The guard must be a child before the running one. A trigger read by a child after it still wakes
+    the agent, but nothing is preempted (`GuardAfterTheRunningChild_DoesNotPreempt`).
+  - Rows are compared once per step with the row of the agent's last think, so a value that rises and
+    falls between two steps is never seen; without wake, one that falls again before the agent's next
+    think is not seen either (`RiseAndFallBetweenTwoSteps_IsNotSeen`).
+- **Cost.** Measured in the Editor (Burst safety checks and the jobs debugger on; a Player was not
+  measured) with this pattern, 500 agents, `Spread(5)`, one step per tick, the agent-frame job path
+  (`TreeSimulationWakeCostBenchmark`, two runs of seven interleaved rounds):
+  - wake on the trigger channel, never changing, adds about 150 µs per step to a step of about 330 µs:
+    the rows of the 400 agents that are not due are compared on the calling thread before the job,
+    about 0.4 µs each;
+  - rewriting the positions channel every tick without wake adds nothing measurable;
+  - wake on the positions channel makes every agent think at every step: about 2.8 ms per step instead
+    of 0.48 ms.
+
 ## Debugging (G4)
 
 Three tools answer "why is agent N doing X": a trace of a few selected agents, a query of any

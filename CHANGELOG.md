@@ -4,6 +4,15 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Simulation container: durations in ticks and reactive interrupts (P12-001)
+
+- **Documented and pinned by tests, no code change:** a duration of `n × TickMicroseconds`, or any duration
+  with `TickMicroseconds = 1`, ends after exactly n ticks for every time node and decorator; a duration ends
+  at the agent's next think; `aibt.stdlib.wait` counts thinks, not ticks (corrected in
+  `native-node-library.md`); the retaining reactive pattern with a dedicated wake trigger channel preempts in
+  the step after the write. New sections "Durations in ticks" and "Reactive interrupts" in
+  `simulation-container.md`.
+
 ### Build weight (P11-016 stage 2)
 
 - **`AIBT.Runtime` no longer references Newtonsoft.Json.** The verifier of a compiled native program writes
