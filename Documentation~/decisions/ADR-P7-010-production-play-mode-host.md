@@ -233,9 +233,10 @@ Why:
 - The channel is not a ring. It keeps the first 255 records (one record slot is reserved), counts
   later ones as dropped, and is faulted for good after 512 emissions, so in a long Player session it
   holds the first moments of the tree and then nothing.
-- It costs about 43 KB of native memory per host (256 records of 152 B, 512 seen sequences of 8 B),
-  independent of the tree's size: 85% of a one-node host. The recorder also takes a lease and
-  appends every update after the channel is faulted.
+- It costs about 43 KB of native memory per host (256 records of 152 B and 512 seen sequences of 8 B:
+  43,008 B), independent of the tree's size. For a one-node host in a Player that is 84% of its 51,249 B;
+  with its allocation overhead and the recorder the measured saving was 48,038 B, 94% (P11-016 evidence).
+  The recorder also takes a lease and appends every update after the channel is faulted.
 - Precedent: the simulation container already creates its channel only on request (ADR-P10-008), and
   its debug registration is limited to the Editor and development builds.
 
@@ -259,7 +260,11 @@ Consequences:
   unchanged (`None`, the agent setting and its properties are additions).
 - `specifications/native-runtime-v1.md` gains one clarifying sentence after its `AIBT4310` rule: a
   host that requests no trace level has no trace buffer and is not subject to that rule. The rule
-  itself is unchanged; a channel created at a trace level with zero capacity still fails.
+  itself is unchanged; a channel created at a trace level with zero capacity still fails. (This line and
+  the sentence were added with the implementation, `a02d2f4`. The sentence was corrected in the P11-016
+  stage 1 follow-up: it said "by default in a Player", but only `ProductionTreeProgram.TryBootstrap`
+  without a capacity and `NativeTreeAgent` choose that default; the `ProductionTreeHost.TryBootstrap`
+  overloads take the caller's capacity. The 85% above was corrected in the same follow-up.)
 
 Not in this amendment (open findings): the recorder keeps taking a lease and appending after the
 channel is faulted; enabling or disabling a trace on a live host (the container-only
