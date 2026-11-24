@@ -224,6 +224,54 @@ namespace AIBT.Tests.Integration.NativeRuntime
             AssertSame(immediate, agentFrame, "JobsAgentFrame batches run in place");
         }
 
+        [Test]
+        public void JobsAgentFrame_TwoHostsOfOneCatalog_ReadItsMetadataInOneParallelJob_AndMatchImmediate()
+        {
+            // P11-016 item 1 under the job: two hosts of one tree read the same catalog metadata arrays
+            // (no copy), both run as work items of one agent-frame job per frame (inner batch 1, so two
+            // workers may run them at once), with the Editor's job safety system on, and every frame
+            // equals a forced Immediate run of the same two agents.
+            Assert.That(Unity.Jobs.LowLevel.Unsafe.JobsUtility.JobDebuggerEnabled, Is.True, "The job safety system is on.");
+#if !ENABLE_UNITY_COLLECTIONS_CHECKS
+            Assert.Fail("Collections safety checks are off; this test needs them.");
+#endif
+            var trees = new[] { Prepare(SequenceTree) };
+            var borrowingChecked = 0;
+            void SameArrays(List<NativeTreeAgent> agents)
+            {
+                Assert.That(agents.Count, Is.EqualTo(2));
+                var first = agents[0].Host.GeneratedDispatchAdapter;
+                var second = agents[1].Host.GeneratedDispatchAdapter;
+                Assert.That(second.Catalog, Is.SameAs(first.Catalog), "Both hosts use one catalog.");
+                var a = first.LeafWorkspacesForTests().Where(w => w != null).ToArray();
+                var b = second.LeafWorkspacesForTests().Where(w => w != null).ToArray();
+                Assert.That(a.Length, Is.EqualTo(4));
+                Assert.That(b.Length, Is.EqualTo(4));
+                foreach (var workspace in a.Concat(b))
+                {
+                    Assert.That(workspace.BorrowsCatalogMetadata, Is.True);
+                    var read = workspace.MetadataForTests;
+                    var lent = a[0].MetadataForTests;
+                    Assert.That(read.Cases.Equals(lent.Cases) && read.ConfigurationFields.Equals(lent.ConfigurationFields)
+                        && read.MemoryFields.Equals(lent.MemoryFields) && read.Bindings.Equals(lent.Bindings)
+                        && read.ValueFields.Equals(lent.ValueFields) && read.CaseCanonicalRanges.Equals(lent.CaseCanonicalRanges)
+                        && read.BindingCanonicalRanges.Equals(lent.BindingCanonicalRanges)
+                        && read.CanonicalRules.Equals(lent.CanonicalRules), Is.True, "Every leaf of both hosts reads the same arrays.");
+                }
+                borrowingChecked++;
+            }
+
+            var immediate = Run(trees, Mode.ForcedImmediate, withTreeValues: true, agentCount: 2, prepare: SameArrays);
+            var agentFrame = Run(trees, Mode.ForcedAgentFrame, withTreeValues: true, agentCount: 2, prepare: SameArrays);
+
+            Assert.That(borrowingChecked, Is.EqualTo(2));
+            Assert.That(immediate.Restarts, Is.GreaterThan(5), "The trees complete and restart.");
+            Assert.That(agentFrame.JobBatches, Is.EqualTo(FrameCount), "One job per frame.");
+            Assert.That(agentFrame.AgentFrameEntries, Is.EqualTo(FrameCount * 2), "Both hosts ran in the job every frame.");
+            Assert.That(agentFrame.InPlaceEntries, Is.Zero);
+            AssertSame(immediate, agentFrame, "two hosts of one catalog in one agent-frame job");
+        }
+
         [TestCase(63, false)]
         [TestCase(64, true)]
         public void JobsAgentFrame_MinimumBatchBoundary(int agents, bool expectJob)

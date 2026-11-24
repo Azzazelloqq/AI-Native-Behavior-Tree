@@ -142,6 +142,11 @@ namespace AIBT.Execution.Burst.Dispatch
         /// <summary>The cases array this workspace reads (owned or borrowed); for tests of sharing.</summary>
         internal NativeArray<NativeBurstDispatchCaseV2> CasesForTests => _cases;
 
+        /// <summary>All eight catalog metadata arrays this workspace reads (owned or borrowed); for tests of sharing.</summary>
+        internal NativeBurstDispatchWorkspaceMetadataV2 MetadataForTests => new NativeBurstDispatchWorkspaceMetadataV2(
+            _cases, _configurationFields, _memoryFields, _bindings, _valueFields,
+            _caseCanonicalRanges, _bindingCanonicalRanges, _canonicalRules);
+
         private static bool TryCreateCore(
             in NativeBurstDispatchWorkspaceShapeV2 shape,
             in NativeBurstDispatchWorkspaceCapacityV2 capacity,

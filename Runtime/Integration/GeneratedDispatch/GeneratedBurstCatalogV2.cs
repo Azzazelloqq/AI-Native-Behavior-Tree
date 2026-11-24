@@ -185,6 +185,9 @@ namespace AIBT
         /// </summary>
         internal void DisableWorkspaceMetadataLendingForTests() => _lendingDisabledForTests = true;
 
+        /// <summary>Test seam (P11-016): lends again, so a test can compare a copying workspace with the arrays.</summary>
+        internal void EnableWorkspaceMetadataLendingForTests() => _lendingDisabledForTests = false;
+
         internal NativeBurstDispatchWorkspaceCapacityV2 CreateWorkspaceCapacity()
         {
             var maxMemory = 0u;

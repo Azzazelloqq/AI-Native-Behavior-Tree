@@ -69,8 +69,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 foreach (var workspace in workspaces)
                 {
                     Assert.That(workspace.BorrowsCatalogMetadata, Is.True);
-                    Assert.That(workspace.CasesForTests.Equals(metadata.Cases), Is.True,
-                        "The workspace's cases array is the catalog's array (same buffer and length), not a copy.");
+                    AssertSameArrays(workspace.MetadataForTests, metadata);
                 }
 
                 RunToSuccess(host);
@@ -131,6 +130,16 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 Assert.That(workspaces.All(w => !w.BorrowsCatalogMetadata), Is.True);
                 Assert.That(workspaces.Select(w => w.CasesForTests).Distinct().Count(), Is.EqualTo(LeafCount),
                     "Copying workspaces each hold their own cases array.");
+                catalog.EnableWorkspaceMetadataLendingForTests();
+                Assert.That(catalog.TryLendWorkspaceMetadata(out var lent), Is.True);
+                foreach (var workspace in workspaces)
+                {
+                    var own = workspace.MetadataForTests;
+                    Assert.That(own.Cases.Equals(lent.Cases) || own.ConfigurationFields.Equals(lent.ConfigurationFields)
+                        || own.MemoryFields.Equals(lent.MemoryFields) || own.CanonicalRules.Equals(lent.CanonicalRules), Is.False,
+                        "A copying workspace reads none of the catalog's arrays.");
+                    Assert.That(own.Cases.ToArray(), Is.EqualTo(lent.Cases.ToArray()), "Its copy holds the same cases.");
+                }
                 RunToSuccess(host);
             }
             finally
@@ -154,6 +163,33 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 Assert.That(failure, Is.EqualTo(BurstContextResult.InvalidEncoding));
 
                 Assert.That(catalog.TryLendWorkspaceMetadata(out var metadata), Is.True);
+
+                // A real, created metadata set of another catalog: its tables have other lengths.
+                Assert.That(JobsEquivalenceCatalog.TryCreateRuntimeCatalog(Allocator.Persistent, out var other, out var otherFailure),
+                    Is.True, otherFailure.ToString());
+                try
+                {
+                    Assert.That(other.TryLendWorkspaceMetadata(out var foreign), Is.True);
+                    Assert.That(foreign.Cases.Length, Is.Not.EqualTo(metadata.Cases.Length), "The other catalog has more cases.");
+                    Assert.That(NativeBurstDispatchWorkspaceOwnerV2.TryCreateBorrowing(
+                        in shape, in foreign, in capacity, Allocator.Persistent, out none, out failure), Is.False);
+                    Assert.That(none, Is.Null);
+                    Assert.That(failure, Is.EqualTo(BurstContextResult.InvalidEncoding));
+                }
+                finally
+                {
+                    Assert.That(other.TryDispose(out var disposeFailure), Is.True, disposeFailure.ToString());
+                }
+
+                // The catalog's own set with one array one element short is refused too.
+                var shortCases = new NativeBurstDispatchWorkspaceMetadataV2(
+                    metadata.Cases.GetSubArray(0, metadata.Cases.Length - 1), metadata.ConfigurationFields, metadata.MemoryFields,
+                    metadata.Bindings, metadata.ValueFields, metadata.CaseCanonicalRanges, metadata.BindingCanonicalRanges,
+                    metadata.CanonicalRules);
+                Assert.That(NativeBurstDispatchWorkspaceOwnerV2.TryCreateBorrowing(
+                    in shape, in shortCases, in capacity, Allocator.Persistent, out none, out failure), Is.False);
+                Assert.That(none, Is.Null);
+                Assert.That(failure, Is.EqualTo(BurstContextResult.InvalidEncoding));
                 Assert.That(NativeBurstDispatchWorkspaceOwnerV2.TryCreateBorrowing(
                     in shape, in metadata, in capacity, Allocator.Persistent, out var workspace, out failure), Is.True, failure.ToString());
                 Assert.That(workspace.TryDispose(out failure), Is.True, failure.ToString());
@@ -164,6 +200,19 @@ namespace AIBT.Tests.Integration.NativeRuntime
             {
                 Assert.That(catalog.TryDispose(out var failure), Is.True, failure.ToString());
             }
+        }
+
+        private static void AssertSameArrays(NativeBurstDispatchWorkspaceMetadataV2 read, NativeBurstDispatchWorkspaceMetadataV2 lent)
+        {
+            // NativeArray equality is the same buffer and length: the workspace reads the catalog's array.
+            Assert.That(read.Cases.Equals(lent.Cases), Is.True, "cases");
+            Assert.That(read.ConfigurationFields.Equals(lent.ConfigurationFields), Is.True, "configuration fields");
+            Assert.That(read.MemoryFields.Equals(lent.MemoryFields), Is.True, "memory fields");
+            Assert.That(read.Bindings.Equals(lent.Bindings), Is.True, "bindings");
+            Assert.That(read.ValueFields.Equals(lent.ValueFields), Is.True, "value fields");
+            Assert.That(read.CaseCanonicalRanges.Equals(lent.CaseCanonicalRanges), Is.True, "case canonical ranges");
+            Assert.That(read.BindingCanonicalRanges.Equals(lent.BindingCanonicalRanges), Is.True, "binding canonical ranges");
+            Assert.That(read.CanonicalRules.Equals(lent.CanonicalRules), Is.True, "canonical rules");
         }
 
         private static GeneratedBurstCatalogV2 CreateCatalog()
