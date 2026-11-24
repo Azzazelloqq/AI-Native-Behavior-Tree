@@ -11,6 +11,7 @@
     "AIBT.CodeGen.P7039ExternalTreeWrite.Tests",
     "AIBT.CodeGen.P11009MixedScope.Tests",
     "AIBT.CodeGen.P11014SessionLimit.Tests",
+    "AIBT.CodeGen.P11014BurstProbe.Tests",
     "AIBT.CodeGen.P11010ReadWrite.Tests",
     "AIBT.CodeGen.P10010SimulationIo.Tests",
     "AIBT.CodeGen.P10011SimulationActions.Tests",
