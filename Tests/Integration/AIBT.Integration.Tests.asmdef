@@ -15,6 +15,7 @@
     "AIBT.CodeGen.P11010ReadWrite.Tests",
     "AIBT.CodeGen.P10010SimulationIo.Tests",
     "AIBT.CodeGen.P10011SimulationActions.Tests",
+    "AIBT.CodeGen.P12001ReactivePattern.Tests",
     "AIBT.StandardNodes",
     "Unity.Burst",
     "Unity.Collections"
