@@ -44,10 +44,11 @@ namespace AIBT.Mcp.Authoring
 
             // P7-018: a document declaring any Agent/Shared entry must be v2, mirroring
             // GeneratedScopeCompiler's own already-enforced rule (formatVersion == 2 required
-            // whenever Agent/Shared or extended bindings are used) -- an ordinary tree-scope-only
-            // document keeps writing v1 exactly as before, no blanket "default to v2".
+            // whenever Agent/Shared or extended bindings are used). P11-014 (W10): every new tree is
+            // v2 unless the caller asks for formatVersion 1, so later native authoring (bindings) is not
+            // refused with AIBT2042. An existing file's format is never raised here.
             var hasExtendedScope = blackboard.Any(key => key.Scope == BlackboardScope.Agent || key.Scope == BlackboardScope.Shared)
-                || (int?)args["formatVersion"] == 2 || ProjectNodeCatalogCache.Current.Generated.ContainsKey(rootNode.TypeId);
+                || (int?)args["formatVersion"] != 1 || ProjectNodeCatalogCache.Current.Generated.ContainsKey(rootNode.TypeId);
             var document = hasExtendedScope
                 ? TreeDocument.CreateVersion2(
                     treeId,

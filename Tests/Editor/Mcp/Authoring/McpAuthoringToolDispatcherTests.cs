@@ -287,21 +287,36 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
             Assert.That(document.AgentContract.ContractId, Is.EqualTo("contract.agent"));
         }
 
+        /// <summary>
+        /// P11-014 item 4 (W10): create_tree writes format 2 unless the caller asks for 1, so later native
+        /// authoring (bindings) is not refused with AIBT2042. An explicit formatVersion 1 keeps working.
+        /// </summary>
         [Test]
-        public void CreateTreeWithOnlyTreeScopeKeysStillWritesV1()
+        public void CreateTree_DefaultsToV2_AndAnExplicitV1StillWritesV1()
         {
-            var response = Dispatch("create_tree", new JObject
+            JObject Create(string id, int? formatVersion)
             {
-                ["treeId"] = "tree.plain",
-                ["name"] = "Plain Tree",
-                ["path"] = "plain.aibt.json",
-                ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
-                ["blackboard"] = new JArray(new JObject { ["id"] = "health", ["valueType"] = "Float32" }),
-            }, "SemanticEdit");
+                var args = new JObject
+                {
+                    ["treeId"] = "tree." + id,
+                    ["name"] = "Plain Tree",
+                    ["path"] = id + ".aibt.json",
+                    ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+                    ["blackboard"] = new JArray(new JObject { ["id"] = "health", ["valueType"] = "Float32" }),
+                };
+                if (formatVersion.HasValue) args["formatVersion"] = formatVersion.Value;
+                return Dispatch("create_tree", args, "SemanticEdit");
+            }
 
-            Assert.That((bool)response["result"]["accepted"], Is.True, response.ToString());
-            var document = CanonicalTreeJson.Parse(File.ReadAllText(Path.Combine(_assetsDir, "plain.aibt.json")), documentId: "plain.aibt.json").Document;
-            Assert.That(document.FormatVersion, Is.EqualTo(1));
+            var byDefault = Create("plain", null);
+            Assert.That((bool)byDefault["result"]["accepted"], Is.True, byDefault.ToString());
+            Assert.That(CanonicalTreeJson.Parse(File.ReadAllText(Path.Combine(_assetsDir, "plain.aibt.json")), documentId: "plain.aibt.json").Document.FormatVersion,
+                Is.EqualTo(2), "the default");
+
+            var explicitV1 = Create("plain-v1", 1);
+            Assert.That((bool)explicitV1["result"]["accepted"], Is.True, explicitV1.ToString());
+            Assert.That(CanonicalTreeJson.Parse(File.ReadAllText(Path.Combine(_assetsDir, "plain-v1.aibt.json")), documentId: "plain-v1.aibt.json").Document.FormatVersion,
+                Is.EqualTo(1), "an explicit formatVersion 1");
         }
 
         private void WritePolicy(bool supportsAgentScope, bool supportsSharedScope)
