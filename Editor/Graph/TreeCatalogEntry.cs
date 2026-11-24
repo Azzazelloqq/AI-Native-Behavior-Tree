@@ -40,9 +40,20 @@ namespace AIBT.Editor.Graph
         /// </summary>
         internal static List<TreeCatalogEntry> ReadAll(IEnumerable<string> paths, NodeRegistry registry, NativeFacts facts,
             RegisteredBlackboardTypeCatalog registeredTypes)
+            => ReadAll(paths, registry, facts, registeredTypes, null);
+
+        /// <summary>
+        /// As <see cref="ReadAll(IEnumerable{string}, NodeRegistry, NativeFacts, RegisteredBlackboardTypeCatalog)"/>,
+        /// resolving subtrees among the tree files under <paramref name="roots"/> (null: the project's).
+        /// The project's tree files are read with the same <paramref name="registeredTypes"/>.
+        /// </summary>
+        internal static List<TreeCatalogEntry> ReadAll(IEnumerable<string> paths, NodeRegistry registry, NativeFacts facts,
+            RegisteredBlackboardTypeCatalog registeredTypes, IEnumerable<ProjectTreeIndex.ScanRoot> roots)
         {
             ProjectTreeIndex.Snapshot snapshot = null;
-            Func<ProjectTreeIndex.Snapshot> scan = () => snapshot ?? (snapshot = ProjectTreeIndex.Scan());
+            Func<ProjectTreeIndex.Snapshot> scan = () => snapshot ?? (snapshot = registeredTypes == null
+                ? (roots == null ? ProjectTreeIndex.Scan() : ProjectTreeIndex.Scan(roots))
+                : ProjectTreeIndex.Scan(roots ?? ProjectTreeIndex.Roots(), registeredTypes));
             var entries = new List<TreeCatalogEntry>();
             foreach (var path in paths) entries.Add(Read(path, registry, null, facts, scan, registeredTypes));
             return entries;
@@ -59,7 +70,7 @@ namespace AIBT.Editor.Graph
         /// against the project's trees with <paramref name="registry"/>.
         /// </param>
         internal static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion)
-            => Read(path, registry, expansion, null);
+            => Read(path, registry, expansion, (NativeFacts)null);
 
         /// <param name="facts">
         /// The project's generated node code and prepared runtime assets (P11-005), used to describe
@@ -67,6 +78,15 @@ namespace AIBT.Editor.Graph
         /// </param>
         internal static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion, NativeFacts facts)
             => Read(path, registry, expansion, facts, ProjectTreeIndex.Scan, null);
+
+        /// <summary>
+        /// The importer's entry (P11-014 review item 3): keys of registered blackboard types are read with
+        /// <paramref name="registeredTypes"/>, so a valid tree with such a key is not "Errors" at import.
+        /// </summary>
+        internal static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion,
+            RegisteredBlackboardTypeCatalog registeredTypes)
+            => Read(path, registry, expansion, null,
+                () => registeredTypes == null ? ProjectTreeIndex.Scan() : ProjectTreeIndex.Scan(registeredTypes), registeredTypes);
 
         private static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion, NativeFacts facts,
             Func<ProjectTreeIndex.Snapshot> scan, RegisteredBlackboardTypeCatalog registeredTypes)

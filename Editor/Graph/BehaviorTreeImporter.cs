@@ -21,20 +21,29 @@ namespace AIBT.Editor.Graph
     /// the source holds the expanded tree. Such an import
     /// depends on every subtree file it read, on the tree-ID index entry of every tree ID it looked
     /// up (so a new, removed or duplicate file with that ID re-imports it) and on the project node
-    /// registry. Version 3: version-2 imports never expanded.
+    /// registry. Version 3: version-2 imports never expanded. Version 4 (P11-014 review item 3): keys of
+    /// registered blackboard types are read with the project catalog's registered types; version-3 imports
+    /// of such a tree read "Errors".
     /// </para>
     /// </summary>
-    [ScriptedImporter(3, "aibt")]
+    [ScriptedImporter(4, "aibt")]
     public sealed class BehaviorTreeImporter : ScriptedImporter
     {
+        /// <summary>Tests only: the project catalog the importer reads (null: <see cref="ProjectNodeCatalog.Discover"/>).</summary>
+        internal static Func<ProjectNodeCatalog> CatalogForTests;
+
         public override void OnImportAsset(AssetImportContext context)
         {
             var path = context.assetPath;
             var json = File.ReadAllText(path);
-            var expansion = ExpandSubtrees(context, path);
-            var entry = expansion == null
-                ? TreeCatalogEntry.Read(path)
-                : TreeCatalogEntry.Read(path, NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry, expansion);
+            // P11-014 review item 3: a tree (or a subtree it uses) with a key of a registered blackboard type
+            // is read with the project catalog's registered types. The catalog is discovered only when the
+            // tree needs it: it does not parse without them, or it uses subtrees.
+            var catalog = NeedsProjectCatalog(path) ? Discover() : null;
+            var expansion = ExpandSubtrees(context, path, catalog);
+            var builtIns = NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry;
+            var entry = TreeCatalogEntry.Read(path, builtIns, expansion, catalog?.RegisteredTypes);
+            if (catalog != null) context.DependsOnCustomDependency(ProjectTreeIndex.RegistryDependencyName);
             var source = ScriptableObject.CreateInstance<BehaviorTreeSource>();
             if (expansion != null && expansion.Success)
             {
@@ -56,15 +65,26 @@ namespace AIBT.Editor.Graph
             context.AddObjectToAsset("tree", asset);
         }
 
-        // Null for a tree without references and interface (imported exactly as before).
-        private static SubtreeExpansion ExpandSubtrees(AssetImportContext context, string path)
+        private static ProjectNodeCatalog Discover() => CatalogForTests != null ? CatalogForTests() : ProjectNodeCatalog.Discover();
+
+        // True when the tree does not parse with the built-in types alone or uses subtrees.
+        private static bool NeedsProjectCatalog(string path)
         {
             TreeJsonReadResult parsed;
             try { parsed = CanonicalTreeJson.Parse(File.ReadAllBytes(path), path); }
+            catch (IOException) { return false; }
+            return !parsed.Success || SubtreeExpander.RequiresExpansion(parsed.Document);
+        }
+
+        // Null for a tree without references and interface (imported exactly as before).
+        private static SubtreeExpansion ExpandSubtrees(AssetImportContext context, string path, ProjectNodeCatalog catalog)
+        {
+            if (catalog == null) return null;
+            TreeJsonReadResult parsed;
+            try { parsed = CanonicalTreeJson.Parse(File.ReadAllBytes(path), catalog.RegisteredTypes, path); }
             catch (IOException) { return null; }
             if (!parsed.Success || !SubtreeExpander.RequiresExpansion(parsed.Document)) return null;
-            var recorder = new RecordingSubtreeResolver(ProjectTreeIndex.Scan());
-            var catalog = ProjectNodeCatalog.Discover();
+            var recorder = new RecordingSubtreeResolver(ProjectTreeIndex.Scan(catalog.RegisteredTypes));
             var expansion = ProjectTreeIndex.Expand(path, parsed.Document, catalog.Registry, catalog.RegisteredTypes, recorder);
             // The expansion stops at the first failing level; the walk also names the files a later
             // fix would make it read, so editing any of them re-imports this tree.
@@ -72,7 +92,6 @@ namespace AIBT.Editor.Graph
             foreach (var treeId in recorder.Requested) context.DependsOnCustomDependency(ProjectTreeIndex.DependencyName(treeId));
             foreach (var source in recorder.Sources)
                 if (!string.Equals(source, path, StringComparison.Ordinal)) context.DependsOnSourceAsset(source);
-            context.DependsOnCustomDependency(ProjectTreeIndex.RegistryDependencyName);
             return expansion;
         }
 
@@ -104,7 +123,7 @@ namespace AIBT.Editor.Graph
             // The import-time summary knows only built-in nodes; the project catalog also knows
             // this project's own nodes, so validate against it for the status shown here.
             var catalog = ProjectNodeCatalogCache.Current;
-            var parsed = CanonicalTreeJson.Parse(source.Json ?? string.Empty, path);
+            var parsed = CanonicalTreeJson.Parse(source.Json ?? string.Empty, catalog.RegisteredTypes, path);
             if (!parsed.Success)
             {
                 EditorGUILayout.HelpBox(string.Join("\n", parsed.Diagnostics.Select(d => d.Code.Value + ": " + d.Message)), MessageType.Error);

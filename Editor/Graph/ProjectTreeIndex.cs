@@ -67,14 +67,32 @@ namespace AIBT.Editor.Graph
         /// <summary>Scans since the last domain reload (P11-007: lets tests and probes count disk walks).</summary>
         internal static int ScanCount { get; private set; }
 
-        /// <summary>Reads the current tree files (unchanged files are not parsed again).</summary>
-        internal static Snapshot Scan() => Scan(Roots());
+        /// <summary>
+        /// Reads the current tree files (unchanged files are not parsed again), with the registered
+        /// blackboard types of the project's node catalog.
+        /// </summary>
+        internal static Snapshot Scan() => Scan(Roots(), ProjectNodeCatalogCache.Current.RegisteredTypes);
+
+        /// <summary>
+        /// Reads the current tree files with <paramref name="registeredTypes"/> (a caller that holds the
+        /// project catalog it validates with, such as the importer or the tree list).
+        /// </summary>
+        internal static Snapshot Scan(RegisteredBlackboardTypeCatalog registeredTypes) => Scan(Roots(), registeredTypes);
+
+        /// <summary>
+        /// Reads the tree files under <paramref name="roots"/> with the project catalog's registered
+        /// blackboard types.
+        /// </summary>
+        internal static Snapshot Scan(IEnumerable<ScanRoot> roots) => Scan(roots, ProjectNodeCatalogCache.Current.RegisteredTypes);
 
         /// <summary>
         /// Reads the tree files under <paramref name="roots"/>: each an asset-path prefix (such as
-        /// <c>Assets</c> or <c>Packages/com.example.trees</c>) and the folder on disk it maps to.
+        /// <c>Assets</c> or <c>Packages/com.example.trees</c>) and the folder on disk it maps to. Keys of
+        /// registered blackboard types are read with <paramref name="registeredTypes"/> (P11-014 review
+        /// item 3: without them a subtree file with such a key was unreadable here, so a parent that
+        /// referenced it could not be expanded); null reads built-in types only.
         /// </summary>
-        internal static Snapshot Scan(IEnumerable<ScanRoot> roots)
+        internal static Snapshot Scan(IEnumerable<ScanRoot> roots, RegisteredBlackboardTypeCatalog registeredTypes)
         {
             ScanCount++;
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -84,7 +102,7 @@ namespace AIBT.Editor.Graph
             {
                 var path = file.Key;
                 if (!seen.Add(path)) continue;
-                var document = Read(path, file.Value);
+                var document = Read(path, file.Value, registeredTypes);
                 if (document == null)
                 {
                     unreadable.Add(path);
@@ -159,10 +177,23 @@ namespace AIBT.Editor.Graph
 
         private static void RegisterRegistryDependency()
         {
-            var registry = ProjectNodeCatalogCache.Current.Registry;
-            if (registry == null || !Register(RegistryDependencyName, Hash128.Compute(registry.Hash))) return;
+            var catalog = ProjectNodeCatalogCache.Current;
+            var registry = catalog.Registry;
+            if (registry == null || !Register(RegistryDependencyName, RegistryHash(catalog))) return;
             SaveSession(SessionState.GetBool(SessionUsesSubtreesKey, true));
             ScheduleRefresh();
+        }
+
+        /// <summary>
+        /// The value of <see cref="RegistryDependencyName"/>: the node registry and (P11-014 review item 3)
+        /// the registered blackboard types, since an import also reads keys of those types with them.
+        /// </summary>
+        internal static Hash128 RegistryHash(ProjectNodeCatalog catalog)
+        {
+            var text = new StringBuilder(catalog.Registry.Hash);
+            foreach (var entry in catalog.RegisteredTypes.Entries.OrderBy(entry => entry.CanonicalTypeId, StringComparer.Ordinal).ThenBy(entry => entry.Version))
+                text.Append('|').Append(entry.CanonicalTypeId).Append('@').Append(entry.Version).Append('#').Append(entry.SchemaHash);
+            return Hash128.Compute(text.ToString());
         }
 
         private static void SaveSession(bool usesSubtrees)
@@ -321,23 +352,30 @@ namespace AIBT.Editor.Graph
             }
         }
 
-        private static TreeDocument Read(string path, string file)
+        private static TreeDocument Read(string path, string file, RegisteredBlackboardTypeCatalog registeredTypes)
         {
             FileInfo info;
             try { info = new FileInfo(file); }
             catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is ArgumentException) { return null; }
             if (!info.Exists) return null;
-            if (s_files.TryGetValue(path, out var cached) && cached.Length == info.Length && cached.WriteTicks == info.LastWriteTimeUtc.Ticks)
+            if (s_files.TryGetValue(path, out var cached) && cached.Length == info.Length && cached.WriteTicks == info.LastWriteTimeUtc.Ticks
+                && ReferenceEquals(cached.RegisteredTypes, registeredTypes))
                 return cached.Document;
             TreeDocument document = null;
             try
             {
-                var read = CanonicalTreeJson.Parse(File.ReadAllBytes(file), path);
+                var bytes = File.ReadAllBytes(file);
+                var read = registeredTypes == null
+                    ? CanonicalTreeJson.Parse(bytes, path)
+                    : CanonicalTreeJson.Parse(bytes, registeredTypes, path);
                 if (read.Success) document = read.Document;
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
-            s_files[path] = new CachedFile { Length = info.Length, WriteTicks = info.LastWriteTimeUtc.Ticks, Document = document };
+            s_files[path] = new CachedFile
+            {
+                Length = info.Length, WriteTicks = info.LastWriteTimeUtc.Ticks, RegisteredTypes = registeredTypes, Document = document,
+            };
             return document;
         }
 
@@ -345,6 +383,8 @@ namespace AIBT.Editor.Graph
         {
             internal long Length;
             internal long WriteTicks;
+            // The parse depends on the registered types: a file is read again with another catalog.
+            internal RegisteredBlackboardTypeCatalog RegisteredTypes;
             internal TreeDocument Document;
         }
 

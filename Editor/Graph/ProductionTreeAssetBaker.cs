@@ -108,7 +108,9 @@ namespace AIBT.Editor.Graph
         internal static string CurrentSourceHash(string path)
         {
             var bytes = File.ReadAllBytes(path);
-            var parsed = CanonicalTreeJson.Parse(bytes, path);
+            // P11-014 review item 3: a tree with a key of a registered type parses only with those types;
+            // without them its subtree files were left out of the hash.
+            var parsed = CanonicalTreeJson.Parse(bytes, ProjectNodeCatalogCache.Current.RegisteredTypes, path);
             if (!parsed.Success || !SubtreeExpander.RequiresExpansion(parsed.Document)) return StableHash.Sha256Hex(bytes);
             var recorder = new RecordingSubtreeResolver(ProjectTreeIndex.Scan());
             recorder.Walk(parsed.Document);

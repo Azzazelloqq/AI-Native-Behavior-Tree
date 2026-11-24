@@ -46,9 +46,13 @@ namespace AIBT
         /// The importer's status of the tree: checked at import time against the built-in node registry only
         /// (core composites and decorators and built-in leaves). A tree that uses other nodes (the package's
         /// <c>aibt.unity.*</c> nodes, the native library, a project's own nodes) reads "Needs registry" here
-        /// even when it is valid. Project nodes are validated by this asset's inspector and by the Graph
-        /// window (its tree list and the open graph), which use the project's node catalog; the inspector does
-        /// not show this value. P11-015 (D6): documented, behaviour unchanged.
+        /// even when it is valid; so does a tree whose subtrees could not be expanded only because the project
+        /// catalog does not know some of their node types. Keys of registered blackboard types are read with
+        /// the project catalog's registered types, and subtrees are expanded against the project's trees and
+        /// node catalog (P11-014 review item 3), so such a tree is not "Errors" when it is valid. Project
+        /// nodes are validated by this asset's inspector and by the Graph window (its tree list and the open
+        /// graph), which use the project's node catalog; the inspector does not show this value. P11-015
+        /// (D6): documented.
         /// </summary>
         public string Status => _status;
 
@@ -149,9 +153,11 @@ namespace AIBT
                     : ManagedTreeProgram.TryCompile(_json, _sourceId, _nodes, _resolver, out _program, out diagnostics);
                 _compileError = compiled ? null : ManagedTreeProgram.Describe(diagnostics);
                 // P11-014 (W3): an import that could not expand the subtrees stored the source and its own
-                // errors; without a resolver the compile can only say "no subtree resolver" (AIBT3020), so
-                // the import's errors come first.
-                if (!compiled && _resolver == null && _status == "Errors" && !string.IsNullOrEmpty(_details)
+                // message; without a resolver the compile can only say "no subtree resolver" (AIBT3020), so
+                // the import's message comes first. The review follow-up (item 3) adds "Needs registry": an
+                // expansion that failed only on node types the project catalog does not know.
+                if (!compiled && _resolver == null && (_status == "Errors" || _status == "Needs registry")
+                    && !string.IsNullOrEmpty(_details)
                     && HasCode(diagnostics, SubtreeExpansionDiagnosticCodes.SubtreeNotFound))
                     _compileError = _details + "\n" + _compileError;
             }
