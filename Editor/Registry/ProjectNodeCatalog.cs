@@ -40,7 +40,10 @@ namespace AIBT.Editor.Registry
         /// has no <c>.aibt/policy.json</c>. A tree with a managed node runs in a <c>BehaviorTreeAgent</c> and
         /// gets the managed layer's policy (<see cref="ManagedTreeProgram.Policy"/>); any other tree runs in a
         /// native host and gets <see cref="NativeDefaultPolicy"/>. The tree list and MCP <c>validate</c> and
-        /// <c>compile</c> take it from here; <c>prepare_runtime</c> only through its <c>validate</c> gate: the bake
+        /// <c>compile</c> take it from here; the MCP authoring tools and the Graph window's edit session pass
+        /// <see cref="NativeDefaultPolicy"/> to <see cref="ValidateAuthoring(TreeDocument, ReferenceCompilerOptions)"/>,
+        /// which makes the same managed switch (ADR-P9-001, second amendment); <c>prepare_runtime</c> only
+        /// through its <c>validate</c> gate: the bake
         /// itself compiles every native tree with <see cref="ReferenceCompilationPolicy.Phase1"/>
         /// (<c>ProductionTreeAssetBaker</c>), whose scope flags the native compiler does not apply. Give the
         /// expanded tree when the tree uses subtrees (<see cref="ExpandForObserverRule"/>), so a subtree's nodes
@@ -92,10 +95,19 @@ namespace AIBT.Editor.Registry
         internal static readonly ReferenceCompilationPolicy NativeDefaultPolicy = new ReferenceCompilationPolicy(
             supportsAgentScope: true, supportsSharedScope: true);
 
+        /// <summary>
+        /// True for the built-in defaults (<see cref="NativeDefaultPolicy"/>, <see cref="ReferenceCompilationPolicy.Phase1"/>),
+        /// which a tree with a managed node trades for the managed layer's policy. A project's policy file
+        /// gives another instance and decides for every tree, as in MCP <c>validate</c> (P11-015 review
+        /// follow-up: with <c>allowManagedNodes: false</c> an edit adding a managed node was accepted).
+        /// </summary>
+        internal static bool IsBuiltInDefault(ReferenceCompilationPolicy policy)
+            => ReferenceEquals(policy, NativeDefaultPolicy) || ReferenceEquals(policy, ReferenceCompilationPolicy.Phase1);
+
         internal DiagnosticCollection ValidateAuthoring(TreeDocument document, ReferenceCompilerOptions options)
         {
             var managed = UsesManagedNodes(document);
-            if (managed) options = ManagedTreeProgram.CreateOptions(options.SourceId);
+            if (managed && IsBuiltInDefault(options.Policy)) options = ManagedTreeProgram.CreateOptions(options.SourceId);
             var validation = new DiagnosticCollection(TreeValidator.Validate(document, Registry,
                 options.Policy.CreateValidationOptions(options.SourceId), RegisteredTypes));
             if (validation.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)) return WithManagedRefusals(validation, managed, document, options);
@@ -205,7 +217,15 @@ namespace AIBT.Editor.Registry
             var probe = SubtreeExpander.Expand(document, resolver, Registry, StructuralExpansionPolicy.CreateValidationOptions(options.SourceId), RegisteredTypes);
             if (!probe.Success) return probe.Diagnostics;
             var managed = UsesManagedNodes(probe.Document);
-            if (managed) options = ManagedTreeProgram.CreateOptions(options.SourceId);
+            if (managed && IsBuiltInDefault(options.Policy)) options = ManagedTreeProgram.CreateOptions(options.SourceId);
+            // P11-015 review follow-up: the policy check MCP validate makes (each tree, then the expanded tree),
+            // as the overload without a resolver does before compiling. The native compiler expands with both
+            // scope flags on, so without this a tree with a reference skipped the scope rule.
+            var validationOptions = options.Policy.CreateValidationOptions(options.SourceId);
+            var checkedExpansion = SubtreeExpander.Expand(document, resolver, Registry, validationOptions, RegisteredTypes);
+            if (!checkedExpansion.Success) return WithManagedRefusals(checkedExpansion.Diagnostics, managed, probe.Document, options);
+            var validation = new DiagnosticCollection(TreeValidator.Validate(checkedExpansion.Document, Registry, validationOptions, RegisteredTypes));
+            if (validation.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)) return WithManagedRefusals(validation, managed, probe.Document, options);
             var nativeOnly = probe.Document.Nodes.Any(node => Registry.TryGet(node.TypeId, out var entry) && !entry.HasReferenceHandlerBinding);
             return WithManagedRefusals(nativeOnly
                 ? GeneratedCompiledProgramV2Compiler.Compile(document, Generated.Values, RegisteredTypes, options, resolver).Diagnostics

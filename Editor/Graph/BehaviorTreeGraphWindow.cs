@@ -335,8 +335,11 @@ namespace AIBT.Editor.Graph
             }
         }
 
-        private static ReferenceCompilerOptions CompilerOptions() => new ReferenceCompilerOptions(
-            "trees/editor.aibt.json", ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 0));
+        // ADR-P9-001, second amendment 2026-11-24: the edit session checks a tree with the default the tree list
+        // uses (the native default; ValidateAuthoring switches a tree with a managed node to the managed policy).
+        // The Graph window does not read .aibt/policy.json.
+        internal static ReferenceCompilerOptions CompilerOptions() => new ReferenceCompilerOptions(
+            "trees/editor.aibt.json", ProjectNodeCatalog.NativeDefaultPolicy, new CompiledCompilerVersion(1, 0, 0, 0));
 
         // ---------------------------------------------------------------- open / new / save
 

@@ -73,8 +73,8 @@ namespace AIBT.Mcp.Authoring
                     tags: TagSet.Empty,
                     metadata: SemanticObject.Empty);
 
-            var (registry, options) = BuildRegistryAndOptions(projectRoot, path);
-            var diagnostics = ProjectNodeCatalogCache.Current.ValidateAuthoring(document, options);
+            var (registry, options, policyWarning) = BuildRegistryAndOptions(projectRoot, path);
+            var diagnostics = WithPolicyWarning(ProjectNodeCatalogCache.Current.ValidateAuthoring(document, options), policyWarning);
             var success = !diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
 
             var response = new JObject
@@ -375,7 +375,7 @@ namespace AIBT.Mcp.Authoring
                 };
             }
 
-            var (registry, options) = BuildRegistryAndOptions(projectRoot, path);
+            var (registry, options, policyWarning) = BuildRegistryAndOptions(projectRoot, path);
             var catalog = ProjectNodeCatalogCache.Current;
             // ADR-P11-001: a candidate that uses subtrees is validated through its expansion, with
             // references resolved against the project's trees (the candidate replaces its own file).
@@ -404,7 +404,7 @@ namespace AIBT.Mcp.Authoring
                 ["accepted"] = result.Accepted,
                 ["contentHash"] = result.Accepted ? ComputeSemanticHash(result.Document) : actualHash,
                 ["diff"] = WriteSemanticDiff(result.Diff),
-                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(result.Diagnostics),
+                ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(WithPolicyWarning(result.Diagnostics, policyWarning)),
             };
         }
 
@@ -490,26 +490,29 @@ namespace AIBT.Mcp.Authoring
         }
 
         /// <summary>
-        /// Builds the reference-compiler options for authoring writes. Reads
-        /// <c>.aibt/policy.json</c>'s own <c>supportsAgentScope</c>/<c>supportsSharedScope</c> for a
-        /// distinct policy instance when the project opts in (P7-018), mirroring
-        /// <c>McpVerificationToolDispatcher.Validate</c>'s already-established pattern exactly --
-        /// never mutates or touches <see cref="ReferenceCompilationPolicy.Phase1"/>'s own shared
-        /// default (still <c>false</c>/<c>false</c>), so every other call site using it directly is
-        /// unaffected. A project with no policy file, or one that leaves both flags <c>false</c>,
-        /// keeps today's exact Tree-scope-only behavior.
+        /// Builds the reference-compiler options for authoring writes, as <c>validate</c> chooses them
+        /// (ADR-P9-001, second amendment 2026-11-24): a readable <c>.aibt/policy.json</c> decides for every
+        /// tree; without one, <see cref="ProjectNodeCatalog.NativeDefaultPolicy"/>, which
+        /// <see cref="ProjectNodeCatalog.ValidateAuthoring(TreeDocument, ReferenceCompilerOptions)"/> replaces
+        /// with the managed layer's policy for a tree with a managed node. A file that exists and cannot be
+        /// read is not applied and comes back as <paramref name="absolutePath"/>'s warning AIBT9008
+        /// (<c>McpVerificationToolDispatcher.ReadProjectPolicy</c>). <see cref="ReferenceCompilationPolicy.Phase1"/>
+        /// is not touched.
         /// </summary>
-        private static (NodeRegistry Registry, ReferenceCompilerOptions Options) BuildRegistryAndOptions(string projectRoot, string absolutePath)
+        private static (NodeRegistry Registry, ReferenceCompilerOptions Options, Diagnostic PolicyWarning) BuildRegistryAndOptions(string projectRoot, string absolutePath)
         {
             var buildResult = ProjectNodeCatalogCache.Current.BuildResult;
             var sourceId = ToLogicalSourceId(projectRoot, absolutePath);
-            var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
-            var policy = ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out _)
+            var snapshot = AIBT.Mcp.Verification.McpVerificationToolDispatcher.ReadProjectPolicy(projectRoot, out var warning);
+            var policy = snapshot != null
                 ? AIBT.Mcp.Verification.McpVerificationJson.ToCompilationPolicy(snapshot)
-                : ReferenceCompilationPolicy.Phase1;
+                : ProjectNodeCatalog.NativeDefaultPolicy;
             var options = new ReferenceCompilerOptions(sourceId, policy, CompilerVersion);
-            return (buildResult.Registry, options);
+            return (buildResult.Registry, options, warning);
         }
+
+        private static DiagnosticCollection WithPolicyWarning(DiagnosticCollection diagnostics, Diagnostic warning)
+            => warning == null ? diagnostics : new DiagnosticCollection(diagnostics.Concat(new[] { warning }));
 
         private static string ProjectRootParent(string assetsPath)
         {

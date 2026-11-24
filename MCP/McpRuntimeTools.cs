@@ -123,6 +123,12 @@ namespace AIBT.Mcp
                     ["outputPath"] = unityPath, ["existingAssetHash"] = existingHash, ["dryRun"] = dryRun,
                     ["catalog"] = types[0].AssemblyQualifiedName, ["diagnostics"] = McpDiagnosticJson.WriteDiagnostics(diagnostics),
                 };
+                // P11-015 review follow-up (ADR-P9-001, second amendment): validate applied the project's file, the
+                // bake does not, so a rule the file relaxes can refuse the tree here.
+                if (prepared == null && (bool?)validation["policyApplied"] == true)
+                    result["note"] = "validate accepted this tree under .aibt/policy.json, but the bake compiles with the package's "
+                        + "built-in options, so a rule the file relaxes (for example unreachableNodes or requireDeterministicNodes) "
+                        + "still refuses it here.";
                 if (prepared == null || dryRun) return result;
                 if (!Directory.Exists(Path.GetDirectoryName(outputPath))) throw Invalid("Create the output directory inside Assets before preparing.");
                 var latest = TreeDocumentPersistence.Load(sourcePath);

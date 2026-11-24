@@ -244,47 +244,203 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
             Assert.That(onDisk.Blackboard[0].Id, Is.EqualTo("health"));
         }
 
+        /// <summary>
+        /// P7-018 made Agent scope in <c>create_tree</c> an opt-in through the policy file. P11-015 review
+        /// follow-up (ADR-P9-001, second amendment): without the file the authoring tools use the default
+        /// <c>validate</c> and the tree list use, so a native tree with an Agent key is accepted and written as
+        /// format 2; a file whose flag is false still refuses it. Rewritten like its <c>compile</c> sibling
+        /// (<c>CompileWithAgentScopeBlackboard_UsesTheEditorDefaultWithoutAPolicyFile_AndThePolicyWithOne</c>).
+        /// </summary>
         [Test]
-        public void CreateTreeWithAgentScopeKeyRequiresPolicyOptInAndWritesV2()
+        public void CreateTreeWithAgentScopeKey_UsesTheEditorDefaultWithoutAPolicyFile_AndThePolicyWithOne()
         {
-            var withoutOptIn = Dispatch("create_tree", new JObject
-            {
-                ["treeId"] = "tree.agent",
-                ["name"] = "Agent Tree",
-                ["path"] = "agent.aibt.json",
-                ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
-                ["blackboard"] = new JArray(new JObject
-                {
-                    ["id"] = "danger", ["valueType"] = "Bool", ["scope"] = "agent", ["default"] = false,
-                }),
-                ["agentContract"] = new JObject { ["contractId"] = "contract.agent", ["contractVersion"] = 1 },
-            }, "SemanticEdit");
+            var withoutFile = Dispatch("create_tree", AgentTreeArgs("tree.agent", "agent.aibt.json"), "SemanticEdit");
 
-            Assert.That((bool)withoutOptIn["result"]["accepted"], Is.False,
-                "Without a project policy opting in, Agent scope must still be rejected exactly as before.");
-            Assert.That(File.Exists(Path.Combine(_assetsDir, "agent.aibt.json")), Is.False);
-
-            WritePolicy(supportsAgentScope: true, supportsSharedScope: false);
-
-            var withOptIn = Dispatch("create_tree", new JObject
-            {
-                ["treeId"] = "tree.agent",
-                ["name"] = "Agent Tree",
-                ["path"] = "agent.aibt.json",
-                ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
-                ["blackboard"] = new JArray(new JObject
-                {
-                    ["id"] = "danger", ["valueType"] = "Bool", ["scope"] = "agent", ["default"] = false,
-                }),
-                ["agentContract"] = new JObject { ["contractId"] = "contract.agent", ["contractVersion"] = 1 },
-            }, "SemanticEdit");
-
-            Assert.That((bool)withOptIn["result"]["accepted"], Is.True, withOptIn.ToString());
+            Assert.That((bool)withoutFile["result"]["accepted"], Is.True, withoutFile.ToString());
             var written = File.ReadAllText(Path.Combine(_assetsDir, "agent.aibt.json"));
             var document = CanonicalTreeJson.Parse(written, documentId: "agent.aibt.json").Document;
             Assert.That(document.FormatVersion, Is.EqualTo(2));
             Assert.That(document.Blackboard.Single().Scope, Is.EqualTo(BlackboardScope.Agent));
             Assert.That(document.AgentContract.ContractId, Is.EqualTo("contract.agent"));
+
+            WritePolicy(supportsAgentScope: false, supportsSharedScope: false);
+            var flagFalse = Dispatch("create_tree", AgentTreeArgs("tree.agent-refused", "agent-refused.aibt.json"), "SemanticEdit");
+
+            Assert.That((bool)flagFalse["result"]["accepted"], Is.False, flagFalse.ToString());
+            Assert.That(Codes(flagFalse), Does.Contain("AIBT2030"));
+            Assert.That(File.Exists(Path.Combine(_assetsDir, "agent-refused.aibt.json")), Is.False);
+        }
+
+        /// <summary>P11-015 review follow-up: the edit tools agree with <c>validate</c> on such a tree.</summary>
+        [Test]
+        public void EditToolsOnANativeAgentScopeTree_AreAcceptedWithoutAPolicyFile_AndRefusedByAFileWithTheFlagFalse()
+        {
+            var created = Dispatch("create_tree", AgentTreeArgs("tree.agent", "agent.aibt.json"), "SemanticEdit");
+            Assert.That((bool)created["result"]["accepted"], Is.True, created.ToString());
+            var validated = Dispatch("validate", new JObject { ["treeId"] = "tree.agent" }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+
+            var added = Dispatch("add_node", new JObject
+            {
+                ["treeId"] = "tree.agent", ["expectedHash"] = (string)created["result"]["contentHash"], ["parentId"] = "root",
+                ["node"] = new JObject { ["id"] = "inner", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+            }, "SemanticEdit");
+            Assert.That((bool)added["result"]["accepted"], Is.True, added.ToString());
+
+            var keys = Dispatch("set_blackboard_keys", new JObject
+            {
+                ["treeId"] = "tree.agent", ["expectedHash"] = (string)added["result"]["contentHash"],
+                ["keys"] = new JArray(
+                    new JObject { ["id"] = "danger", ["valueType"] = "Bool", ["scope"] = "agent", ["default"] = false },
+                    new JObject { ["id"] = "alert", ["valueType"] = "Bool", ["scope"] = "agent", ["default"] = true }),
+            }, "SemanticEdit");
+            Assert.That((bool)keys["result"]["accepted"], Is.True, keys.ToString());
+
+            WritePolicy(supportsAgentScope: false, supportsSharedScope: false);
+            var refused = Dispatch("add_node", new JObject
+            {
+                ["treeId"] = "tree.agent", ["expectedHash"] = (string)keys["result"]["contentHash"], ["parentId"] = "root",
+                ["node"] = new JObject { ["id"] = "second", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+            }, "SemanticEdit");
+            Assert.That((bool)refused["result"]["accepted"], Is.False, refused.ToString());
+            Assert.That(Codes(refused), Does.Contain("AIBT2030"));
+        }
+
+        /// <summary>A tree with a managed node runs in a BehaviorTreeAgent, which has no Agent scope: still refused.</summary>
+        [Test]
+        public void CreateTree_OfAManagedTreeWithAnAgentScopeKey_IsStillRefusedWithoutAPolicyFile()
+        {
+            var args = AgentTreeArgs("tree.managed-agent", "managed-agent.aibt.json");
+            args["rootNode"] = new JObject
+            {
+                ["id"] = "root", ["typeId"] = "aibt.unity.wait-seconds", ["typeVersion"] = 1,
+                ["parameters"] = new JObject { ["seconds"] = 1.0 },
+            };
+            var response = Dispatch("create_tree", args, "SemanticEdit");
+
+            Assert.That((bool)response["result"]["accepted"], Is.False, response.ToString());
+            Assert.That(Codes(response), Does.Contain("AIBT2030"));
+            Assert.That(File.Exists(Path.Combine(_assetsDir, "managed-agent.aibt.json")), Is.False);
+        }
+
+        /// <summary>An unreadable file is not applied and is reported as AIBT9008, as <c>validate</c> does.</summary>
+        [Test]
+        public void AnUnreadablePolicyFile_IsReportedAsAIBT9008_ByCreateTreeAndTheEditTools()
+        {
+            Directory.CreateDirectory(Path.Combine(_projectRoot, ".aibt"));
+            File.WriteAllText(Path.Combine(_projectRoot, ".aibt", "policy.json"), "{ \"format\": \"aibt.policy\", \"formatVersion\": 1 }");
+
+            var created = Dispatch("create_tree", AgentTreeArgs("tree.agent", "agent.aibt.json"), "SemanticEdit");
+            Assert.That((bool)created["result"]["accepted"], Is.True, created.ToString());
+            AssertPolicyWarning(created);
+
+            var added = Dispatch("add_node", new JObject
+            {
+                ["treeId"] = "tree.agent", ["expectedHash"] = (string)created["result"]["contentHash"], ["parentId"] = "root",
+                ["node"] = new JObject { ["id"] = "inner", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+            }, "SemanticEdit");
+            Assert.That((bool)added["result"]["accepted"], Is.True, added.ToString());
+            AssertPolicyWarning(added);
+        }
+
+        /// <summary>
+        /// Neighbour (a): with a file the file decides for every tree. <c>validate</c> refuses a managed tree under
+        /// <c>allowManagedNodes: false</c>; adding a managed node must be refused the same way.
+        /// </summary>
+        [Test]
+        public void WithAFileThatForbidsManagedNodes_AddingAManagedNode_IsRefused_AsValidateRefusesTheTree()
+        {
+            var hash = CreateSessionTree();
+            WritePolicy(supportsAgentScope: false, supportsSharedScope: false, allowManagedNodes: false);
+
+            var added = Dispatch("add_node", new JObject
+            {
+                ["treeId"] = "tree.session", ["expectedHash"] = hash, ["parentId"] = "root",
+                ["node"] = new JObject
+                {
+                    ["id"] = "wait", ["typeId"] = "aibt.unity.wait-seconds", ["typeVersion"] = 1,
+                    ["parameters"] = new JObject { ["seconds"] = 1.0 },
+                },
+                ["dryRun"] = true,
+            }, "SemanticEdit");
+            UnityEngine.Debug.Log("P11-015 policy default, neighbour (a): " + added.ToString(Newtonsoft.Json.Formatting.None));
+            Assert.That((bool)added["result"]["accepted"], Is.False, added.ToString());
+            // The file's own rules apply (AIBT2039 execution domain, AIBT2040 nondeterministic: this file also
+            // requires deterministic nodes), not the managed layer's policy.
+            Assert.That(Codes(added).Intersect(new[] { "AIBT2039", "AIBT2040" }), Is.Not.Empty, added.ToString());
+        }
+
+        /// <summary>
+        /// Neighbour (b): a tree with a subtree reference is checked like the same tree without one. Under a file
+        /// whose Agent flag is false, a native tree with an Agent key is refused (AIBT2030) with or without a
+        /// reference to a subtree whose only node has no reference handler (the native compiler expands with both
+        /// scope flags on).
+        /// </summary>
+        [Test]
+        public void AnAgentScopeTreeWithASubtreeReference_IsCheckedLikeTheSameTreeWithoutOne()
+        {
+            WritePolicy(supportsAgentScope: false, supportsSharedScope: false);
+            File.WriteAllText(Path.Combine(_assetsDir, "hold.aibt.json"), @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 3, ""treeId"": ""tree.hold"", ""name"": ""Hold"", ""root"": ""hold"",
+  ""nodes"": { ""hold"": { ""type"": ""aibt.native.fail"", ""typeVersion"": 1 } }
+}");
+            File.WriteAllText(Path.Combine(_assetsDir, "plain.aibt.json"), @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tree.plain"", ""name"": ""Plain"", ""root"": ""root"",
+  ""blackboardContracts"": { ""agent"": { ""contractId"": ""contract.agent"", ""contractVersion"": 1 } },
+  ""blackboard"": { ""danger"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": false } },
+  ""nodes"": { ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""hold""] },
+    ""hold"": { ""type"": ""aibt.native.fail"", ""typeVersion"": 1 } }
+}");
+            File.WriteAllText(Path.Combine(_assetsDir, "referencing.aibt.json"), @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 3, ""treeId"": ""tree.referencing"", ""name"": ""Referencing"", ""root"": ""root"",
+  ""blackboardContracts"": { ""agent"": { ""contractId"": ""contract.agent"", ""contractVersion"": 1 } },
+  ""blackboard"": { ""danger"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": false } },
+  ""nodes"": { ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""use""] },
+    ""use"": { ""subtree"": { ""treeId"": ""tree.hold"", ""interfaceVersion"": 1, ""keys"": { } } } }
+}");
+
+            JObject AddInner(string treeId)
+            {
+                var hash = (string)Dispatch("inspect_tree", new JObject { ["treeId"] = treeId }, "Read")["result"]["contentHash"];
+                return Dispatch("add_node", new JObject
+                {
+                    ["treeId"] = treeId, ["expectedHash"] = hash, ["parentId"] = "root",
+                    ["node"] = new JObject { ["id"] = "inner", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+                    ["dryRun"] = true,
+                }, "SemanticEdit");
+            }
+
+            var plain = AddInner("tree.plain");
+            var referencing = AddInner("tree.referencing");
+            UnityEngine.Debug.Log("P11-015 policy default, neighbour (b): plain " + plain.ToString(Newtonsoft.Json.Formatting.None)
+                + " referencing " + referencing.ToString(Newtonsoft.Json.Formatting.None));
+            Assert.That((bool)plain["result"]["accepted"], Is.False, plain.ToString());
+            Assert.That(Codes(plain), Does.Contain("AIBT2030"));
+            Assert.That((bool)referencing["result"]["accepted"], Is.False, referencing.ToString());
+            Assert.That(Codes(referencing), Does.Contain("AIBT2030"));
+        }
+
+        private static JObject AgentTreeArgs(string treeId, string path) => new JObject
+        {
+            ["treeId"] = treeId,
+            ["name"] = "Agent Tree",
+            ["path"] = path,
+            ["rootNode"] = new JObject { ["id"] = "root", ["typeId"] = BuiltInNodeManifests.MemorySequenceTypeId, ["typeVersion"] = 1 },
+            ["blackboard"] = new JArray(new JObject
+            {
+                ["id"] = "danger", ["valueType"] = "Bool", ["scope"] = "agent", ["default"] = false,
+            }),
+            ["agentContract"] = new JObject { ["contractId"] = "contract.agent", ["contractVersion"] = 1 },
+        };
+
+        private static string[] Codes(JObject response)
+            => ((response["result"]?["diagnostics"] as JArray) ?? new JArray()).Select(d => (string)d["code"]).ToArray();
+
+        private static void AssertPolicyWarning(JObject response)
+        {
+            var warning = ((JArray)response["result"]["diagnostics"]).FirstOrDefault(d => (string)d["code"] == "AIBT9008");
+            Assert.That(warning, Is.Not.Null, response.ToString());
+            Assert.That((string)warning["severity"], Is.EqualTo("warning").IgnoreCase);
         }
 
         /// <summary>
@@ -319,14 +475,14 @@ namespace AIBT.Tests.Editor.Mcp.Authoring
                 Is.EqualTo(1), "an explicit formatVersion 1");
         }
 
-        private void WritePolicy(bool supportsAgentScope, bool supportsSharedScope)
+        private void WritePolicy(bool supportsAgentScope, bool supportsSharedScope, bool allowManagedNodes = true)
         {
             var policyDir = Path.Combine(_projectRoot, ".aibt");
             Directory.CreateDirectory(policyDir);
             var json = "{\n"
                 + "  \"format\": \"aibt.policy\",\n"
                 + "  \"formatVersion\": 1,\n"
-                + "  \"allowManagedNodes\": true,\n"
+                + "  \"allowManagedNodes\": " + (allowManagedNodes ? "true" : "false") + ",\n"
                 + "  \"allowMainThreadNodes\": true,\n"
                 + "  \"requireTreeDescription\": false,\n"
                 + "  \"requireNodeDescriptions\": false,\n"

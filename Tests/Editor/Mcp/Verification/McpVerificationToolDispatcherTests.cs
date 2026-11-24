@@ -294,6 +294,39 @@ namespace AIBT.Tests.Editor.Mcp.Verification
             Assert.That(File.Exists(Path.Combine(_assetsDir, "agent.asset")), Is.False, "A dry run writes nothing.");
         }
 
+        /// <summary>
+        /// P11-015 review follow-up (documented limitation): the bake compiles with the package's built-in options,
+        /// so a rule the policy file relaxes passes <c>validate</c> and still refuses <c>prepare_runtime</c>. The
+        /// refusal says so.
+        /// </summary>
+        [Test]
+        public void PrepareRuntime_OfATreeAPolicyFileRelaxes_IsRefusedByTheBake_AndSaysWhy()
+        {
+            WritePolicy(supportsAgentScope: false, supportsSharedScope: false);
+            var policyPath = Path.Combine(_projectRoot, ".aibt", "policy.json");
+            File.WriteAllText(policyPath, File.ReadAllText(policyPath).Replace("\"unreachableNodes\": \"error\"", "\"unreachableNodes\": \"warning\""));
+            WriteTree("orphan.aibt.json", @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tree.orphan"", ""name"": ""Orphan"", ""root"": ""root"",
+  ""nodes"": { ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1 }, ""spare"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1 } }
+}");
+            var catalog = AIBT.Editor.Registry.ProjectNodeCatalog.RuntimeCatalogTypes()
+                .FirstOrDefault(type => type.FullName == "AIBT.Authoring.BuiltInLeaves.BuiltInLeafCatalog");
+            Assert.That(catalog, Is.Not.Null);
+            var validated = Dispatch("validate", new JObject { ["treeId"] = "tree.orphan" }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+            var inspected = Dispatch("inspect_tree", new JObject { ["treeId"] = "tree.orphan" }, "Read");
+
+            var prepared = Dispatch("prepare_runtime", new JObject
+            {
+                ["treeId"] = "tree.orphan", ["expectedHash"] = (string)inspected["result"]["contentHash"],
+                ["catalog"] = catalog.AssemblyQualifiedName, ["outputPath"] = "Assets/orphan.asset", ["dryRun"] = true,
+            }, "Compilation");
+
+            Assert.That((bool)prepared["result"]["success"], Is.False, prepared.ToString());
+            Assert.That(Codes(prepared), Does.Contain("AIBT2020"));
+            Assert.That((string)prepared["result"]["note"], Does.Contain("built-in options").And.Contain(".aibt/policy.json"), prepared.ToString());
+        }
+
         private static void AssertPolicyWarning(JArray diagnostics, string field)
         {
             var warning = diagnostics.FirstOrDefault(d => (string)d["code"] == "AIBT9008");

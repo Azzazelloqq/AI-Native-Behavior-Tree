@@ -179,8 +179,8 @@ namespace AIBT.Mcp.Authoring
             catch (ArgumentException exception) { throw new McpToolException(McpAuthoringDiagnostics.MalformedArguments, exception.Message); }
             extraction = WithDescriptions(extraction, document, top, description);
 
-            var (_, parentOptions) = BuildRegistryAndOptions(projectRoot, path);
-            var (_, subtreeOptions) = BuildRegistryAndOptions(projectRoot, newPath);
+            var (_, parentOptions, policyWarning) = BuildRegistryAndOptions(projectRoot, path);
+            var (_, subtreeOptions, _) = BuildRegistryAndOptions(projectRoot, newPath);
             var resolver = new McpSubtreeResolver(scan, files.SourceIds(file => ToLogicalSourceId(projectRoot, file)))
                 .Override(extraction.Subtree, subtreeOptions.SourceId);
             var subtreeDiagnostics = catalog.ValidateAuthoring(extraction.Subtree, subtreeOptions, resolver);
@@ -189,7 +189,7 @@ namespace AIBT.Mcp.Authoring
                 candidate => catalog.ValidateAuthoring(candidate, parentOptions, resolver.Override(candidate, parentOptions.SourceId)));
             var subtreeValid = !subtreeDiagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
             var accepted = result.Accepted && subtreeValid;
-            var diagnostics = new DiagnosticCollection(subtreeDiagnostics.Concat(result.Diagnostics));
+            var diagnostics = WithPolicyWarning(new DiagnosticCollection(subtreeDiagnostics.Concat(result.Diagnostics)), policyWarning);
 
             var response = new JObject
             {
