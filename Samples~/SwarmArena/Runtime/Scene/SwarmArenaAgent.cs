@@ -35,9 +35,12 @@ namespace AIBT.Samples.SwarmArena
         private Float3Value _stagedPatrolPoint;
         private float _movementSpeed;
         private bool _registered;
+        private bool _moveSinceState;
 
         public ProductionTreeHost Host { get; private set; }
         public SwarmArenaAgentState State { get; private set; }
+        /// <summary>The last committed move direction; applied every frame by <see cref="ApplyMoveIntent"/>.</summary>
+        public Vector3 MoveIntent { get; private set; }
         public int AttackCount { get; private set; }
         public Vector3 PatrolPoint { get; private set; }
         public bool UsesPipelining { get; private set; }
@@ -135,15 +138,32 @@ namespace AIBT.Samples.SwarmArena
         {
             if (effect.StableId == MoveIntentId && effect.TryGetFloat3(out var move))
             {
-                transform.position += new Vector3(move.X, move.Y, move.Z) * (_movementSpeed * Time.unscaledDeltaTime);
+                MoveIntent = new Vector3(move.X, move.Y, move.Z);
+                _moveSinceState = true;
                 return;
             }
             if (effect.StableId == StateIntentId && effect.TryGetInt32(out var state))
             {
                 State = (SwarmArenaAgentState)state;
+                // A steer node commits a move and a state together; a state committed without a move
+                // (the attack branch) means the agent stands. The flag works in either delivery order.
+                if (!_moveSinceState) MoveIntent = Vector3.zero;
+                _moveSinceState = false;
                 return;
             }
             if (effect.StableId == AttackId && effect.TryGetInt32(out _)) AttackCount++;
+        }
+
+        /// <summary>
+        /// Moves the agent along its last committed move intent for one frame. The scenario calls it
+        /// every frame, not once per received effect: a <see cref="SchedulingPolicy.PipelinedJobs"/>
+        /// host commits one logical update per (lifecycle steps + 1) frames, so moving only when an
+        /// effect arrives would move it that many times slower than a Normal host.
+        /// </summary>
+        public void ApplyMoveIntent(float deltaTime)
+        {
+            if (MoveIntent == Vector3.zero) return;
+            transform.position += MoveIntent * (_movementSpeed * deltaTime);
         }
 
         internal void SetPatrolPoint(Vector3 point) => PatrolPoint = point;

@@ -34,7 +34,11 @@ namespace AIBT.Samples.SwarmArena
         private SwarmArenaInstancedPresenter _presenter;
         private System.Random _random;
         private float _phaseElapsed;
+        private const float UpdateRateWindowSeconds = 2f;
         private float _telemetryElapsed;
+        private float _updateRateElapsed;
+        private int _updateRateFrames;
+        private float _updateRateFramesPerSecond;
         private float _fpsElapsed;
         private int _fpsFrameCount;
         private int _editorFramesPerSecond;
@@ -54,11 +58,33 @@ namespace AIBT.Samples.SwarmArena
         private int _failedSchedulingCount;
         private int _attacksPerSecond;
         private ulong _updatesPerSecond;
+        private ulong _normalUpdatesPerSecond;
+        private ulong _pipelinedUpdatesPerSecond;
         private long _lastAttackTotal;
         private ulong _lastUpdateTotal;
+        private ulong _lastNormalUpdateTotal;
+        private ulong _lastPipelinedUpdateTotal;
 
         public int Population => _agents.Count;
         public int PendingPopulation => _pendingPopulation;
+        /// <summary>Logical updates per second of all agents (2 s window).</summary>
+        public ulong LogicalUpdatesPerSecond => _updatesPerSecond;
+        /// <summary>Logical updates per second of the Normal half, summed over its agents (2 s window).</summary>
+        public ulong NormalUpdatesPerSecond => _normalUpdatesPerSecond;
+        /// <summary>Logical updates per second of the PipelinedJobs half, summed over its agents (2 s window).</summary>
+        public ulong PipelinedUpdatesPerSecond => _pipelinedUpdatesPerSecond;
+        /// <summary>True when the keyboard controls work: they use the legacy Input Manager.</summary>
+        public static bool KeyboardControlsAvailable
+        {
+            get
+            {
+#if ENABLE_LEGACY_INPUT_MANAGER
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
         public string ActivePhaseName => _phase == 0 ? "Patrol"
             : _phase == 1 ? "Pursue"
             : _phase == 2 ? "Flee"
@@ -101,6 +127,14 @@ namespace AIBT.Samples.SwarmArena
         private void LateUpdate()
         {
             if (_error != null) return;
+            // Every frame, after the scheduler delivered this frame's effects: a PipelinedJobs agent
+            // receives a new move intent only once per (lifecycle steps + 1) frames.
+            var deltaTime = Time.unscaledDeltaTime;
+            for (var index = 0; index < _agents.Count; index++)
+            {
+                var agent = _agents[index];
+                if (agent != null) agent.ApplyMoveIntent(deltaTime);
+            }
             UpdateTelemetry();
             _presenter.Render(_agents);
         }
@@ -151,7 +185,7 @@ namespace AIBT.Samples.SwarmArena
             error = null;
             if (_tree == null || _scheduler == null || _world == null || _beacon == null || _danger == null)
             {
-                error = "Assign the tree, scheduler/world, beacon and danger references in the sample scene.";
+                error = "Assign the tree, scheduler/world, beacon and danger references (AIBT > Samples > Swarm Arena > Create Demo builds a wired scene).";
                 return false;
             }
             var parsed = CanonicalTreeJson.Parse(_tree.text, "Samples~/SwarmArena/Trees/swarm-arena.aibt.json");
@@ -242,8 +276,11 @@ namespace AIBT.Samples.SwarmArena
             _createdHostCount++;
         }
 
+        // The keyboard controls use the legacy Input Manager. In a project set to the Input System
+        // package only they compile out; the scripted phases still run and the overlay says so.
         private void HandleControls()
         {
+#if ENABLE_LEGACY_INPUT_MANAGER
             var input = new Vector3(
                 Input.GetAxisRaw("Horizontal"), 0f, Input.GetAxisRaw("Vertical"));
             if (input.sqrMagnitude > 1f) input.Normalize();
@@ -258,6 +295,7 @@ namespace AIBT.Samples.SwarmArena
                 _phaseElapsed = 0f;
                 ApplyScriptedPhase();
             }
+#endif
         }
 
         private void ApplyScriptedPhase()
@@ -291,24 +329,42 @@ namespace AIBT.Samples.SwarmArena
 
         private void OnGUI()
         {
-            GUI.Box(new Rect(14f, 14f, 550f, 258f), "AIBT Swarm Arena — live runtime telemetry");
-            GUI.Label(new Rect(28f, 42f, 520f, 20f), "Phase: " + ActivePhaseName + " | seed: 7034 | population: " + Population
+            GUI.Box(new Rect(14f, 14f, 680f, 302f), "AIBT Swarm Arena — live runtime telemetry");
+            GUI.Label(new Rect(28f, 42f, 650f, 20f), "Phase: " + ActivePhaseName + " | seed: 7034 | population: " + Population
                 + (_pendingPopulation >= 0 ? " → " + _pendingPopulation + " pending idle barrier" : string.Empty)
                 + " | hosts created/destroyed: " + _createdHostCount + "/" + _destroyedHostCount);
-            GUI.Label(new Rect(28f, 64f, 520f, 20f), "State: Patrol " + _patrolCount + " · Pursue " + _pursueCount
+            GUI.Label(new Rect(28f, 64f, 650f, 20f), "State: Patrol " + _patrolCount + " · Pursue " + _pursueCount
                 + " · Flee " + _fleeCount + " · Attack " + _attackCount);
-            GUI.Label(new Rect(28f, 86f, 520f, 20f), "Profiles: Normal " + _normalProfileCount
+            GUI.Label(new Rect(28f, 86f, 650f, 20f), "Profiles: Normal " + _normalProfileCount
                 + " · PipelinedJobs " + _pipelinedProfileCount + " | registered: " + _scheduler.RegisteredCount);
-            GUI.Label(new Rect(28f, 108f, 520f, 20f), "Last second: logical updates " + _updatesPerSecond
-                + " · committed attacks " + _attacksPerSecond + " · Runtime FPS " + _editorFramesPerSecond);
-            GUI.Label(new Rect(28f, 130f, 520f, 20f), "Scheduler frame " + _scheduler.LastFrameIndex + ": admitted "
+            GUI.Label(new Rect(28f, 108f, 650f, 20f), "Logical updates/s (2 s): Normal " + _normalUpdatesPerSecond
+                + PerAgent(_normalUpdatesPerSecond, _normalProfileCount) + " · PipelinedJobs " + _pipelinedUpdatesPerSecond
+                + PerAgent(_pipelinedUpdatesPerSecond, _pipelinedProfileCount));
+            GUI.Label(new Rect(28f, 130f, 650f, 20f), "PipelinedJobs: one decision per (lifecycle steps + 1) frames"
+                + FramesPerDecision() + "; agents move on their last intent every frame.");
+            GUI.Label(new Rect(28f, 152f, 650f, 20f), "Last second: committed attacks " + _attacksPerSecond
+                + " · Runtime FPS " + _editorFramesPerSecond);
+            GUI.Label(new Rect(28f, 174f, 650f, 20f), "Scheduler frame " + _scheduler.LastFrameIndex + ": admitted "
                 + _admittedCount + " · deferred " + _deferredCount + " · failed " + _failedSchedulingCount);
-            GUI.Label(new Rect(28f, 152f, 520f, 20f), "Budget: " + _scheduler.LastFrameConsumedMicroseconds.ToString("F0")
+            GUI.Label(new Rect(28f, 196f, 650f, 20f), "Budget: " + _scheduler.LastFrameConsumedMicroseconds.ToString("F0")
                 + " / " + FormatBudget(_scheduler.LastFrameAllocatedBudgetMicroseconds) + " μs"
                 + (_scheduler.LastFrameOverran ? " · overrun observed" : " · within current frame"));
-            GUI.Label(new Rect(28f, 184f, 520f, 20f), "1 = 64 · 2 = 256 · 3 = 512 agents | WASD beacon | Space pauses phases | R resets patrol");
-            GUI.Label(new Rect(28f, 206f, 520f, 38f), "Colors: blue patrol · green pursue · yellow flee · red attack. "
+            GUI.Label(new Rect(28f, 228f, 650f, 20f), KeyboardControlsAvailable
+                ? "1 = " + _lowPopulation + " · 2 = " + _highPopulation + " · 3 = " + _stressPopulation
+                  + " agents | WASD beacon | Space pauses phases | R resets patrol"
+                : "Keys unavailable: they need the legacy Input Manager (Player Settings > Active Input Handling).");
+            GUI.Label(new Rect(28f, 250f, 650f, 38f), "Colors: blue patrol · green pursue · yellow flee · red attack. "
                 + "Runtime FPS is a 0.5 s display average, not a Player benchmark.");
+        }
+
+        private static string PerAgent(ulong updatesPerSecond, int agents)
+            => agents == 0 ? string.Empty : " (" + ((double)updatesPerSecond / agents).ToString("F1") + " per agent)";
+
+        private string FramesPerDecision()
+        {
+            if (_pipelinedProfileCount == 0 || _pipelinedUpdatesPerSecond == 0 || _updateRateFramesPerSecond <= 0f) return string.Empty;
+            var perAgent = (double)_pipelinedUpdatesPerSecond / _pipelinedProfileCount;
+            return ", now about " + (_updateRateFramesPerSecond / perAgent).ToString("F0");
         }
 
         private void UpdateFrameRate()
@@ -332,14 +388,25 @@ namespace AIBT.Samples.SwarmArena
             _pipelinedProfileCount = 0;
             long totalAttacks = 0;
             ulong totalUpdates = 0;
+            ulong normalUpdates = 0;
+            ulong pipelinedUpdates = 0;
             for (var index = 0; index < _agents.Count; index++)
             {
                 var agent = _agents[index];
                 if (agent == null) continue;
                 totalAttacks += agent.AttackCount;
-                totalUpdates += agent.TotalLogicalUpdates;
-                if (agent.UsesPipelining) _pipelinedProfileCount++;
-                else _normalProfileCount++;
+                var updates = agent.TotalLogicalUpdates;
+                totalUpdates += updates;
+                if (agent.UsesPipelining)
+                {
+                    _pipelinedProfileCount++;
+                    pipelinedUpdates += updates;
+                }
+                else
+                {
+                    _normalProfileCount++;
+                    normalUpdates += updates;
+                }
                 if (agent.State == SwarmArenaAgentState.Patrol) _patrolCount++;
                 else if (agent.State == SwarmArenaAgentState.Pursue) _pursueCount++;
                 else if (agent.State == SwarmArenaAgentState.Flee) _fleeCount++;
@@ -349,13 +416,28 @@ namespace AIBT.Samples.SwarmArena
             _telemetryElapsed += Time.unscaledDeltaTime;
             if (_telemetryElapsed >= 0.5f)
             {
-                var inverseSeconds = 1.0 / _telemetryElapsed;
-                _attacksPerSecond = (int)((totalAttacks - _lastAttackTotal) * inverseSeconds);
-                _updatesPerSecond = (ulong)((totalUpdates - _lastUpdateTotal) * inverseSeconds);
+                _attacksPerSecond = (int)((totalAttacks - _lastAttackTotal) / _telemetryElapsed);
                 _lastAttackTotal = totalAttacks;
-                _lastUpdateTotal = totalUpdates;
                 _telemetryElapsed = 0f;
             }
+
+            // Logical updates use a 2 s window: a PipelinedJobs group commits all its agents together
+            // about every 32 frames (half a second at 60 FPS), so a 0.5 s window would flicker to 0.
+            _updateRateElapsed += Time.unscaledDeltaTime;
+            if (_updateRateElapsed >= UpdateRateWindowSeconds)
+            {
+                var inverseSeconds = 1.0 / _updateRateElapsed;
+                _updatesPerSecond = Rate(totalUpdates, _lastUpdateTotal, inverseSeconds);
+                _normalUpdatesPerSecond = Rate(normalUpdates, _lastNormalUpdateTotal, inverseSeconds);
+                _pipelinedUpdatesPerSecond = Rate(pipelinedUpdates, _lastPipelinedUpdateTotal, inverseSeconds);
+                _updateRateFramesPerSecond = (float)(_updateRateFrames * inverseSeconds);
+                _lastUpdateTotal = totalUpdates;
+                _lastNormalUpdateTotal = normalUpdates;
+                _lastPipelinedUpdateTotal = pipelinedUpdates;
+                _updateRateElapsed = 0f;
+                _updateRateFrames = 0;
+            }
+            _updateRateFrames++;
 
             _admittedCount = 0;
             _deferredCount = 0;
@@ -393,6 +475,10 @@ namespace AIBT.Samples.SwarmArena
             foreach (var diagnostic in diagnostics) return diagnostic.Code + ": " + diagnostic.Message;
             return "unknown diagnostic";
         }
+
+        // Destroyed hosts take their totals with them when the population shrinks; never report a negative rate.
+        private static ulong Rate(ulong total, ulong last, double inverseSeconds)
+            => total >= last ? (ulong)((total - last) * inverseSeconds) : 0ul;
 
         private static string FormatBudget(double microseconds)
             => double.IsPositiveInfinity(microseconds) ? "unbounded" : microseconds.ToString("F0");

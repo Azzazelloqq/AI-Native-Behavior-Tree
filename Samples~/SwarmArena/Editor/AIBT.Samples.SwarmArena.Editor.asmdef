@@ -3,7 +3,8 @@
   "rootNamespace": "AIBT.Samples.SwarmArena.Editor",
   "references": [
     "AIBT.Runtime",
-    "AIBT.Editor"
+    "AIBT.Editor",
+    "AIBT.Samples.SwarmArena"
   ],
   "includePlatforms": [
     "Editor"
