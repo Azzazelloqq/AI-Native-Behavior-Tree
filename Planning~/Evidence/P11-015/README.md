@@ -26,8 +26,10 @@ Status: `in_progress`, waiting for the orchestrator's acceptance run.
 | `545f520` | 4 (D5, D6, D7, D9) | docs: the cadence, the importer status, the verified Editor and install routes, where the Player compiles |
 | `bfadf82` | 5 (D8) | chore(packaging): development folders and the 370 MB raw report leave the package |
 | `a69c3f9` | CHANGELOG | consumer-install fixes |
-| planning commit | 6 | task cards, work items, MASTER_PLAN, P11-011 evidence, this evidence up to item 6 |
-| last commit | 7, 8 | the fresh-install proof and the size measurements |
+| `3a1f061` | 6 | task cards, work items, MASTER_PLAN, P11-011 evidence, this evidence up to item 6 |
+| `baa579e` | 7 | docs(readme): the `git archive` step writes the tar outside the checkout |
+| `9ccabed` | 8 | docs(performance): size and memory; a CHANGELOG line |
+| this commit (last) | 7, 8 | this evidence: the fresh-install proof and the size measurements |
 
 ## Part A: Swarm Arena (accepted by the orchestrator)
 
@@ -239,6 +241,291 @@ Tests: `McpVerificationToolDispatcherTests` and `McpToolDispatcherTests` (Discov
 - **P11-015.** This card and evidence, work item `in_progress`.
 - MASTER_PLAN sentences for both, and the CHANGELOG section (`a69c3f9`).
 
+### 7. Proof on a fresh install
+
+Raw files: `C:\UnityProjects\_aibt_f14\fresh\`. The harness is the P11-011 one with one more step
+(`McpCheck`, `F14Driver.McpChecks`) and a `-Root` parameter. The part A versions are in
+`C:\UnityProjects\_aibt_f14\backup-partA\`.
+
+**A new defect: the README's tarball step wrote outside its folder.** The README's first command
+(`git -C <AIBT> archive … -o aibt.tar HEAD`) wrote `aibt.tar` **into the AIBT checkout**, because
+`git -C` resolves a relative `-o` path there. The next command then found no file (`tar.exe: Error
+opening archive`).
+
+- The stray file was moved out of the checkout to
+  `fresh\pkg\stray-aibt.tar-written-into-the-checkout`, and the checkout is clean again.
+- Fixed in `baa579e`: the step now passes `-o "$PWD/aibt.tar"` and says why.
+- The tarball below was made from `baa579e` with the corrected README steps, verbatim.
+
+| | First run (P11-011, `0aa9a6a`) | Fresh install (`baa579e`) |
+| --- | --- | --- |
+| Tarball | 25.6 MB | **2.36 MB** (2,479,308 bytes, SHA-256 `91969ac8e399d1009fd21f66d1641d874a58eccbfb7431017b2f721c6d7cf97c`) |
+| Files | 3061 | **2133** (12,319,461 bytes unpacked; 0 files of `Planning~`, `Benchmarks~` or `Spikes~`) |
+| Installed copy after every step | 1 file changed (`package.json`, the Package Manager's `_fingerprint`) | the same: 2133 = 2133, 0 added, 0 removed, 1 changed (`logs\packagecache-*.txt`) |
+
+`Planning~` is export-ignored, so `git archive` of `3a1f061` and of `baa579e` differ only in
+`README.md`.
+
+The project:
+
+- `fresh\project\F14Fresh`, Built-in render pipeline, Unity 6000.6.9f1, with no `.aibt/policy.json`
+  (`out\mcp.txt`: `POLICY_FILE|…|exists=False`).
+- Burst `2.0.0`, Collections `6.6.0` and Newtonsoft `3.2.2` resolved (`out\import.txt`).
+
+**Import and setup** (`out\import.txt`, `out\setup.txt`):
+
+- All 6 samples imported, with 0 warnings and 0 errors.
+- The 4 Create Demo menus ran with 0 errors and 0 warnings each, including Swarm Arena's new one.
+- Both prepared assets are `Current`.
+- The tree list shows all 8 trees Valid.
+
+**Loaded AIBT assemblies** (`out\mcp.txt`, 23): `AIBT.Agents`, `AIBT.Authoring`,
+`AIBT.Authoring.BuiltInLeaves`, `AIBT.Authoring.BuiltInLeaves.Catalog`, `AIBT.BurstNodes.Sample`,
+`AIBT.BurstNodes.Sample.Catalog`, `AIBT.Editor`, `AIBT.Mcp`, `AIBT.Runtime`, `AIBT.StandardNodes`, and
+the 13 sample assemblies (`AIBT.Samples.*`).
+
+- `FIXTURE_ASSEMBLY|…|loaded=False` for all three fixture assemblies.
+- 0 AIBT assemblies have "Test" or "Fixture" in their name. P11-011 loaded the three fixtures.
+
+**MCP** (`out\mcp.txt`; raw responses in `out\mcp-list-operations.json`,
+`out\mcp-list-custom-tools.json` and `out\mcp-project-manifest.json`):
+
+- **Tool list.** `list_operations` gives 44 operations and `list_custom_tools` gives
+  `{"tools":[],"diagnostics":[]}`, so `aibt_custom_sample_write_marker` is absent.
+- **Manifest.** `get_project_manifest` lists all 8 trees with `"policy": null` and no `policyWarnings`.
+  That real response validates against `Schemas~/project-manifest.schema.json` (`check-jsonschema
+  0.38.0`: ok).
+- **`validate` without a policy file:** all 8 trees are `valid:true, policyApplied:false`. Native
+  Guard, First Agent and Swarm Arena have only AIBT2053 info diagnostics; the other five have none.
+- **`validate` under the minimal policy of `data-formats.md`:** the harness writes the documentation's
+  JSON block into `.aibt/policy.json`. All 8 trees are `valid:true, policyApplied:true`, so the
+  documented claim holds. `get_project_manifest` then reports that policy. The file was removed
+  afterwards.
+- **A side observation**, open finding below. The first run of this step (`out\mcp-attempt1-before-catalog-refresh.txt`)
+  called MCP straight from `-executeMethod` in a fresh Editor process. There, `validate` reported AIBT2021
+  ("Node type is not present in the selected registry") for every project node: the Simple Agent
+  trees, First Agent, Native Guard and Swarm Arena.
+  - The cause: `ProjectNodeCatalogCache` starts with the built-in nodes and discovers project nodes on
+    `EditorApplication.delayCall`, which has not run yet when an `-executeMethod` entry point starts.
+  - The Setup step's earlier MCP calls ran after the Create Demo menus had refreshed the catalog, and
+    they were valid.
+  - The harness now calls the cache's `Refresh` first, which is what `delayCall` does in an interactive
+    Editor.
+
+**Player** (`out\build.txt`, `logs\Build-result.txt`):
+
+- Windows x64 IL2CPP release, managed stripping Minimal.
+- `Succeeded`, 0 errors, **0 warnings** (P11-011: 2, the missing URP scripts), 128 s.
+- 93.7 MB shipped without the IL2CPP backup folder; `GameAssembly.dll` 26.5 MB; `lib_burst_generated.dll`
+  1.25 MB.
+
+| Run (`run\…\f14-lines.txt`) | Burst | Simple Agent | First Agent | Native Guard | Swarm Arena | Warnings | Exit |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| batch (`-batchmode -nographics`) | enabled, probe job ran as Burst | PASS (Guard 60, Scout 54, Wanderer 10 completions; 3× `spotted`) | PASS (3 runs) | PASS | PASS (64/64 updated, pipelined 31.22 frames per update, 32/32 patrol points) | 0 | **0** (90 s) |
+| windowed (Direct3D12) | enabled, probe job ran as Burst | PASS | PASS | PASS | PASS (pipelined 31.5 frames per update, 32/32) | 0 | **0** (92 s) |
+
+- Neither `Player.log` contains the word "exception" (0 matches each).
+- Screenshots: `run\windowed\shots\*.png`, 3 per scene. Swarm Arena's agents are drawn in state colours
+  and the danger zone is purple.
+- `logs\Verify-result.txt`: the submodule's `git status --short` is empty and its head is `baa579e`.
+- **Not repeated:** the URP copy. Part A ran the same Swarm Arena files under URP (windowed and batch,
+  exit code 0), and nothing in part B touches rendering.
+
+### 8. Size and memory
+
+Brief: `brief-b-item-8-size.md`. Measured in temp projects only; no package code changed.
+
+**Conditions.** Windows 11 x64, Unity 6000.6.9f1, Standalone Windows x64, IL2CPP, release (not
+development), Built-in render pipeline, the package from the tarball of item 7 (`baa579e`). Four
+projects under `C:\UnityProjects\_aibt_f14\size\project\`, each with the same probe scene
+(`harness\Runtime\SizeProbe.cs`, one GameObject and a camera):
+
+- **A**: no AIBT;
+- **B**: AIBT and the First Agent sample (a native-only game: `NativeTreeAgent`, no managed tree);
+- **C**: AIBT and the Simple Agent sample (a managed-only game: `BehaviorTreeAgent`, no native tree);
+- **D**: AIBT, First Agent, Simple Agent, Native Guard and the generated trees. Only for growth and
+  memory; StandardNodes comes with Native Guard, so D is not a size reference.
+
+Each build's scene list is the probe scene plus the sample's demo scene (D: the Memory scene). Managed stripping `Minimal`
+unless named; B also with `High`. Scripts: `scripts\Invoke-Size.ps1` (steps) and
+`scripts\Invoke-SizeChain.ps1`; sizes by `tools\build_sizes.py` (`raw\build-sizes.txt`).
+
+**Not measured:** other platforms (Android, iOS, consoles, WebGL), the Mono backend, development
+builds, mobile, URP or HDRP, Burst-disabled builds, compressed downloads (installer, store package).
+
+#### 8.1 What AIBT adds to a Player
+
+| Build | Shipped bytes | Δ to A | `GameAssembly.dll` | Δ to A | `lib_burst_generated.dll` | `_Data` | AIBT IL (assemblies) | AIBT C++ generated |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A, no AIBT, Minimal | 69,491,211 | – | 8,764,416 | – | – | 12,869,251 | – | – |
+| B, native only, Minimal | 92,052,652 | +22,561,441 | 26,064,896 | +17,300,480 | 388,608 | 18,130,212 | 1,569,792 (8) | 31,945,533 |
+| B, native only, High | 84,669,964 | +15,178,753 | 20,613,120 | +11,848,704 | 369,664 | 16,199,300 | 869,888 (8) | 17,630,983 |
+| C, managed only, Minimal | 91,959,937 | +22,468,726 | 26,037,248 | +17,272,832 | 313,344 | 18,065,145 | 1,545,216 (6) | 31,820,321 |
+
+- "Shipped" is every file of the build folder except `SizePlayer_BackUpThisFolder_ButDontShipItWithYourGame`.
+  IL is the stripped IL that il2cpp compiled (`…BackUpThisFolder…\Managed`); C++ is
+  `…BackUpThisFolder…\il2cppOutput`, files named after AIBT assemblies (the shared `Generics*` files are
+  not attributed, so the C++ column is a lower bound).
+- `_Data` grows by 5.3 MB in B and C: `il2cpp_data` (the IL2CPP metadata) from 3,054,253 to 7,775,464
+  bytes in B (+4.7 MB), and `Plugins\x86_64\lib_burst_generated.dll` (0.39 MB in B, 0.31 MB in C). The
+  tree assets themselves are a few KB (8.2). `Resources` is 6,453,444 bytes in every build.
+- Per assembly, B Minimal / B High IL: `AIBT.Runtime` 934,912 / 523,264, `AIBT.Authoring` 486,400 /
+  230,400, `AIBT.Agents` 89,088 / 82,944, built-in leaves and catalog 28,672 / 14,848, the sample's own
+  three assemblies 30,720 / 18,432. C++: `AIBT.Runtime` 17.7 / 10.7 MB, `AIBT.Authoring` 12.6 / 5.3 MB,
+  `AIBT.Agents` 1.39 / 1.35 MB.
+
+**In words.**
+
+- A native-only game (B) pays 22.6 MB shipped with Minimal stripping, of which 17.3 MB is
+  `GameAssembly.dll`, 0.39 MB Burst code and 5.3 MB `_Data`.
+- A managed-only game (C) pays 22.5 MB, almost the same. Both Players hold `AIBT.Runtime`,
+  `AIBT.Authoring` and `AIBT.Agents`: the package's runtime assemblies are auto-referenced, so every
+  build takes them whether a scene uses them or not, and Minimal stripping leaves them whole.
+- **`AIBT.Authoring` is in a native-only Player:** 486,400 bytes IL, 12.6 MB C++ with Minimal.
+- **High stripping does not remove it:** 230,400 bytes IL, 5.3 MB C++ and 153 types remain, among them
+  `NodeRegistry`, `ReferenceCompiler`, `CanonicalTreeJson` and the subtree expansion: the managed compile
+  path. Under High `AIBT.Agents` keeps `BehaviorTreeAgent`, `BehaviorTreeSource` and all 60 built-in
+  managed nodes (93 types) although no scene of B uses them, and `BehaviorTreeAgent` compiles through
+  `AIBT.Authoring` (D9). The package has no `link.xml` and no `[Preserve]`; why the linker keeps these
+  types was not traced. High saves 7.4 MB shipped in B (22.6 → 15.2 MB over A).
+- **The Player runs under High:** B High, First Agent PASS (133,395 host updates in 12 s), exit 0,
+  no error logged (`run\B-High-scene\size-lines.txt`). B Minimal PASS (97,678 updates), C Minimal PASS
+  (Guard 1, Wanderer 5, Scout 40 completions), A exit 0. Not checked under High: C (managed trees use
+  reflection-created nodes, the riskier case for High stripping).
+
+#### 8.2 Growth with tree size
+
+Generated trees (`tools\generate_trees.py`, `raw\generated-trees.txt`): the sample's branches repeated
+under its root with suffixed ids. Native trees use the Native Guard catalog's leaves, managed trees the
+Simple Agent nodes. The native ones are baked with `ProductionTreeAssetBaker.Create` and the Native Guard
+catalog, the managed ones compiled with `ReferenceCompiler` (`SizeAibtDriver.PrepareGrowth`,
+`out\D\growth.txt`); breakdowns by `tools\payload_breakdown.py`
+(`raw\generated-native-breakdown.txt`).
+
+Native path (`NativeTreeAgent`, prepared asset):
+
+| Tree | Nodes | Source bytes | Semantic program bytes | Payload bytes | Asset on disk | Asset in the build ("Used Assets") |
+| --- | --- | --- | --- | --- | --- | --- |
+| `size-native-10` | 15 | 3,858 | 2,978 | 6,861 | 14,669 | 7.1 KB |
+| `size-native-100` | 109 | 23,679 | 18,592 | 39,547 | 80,043 | 39.0 KB |
+| `size-native-1000` | 1009 | 214,975 | 169,797 | 356,807 | 714,565 | 348.9 KB |
+| per node, 100 → 1000 | | 213 | 168 | 353 | 705 | 353 |
+
+Managed path (`BehaviorTreeAgent`, `BehaviorTreeSource`):
+
+| Tree | Nodes | Source bytes | Reference program bytes (compiled in the Player) | JSON the asset carries | Asset in the build ("Used Assets") |
+| --- | --- | --- | --- | --- | --- |
+| `size-managed-10` | 12 | 3,407 | 2,367 | 3,407 | 3.7 KB |
+| `size-managed-100` | 108 | 25,165 | 17,169 | 25,165 | 25.0 KB |
+| `size-managed-1000` | 1004 | 230,700 | 157,847 | 230,700 | 225.8 KB |
+| per node, 100 → 1000 | | 229 | 157 | 229 | 230 |
+
+- "Used Assets" is the Editor log's build report of the rebuilt D Player (`out\D\Minimal-r2-editor-build-report.txt`,
+  KB = 1024 bytes); the first D build did not carry the trees (see "Harness defect" below).
+- The semantic program is `CompiledProgramContentHashV1.Serialize` of the baked program; the V2 image of
+  the generated trees was not measured separately (it is inside the payload's outer preimage).
+
+- Growth is linear: from 100 to 1000 nodes each column grows by a constant per node (last column).
+- Per native node the prepared asset carries 353 bytes of payload: 168 in the semantic program (69 in
+  the node record, 91 in the debug-map entry, the rest in children and config), about as much again in
+  the outer V2 preimage, and the YAML stores it as hex, so 705 bytes per node on disk.
+- 48 of the 91 debug-map bytes per node are the source path (`Assets/Size/Trees/size-native-1000.aibt.json`,
+  length-prefixed), repeated in every entry; the outer preimage repeats it again.
+- A managed tree's `BehaviorTreeSource` carries the source JSON as it is (`jsonCarried` = source
+  bytes); the Player compiles it at run time (D9).
+
+#### 8.3 What `NativeGuard.runtime.asset` holds
+
+`raw\prepared-asset-breakdown.txt` (the asset of item 7's fresh project; SHA-256 of the decoded payload
+equals `_payloadHash`):
+
+| Part | Bytes | Note |
+| --- | --- | --- |
+| File on disk | 34,952 | YAML |
+| `_payload` on disk | 33,971 characters | the 16,985-byte payload as hex, plus a trailing `y` |
+| other fields | 383 characters | `_payloadHash`, `_catalogFingerprint`, `_sourceId`, `_sourceGuid`, `_sourceContentHash`, `_catalogTypeName`, `_subtreeSourceGuids` |
+| In the build ("Used Assets", `fresh\logs\build-editor.log`) | 17.0 KB | binary serialization: the payload as bytes |
+| **Payload** | **16,985** | `ProductionTreeArchive.Write` |
+| magic and version | 8 | |
+| semantic program | 7,905 | `CompiledProgramContentHashV1.Serialize`: header 267 (three 64-character hash strings), 37 node records × 69 = 2,557, children 148, slots 234, config 152, defaults 20, **debug map 4,507** (37 entries; the 80-byte source path in each = 3,108) |
+| outer V2 preimage | 8,119 | the bytes `NativeCompiledProgramV2Verifier` reads; holds the same 37 source paths again |
+| slots, authorities, accesses | 319 + 185 + 433 | binding tables (canonical key, type and default text) |
+| scopes, watched, registered types and fields | 16 | empty here |
+
+**Why 3× the program in the build and 6× on disk.** The 5,451 bytes the brief compares with are
+Native Guard's compiled V2 byte stream as P11-009 measured it, in the Modules project, where the
+source path is shorter (`P11-009 F9\native-guard-bytes-compare.txt`); it was not re-measured here.
+
+- In the build the asset is the payload (16,985 bytes = 3.1×): the program is stored twice, as the
+  semantic program (7,905) and as the V2 preimage (8,119), and each copy carries a debug map with the
+  full source path per node. The binding tables add 0.9 KB.
+- On disk the YAML writes the payload as hex, two characters a byte: 33,971 characters (6.2× the
+  program), and the file with its other fields is 34,952 bytes (6.4×).
+
+**What the Player never reads.** Nothing is unread, but one copy is read only to be compared:
+
+- The executed image is built from the semantic program (`NativeProgramImageOwner.cs:186`). The V2
+  preimage is hashed on load (`OuterContentHash`) and read by `NativeCompiledProgramV2Verifier.TryValidate`
+  (called from `NativeProgramImageOwner.cs:670`), which checks it field by field against the semantic
+  program.
+- The debug maps' `SourcePath` is read only for diagnostics (`NativeDiagnosticProjectorV1`).
+- Not changed here (brief); see the open findings.
+
+#### 8.4 Memory per agent
+
+Probe: `SizeProbe.Memory` in the rebuilt D Player (`build\D-Minimal-r2`, and `D-Minimal-r3` with one more
+kind), `-batchmode -nographics`. It loads the Memory scene (the trees are referenced there, so they are
+in the build), measures after `GC.Collect` twice, spawns N GameObjects with the component, waits until
+every agent has updated at least once (here: 1 frame), waits 30 more frames, and measures again.
+
+- **Managed** = the change of `Profiler.GetMonoUsedSizeLong()` (within 4 KB of `GC.GetTotalMemory` in all 56 measurements).
+- **Native** = the change of `Profiler.GetTotalAllocatedMemoryLong()`. It moves in steps of 128 KB, so
+  below about 1.3 KB per agent at N = 100 (130 bytes at N = 1000) a figure is not resolved.
+- `Profiler.supported` is `False` in a release Player; both counters still report (nonzero, and they move
+  with N).
+- Every run: all N updated, 0 faulted, exit code 0. Two passes per point; the table gives the mean per
+  agent and, where the passes differ, the range. Raw lines: `raw\memory-set-r2.txt`,
+  `raw\memory-extra-r3.txt`; the fit: `tools\memory_fit.py` → `raw\memory-fit.txt`. Run folders:
+  `run\D-Minimal-r2-memory-*-pass{1,2}\`, `run\D-Minimal-r3-memory-*-pass{1,2}\`.
+
+| What is spawned | Tree nodes | Managed per agent, N = 100 / 300 / 1000 | Native per agent, N = 100 / 300 / 1000 | Native fit: once + per agent |
+| --- | --- | --- | --- | --- |
+| empty GameObject (baseline) | – | 123 B / – / 70 B | 0 / – / 393 B | – |
+| `ProductionTreeHost`, First Agent program, bootstrapped from code | 1 | 4.4 / – / 3.8 KB | 55.1 / – / 51.6 KB | 0.4 MB + 51.2 KB |
+| `ProductionTreeHost`, 100-node program | 109 | 145.4 / – / 143.4 KB | 838.2 / – / 838.7 KB | 0 + 838.8 KB |
+| `NativeTreeAgent`, First Agent | 1 | 7.2 / 6.7 / 6.3 KB | 760 (630–889) / 322 (308–335) / 132.7 KB | 73.7 MB + 60.1 KB |
+| `NativeTreeAgent`, 100-node tree | 109 | 147.3 / 145.1 / 143.6 KB | 1686 / 1224 / 1038 (1029–1046) KB | 74.9 MB + 963 KB |
+| `BehaviorTreeAgent`, Simple Agent `guard.aibt` | 17 | 23.3 / – / 17.2 KB | 32.8 / – / 3.9 KB | 3.2 MB + 0.7 KB |
+
+Managed fit, once + per agent: `ProductionTreeHost` 0.06 MB + 3.7 KB (1 node) and 0.2 MB + 143.2 KB
+(109 nodes); `NativeTreeAgent` 0.14 MB + 6.1 KB and 0.49 MB + 143.1 KB; `BehaviorTreeAgent` 0.69 MB +
+16.5 KB.
+
+**Is the cost per agent the same at 100 and 1000?**
+
+- **Bare hosts: yes.** 51–55 KB native for a 1-node tree, 838 KB for a 109-node tree at both N.
+- **`NativeTreeAgent`: no.** The first agents bring a one-time native block of about 74 MB (the
+  N = 100 total was 63 MB in one pass and 89 MB in the other), which bare hosts do not have. Past it,
+  each agent costs the host's memory plus 9 KB (1 node) or 125 KB (109 nodes) native. Divided by N,
+  the block makes 100 agents look 5.7× (First Agent) or 1.6× (100-node tree) as expensive per agent as
+  1000.
+- **`BehaviorTreeAgent`: almost.** Managed 16.5 KB per agent plus 0.7 MB once; native about 3.2 MB once
+  and under 1 KB per agent.
+
+**What grows with the tree.** A host's memory grows with the node count: from 1 to 109 nodes, by
+7.3 KB native and 1.3 KB managed per node, per host. 1000 `NativeTreeAgent`s with the 100-node tree
+take 1.0 GB native and 144 MB managed. A `BehaviorTreeAgent` with the 17-node guard tree takes about
+17 KB (16.5 managed, 0.7 native).
+
+**Harness defect, first attempt.** `SizeAibtDriver.PrepareGrowth` saved the Memory scene with every
+template reference as `{fileID: 0}` (set through `SerializedObject`; cause not found). So the first D
+build carried none of the generated trees, and all eight memory runs failed ("No runtime tree asset is
+assigned", `run\attempt1-null-templates\`). `SizeAibtDriver.FixTemplates` sets the fields directly and
+checks the saved YAML (`out\D\templates.txt`, 0 null references); the D Player was rebuilt
+(`build\D-Minimal-r2`, `-r3`) and every number above comes from it. The two `hosts` runs of the first
+attempt threw a `NullReferenceException` in the probe and did not quit; the harness does not kill a
+Player, so they are still running (pids 55472 and 60396, `build\D-Minimal\SizePlayer.exe`).
+
 ## Open findings (not fixed here)
 
 - **Authoring tools and the graph's edit session still use the old default.** Without a policy file,
@@ -248,6 +535,14 @@ Tests: `McpVerificationToolDispatcherTests` and `McpToolDispatcherTests` (Discov
   - A native tree with Agent or Shared keys can therefore get scope diagnostics while it is edited,
     although the tree list, `validate` and the bake accept it.
   - Not measured in a consumer: the samples' native trees use Tree scope.
+- **MCP from `-executeMethod` sees only built-in nodes at first.** `ProjectNodeCatalogCache` (in
+  `Editor/Registry/ProjectNodeCatalog.cs`) starts with `ProjectNodeCatalog.Initial()` and discovers
+  project nodes on `EditorApplication.delayCall` or `projectChanged`.
+  - So a batch-mode script that calls `McpToolDispatcher.Dispatch` right at startup gets AIBT2021 for
+    every project node: 8 trees invalid in item 7's first `McpCheck` run.
+  - The documented routes (the MCP bridge and the CLI against a running Editor) are not affected: the
+    refresh has run before the first request.
+  - Older than this task. The fix would change when discovery runs, and it was not made here.
 - **Bisect gap.** `46da0de` contains the test that reads the minimal policy from `data-formats.md`, but
   that text arrived in `fee9937`. At `46da0de` alone that one test fails.
 - **Console.** The Modules Console buffer holds Editor-internal errors ("Release of invalid GC handle",
@@ -256,8 +551,65 @@ Tests: `McpVerificationToolDispatcherTests` and `McpToolDispatcherTests` (Discov
   and an undeclared `live-target` write in the first cadence test. No error comes from a committed
   state of this task.
 
+- **A prepared asset stores the program twice.** `ProductionTreeArchive.Write`
+  (`Runtime/Integration/ProductionTreeArchive.cs:22`) writes the semantic program and the outer V2
+  preimage. The Player builds the image from the semantic program (`NativeProgramImageOwner.cs:186`).
+  It uses the preimage only to hash it (`OuterContentHash`, `NativeProgramBlackboardContractsV2.cs:278`)
+  and in `NativeCompiledProgramV2Verifier.TryValidate` (`NativeCompiledProgramV2Verifier.cs:110`, called
+  from `NativeProgramImageOwner.cs:670`), which compares it with the semantic program.
+  - Native Guard: 8,119 of 16,985 payload bytes; the 1009-node tree: 174,466 of 356,807 (49%).
+  - Dropping it would change the archive format and the verification, so it is a design decision, not
+    a fix here.
+- **The debug maps repeat the full source path per node.** Each debug-map entry holds the source path,
+  in the semantic program and again in the V2 preimage.
+  - Native Guard: 37 × 80 bytes of path text = 3,108 of the semantic program's 7,905 bytes.
+  - The 1009-node tree: 48,432 bytes of path text in the semantic program's debug map (48 bytes per node
+    for a 44-character path), and as much again in the preimage.
+  - The path depends on where the tree sits in the project, so a deeper folder makes every node bigger.
+- **The YAML stores the payload as hex.** On disk a prepared asset is twice its payload (Native Guard
+  33,971 characters for 16,985 bytes). In the build it is binary (17.0 KB). Costs only repository and
+  Editor disk space.
+- **A native-only Player carries the managed path.** `AIBT.Authoring` (486,400 bytes IL, 12.6 MB C++)
+  and `AIBT.Agents` with `BehaviorTreeAgent` and the 60 managed nodes are in B, which uses only
+  `NativeTreeAgent`. Under High stripping 230,400 bytes IL and 5.3 MB C++ of `AIBT.Authoring` remain
+  (the reference compiler, `NodeRegistry`, `CanonicalTreeJson`), and `AIBT.Agents` keeps 93 types.
+  Not traced: why the linker keeps them. Splitting assemblies or adding `link.xml` rules would change the
+  package's assembly layout; not done here.
+- **A native host's memory grows by about 7.3 KB native and 1.3 KB managed per tree node.** A bare
+  `ProductionTreeHost` costs 51 KB native and 3.7 KB managed with the 1-node First Agent tree, 839 KB
+  and 143 KB with a 109-node tree, the same at 100 and 1000 hosts. 1000 `NativeTreeAgent`s with the
+  109-node tree take 1.0 GB native and 144 MB managed.
+  - Each host copies the program's node records, child indices and configuration into its own arrays
+    (`SchedulingPolicyDriver.cs:57-65`), so immutable program data is held once per host. The node
+    records alone are 69 bytes a node; the rest of the 7.3 KB per node was not attributed.
+  - Not a defect by itself, but a cost a user with many agents and large trees needs to know; recorded
+    in `performance.md`.
+- **`NativeTreeAgent` brings a one-time native block of about 74 MB.** The fit over N = 100, 300 and
+  1000 gives 73.7 MB (First Agent) and 74.9 MB (100-node tree) allocated once; the N = 100 total was
+  63 MB in one pass and 89 MB in the other. Bare hosts bootstrapped from code do not have it. Past it
+  the agent adds 9 KB (1 node) or 125 KB (109 nodes) native per agent over the host.
+  - Candidate places, not traced: the world and scheduler (`NativeTreeAgent.StartHost` →
+    `ProductionTreeWorld.TryRegister`, `ProductionTreeScheduler`, the jobs drivers
+    `ProductionAgentFrameDriverV1` and `ProductionPipelinedGroupDriverV1`), or Unity's job-system
+    allocators on first use.
+
 ## Deviations
+
+- **A README fix after the planning commit.** The README step was wrong (item 7) and was fixed in
+  `baa579e`, after the planning commit `3a1f061`. The tarball comes from `baa579e`.
 
 - **Response schema without a version bump.** The manifest response schema changed with no version bump
   (reason under item 1).
 - **D7 range.** D7's open range is "before 6000.6", not "before 6000.5" (reason under item 4).
+- **Performance documentation after the tarball.** Item 8's table in `Documentation~/performance.md`
+  was added after the tarball of item 7 (`baa579e`), so that tarball does not contain it. Nothing else
+  in the package changed after `baa579e`.
+- **Harness catalog refresh.** The item 7 harness calls the Editor's node-catalog refresh by reflection
+  before its MCP checks (open finding "MCP from `-executeMethod` …"); without it the checks fail.
+- **Two Size Players left running.** The first memory attempt's two `hosts` runs hung after a
+  `NullReferenceException` in the probe (the template references were null, see 8.4). The harness never
+  kills a process, and this task's rule is to kill nothing, so they are still running: pids 55472 and
+  60396, `C:\UnityProjects\_aibt_f14\size\build\D-Minimal\SizePlayer.exe`, about 100 MB each. They can be
+  closed by hand. The D Player was rebuilt into new folders instead.
+- **An extra probe kind.** Item 8.4 adds `empty` (baseline) and `hosts100` (bare hosts with the 100-node
+  program) to the brief's kinds, and a third point (N = 300) for `NativeTreeAgent`, to place the costs.
