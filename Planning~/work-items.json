@@ -4,6 +4,28 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P12-003", "phase": 12, "title": "Read-only game arrays in nodes (SweetKingdom request 2): ADR with an independent read and a prototype (copy per step against a job-safe view; AtomicSafetyHandle against game jobs) before any code; not started, after P12-002",
+      "status": "draft", "kind": "spike",
+      "card": "Planning~/Tasks/P12/P12-003-read-only-game-arrays.md",
+      "dependsOn": ["P12-002"],
+      "owns": ["Planning~/Evidence/P12-003/"]
+    },
+    {
+      "id": "P12-002", "phase": 12, "title": "Indexed input channel: group or squad data read by every member (SweetKingdom request 1): a rows array of any length and a per-agent row index read through the ordinary [AibtInput] handle; waits for the decision on its independent design read",
+      "status": "blocked", "kind": "implementation",
+      "card": "Planning~/Tasks/P12/P12-002-indexed-input-channel.md",
+      "blockedBy": ["decision on the independent design read of the API shape (index type and ownership, bounds and faults, wake through the index, a group-level row, when the game writes)"],
+      "dependsOn": [],
+      "owns": ["Planning~/Evidence/P12-002/"]
+    },
+    {
+      "id": "P12-001", "phase": 12, "title": "Durations in ticks and reactive interrupts in the simulation container (SweetKingdom requests 3 and 4): tests that pin d = n x TickMicroseconds and TickMicroseconds = 1 for every time node and decorator, what aibt.stdlib.wait counts, the retaining reactive selector with a dedicated wake trigger channel, documentation sections, the wake-on-change cost at 500 agents (Editor, jobs path: about 150 us per step for the trigger comparison, nothing measurable for a rewritten channel without wake, 2.8 ms instead of 0.48 ms when every agent wakes); no runtime change",
+      "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P12/P12-001-ticks-and-reactive-interrupts.md",
+      "dependsOn": ["P10-012", "P11-002"],
+      "owns": ["Planning~/Evidence/P12-001/"]
+    },
+    {
       "id": "P11-017", "phase": 11, "title": "Postponed by the owner on 2026-11-24, not started: attribution of the remaining build weight (item 5a) and the size table, the Size and memory rewrite of performance.md, the second round of memory per agent (one dispatch workspace per adapter, decided), prepared-asset envelope version 2",
       "status": "ready", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-017-postponed-memory-and-weight.md",
