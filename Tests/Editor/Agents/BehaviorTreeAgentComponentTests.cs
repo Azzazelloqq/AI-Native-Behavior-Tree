@@ -136,6 +136,45 @@ namespace AIBT.Tests.Editor.Agents
             Assert.That(_agent.IsRunning, Is.False);
         }
 
+        /// <summary>
+        /// P11-014 confirmation U10: Restart(true) on a tree whose root is the idle leaf, after one tick,
+        /// and Stop() then Restart(true). Neither faults; the blackboard is back at its defaults and the
+        /// idle root runs again.
+        /// </summary>
+        [Test]
+        public void U10_RestartTrue_OnAnIdleRoot_AfterOneTick_AndAfterStop_DoesNotFault()
+        {
+            var source = BehaviorTreeSource.FromJson(Tree("idle",
+                "\"score\": { \"type\": \"Int32\", \"typeVersion\": 1, \"scope\": \"tree\", \"default\": 3 }",
+                Node("idle", "aibt.unity.idle", null)), "u10-idle");
+            _created.Add(source);
+            _agent.Tree = source;
+            Assert.That(_agent.Blackboard, Is.Not.Null, _agent.LastError);
+            var faults = new List<string>();
+            _agent.Faulted += faults.Add;
+
+            _agent.Tick(0.1f);
+            Assert.That(_agent.IsRunning, Is.True, "the idle root keeps running");
+            _agent.Blackboard.Set("score", 9);
+            _agent.Restart(true);
+            Assert.That(_agent.LastError, Is.Null, "Restart(true) after one tick");
+            Assert.That(_agent.HasFaulted, Is.False, "Restart(true) after one tick");
+            Assert.That(_agent.Blackboard.Get<int>("score"), Is.EqualTo(3), "Restart(true) resets the blackboard");
+            _agent.Tick(0.1f);
+            Assert.That(_agent.IsRunning, Is.True, "running again after Restart(true)");
+
+            _agent.Stop();
+            _agent.Blackboard.Set("score", 9);
+            _agent.Restart(true);
+            Assert.That(_agent.LastError, Is.Null, "Stop() then Restart(true)");
+            Assert.That(_agent.HasFaulted, Is.False, "Stop() then Restart(true)");
+            Assert.That(_agent.Blackboard.Get<int>("score"), Is.EqualTo(3));
+            _agent.Tick(0.1f);
+            Assert.That(_agent.IsRunning, Is.True, "running again after Stop() then Restart(true)");
+            Assert.That(faults, Is.Empty);
+            LogAssert.NoUnexpectedReceived();
+        }
+
         private void Assign(string json)
         {
             var source = BehaviorTreeSource.FromJson(json, "agent-test", _nodes);
