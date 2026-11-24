@@ -137,11 +137,24 @@ namespace AIBT
                     ? ManagedTreeProgram.TryCompileExpanded(_json, _sourceId, _nodes, SubtreeNodeSources(), out _program, out diagnostics)
                     : ManagedTreeProgram.TryCompile(_json, _sourceId, _nodes, _resolver, out _program, out diagnostics);
                 _compileError = compiled ? null : ManagedTreeProgram.Describe(diagnostics);
+                // P11-014 (W3): an import that could not expand the subtrees stored the source and its own
+                // errors; without a resolver the compile can only say "no subtree resolver" (AIBT3020), so
+                // the import's errors come first.
+                if (!compiled && _resolver == null && _status == "Errors" && !string.IsNullOrEmpty(_details)
+                    && HasCode(diagnostics, SubtreeExpansionDiagnosticCodes.SubtreeNotFound))
+                    _compileError = _details + "\n" + _compileError;
             }
 
             program = _program;
             error = _compileError;
             return program != null;
+        }
+
+        private static bool HasCode(DiagnosticCollection diagnostics, DiagnosticCode code)
+        {
+            for (var index = 0; index < diagnostics.Count; index++)
+                if (diagnostics[index].Code.Equals(code)) return true;
+            return false;
         }
 
         private Dictionary<NodeId, string> SubtreeNodeSources()

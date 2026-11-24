@@ -91,6 +91,29 @@ namespace AIBT.Tests.Editor.Agents
             }
         }
 
+        /// <summary>
+        /// P11-014 item 5 (W3): when the import could not expand the subtrees, it stores the source JSON and
+        /// its own errors. Compiling that source without a resolver gave only AIBT3020 ("no subtree resolver
+        /// was given"); the import's errors now come first.
+        /// </summary>
+        [Test]
+        public void BehaviorTreeSource_AFailedImport_ReportsTheImportsErrorsFirst()
+        {
+            const string ImportError = "AIBT3023: Subtree 'tests.p11.counter' declares interface version 2, but the reference asks for 1.";
+            var stored = ScriptableObject.CreateInstance<BehaviorTreeSource>();
+            try
+            {
+                stored.SetContent(Parent, ParentSource, "tests.p11.counters", "Two Counters", 3, "Errors", ImportError);
+                Assert.That(stored.TryGetProgram(out _, out var error), Is.False);
+                Assert.That(error, Does.StartWith(ImportError), error);
+                Assert.That(error, Does.Contain("AIBT3020"), "the compile's own diagnostics follow");
+            }
+            finally
+            {
+                Object.DestroyImmediate(stored);
+            }
+        }
+
         [Test]
         public void BehaviorTreeSource_ExpandedContentCompilesLikeTheResolverPath()
         {
