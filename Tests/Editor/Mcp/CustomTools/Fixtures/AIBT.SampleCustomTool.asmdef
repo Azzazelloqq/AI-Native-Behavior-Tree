@@ -7,6 +7,9 @@
   "includePlatforms": [
     "Editor"
   ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
   "autoReferenced": false,
   "overrideReferences": true,
   "precompiledReferences": [
