@@ -12,7 +12,8 @@ Branch `feature/aibt-consumer-workflow`, base `9a395a1`. The briefs are in
 - The machine is loaded; no conclusion is drawn from timings.
 - Only the touched test classes were run, not the ten assemblies.
 
-Status: `in_progress`, waiting for the orchestrator's acceptance run.
+Status: accepted by the orchestrator on `3862964` ("Acceptance run" at the end); the item is in `Review`.
+Memory and build weight continue in P11-016.
 
 ## Commits
 
@@ -754,3 +755,71 @@ consumer project.
   closed by hand. The D Player was rebuilt into new folders instead.
 - **An extra probe kind.** Item 8.4 adds `empty` (baseline) and `hosts100` (bare hosts with the 100-node
   program) to the brief's kinds, and a third point (N = 300) for `NativeTreeAgent`, to place the costs.
+
+## Acceptance run (orchestrator, 2026-11-24)
+
+The run covers P11-014 and P11-015 together, on `3862964` (clean working tree).
+
+- **Read by the orchestrator.** Both sessions' reports; the diff `824a378..87ef22a` of the scheduler change
+  and of the policy helpers; the whole diff `87ef22a..3862964` under `Runtime/`, `Editor/`, `MCP/`, `Agents/`,
+  `.gitattributes` and `.npmignore` (the review follow-up and the policy default). Part A (Swarm Arena) was
+  accepted earlier from the raw Player lines, the byte identity of the delivered folder and the screenshots.
+- **Protected paths.** `git diff --name-status 824a378..3862964` is empty for
+  `Tests/Editor/CodeGen/Contracts/ExpectedPublicAbiV2.txt`, `CodeGen~`, `package.json` and `Tests/Fixtures`.
+  Under `Documentation~/specifications` one file, `time-and-random-v1.md` (+15 -7, commit `b7494b3`): the
+  correction of text recorded in P11-014 (the combine function is not a bijection of the run index; which
+  bootstrap takes an instance id). The code of both is unchanged in the range.
+- **Independent review** of `824a378..87ef22a` (a reader given the code and neutral questions): no blocker,
+  six should-fix findings and notes. Full text: `C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\independent-review-824a378-87ef22a.md`. All six
+  were given back and are in the "Review follow-up" sections of this file and of the P11-014 evidence
+  (`407cf1f..f019ff7`). The orchestrator's brief: `C:\UnityProjects\_aibt_acceptance\P11-014\brief-review-fixes.md`.
+- **Decision: one default policy for every tool** (orchestrator, under the owner's delegation of
+  2026-11-23). The session stopped on item 5 as the brief said. A second independent read
+  (`C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\policy-default-read.md`) confirmed the disagreement (`validate` accepted and `add_node` refused a
+  native tree with an Agent-scope key; the Graph window's list said Valid while its edit session showed
+  AIBT2030), and traced the opt-in to P7-018, where the policy file was the only way to say a project's trees
+  are native: a capability flag of the reference executor, not a safety boundary. Decided: the MCP authoring
+  tools and the graph edit session use the default `validate` uses; ADR-P9-001 has the second amendment
+  (`fe43768`), the code is `b7378b3`. Brief: `C:\UnityProjects\_aibt_acceptance\P11-014\brief-policy-default.md`. One existing expectation
+  inverted (`CreateTreeWithAgentScopeKeyRequiresPolicyOptInAndWritesV2`), as planned.
+- **The first full run on `87ef22a` was invalid, and why.** In an Editor that had run for 19 hours
+  `AIBT.Integration.Tests` did not finish in the script's 1200 s and three `TreeSimulation*` population tests
+  exceeded their 180 s timeout. Measured after that: `JobsPolicyEquivalenceTests` took 316-381 s in that
+  Editor and 180 s in a freshly started one; the old Burst parity test before it changed that by about 9 %
+  (196 s). The cause of the slowdown of a long-lived Editor was not determined (Editor age or machine load).
+  The runs below were made in the Editor started at 17:02; the script now waits 2700 s per assembly and
+  does not start the PlayMode run after an unfinished Editor run. Raw: `C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\full-run-87ef22a.txt`,
+  `C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\ab-burst-toggle.txt`, `C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\ab-burst-toggle-fresh-editor.txt`,
+  `C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\integration-rerun-87ef22a.json`.
+- **The Modules Editor stopped at 11:05:49 on 2026-11-24** between two of these runs: its log ends without
+  the shutdown lines and no crash record exists; an Editor of another project started two seconds later.
+  Not stopped by the orchestrator or a session. Cause not determined. Log kept: `C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\Editor-until-1105.log`.
+- **Full runs of ten assemblies**, all green: on `f019ff7` (18:24-18:45; Runtime 815, Integration 588,
+  Editor 885, the rest as below) and on `3862964` (19:03-19:21, table below). Editor-log counters did not
+  move during either (unknown-command 0, main-thread-timeout 11 before and after). Raw:
+  `C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\full-run-f019ff7.txt`, `C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\full-run-3862964.txt`.
+
+| Assembly | `e70dbea` | `3862964` |
+|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 815/815 |
+| `AIBT.Integration.Tests` | 510/510 | 588/588 |
+| `AIBT.Editor.Tests` | 859/859 | 892/892 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 |
+| `AIBT.CodeGen.GenerationTests` | 14/14 | 14/14 |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 |
+
+- **Decision.** P11-014 and P11-015 are accepted into `Review`. Open and not blocking, recorded in the
+  evidence of the two items: node bodies run Burst-compiled only in the agent-frame job and as managed code
+  on the other paths in the Editor (a change needs the generator, which is protected, and is throughput work
+  the owner has not released); the Graph window does not read the policy file; the bake compiles with the
+  built-in options; the Swarm Arena notes of the review and the "Size and memory" numbers go to P11-016.
+
+Not done by the orchestrator: the new and changed test files and the documentation pages were not read
+line by line (the review read the tests of `824a378..87ef22a`; the tests of `87ef22a..3862964` were read by
+nobody but their author); no probe was run again; the Graph window was not opened on a tree with an
+Agent-scope key; the new tarball was not imported into a consumer project after the review follow-up
+(P11-016 builds from a fresh tarball again); `npm pack` was not run.

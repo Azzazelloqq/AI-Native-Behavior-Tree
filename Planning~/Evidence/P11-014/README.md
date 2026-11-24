@@ -3,7 +3,7 @@
 Branch `feature/aibt-consumer-workflow`, base `824a378`. Raw files: `C:\UnityProjects\_aibt_acceptance\P11-014\raw\`
 (running notes in `..\progress-notes.md`). Unity 6000.6.9f1, the Modules Editor (Pipeline port 7810). The
 machine is loaded; no conclusion is drawn from timings. Only the touched test classes were run, not the
-ten assemblies (one deviation, below). Status: `in_progress`, waiting for the orchestrator's acceptance run.
+ten assemblies (one deviation, below). Status: accepted by the orchestrator on `3862964` ("Acceptance run" at the end); the item is in `Review`.
 
 ## Commits
 
@@ -322,3 +322,22 @@ Each also needs the evidence the agent-frame row has:
 - Item 15's platform statement on a 32-bit ARM device.
 - U9 with a subtree-using tree that has registered-type keys.
 - Swarm Arena's 1/32 rate in a Player (not changed here).
+
+## Acceptance run (orchestrator, 2026-11-24)
+
+Accepted together with P11-015 on `3862964`: what was read, the protected paths, the independent review, the
+two full runs of the ten assemblies (all green) and the table are in `Planning~/Evidence/P11-015/README.md`,
+"Acceptance run". For this item:
+
+- The scheduler change (`8cde249`: a pipelined group that started with no driver is not a failure) was read
+  by the orchestrator and by the review: registration state stays consistent. Two observations stay open, as
+  recorded above (members that failed inside the round are recorded `Executed`, as on the same-frame path; a
+  finished host under a forced `PipelinedJobs` profile goes through group formation every due frame).
+- **Correction of confirmation U3.** The first test compared two runs whose node bodies were both managed
+  code, so "bit-identical with Burst off and on" was not established by it; it also changed process-wide
+  Burst options. `BurstExecutionPathTests` (`407cf1f`) replaces it: a fixture node reports from inside its
+  body whether it runs Burst-compiled, and the parity is between the agent-frame job (Burst) and `Immediate`
+  (managed): 240 frames, flat and 3D, no difference. The table of paths in "Review follow-up" is the result;
+  the documentation lines that promised Burst execution of the whole native layer were corrected (`dcb1b2d`).
+- `CapacityExceeded` names the cause its site knows (`77966db`): diff read by the orchestrator.
+- Not done by the orchestrator: as listed there; Burst in a Player was measured by nobody.

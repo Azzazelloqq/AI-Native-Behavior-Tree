@@ -1,7 +1,8 @@
 # P11-015 — Consumer-install fixes (findings of P11-011)
 
-Status: `in_progress` — committed on `feature/aibt-consumer-workflow` (local commits only); waits for the
-orchestrator's acceptance run.
+Status: `Review` — committed on `feature/aibt-consumer-workflow` (local commits only) and accepted by the
+orchestrator after the full run of ten assemblies on `3862964` (all green) and an independent review (no
+blocker; its findings are in the evidence's "Review follow-up").
 
 ## Objective
 

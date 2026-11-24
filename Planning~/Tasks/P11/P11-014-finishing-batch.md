@@ -1,7 +1,8 @@
 # P11-014 — Finishing batch: review follow-ups of P11-006 to P11-013
 
-Status: `in_progress` — committed on `feature/aibt-consumer-workflow` (local commits only); waits for the
-orchestrator's acceptance run.
+Status: `Review` — committed on `feature/aibt-consumer-workflow` (local commits only) and accepted by the
+orchestrator after the full run of ten assemblies on `3862964` (all green) and an independent review (no
+blocker; its findings are in the evidence's "Review follow-up").
 
 ## Objective
 
