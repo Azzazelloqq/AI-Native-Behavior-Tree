@@ -528,7 +528,7 @@ namespace AIBT
             SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.EffectCapture);
             if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out var failure))
             {
-                Fail(failure, ProductionTreeAgentFailureDetail.CallbackRejected, result);
+                Fail(failure, ProductionTreeAgentFailureDetail.CallbackRejected, result, null, step.NodeIndex);
                 return false;
             }
             SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.MachineComplete);
@@ -599,7 +599,7 @@ namespace AIBT
                     SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.EffectCapture);
                     if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out failure))
                     {
-                        Fail(failure, ProductionTreeAgentFailureDetail.CallbackRejected, result);
+                        Fail(failure, ProductionTreeAgentFailureDetail.CallbackRejected, result, null, step.NodeIndex);
                         return;
                     }
                     SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.MachineComplete);
@@ -646,7 +646,8 @@ namespace AIBT
             NativeRuntimeFailureV1 failure,
             ProductionTreeAgentFailureDetail detail,
             BurstContextResult rejected = default,
-            string text = null)
+            string text = null,
+            uint nodeIndex = uint.MaxValue)
         {
             if (LastFailure.Code != NativeRuntimeDiagnosticCodeV1.None) return;
             LastFailure = failure;
@@ -654,11 +655,13 @@ namespace AIBT
             _ready = false;
             _recorder?.ReleaseWriter();
             if (_logs)
-                Debug.LogError("AIBT ProductionTreeHost: " + failure.Code + ": " + Describe(detail, rejected, text), _logContext);
+                Debug.LogError("AIBT ProductionTreeHost: " + failure.Code + ": " + Describe(detail, rejected, text, nodeIndex), _logContext);
         }
 
-        private string Describe(ProductionTreeAgentFailureDetail detail, BurstContextResult rejected, string text)
+        private string Describe(ProductionTreeAgentFailureDetail detail, BurstContextResult rejected, string text, uint nodeIndex)
         {
+            if (detail == ProductionTreeAgentFailureDetail.CallbackRejected && rejected == BurstContextResult.CapacityExceeded)
+                return DescribeCapacityExceeded(nodeIndex);
             switch (detail)
             {
                 case ProductionTreeAgentFailureDetail.Reentrant: return "Reentrant execution is not supported.";
@@ -673,6 +676,28 @@ namespace AIBT
                 case ProductionTreeAgentFailureDetail.AgentFrameNotRun: return "The agent-frame job did not run this host's update.";
                 default: return text;
             }
+        }
+
+        /// <summary>
+        /// P11-014 (item 7): the usual cause of a CapacityExceeded callback is the value-session limit. The
+        /// catalog sizes one callback's value sessions for its largest node (one per Read or Write binding,
+        /// two per ReadWrite binding); a node that reads or writes one binding more often than that in one
+        /// callback is refused and the host stops. The failure code is unchanged.
+        /// </summary>
+        private string DescribeCapacityExceeded(uint nodeIndex)
+        {
+            var node = "a native node (not known on this path)";
+            if (nodeIndex != uint.MaxValue && Program != null)
+            {
+                node = "runtime node " + nodeIndex;
+                for (var index = 0; index < Program.DebugMap.Count; index++)
+                    if (Program.DebugMap[index].RuntimeNodeIndex == nodeIndex)
+                        node = "node '" + Program.DebugMap[index].AuthoringNodeId.Value + "'";
+            }
+            return "Callback rejected: CapacityExceeded by " + node + ". The usual cause is the value-session limit: the catalog "
+                + "sizes one callback's value sessions for its largest node (one per Read or Write binding, two per ReadWrite "
+                + "binding), so a node that reads or writes one binding more often than that in one callback is refused. Read "
+                + "a value once into a local and reuse it (burst-node-authoring.md, 'Read a binding once per callback').";
         }
 
         /// <summary>Marks the instance for teardown. Returns false when it already was.</summary>

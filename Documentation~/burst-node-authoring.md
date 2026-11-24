@@ -55,3 +55,21 @@ prevents publication. Callback code must stay unmanaged and Burst-compatible.
 Import the sample from Unity Package Manager, then use its shard/catalog as the
 minimal reference. Runtime ownership, native backing, and dispatch internals are
 intentionally not part of the public authoring surface.
+
+## Read a binding once per callback
+
+Read each blackboard binding at most once per callback: read the value into a local and use the
+local. The same holds for writes (write once, at the end).
+
+The generated catalog sizes the value sessions of one callback for its largest node: one session
+per `Read` or `Write` binding, two per `ReadWrite` binding (a read and a write). Every
+`TryRead`/`TryWrite` call takes one session. A node that reads one binding twice in one callback
+therefore asks for more sessions than the catalog has. The second call returns
+`BurstContextResult.CapacityExceeded`, and because the rejection is latched the host stops with
+`NativeLifetimeStateInvalid`. The Console names the node and the rule:
+`Callback rejected: CapacityExceeded by node '<id>'. The usual cause is the value-session limit ...`.
+
+A catalog that also holds a node with more bindings has spare sessions, so the second read
+succeeds there and the same node seems to work. Moving the node into a smaller catalog, or
+removing the larger node, makes the fault appear. Do not rely on the spare sessions.
+`Tests/Integration/NativeRuntime/MixedScopeNativeTreeTests.SessionLimit.cs` shows both cases.
