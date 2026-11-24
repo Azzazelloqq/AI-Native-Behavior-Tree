@@ -39,10 +39,11 @@ Package Manager and pick its `package.json`.
 ```
 
 From a tarball made with `git archive` (an immutable copy of one commit; `.gitattributes` leaves out
-the development folders). Run in PowerShell:
+the development folders). Run in PowerShell, in an empty folder outside the checkout; `-o` takes a
+full path because `git -C` resolves a relative one inside the checkout:
 
 ```powershell
-git -C C:/path/to/AIBT archive --format=tar --prefix=package/ -o aibt.tar HEAD
+git -C C:/path/to/AIBT archive --format=tar --prefix=package/ -o "$PWD/aibt.tar" HEAD
 New-Item -ItemType Directory src | Out-Null
 tar -xf aibt.tar -C src
 tar --format=pax -czf com.azzazello.aibt-0.1.0.tgz -C src package
