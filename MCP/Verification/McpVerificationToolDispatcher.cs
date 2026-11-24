@@ -29,23 +29,27 @@ namespace AIBT.Mcp.Verification
             var registry = ProjectNodeCatalogCache.Current.Registry;
             var document = ApplyMigrations(loadedDocument, registry, out var migrationDiagnostics);
 
-            var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
-            var policyApplied = ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out _);
+            // P11-015 (D1, ADR-P9-001 amendment 2026-11-24): with a readable policy file the file decides;
+            // without one (or with one that cannot be read, reported as a warning) the Editor's options.
+            var snapshot = ReadProjectPolicy(projectRoot, out var policyWarning);
+            var policyApplied = snapshot != null;
+            var sourceId = ToLogicalSourceId(projectRoot, path);
             var options = policyApplied
                 ? new ValidationOptions(
-                    ToLogicalSourceId(projectRoot, path),
+                    sourceId,
                     McpVerificationJson.ToUnreachableNodePolicy(snapshot.UnreachableNodes),
                     snapshot.SupportsAgentScope,
                     snapshot.SupportsSharedScope,
                     McpVerificationJson.ToValidationPolicy(snapshot))
-                : new ValidationOptions(ToLogicalSourceId(projectRoot, path));
+                : EditorDefaultPolicy(document, McpSubtrees.ResolverFor(document, projectRoot), sourceId).CreateValidationOptions(sourceId);
+            var policyDiagnostics = policyWarning == null ? Array.Empty<Diagnostic>() : new[] { policyWarning };
 
             var registeredTypes = ProjectNodeCatalogCache.Current.RegisteredTypes;
             var referenced = McpSubtrees.ReferencedTreeIds(document);
             if (referenced.Count == 0)
             {
                 var diagnostics = new DiagnosticCollection(TreeValidator.Validate(document, registry, options, registeredTypes)
-                    .Concat(ObserverDiagnostics(document, registry, projectRoot, path)).Concat(migrationDiagnostics));
+                    .Concat(ObserverDiagnostics(document, registry, projectRoot, path)).Concat(migrationDiagnostics).Concat(policyDiagnostics));
 
                 return new JObject
                 {
@@ -61,7 +65,7 @@ namespace AIBT.Mcp.Verification
             var expansion = SubtreeExpander.Expand(document, McpSubtrees.Resolver(projectRoot), registry, options, registeredTypes);
             var expandedDiagnostics = new DiagnosticCollection((expansion.Success
                 ? TreeValidator.Validate(expansion.Document, registry, options, registeredTypes).Concat(ObserverDiagnostics(expansion.Document, registry, projectRoot, path))
-                : expansion.Diagnostics).Concat(migrationDiagnostics));
+                : expansion.Diagnostics).Concat(migrationDiagnostics).Concat(policyDiagnostics));
             return new JObject
             {
                 ["valid"] = !HasError(expandedDiagnostics),
@@ -85,23 +89,25 @@ namespace AIBT.Mcp.Verification
             var registry = ProjectNodeCatalogCache.Current.Registry;
             var document = ApplyMigrations(loadedDocument, registry, out var migrationDiagnostics);
 
-            // P7-018: mirrors Validate's already-established project-policy read exactly -- never
-            // touches ReferenceCompilationPolicy.Phase1's own shared default (still false/false).
-            var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
-            var policy = ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out _)
-                ? McpVerificationJson.ToCompilationPolicy(snapshot)
-                : ReferenceCompilationPolicy.Phase1;
-            var options = new ReferenceCompilerOptions(ToLogicalSourceId(projectRoot, path), policy, CompilerVersion);
+            // P7-018: mirrors Validate's project-policy read exactly. P11-015 (D1, ADR-P9-001 amendment
+            // 2026-11-24): without a readable policy file, the Editor's options, not Phase1.
+            var snapshot = ReadProjectPolicy(projectRoot, out var policyWarning);
+            var sourceId = ToLogicalSourceId(projectRoot, path);
 
             // ADR-P11-001: references resolve through the project's trees; a tree without subtree
             // features compiles through the unchanged overload.
             var resolver = McpSubtrees.ResolverFor(document, projectRoot);
+            var policy = snapshot != null
+                ? McpVerificationJson.ToCompilationPolicy(snapshot)
+                : EditorDefaultPolicy(document, resolver, sourceId);
+            var options = new ReferenceCompilerOptions(sourceId, policy, CompilerVersion);
             var result = resolver == null ? ReferenceCompiler.Compile(document, registry, options) : ReferenceCompiler.Compile(document, registry, options, resolver);
             // P11-014 (item 1): a tree a BehaviorTreeAgent would refuse (AIBT2051) does not compile here either.
             var observed = ProjectNodeCatalogCache.Current.ExpandForObserverRule(document, resolver, options.SourceId);
             var observerDiagnostics = observed == null ? new List<Diagnostic>() : ProjectNodeCatalog.ObserverDiagnostics(observed, registry, options.SourceId);
             var success = result.Success && observerDiagnostics.All(diagnostic => diagnostic.Severity != DiagnosticSeverity.Error);
-            var diagnostics = new DiagnosticCollection(result.Diagnostics.Concat(observerDiagnostics).Concat(migrationDiagnostics));
+            var diagnostics = new DiagnosticCollection(result.Diagnostics.Concat(observerDiagnostics).Concat(migrationDiagnostics)
+                .Concat(policyWarning == null ? Array.Empty<Diagnostic>() : new[] { policyWarning }));
 
             return new JObject
             {
@@ -342,6 +348,41 @@ namespace AIBT.Mcp.Verification
         private static string ProjectRootParent(string assetsPath)
         {
             return System.IO.Directory.GetParent(assetsPath)?.FullName ?? assetsPath;
+        }
+
+        // ---- project policy (P11-015, D1) ------------------------------------------------------
+
+        /// <summary>
+        /// Reads <c>&lt;project&gt;/.aibt/policy.json</c>. Returns null when there is no file, and null with
+        /// <paramref name="warning"/> set (AIBT9008, a warning naming the problem, such as the missing field)
+        /// when the file exists and cannot be read: the caller then uses the Editor's options
+        /// (ADR-P9-001 amendment 2026-11-24). Used by <c>validate</c>, <c>compile</c> and
+        /// <c>get_project_manifest</c>.
+        /// </summary>
+        internal static ProjectPolicySnapshot ReadProjectPolicy(string projectRoot, out Diagnostic warning)
+        {
+            warning = null;
+            var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
+            if (!System.IO.File.Exists(policyPath)) return null;
+            if (ProjectPolicySnapshot.TryReadFile(policyPath, out var snapshot, out var error)) return snapshot;
+            warning = new Diagnostic(DiscoveryDiagnosticCodes.MalformedPolicyDocument, DiagnosticSeverity.Warning,
+                "The project policy file .aibt/policy.json was not applied: " + (error?.Message ?? "it could not be read.")
+                + " The Editor's defaults were used instead: the managed policy for a tree with managed nodes, otherwise the "
+                + "native default with Agent and Shared scope allowed.",
+                new DiagnosticLocation(".aibt/policy.json"));
+            return null;
+        }
+
+        /// <summary>
+        /// The Editor's policy for <paramref name="document"/> without a policy file
+        /// (<see cref="ProjectNodeCatalog.DefaultPolicy"/>), decided on the expanded tree when the tree
+        /// references subtrees and they resolve.
+        /// </summary>
+        private static ReferenceCompilationPolicy EditorDefaultPolicy(TreeDocument document, ISubtreeResolver resolver, string sourceId)
+        {
+            var catalog = ProjectNodeCatalogCache.Current;
+            var expanded = catalog.ExpandForObserverRule(document, resolver, sourceId) ?? document;
+            return ProjectNodeCatalog.DefaultPolicy(expanded, catalog.Registry);
         }
 
         /// <summary>

@@ -35,6 +35,25 @@ namespace AIBT.Editor.Registry
             => document.Nodes.Any(node => registry.TryGet(node.TypeId, out var entry)
                 && entry.Manifest.ExecutionDomain != NodeExecutionDomain.Burst);
 
+        /// <summary>
+        /// ADR-P9-001 (amendment 2026-11-24, P11-015): the policy a tree is checked with when the project
+        /// has no <c>.aibt/policy.json</c>. A tree with a managed node runs in a <c>BehaviorTreeAgent</c> and
+        /// gets the managed layer's policy (<see cref="ManagedTreeProgram.Policy"/>); any other tree runs in a
+        /// native host and gets <see cref="NativeDefaultPolicy"/>. The tree list and MCP <c>validate</c>,
+        /// <c>compile</c> and <c>prepare_runtime</c> take it from here. Give the expanded tree when the tree
+        /// uses subtrees (<see cref="ExpandForObserverRule"/>), so a subtree's nodes count as the parent's.
+        /// </summary>
+        internal static ReferenceCompilationPolicy DefaultPolicy(TreeDocument document, NodeRegistry registry)
+            => UsesManagedNodes(document, registry) ? ManagedTreeProgram.Policy : NativeDefaultPolicy;
+
+        /// <summary>
+        /// The native default without a policy file: the built-in defaults (no managed or main-thread
+        /// nodes, deterministic nodes required) with Agent and Shared scope allowed, because native hosts
+        /// bind both.
+        /// </summary>
+        internal static readonly ReferenceCompilationPolicy NativeDefaultPolicy = new ReferenceCompilationPolicy(
+            supportsAgentScope: true, supportsSharedScope: true);
+
         internal DiagnosticCollection ValidateAuthoring(TreeDocument document, ReferenceCompilerOptions options)
         {
             var managed = UsesManagedNodes(document);

@@ -112,12 +112,11 @@ namespace AIBT.Editor.Graph
                     return entry;
                 }
                 // Trees with managed (C#) nodes run on BehaviorTreeAgent and are validated with the
-                // managed policy, which accepts the main-thread nodes the native policy rejects.
-                var managed = document.Nodes.Any(node => registry.TryGet(node.TypeId, out var item) &&
-                                                         item.Manifest.ExecutionDomain != NodeExecutionDomain.Burst);
-                var options = managed
-                    ? ManagedTreeProgram.CreateOptions(path).Policy.CreateValidationOptions(path)
-                    : new ValidationOptions(path, supportsAgentScope: true, supportsSharedScope: true);
+                // managed policy, which accepts the main-thread nodes the native policy rejects; other
+                // trees with the native default (Agent and Shared scope allowed). One helper, which MCP
+                // validate/compile use too (ADR-P9-001 amendment 2026-11-24).
+                var managed = ProjectNodeCatalog.UsesManagedNodes(document, registry);
+                var options = ProjectNodeCatalog.DefaultPolicy(document, registry).CreateValidationOptions(path);
                 var diagnostics = TreeValidator.Validate(document, registry, options, registeredTypes);
                 // P11-008 (review F10): BehaviorTreeAgent refuses an observer block when it loads the tree.
                 // P11-009 (review F10, native half): a native host does not re-evaluate observers (warning AIBT2054).

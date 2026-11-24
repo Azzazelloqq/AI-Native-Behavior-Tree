@@ -176,6 +176,53 @@ namespace AIBT.Tests.Editor.Mcp.Discovery
             Assert.That((string)((JArray)result["trees"])[0]["treeId"], Is.EqualTo("tree.dispatcher-test"));
         }
 
+        // P11-015 (D1, ADR-P9-001 amendment 2026-11-24): a project without .aibt/policy.json gets the
+        // manifest (trees, capabilities) with policy null, not an error-only object.
+        [Test]
+        public void GetProjectManifestWithoutAPolicyFile_ListsTheTrees_WithPolicyNull()
+        {
+            File.Delete(Path.Combine(_projectRoot, ".aibt", "policy.json"));
+            WriteSampleTree();
+
+            var result = Dispatch("get_project_manifest", new JObject(), "Read")["result"];
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result["error"], Is.Null, result.ToString());
+            Assert.That((string)result["format"], Is.EqualTo("aibt-project-manifest"));
+            Assert.That(result["capabilities"], Is.Not.Null, result.ToString());
+            Assert.That(result["policy"], Is.Not.Null.And.Property("Type").EqualTo(JTokenType.Null), "The key is present and null.");
+            Assert.That(result["policyWarnings"], Is.Null, "No file, nothing to warn about.");
+            Assert.That((string)((JArray)result["trees"])[0]["treeId"], Is.EqualTo("tree.dispatcher-test"));
+        }
+
+        // P11-015 (D1): a policy file that exists and cannot be read is reported, naming the missing field.
+        [Test]
+        public void GetProjectManifestWithAnUnreadablePolicyFile_ListsTheTrees_AndWarnsNamingTheField()
+        {
+            File.WriteAllText(Path.Combine(_projectRoot, ".aibt", "policy.json"), ValidPolicyJson.Replace(@"""supportsSharedScope"": false,", ""));
+            WriteSampleTree();
+
+            var result = Dispatch("get_project_manifest", new JObject(), "Read")["result"];
+
+            Assert.That(result["error"], Is.Null, result.ToString());
+            Assert.That(result["policy"].Type, Is.EqualTo(JTokenType.Null));
+            Assert.That(((JArray)result["trees"]).Count, Is.EqualTo(1));
+            var warnings = (JArray)result["policyWarnings"];
+            Assert.That(warnings, Is.Not.Null.And.Count.EqualTo(1), result.ToString());
+            Assert.That((string)warnings[0]["code"], Is.EqualTo("AIBT9008"));
+            Assert.That((string)warnings[0]["severity"], Is.EqualTo("warning").IgnoreCase);
+            Assert.That((string)warnings[0]["message"], Does.Contain("supportsSharedScope"));
+        }
+
+        private void WriteSampleTree()
+        {
+            File.WriteAllText(Path.Combine(_assetsDir, "sample.aibt.json"), @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 1, ""treeId"": ""tree.dispatcher-test"",
+  ""name"": ""Dispatcher Test"", ""root"": ""root"",
+  ""nodes"": { ""root"": { ""type"": ""aibt.action.success"", ""typeVersion"": 1 } }
+}");
+        }
+
         [Test]
         public void GetNodeContractRoundTripsARealBuiltIn()
         {

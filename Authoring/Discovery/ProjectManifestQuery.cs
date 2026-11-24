@@ -20,6 +20,17 @@ namespace AIBT.Authoring
             _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         }
 
+        private ProjectManifestQuery(NodeRegistry registry)
+        {
+            _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        }
+
+        /// <summary>
+        /// P11-015 (ADR-P9-001 amendment 2026-11-24): the manifest of a project without a readable
+        /// <c>.aibt/policy.json</c>; <see cref="Build"/> writes <c>"policy": null</c>.
+        /// </summary>
+        internal static ProjectManifestQuery WithoutPolicy(NodeRegistry registry) => new ProjectManifestQuery(registry);
+
         public JObject Build(IEnumerable<TreeDocument> trees)
         {
             if (trees == null)
@@ -57,7 +68,7 @@ namespace AIBT.Authoring
                 },
                 ["nodeRegistryHash"] = _registry.Hash,
                 ["nodeCount"] = _registry.Count,
-                ["policy"] = PolicyJson(_policy),
+                ["policy"] = _policy == null ? JValue.CreateNull() : PolicyJson(_policy),
                 ["trees"] = treeArray,
             };
         }

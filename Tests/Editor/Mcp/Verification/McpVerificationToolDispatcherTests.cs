@@ -113,7 +113,10 @@ namespace AIBT.Tests.Editor.Mcp.Verification
             // expectation (built-ins plus AIBT.Agents nodes) missed the native standard shard that
             // every project's catalog includes since P9-002, so it failed in a clean consumer too.
             var registry = AIBT.Editor.Registry.ProjectNodeCatalogCache.Current.Registry;
-            var options = new ReferenceCompilerOptions("valid.aibt.json", ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 0));
+            // P11-015 (D1): without a policy file the tool compiles with the Editor's default policy,
+            // which the program header records, so the direct call uses the same one.
+            var options = new ReferenceCompilerOptions("valid.aibt.json", AIBT.Editor.Registry.ProjectNodeCatalog.DefaultPolicy(document, registry),
+                new CompiledCompilerVersion(1, 0, 0, 0));
             var direct = ReferenceCompiler.Compile(document, registry, options);
 
             Assert.That(direct.Success, Is.True);
@@ -131,41 +134,191 @@ namespace AIBT.Tests.Editor.Mcp.Verification
             Assert.That(((JArray)response["result"]["diagnostics"]).Count, Is.GreaterThan(0));
         }
 
-        [Test]
-        public void CompileWithAgentScopeBlackboardRequiresPolicyOptIn()
-        {
-            const string AgentScopeTree = @"{
+        private const string NativeAgentScopeTree = @"{
   ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tree.agent-verify"",
   ""name"": ""Agent Verify"", ""root"": ""root"",
   ""blackboardContracts"": { ""agent"": { ""contractId"": ""contract.agent"", ""contractVersion"": 1 } },
   ""blackboard"": { ""danger"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": false } },
   ""nodes"": { ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1 } }
 }";
-            WriteTree("agent.aibt.json", AgentScopeTree);
+
+        // A tree with a managed node runs in a BehaviorTreeAgent, which has no Agent scope: the agent
+        // refuses this tree, so validate and compile refuse it too, with or without a policy file.
+        private const string ManagedAgentScopeTree = @"{
+  ""format"": ""aibt.tree"", ""formatVersion"": 2, ""treeId"": ""tree.managed-agent-scope"",
+  ""name"": ""Managed Agent Scope"", ""root"": ""root"",
+  ""blackboardContracts"": { ""agent"": { ""contractId"": ""contract.agent"", ""contractVersion"": 1 } },
+  ""blackboard"": { ""danger"": { ""type"": ""Bool"", ""typeVersion"": 1, ""scope"": ""agent"", ""default"": false } },
+  ""nodes"": {
+    ""root"": { ""type"": ""aibt.core.memory-sequence"", ""typeVersion"": 1, ""children"": [""wait""] },
+    ""wait"": { ""type"": ""aibt.unity.wait-seconds"", ""typeVersion"": 1, ""parameters"": { ""seconds"": 1.0 } }
+  }
+}";
+
+        // P11-015 (D1, ADR-P9-001 amendment 2026-11-24): without .aibt/policy.json the tools use the
+        // Editor's options (the tree list's), a native tree may use Agent and Shared scope. With a policy
+        // file the file decides, as before.
+        [Test]
+        public void CompileWithAgentScopeBlackboard_UsesTheEditorDefaultWithoutAPolicyFile_AndThePolicyWithOne()
+        {
+            WriteTree("agent.aibt.json", NativeAgentScopeTree);
 
             var withoutPolicy = Dispatch("compile", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
-            Assert.That((bool)withoutPolicy["result"]["success"], Is.False,
-                "Without a project policy opting in, Agent scope must still be rejected exactly as before.");
+            Assert.That((bool)withoutPolicy["result"]["success"], Is.True,
+                "Without a policy file a native tree is compiled with Agent and Shared scope allowed, as the tree list validates it. " + withoutPolicy);
+            var validated = Dispatch("validate", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+            Assert.That((bool)validated["result"]["policyApplied"], Is.False);
+
+            WritePolicy(supportsAgentScope: false, supportsSharedScope: false);
+            var refusedByPolicy = Dispatch("compile", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
+            Assert.That((bool)refusedByPolicy["result"]["success"], Is.False, "A policy file without Agent scope still refuses the tree, as before.");
+            var refusedValidation = Dispatch("validate", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
+            Assert.That((bool)refusedValidation["result"]["valid"], Is.False);
+            Assert.That((bool)refusedValidation["result"]["policyApplied"], Is.True);
+            Assert.That(Codes(refusedValidation), Does.Contain("AIBT2030"));
 
             WritePolicy(supportsAgentScope: true, supportsSharedScope: false);
-
             var withPolicy = Dispatch("compile", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
             Assert.That((bool)withPolicy["result"]["success"], Is.True, withPolicy.ToString());
         }
 
-        private void WritePolicy(bool supportsAgentScope, bool supportsSharedScope)
+        [TestCase("guard")]
+        [TestCase("scout")]
+        [TestCase("wander")]
+        public void TheSimpleAgentSampleTrees_ValidateAndCompile_WithoutAPolicyFile(string name)
+        {
+            var source = File.ReadAllText(EditorTestPackagePaths.Resolve("Samples~", "SimpleAgent", "Trees", name + ".aibt"));
+            var treeId = (string)JObject.Parse(source)["treeId"];
+            var sampleTypes = JObject.Parse(source)["nodes"].Children<JProperty>().Select(node => (string)node.Value["type"])
+                .Where(type => type.StartsWith("samples.", System.StringComparison.Ordinal)).Distinct().ToArray();
+            foreach (var type in sampleTypes)
+                Assume.That(AIBT.Editor.Registry.ProjectNodeCatalogCache.Current.Registry.TryGet(type, out _), Is.True,
+                    "The Simple Agent sample's own node '" + type + "' is registered only where the sample is imported.");
+            WriteTree(name + ".aibt", source);
+
+            var validated = Dispatch("validate", new JObject { ["treeId"] = treeId }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+            Assert.That((bool)validated["result"]["policyApplied"], Is.False);
+            var compiled = Dispatch("compile", new JObject { ["treeId"] = treeId }, "Compilation");
+            Assert.That((bool)compiled["result"]["success"], Is.True, compiled.ToString());
+        }
+
+        // P11-015: the minimal policy file Documentation~/data-formats.md shows accepts the samples.
+        [TestCase("guard")]
+        [TestCase("scout")]
+        [TestCase("wander")]
+        public void TheSimpleAgentSampleTrees_AreValid_UnderTheMinimalPolicyTheDocumentationShows(string name)
+        {
+            var source = File.ReadAllText(EditorTestPackagePaths.Resolve("Samples~", "SimpleAgent", "Trees", name + ".aibt"));
+            var treeId = (string)JObject.Parse(source)["treeId"];
+            Assume.That(name != "guard" || AIBT.Editor.Registry.ProjectNodeCatalogCache.Current.Registry.TryGet("samples.simple.next-waypoint", out _), Is.True,
+                "The Simple Agent sample's own node is registered only where the sample is imported.");
+            WriteTree(name + ".aibt", source);
+            var formats = File.ReadAllText(EditorTestPackagePaths.Resolve("Documentation~", "data-formats.md")).Replace("\r\n", "\n");
+            var section = formats.Substring(formats.IndexOf("## Project policy", System.StringComparison.Ordinal));
+            var start = section.IndexOf("```json\n", System.StringComparison.Ordinal) + "```json\n".Length;
+            var policy = section.Substring(start, section.IndexOf("```", start, System.StringComparison.Ordinal) - start);
+            Directory.CreateDirectory(Path.Combine(_projectRoot, ".aibt"));
+            File.WriteAllText(Path.Combine(_projectRoot, ".aibt", "policy.json"), policy);
+
+            var validated = Dispatch("validate", new JObject { ["treeId"] = treeId }, "Compilation");
+            Assert.That((bool)validated["result"]["policyApplied"], Is.True, validated.ToString());
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+        }
+
+        [Test]
+        public void AManagedTreeTheAgentWouldRefuse_IsStillRefused_WithoutAPolicyFile()
+        {
+            WriteTree("managed.aibt.json", ManagedAgentScopeTree);
+
+            var validated = Dispatch("validate", new JObject { ["treeId"] = "tree.managed-agent-scope" }, "Compilation");
+            Assert.That((bool)validated["result"]["valid"], Is.False, validated.ToString());
+            Assert.That(Codes(validated), Does.Contain("AIBT2030"));
+            var compiled = Dispatch("compile", new JObject { ["treeId"] = "tree.managed-agent-scope" }, "Compilation");
+            Assert.That((bool)compiled["result"]["success"], Is.False, compiled.ToString());
+        }
+
+        [Test]
+        public void AManagedTree_WithAPolicyFile_KeepsTodaysAnswer()
+        {
+            WriteTree("wander.aibt", File.ReadAllText(EditorTestPackagePaths.Resolve("Samples~", "SimpleAgent", "Trees", "wander.aibt")));
+            WritePolicy(supportsAgentScope: false, supportsSharedScope: false, allowManagedNodes: false);
+
+            var refused = Dispatch("validate", new JObject { ["treeId"] = "samples.simple.wander" }, "Compilation");
+            Assert.That((bool)refused["result"]["valid"], Is.False, "The policy file forbids managed nodes; it is applied as before. " + refused);
+            Assert.That((bool)refused["result"]["policyApplied"], Is.True);
+
+            WritePolicy(supportsAgentScope: false, supportsSharedScope: false, requireDeterministicNodes: false);
+            var accepted = Dispatch("validate", new JObject { ["treeId"] = "samples.simple.wander" }, "Compilation");
+            Assert.That((bool)accepted["result"]["valid"], Is.True, accepted.ToString());
+            Assert.That((bool)accepted["result"]["policyApplied"], Is.True);
+        }
+
+        // P11-015 (D1): a policy file that exists and cannot be read is reported as a warning naming the
+        // missing field; the tools then use the Editor's options.
+        [Test]
+        public void AnUnreadablePolicyFile_IsReportedAsAWarningNamingTheField_InValidateAndCompile()
+        {
+            WriteTree("agent.aibt.json", NativeAgentScopeTree);
+            WritePolicy(supportsAgentScope: true, supportsSharedScope: false, omit: "supportsSharedScope");
+
+            var validated = Dispatch("validate", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
+            Assert.That((bool)validated["result"]["policyApplied"], Is.False);
+            Assert.That((bool)validated["result"]["valid"], Is.True, validated.ToString());
+            AssertPolicyWarning((JArray)validated["result"]["diagnostics"], "supportsSharedScope");
+
+            var compiled = Dispatch("compile", new JObject { ["treeId"] = "tree.agent-verify" }, "Compilation");
+            Assert.That((bool)compiled["result"]["success"], Is.True, compiled.ToString());
+            AssertPolicyWarning((JArray)compiled["result"]["diagnostics"], "supportsSharedScope");
+        }
+
+        // P11-015 (D1): prepare_runtime is gated on validate, so a native tree with Agent-scope keys that
+        // the graph can bake is not refused there without a policy file.
+        [Test]
+        public void PrepareRuntime_OfANativeAgentScopeTree_IsNotRefused_WithoutAPolicyFile()
+        {
+            WriteTree("agent.aibt.json", NativeAgentScopeTree);
+            var catalog = AIBT.Editor.Registry.ProjectNodeCatalog.RuntimeCatalogTypes()
+                .FirstOrDefault(type => type.FullName == "AIBT.Authoring.BuiltInLeaves.BuiltInLeafCatalog");
+            Assert.That(catalog, Is.Not.Null);
+            var inspected = Dispatch("inspect_tree", new JObject { ["treeId"] = "tree.agent-verify" }, "Read");
+
+            var prepared = Dispatch("prepare_runtime", new JObject
+            {
+                ["treeId"] = "tree.agent-verify", ["expectedHash"] = (string)inspected["result"]["contentHash"],
+                ["catalog"] = catalog.AssemblyQualifiedName, ["outputPath"] = "Assets/agent.asset", ["dryRun"] = true,
+            }, "Compilation");
+
+            Assert.That((bool)prepared["result"]["success"], Is.True, prepared.ToString());
+            Assert.That(File.Exists(Path.Combine(_assetsDir, "agent.asset")), Is.False, "A dry run writes nothing.");
+        }
+
+        private static void AssertPolicyWarning(JArray diagnostics, string field)
+        {
+            var warning = diagnostics.FirstOrDefault(d => (string)d["code"] == "AIBT9008");
+            Assert.That(warning, Is.Not.Null, diagnostics.ToString());
+            Assert.That((string)warning["severity"], Is.EqualTo("warning").IgnoreCase);
+            Assert.That((string)warning["message"], Does.Contain(field));
+        }
+
+        private static string[] Codes(JObject response)
+            => ((JArray)response["result"]["diagnostics"]).Select(d => (string)d["code"]).ToArray();
+
+        private void WritePolicy(bool supportsAgentScope, bool supportsSharedScope, bool allowManagedNodes = true,
+            bool requireDeterministicNodes = true, string omit = null)
         {
             var policyDir = Path.Combine(_projectRoot, ".aibt");
             Directory.CreateDirectory(policyDir);
             var json = "{\n"
                 + "  \"format\": \"aibt.policy\",\n"
                 + "  \"formatVersion\": 1,\n"
-                + "  \"allowManagedNodes\": true,\n"
+                + "  \"allowManagedNodes\": " + (allowManagedNodes ? "true" : "false") + ",\n"
                 + "  \"allowMainThreadNodes\": true,\n"
                 + "  \"requireTreeDescription\": false,\n"
                 + "  \"requireNodeDescriptions\": false,\n"
                 + "  \"blackboardNaming\": \"any\",\n"
-                + "  \"requireDeterministicNodes\": true,\n"
+                + "  \"requireDeterministicNodes\": " + (requireDeterministicNodes ? "true" : "false") + ",\n"
                 + "  \"allowSideEffects\": true,\n"
                 + "  \"unreachableNodes\": \"error\",\n"
                 + "  \"supportsAgentScope\": " + (supportsAgentScope ? "true" : "false") + ",\n"
@@ -174,6 +327,13 @@ namespace AIBT.Tests.Editor.Mcp.Verification
                 + "  \"warningsAsErrors\": [],\n"
                 + "  \"performance\": { \"forbidUnboundedRepeaters\": false, \"requireEventDrivenServices\": false }\n"
                 + "}";
+            if (omit != null)
+            {
+                // P11-015: a file that exists but lacks a required field.
+                var document = JObject.Parse(json);
+                document.Remove(omit);
+                json = document.ToString();
+            }
             File.WriteAllText(Path.Combine(policyDir, "policy.json"), json);
         }
 

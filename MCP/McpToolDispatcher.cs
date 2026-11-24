@@ -200,21 +200,15 @@ namespace AIBT.Mcp
             var registryResult = ProjectLeafExtensionDiscovery.BuildWithBuiltInsAndProjectExtensions();
             var scan = AibtTreeDiscovery.Scan(projectRoot);
 
-            ProjectPolicySnapshot policy;
-            var policyPath = System.IO.Path.Combine(ProjectRootParent(projectRoot), ".aibt", "policy.json");
-            if (!ProjectPolicySnapshot.TryReadFile(policyPath, out policy, out var policyError))
-            {
-                policy = null;
-            }
-
-            var manifestJson = policy != null
-                ? new ProjectManifestQuery(registryResult.Registry, policy).Build(scan.Trees)
-                : new JObject
-                {
-                    ["format"] = "aibt-project-manifest",
-                    ["formatVersion"] = 1,
-                    ["error"] = "Project policy could not be read: " + policyPath,
-                };
+            // P11-015 (D1, ADR-P9-001 amendment 2026-11-24): without a readable policy file the manifest
+            // still lists the trees and capabilities, with "policy": null; a file that exists and cannot be
+            // read adds "policyWarnings" (AIBT9008, naming the problem) instead of replacing the manifest.
+            var policy = McpVerificationToolDispatcher.ReadProjectPolicy(projectRoot, out var policyWarning);
+            var manifestJson = (policy != null
+                ? new ProjectManifestQuery(registryResult.Registry, policy)
+                : ProjectManifestQuery.WithoutPolicy(registryResult.Registry)).Build(scan.Trees);
+            if (policyWarning != null)
+                manifestJson["policyWarnings"] = McpDiagnosticJson.WriteDiagnostics(new DiagnosticCollection(new[] { policyWarning }));
 
             manifestJson["skippedTreeFiles"] = new JArray(scan.SkippedFiles);
             AddSubtreeFields(manifestJson["trees"] as JArray, scan.Trees);
@@ -313,11 +307,6 @@ namespace AIBT.Mcp
             }
 
             return new JObject { ["found"] = true, ["key"] = key, ["content"] = System.IO.File.ReadAllText(fullPath) };
-        }
-
-        private static string ProjectRootParent(string assetsPath)
-        {
-            return System.IO.Directory.GetParent(assetsPath)?.FullName ?? assetsPath;
         }
 
         private static HashSet<McpPermissionCategory> ParseGranted(JArray array)

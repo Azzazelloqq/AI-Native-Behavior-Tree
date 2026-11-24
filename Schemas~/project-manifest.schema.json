@@ -38,7 +38,15 @@
         },
         "nodeRegistryHash": { "type": "string", "minLength": 1 },
         "nodeCount": { "type": "integer", "minimum": 0 },
-        "policy": { "$ref": "#/$defs/policySummary" },
+        "policy": {
+          "description": "The project's .aibt/policy.json; null when the project has none or it cannot be read (P11-015, ADR-P9-001 amendment 2026-11-24).",
+          "oneOf": [{ "$ref": "#/$defs/policySummary" }, { "type": "null" }]
+        },
+        "policyWarnings": {
+          "description": "Present when .aibt/policy.json exists and cannot be read: AIBT9008 warnings naming the problem.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/diagnostic" }
+        },
         "trees": {
           "type": "array",
           "items": {
@@ -48,7 +56,27 @@
             "properties": {
               "treeId": { "type": "string", "minLength": 1 },
               "name": { "type": "string" },
-              "revision": { "type": "integer", "minimum": 0 }
+              "revision": { "type": "integer", "minimum": 0 },
+              "interface": {
+                "description": "ADR-P11-001: the tree's subtree interface, null when it declares none.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["version", "keys"],
+                    "properties": {
+                      "version": { "type": "integer", "minimum": 1 },
+                      "keys": { "type": "array", "items": { "type": "string" } }
+                    }
+                  },
+                  { "type": "null" }
+                ]
+              },
+              "referencedTreeIds": {
+                "description": "ADR-P11-001: the tree IDs the tree's subtree reference nodes name.",
+                "type": "array",
+                "items": { "type": "string" }
+              }
             }
           }
         },
@@ -56,6 +84,7 @@
       }
     },
     "policyError": {
+      "description": "Returned before P11-015 when .aibt/policy.json was missing or unreadable; no longer produced.",
       "type": "object",
       "additionalProperties": false,
       "required": ["format", "formatVersion", "error", "skippedTreeFiles"],
@@ -69,6 +98,15 @@
     "skippedTreeFiles": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["code", "severity", "message"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^AIBT[0-9]{4}$" },
+        "severity": { "type": "string" },
+        "message": { "type": "string", "minLength": 1 }
+      }
     },
     "policySummary": {
       "type": "object",
