@@ -4,6 +4,37 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Finishing batch (P11-014)
+
+- **One observer rule everywhere.** MCP `validate` and `compile` now report `AIBT2051` for a managed tree
+  with an `observer` block, as `BehaviorTreeAgent` refuses it (`compile` no longer reports success). The
+  bake warns (`AIBT2054`) for an observer inside a subtree. A tree of built-in nodes only gets `AIBT2054`
+  saying what each host does: `BehaviorTreeAgent` refuses the tree, a native host ignores the block.
+- **MCP `create_tree` writes format 2** unless `formatVersion: 1` is given, so a later bound node no longer
+  gets `AIBT2042` twice.
+- **A failed subtree import reports its own errors first.** A `BehaviorTreeAgent` on an imported tree
+  whose subtrees could not be expanded said only "no subtree resolver" (`AIBT3020`).
+- **`ProductionTreeHost.IsExecuting` is public**, so code can tell a `PipelinedJobs` host that is between
+  frames from one that refuses reads for another reason.
+- **The value-session refusal says what happened.** A native node that reads or writes one binding more
+  often than its catalog sized stops the host with `NativeLifetimeStateInvalid`, as before; the Console
+  now names the node and the rule. The rule is in the Burst node guide ("Read a binding once per
+  callback").
+- **A finished host is no longer failed under forced `PipelinedJobs`.** An agent whose run had finished
+  (`RestartMode.Never`) got `NativeCapacityPlanInvalid` one frame later, an error in the log, a false
+  `TryGetValue` and Agent keys reset by the next `Restart()`.
+- **The tree list reads registered blackboard types.** A tree with a key of a registered type was listed
+  as "Errors".
+- **The NativeTreeAgent inspector's random-stream hint** follows an asset prepared again in place.
+- Documentation: a [Known limitations](Documentation~/known-limitations.md) page; random guards and
+  reactive composites (library guide); an observer on a subtree's root (subtrees); the Native Guard
+  cooldown lasts one run (sample README); ADR-P11-013 and the quickstart on failed starts, a host stopped
+  by user code and handle-like Agent values; the combine function of random stream identities is
+  described correctly (ADR-P11-008 amendment, `time-and-random-v1`).
+- Source compatibility: a bare `default` literal as the seed argument of `TryBootstrap` is now ambiguous
+  between `ulong` and `RandomStreamSeeding` (the P11-012 overloads); write `0UL` or
+  `default(RandomStreamSeeding)`.
+
 ### Agent memory of NativeTreeAgent (P11-013)
 
 - **Agent-scope keys of a `NativeTreeAgent` now last across runs** (ADR-P11-013, AIBT-053). Every run
@@ -99,7 +130,8 @@ All notable changes to this project will be documented here. The project follows
   The managed agent does not run observer re-evaluation: a tree with an `observer` block loaded and
   then stopped the agent with `AIBT4002` the first time a watched key changed. It is now refused at
   load with the new error `AIBT2051`, which names the node; the Editor's validation of trees with
-  managed nodes (graph, tree list, MCP) shows the same error. Use a condition's `interrupt` field or
+  managed nodes (graph, tree list) shows the same error. (Corrected in P11-014: MCP `validate` and
+  `compile` did not report it until then.) Use a condition's `interrupt` field or
   a reactive composite instead. Native hosts are unchanged: there an `observer` block still compiles
   and changes nothing (see Production tree host). The execution-semantics specification notes where
   observers are implemented (the reference executor only).
