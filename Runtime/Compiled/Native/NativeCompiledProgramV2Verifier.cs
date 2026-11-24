@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using Newtonsoft.Json;
 
 namespace AIBT
 {
@@ -412,27 +411,27 @@ namespace AIBT
                 case BlackboardValueType.Float2: text = "{\"x\":" + Format(ToSingle(ReadU32(bytes, offset))) + ",\"y\":" + Format(ToSingle(ReadU32(bytes, offset + 4))) + "}"; break;
                 case BlackboardValueType.Float3: text = "{\"x\":" + Format(ToSingle(ReadU32(bytes, offset))) + ",\"y\":" + Format(ToSingle(ReadU32(bytes, offset + 4))) + ",\"z\":" + Format(ToSingle(ReadU32(bytes, offset + 8))) + "}"; break;
                 case BlackboardValueType.Quaternion: text = "{\"x\":" + Format(ToSingle(ReadU32(bytes, offset))) + ",\"y\":" + Format(ToSingle(ReadU32(bytes, offset + 4))) + ",\"z\":" + Format(ToSingle(ReadU32(bytes, offset + 8))) + ",\"w\":" + Format(ToSingle(ReadU32(bytes, offset + 12))) + "}"; break;
-                case BlackboardValueType.Enum32: text = "{\"contract\":" + JsonConvert.ToString(enumContract) + ",\"value\":" + unchecked((int)ReadU32(bytes, offset + 8)).ToString(CultureInfo.InvariantCulture) + "}"; break;
+                case BlackboardValueType.Enum32: text = "{\"contract\":" + JsonStringLiteralV1.Quote(enumContract) + ",\"value\":" + unchecked((int)ReadU32(bytes, offset + 8)).ToString(CultureInfo.InvariantCulture) + "}"; break;
                 case BlackboardValueType.FixedString32:
                 case BlackboardValueType.FixedString64:
                 case BlackboardValueType.FixedString128:
                 case BlackboardValueType.FixedString512:
                     var length = bytes[(int)offset] | bytes[(int)offset + 1] << 8;
                     var raw = new byte[length]; for (var index = 0; index < length; index++) raw[index] = bytes[(int)offset + 2 + index];
-                    text = JsonConvert.ToString(Encoding.UTF8.GetString(raw)); break;
+                    text = JsonStringLiteralV1.Quote(Encoding.UTF8.GetString(raw)); break;
                 case BlackboardValueType.AgentId:
-                case BlackboardValueType.EntityId: text = JsonConvert.ToString(ReadU64(bytes, offset).ToString(CultureInfo.InvariantCulture)); break;
+                case BlackboardValueType.EntityId: text = JsonStringLiteralV1.Quote(ReadU64(bytes, offset).ToString(CultureInfo.InvariantCulture)); break;
                 case BlackboardValueType.OperationId:
-                    text = JsonConvert.ToString(ReadU64(bytes, offset).ToString(CultureInfo.InvariantCulture) + ":"
+                    text = JsonStringLiteralV1.Quote(ReadU64(bytes, offset).ToString(CultureInfo.InvariantCulture) + ":"
                         + ReadU32(bytes, offset + 8).ToString(CultureInfo.InvariantCulture) + ":"
                         + ReadU32(bytes, offset + 12).ToString(CultureInfo.InvariantCulture) + ":"
                         + ReadU64(bytes, offset + 16).ToString(CultureInfo.InvariantCulture)); break;
                 case BlackboardValueType.AssetId:
                     var asset = new AssetId(ReadU64(bytes, offset), ReadU64(bytes, offset + 8),
                         unchecked((long)ReadU64(bytes, offset + 16)), bytes[(int)offset + 24] != 0);
-                    text = asset.HasLocalFileId ? "{\"guid\":" + JsonConvert.ToString(asset.ToGuidString())
+                    text = asset.HasLocalFileId ? "{\"guid\":" + JsonStringLiteralV1.Quote(asset.ToGuidString())
                         + ",\"localFileId\":" + asset.LocalFileId.ToString(CultureInfo.InvariantCulture) + "}"
-                        : JsonConvert.ToString(asset.ToGuidString()); break;
+                        : JsonStringLiteralV1.Quote(asset.ToGuidString()); break;
                 default: return false;
             }
             result = Encoding.UTF8.GetBytes(text);
