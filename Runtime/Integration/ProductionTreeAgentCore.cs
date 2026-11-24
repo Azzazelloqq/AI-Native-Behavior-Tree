@@ -53,6 +53,8 @@ namespace AIBT
         private bool _disposed;
         private NativeLifecycleStepResultV1 _pendingStep;
         private bool _hasPendingStep;
+        // P11-014 review item 2: the cause a pending dispatch's effect reservation recorded, for the message.
+        private string _pendingCapacityCause;
         private int _configuredEffectQueueCapacity;
         private ProductionTreeEffectQueue _effectQueue;
         // P10-010: simulation-container agents only.
@@ -390,6 +392,7 @@ namespace AIBT
             {
                 result = reserveFailure;
                 status = NodeStatus.Failure;
+                _pendingCapacityCause = ReservationCause();
             }
             SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Return);
             return true;
@@ -479,7 +482,8 @@ namespace AIBT
                     Fail(agent.Failure, ProductionTreeAgentFailureDetail.CannotAdvance);
                     break;
                 case AgentFrameOutcomeV1.CallbackRejected:
-                    Fail(agent.Failure, ProductionTreeAgentFailureDetail.CallbackRejected, agent.RejectedResult);
+                    Fail(agent.Failure, ProductionTreeAgentFailureDetail.CallbackRejected, agent.RejectedResult,
+                        CapacityCause((AgentFrameRejectionSiteV1)agent.RejectedSite), agent.RejectedNodeIndex);
                     break;
                 case AgentFrameOutcomeV1.StepLimit:
                     FailStepLimit();
@@ -516,19 +520,24 @@ namespace AIBT
         /// without mutating the machine, if none is pending or the agent already faulted. The
         /// caller releases its own drive lock.
         /// </summary>
-        internal bool CompletePendingDispatch(BurstContextResult result, NodeStatus status)
+        internal bool CompletePendingDispatch(BurstContextResult result, NodeStatus status, string capacityCause = null)
         {
             if (!_hasPendingStep) return false;
             var step = _pendingStep;
             _hasPendingStep = false;
+            var cause = capacityCause ?? _pendingCapacityCause;
+            _pendingCapacityCause = null;
             if (!_ready) return false; // A reentrant call may already have faulted the host.
             if (result == BurstContextResult.Success
                 && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
+            {
                 status = NodeStatus.Failure;
+                cause = CaptureCause();
+            }
             SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.EffectCapture);
             if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out var failure))
             {
-                Fail(failure, ProductionTreeAgentFailureDetail.CallbackRejected, result, null, step.NodeIndex);
+                Fail(failure, ProductionTreeAgentFailureDetail.CallbackRejected, result, cause, step.NodeIndex);
                 return false;
             }
             SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.MachineComplete);
@@ -580,6 +589,7 @@ namespace AIBT
                     BurstContextResult result;
                     SchedulerFrameProfileV1.StepStart();
                     SchedulerFrameProfileV1.Add(SchedulerFrameProfileV1.Counter.SingleDispatches, 1);
+                    string capacityCause = null;
                     if (TryReserveGeneratedEffectCapacity(request.NodeIndex, out var reserveFailure))
                     {
                         SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Reserve);
@@ -589,17 +599,21 @@ namespace AIBT
                     {
                         result = reserveFailure;
                         status = NodeStatus.Failure;
+                        capacityCause = ReservationCause();
                     }
                     SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.Return);
                     SchedulerFrameProfileV1.Lap(SchedulerFrameProfileV1.Stage.HostDispatch);
                     if (!_ready) return; // A reentrant call may already have faulted the host.
                     if (result == BurstContextResult.Success
                         && !TryCaptureGeneratedEffects(step.NodeIndex, out result))
+                    {
                         status = NodeStatus.Failure;
+                        capacityCause = CaptureCause();
+                    }
                     SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.EffectCapture);
                     if (!_agents[0].Machine.TryCompleteDispatch(step.DispatchToken, result, status, out failure))
                     {
-                        Fail(failure, ProductionTreeAgentFailureDetail.CallbackRejected, result, null, step.NodeIndex);
+                        Fail(failure, ProductionTreeAgentFailureDetail.CallbackRejected, result, capacityCause, step.NodeIndex);
                         return;
                     }
                     SchedulerFrameProfileV1.StepLap(SchedulerFrameProfileV1.Step.MachineComplete);
@@ -661,7 +675,7 @@ namespace AIBT
         private string Describe(ProductionTreeAgentFailureDetail detail, BurstContextResult rejected, string text, uint nodeIndex)
         {
             if (detail == ProductionTreeAgentFailureDetail.CallbackRejected && rejected == BurstContextResult.CapacityExceeded)
-                return DescribeCapacityExceeded(nodeIndex);
+                return DescribeCapacityExceeded(nodeIndex, text);
             switch (detail)
             {
                 case ProductionTreeAgentFailureDetail.Reentrant: return "Reentrant execution is not supported.";
@@ -679,14 +693,15 @@ namespace AIBT
         }
 
         /// <summary>
-        /// P11-014 (item 7): the usual cause of a CapacityExceeded callback is the value-session limit. The
-        /// catalog sizes one callback's value sessions for its largest node (one per Read or Write binding,
-        /// two per ReadWrite binding); a node that reads or writes one binding more often than that in one
-        /// callback is refused and the host stops. The failure code is unchanged.
+        /// P11-014 item 7, corrected by the review follow-up (item 2): a CapacityExceeded refusal names the
+        /// node. It names the limit only where the failing site knows it (<paramref name="cause"/>: the
+        /// effect or command reservation before the callback, the effect or command capture after it, a
+        /// failed group); a refusal returned by the callback itself lists the possible limits. The failure
+        /// code is unchanged.
         /// </summary>
-        private string DescribeCapacityExceeded(uint nodeIndex)
+        private string DescribeCapacityExceeded(uint nodeIndex, string cause)
         {
-            var node = "a native node (not known on this path)";
+            var node = "a native node (this path did not record which)";
             if (nodeIndex != uint.MaxValue && Program != null)
             {
                 node = "runtime node " + nodeIndex;
@@ -694,10 +709,49 @@ namespace AIBT
                     if (Program.DebugMap[index].RuntimeNodeIndex == nodeIndex)
                         node = "node '" + Program.DebugMap[index].AuthoringNodeId.Value + "'";
             }
-            return "Callback rejected: CapacityExceeded by " + node + ". The usual cause is the value-session limit: the catalog "
-                + "sizes one callback's value sessions for its largest node (one per Read or Write binding, two per ReadWrite "
-                + "binding), so a node that reads or writes one binding more often than that in one callback is refused. Read "
-                + "a value once into a local and reuse it (burst-node-authoring.md, 'Read a binding once per callback').";
+            return "Callback rejected: CapacityExceeded at " + node + ". " + (cause ?? CallbackCapacityLimits);
+        }
+
+        /// <summary>The possible limits of a CapacityExceeded the callback returned; the site does not know which one.</summary>
+        internal const string CallbackCapacityLimits =
+            "The node's callback was refused because one of its fixed capacities was too small; this site does not record "
+            + "which. The possible limits: the callback's value sessions or their staging bytes (the catalog sizes them for its "
+            + "largest node: one session per Read or Write binding, two per ReadWrite binding, so reading or writing one binding "
+            + "more often in one callback is refused; read a value once into a local, burst-node-authoring.md, 'Read a binding "
+            + "once per callback'), and the node's command, command payload or operation capacity (the effects, simulation "
+            + "commands or action changes it publishes in one callback).";
+
+        /// <summary>The text for a failed batched group (<see cref="ProductionDispatchResolverV1"/>): every member stops.</summary>
+        internal static string GroupCapacityCause(int members)
+            => "The batched dispatch of a group of " + members + " nodes of one catalog was refused, so every host in the group "
+               + "stopped; the group does not record which member or which limit. The possible limits: a member's effect queue "
+               + "or command quota (reserved before the callbacks), the group's workspace, and every limit of a member's "
+               + "callback (its value sessions and their staging bytes, its command, command payload or operation capacity; "
+               + "burst-node-authoring.md, 'Read a binding once per callback').";
+
+        /// <summary>The reservation before a node's callback failed: the node was not called.</summary>
+        private string ReservationCause()
+            => _simulation != null
+                ? "The simulation container's command quota had no room for the commands this node may publish in one callback, "
+                  + "so the node was not called."
+                : "The host's effect queue had fewer free entries than the effects this node may publish in one callback, so "
+                  + "the node was not called. Drain the effects more often or give the host a larger effect capacity.";
+
+        /// <summary>The capture after a node's callback failed: the node ran, its output did not fit.</summary>
+        private string CaptureCause()
+            => _simulation != null
+                ? "The node ran, but the simulation container did not accept the commands or action changes it published "
+                  + "(a command channel, action or event capacity)."
+                : "The node ran, but the effects it published did not fit the host's effect queue.";
+
+        private string CapacityCause(AgentFrameRejectionSiteV1 site)
+        {
+            switch (site)
+            {
+                case AgentFrameRejectionSiteV1.Reservation: return ReservationCause();
+                case AgentFrameRejectionSiteV1.Capture: return CaptureCause();
+                default: return null;
+            }
         }
 
         /// <summary>Marks the instance for teardown. Returns false when it already was.</summary>

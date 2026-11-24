@@ -63,8 +63,12 @@ namespace AIBT
                     continue;
                 }
 
+                // P11-014 review item 2: the group does not know which member or limit refused it; say so.
+                var groupCause = groupFailure == AIBT.Burst.BurstContextResult.CapacityExceeded
+                    ? ProductionTreeAgentCore.GroupCapacityCause(groupScratch.Count)
+                    : null;
                 for (var memberIndex = 0; memberIndex < groupScratch.Count; memberIndex++)
-                    groupScratch[memberIndex].Host.CompletePendingDispatch(groupFailure, NodeStatus.Failure);
+                    groupScratch[memberIndex].Host.CompletePendingDispatch(groupFailure, NodeStatus.Failure, groupCause);
             }
         }
 

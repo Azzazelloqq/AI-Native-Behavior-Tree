@@ -66,8 +66,20 @@ per `Read` or `Write` binding, two per `ReadWrite` binding (a read and a write).
 `TryRead`/`TryWrite` call takes one session. A node that reads one binding twice in one callback
 therefore asks for more sessions than the catalog has. The second call returns
 `BurstContextResult.CapacityExceeded`, and because the rejection is latched the host stops with
-`NativeLifetimeStateInvalid`. The Console names the node and the rule:
-`Callback rejected: CapacityExceeded by node '<id>'. The usual cause is the value-session limit ...`.
+`NativeLifetimeStateInvalid`. The Console names the node:
+`Callback rejected: CapacityExceeded at node '<id>'.` The callback's own refusal does not record
+which capacity was too small, so the message lists the possible limits: the value sessions and
+their staging bytes described here, and the node's command, command payload or operation capacity
+(the effects, simulation commands or action changes it publishes in one callback).
+
+`CapacityExceeded` has other causes, and where the host knows the cause the message names it:
+
+- the host's effect queue (or a simulation container's command quota) had too few free entries
+  for the effects the node may publish in one callback, so the node was not called;
+- the node ran, but the effects it published did not fit the effect queue (or the container did
+  not accept its commands or action changes);
+- under `BatchedJobsSameFrame` or `PipelinedJobs`, a batched group of nodes of one catalog was
+  refused; every host in the group stops, and the message lists the possible limits.
 
 A catalog that also holds a node with more bindings has spare sessions, so the second read
 succeeds there and the same node seems to work. Moving the node into a smaller catalog, or

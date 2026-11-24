@@ -97,6 +97,17 @@ namespace AIBT
         internal byte IsCompletion;
     }
 
+    /// <summary>P11-014 review item 2: where an agent-frame dispatch was refused (<see cref="AgentFrameAgentV1.RejectedSite"/>).</summary>
+    internal enum AgentFrameRejectionSiteV1 : byte
+    {
+        /// <summary>The node's callback, or a node without a dispatch slot.</summary>
+        Callback = 0,
+        /// <summary>The effect or command reservation before the callback; the node was not called.</summary>
+        Reservation = 1,
+        /// <summary>The effect or command capture after the callback.</summary>
+        Capture = 2,
+    }
+
     /// <summary>One agent's update inside the agent-frame job: inputs set by the host, outputs drained in agent order.</summary>
     internal struct AgentFrameAgentV1
     {
@@ -119,6 +130,9 @@ namespace AIBT
         internal NativeLifecycleStepResultV1 TerminalStep;
         internal NativeRuntimeFailureV1 Failure;
         internal BurstContextResult RejectedResult;
+        // P11-014 review item 2: the refused node and where (an AgentFrameRejectionSiteV1), for the message.
+        internal uint RejectedNodeIndex;
+        internal byte RejectedSite;
         internal byte Executed;
         // Diagnostics: dispatches run, the job thread index, and whether the body ran without Burst.
         internal uint Dispatches;
@@ -171,6 +185,7 @@ namespace AIBT
                 {
                     BurstContextResult result;
                     NodeStatus status;
+                    var site = AgentFrameRejectionSiteV1.Callback;
                     if (step.NodeIndex >= (uint)agent.Slots.Length)
                     {
                         // Same results as the adapter's reservation and Dispatch for an unknown node.
@@ -198,6 +213,7 @@ namespace AIBT
                         {
                             result = BurstContextResult.CapacityExceeded;
                             status = NodeStatus.Failure;
+                            site = AgentFrameRejectionSiteV1.Reservation;
                         }
                         else if (agent.SimulationMode != 0
                             && (result = AIBT.Simulation.SimulationAgentRoutinesV1.TryReserve(ref agent.Simulation, slot.CommandChannels))
@@ -205,6 +221,7 @@ namespace AIBT
                         {
                             // The container's command quota (the effect-capacity rule): same as its in-place reservation.
                             status = NodeStatus.Failure;
+                            site = AgentFrameRejectionSiteV1.Reservation;
                         }
                         else
                         {
@@ -212,7 +229,10 @@ namespace AIBT
                             result = ExecuteSlot(ref agent, ref slot, in step, ref body, out status);
                             if (result == BurstContextResult.Success && agent.EffectFree >= 0
                                 && !TryCaptureEffects(ref agent, ref slot, out result))
+                            {
                                 status = NodeStatus.Failure;
+                                site = AgentFrameRejectionSiteV1.Capture;
+                            }
                             if (result == BurstContextResult.Success && agent.SimulationMode != 0)
                             {
                                 var state = slot.State[0];
@@ -225,7 +245,11 @@ namespace AIBT
                                     result = AIBT.Simulation.SimulationAgentRoutinesV1.TryCapture(
                                         ref agent.Simulation, slot.CommandChannels, slot.PublishedCommands, slot.PublishedPayload, ref state);
                                 slot.State[0] = state;
-                                if (result != BurstContextResult.Success) status = NodeStatus.Failure;
+                                if (result != BurstContextResult.Success)
+                                {
+                                    status = NodeStatus.Failure;
+                                    site = AgentFrameRejectionSiteV1.Capture;
+                                }
                             }
                         }
                     }
@@ -233,6 +257,8 @@ namespace AIBT
                     {
                         agent.Outcome = AgentFrameOutcomeV1.CallbackRejected;
                         agent.RejectedResult = result;
+                        agent.RejectedNodeIndex = step.NodeIndex;
+                        agent.RejectedSite = (byte)site;
                         agent.Failure = failure;
                         return;
                     }

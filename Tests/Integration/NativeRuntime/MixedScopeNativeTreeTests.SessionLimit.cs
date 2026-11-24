@@ -51,8 +51,29 @@ namespace AIBT.Tests.Integration.NativeRuntime
             Assert.That(code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeLifetimeStateInvalid), "the failure code is unchanged");
             var message = errors.SingleOrDefault(text => text.Contains("AIBT ProductionTreeHost: "));
             Assert.That(message, Is.Not.Null, string.Join("\n", errors));
-            Assert.That(message, Does.Contain("Callback rejected: CapacityExceeded by node 'reader'"), message);
-            Assert.That(message, Does.Contain("value-session limit").And.Contain("Read a value once into a local"), message);
+            Assert.That(message, Does.Contain("Callback rejected: CapacityExceeded at node 'reader'"), message);
+            // P11-014 review item 2: the callback's own refusal lists the possible limits; none is "the usual cause".
+            Assert.That(message, Does.Contain("value sessions").And.Contain("read a value once into a local"), message);
+            Assert.That(message, Does.Contain("command, command payload or operation capacity"), message);
+            Assert.That(message, Does.Not.Contain("usual cause"), message);
+        }
+
+        /// <summary>
+        /// P11-014 review item 2: on the JobsAgentFrame job the refusal names the node too (before, the
+        /// message said the node was not known on this path).
+        /// </summary>
+        [Test]
+        public void ValueSessionLimit_OnTheAgentFrameJob_TheMessageNamesTheNode()
+        {
+            var profile = ProfileFor("forced-agent-frame");
+            var twice = Spawn(PrepareSessionAsset(SessionTree("aibt.tests.read-twice", "tests.p11014.agent-frame-twice")), profile);
+            var errors = CaptureErrors(() => { for (var frame = 0; frame < 3; frame++) Frame(); });
+
+            var message = errors.FirstOrDefault(text => text.Contains("AIBT ProductionTreeHost: "));
+            Debug.Log("P11-014 review item 2, agent frame: LastError=" + (twice.LastError ?? "null") + "; message: " + message);
+            Assert.That(twice.LastError, Is.Not.Null.And.Contain("NativeLifetimeStateInvalid"));
+            Assert.That(message, Is.Not.Null, string.Join("; ", errors));
+            Assert.That(message, Does.Contain("Callback rejected: CapacityExceeded at node 'reader'"), message);
         }
 
         [Test]
@@ -85,6 +106,9 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 + (once.Host == null ? "null" : "kept") + ", runs " + once.CompletedRuns + "; world failure " + _world.LastWorldFailure.Code
                 + "; errors: " + string.Join(" | ", errors));
             Assert.That(twice.LastError, Is.Not.Null.And.Contain("NativeLifetimeStateInvalid"), "the over-reading agent stops");
+            // P11-014 review item 4: the evidence says the batched path's message names the node; assert it.
+            Assert.That(errors.Where(text => text.Contains("AIBT ProductionTreeHost: ")).ToArray(),
+                Has.Length.EqualTo(1).And.All.Contain("Callback rejected: CapacityExceeded at node 'reader'"), string.Join("; ", errors));
             Assert.That(once.LastError, Is.Null, "the neighbour on the same catalog keeps running");
             Assert.That(once.CompletedRuns, Is.GreaterThanOrEqualTo(10));
             Assert.That(_world.LastWorldFailure.Code, Is.EqualTo(NativeRuntimeDiagnosticCodeV1.None));

@@ -976,12 +976,12 @@ namespace AIBT
         /// recently returned. Returns false, without mutating the machine, if no wave step is
         /// currently pending (a caller error) or the host already faulted reentrantly.
         /// </summary>
-        internal bool CompletePendingDispatch(BurstContextResult result, NodeStatus status)
+        internal bool CompletePendingDispatch(BurstContextResult result, NodeStatus status, string capacityCause = null)
         {
             if (!_core.HasPendingDispatch) return false;
             try
             {
-                return _core.CompletePendingDispatch(result, status);
+                return _core.CompletePendingDispatch(result, status, capacityCause);
             }
             finally
             {
