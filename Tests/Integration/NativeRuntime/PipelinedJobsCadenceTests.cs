@@ -152,10 +152,11 @@ namespace AIBT.Tests.Integration.NativeRuntime
         [Test]
         public void TheSharedLoop16BenchmarkTree_TakesItsStepsPlusOneFramesPerUpdate()
         {
-            var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(PipelinedJobsCadenceTests).Assembly);
-            var root = package == null ? System.IO.Path.Combine(Application.dataPath, "AIBT") : package.resolvedPath;
-            var path = System.IO.Path.Combine(root, "Benchmarks~", "Phase10", "PlayerPerf", "Assets", "AibtPerf", "Trees", "shared-loop16.aibt.json");
-            Assume.That(System.IO.File.Exists(path), Is.True, "The benchmark tree ships only in a source checkout.");
+            // P11-014 review item 4: the package root as the other tests of this assembly resolve it. A tarball
+            // install has no Benchmarks~ folder, so the test is Inconclusive there.
+            var path = AIBT.Tests.Integration.SemanticSlice.SemanticSliceTestPackagePaths.Resolve(
+                "Benchmarks~", "Phase10", "PlayerPerf", "Assets", "AibtPerf", "Trees", "shared-loop16.aibt.json");
+            Assume.That(System.IO.File.Exists(path), Is.True, "The benchmark tree ships only in a source checkout (Benchmarks~ is not in the package tarball).");
             var agent = Spawn(PrepareWithBuiltInLeaves(System.IO.File.ReadAllText(path)), Pipelined("tests.p11015.shared-loop16"), null);
 
             var measured = Measure(agent);

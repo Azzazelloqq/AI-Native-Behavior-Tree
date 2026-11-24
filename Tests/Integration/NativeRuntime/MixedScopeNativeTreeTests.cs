@@ -164,6 +164,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
         [TestCase("forced-batched-jobs")]
         [TestCase("forced-pipelined-jobs")]
         [TestCase("forced-agent-frame")]
+        [TestCase("forced-agent-frame-in-place")]
         public void NativeTreeAgent_RunsTheMixedTree_InEverySchedulingProfile(string kind)
         {
             var profile = ProfileFor(kind);
@@ -312,6 +313,12 @@ namespace AIBT.Tests.Integration.NativeRuntime
                     // P11-014 item 11b: below the minimum batch (64) a JobsAgentFrame batch runs each member
                     // in place, so a handful of test agents never reached the job.
                     _scheduler.AgentFrameMinimumBatchSize = 1;
+                    return Forced(SchedulingPolicy.JobsAgentFrame, false);
+                case "forced-agent-frame-in-place":
+                    // P11-014 review item 4: the in-place fallback below the minimum batch, which the kind above
+                    // no longer reaches.
+                    _scheduler.SetJobsCapabilities(JobsCapabilities(pipelined: false));
+                    Assert.That(_scheduler.AgentFrameMinimumBatchSize, Is.EqualTo(ProductionTreeScheduler.DefaultAgentFrameMinimumBatchSize));
                     return Forced(SchedulingPolicy.JobsAgentFrame, false);
                 default: throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }

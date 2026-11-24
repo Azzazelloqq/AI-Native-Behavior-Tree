@@ -33,7 +33,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
         private static readonly string[] Kinds =
         {
             "interactive", "background", "forced-immediate", "forced-budgeted",
-            "forced-batched-jobs", "forced-pipelined-jobs", "forced-agent-frame",
+            "forced-batched-jobs", "forced-pipelined-jobs", "forced-agent-frame", "forced-agent-frame-in-place",
         };
 
         /// <summary>The same Agent contract as <see cref="MixedTree"/>, one more Tree key: the Agent range starts 8 bytes later.</summary>
@@ -363,6 +363,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 case "forced-batched-jobs": return "BatchedJobsSameFrame";
                 case "forced-pipelined-jobs": return "PipelinedJobs";
                 case "forced-agent-frame": return "JobsAgentFrame job";
+                case "forced-agent-frame-in-place": return "JobsAgentFrame in place";
                 default: throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
             }
         }

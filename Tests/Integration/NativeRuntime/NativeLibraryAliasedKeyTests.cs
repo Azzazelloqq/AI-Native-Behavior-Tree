@@ -146,8 +146,19 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 Copy("down", type, "low", "k"), Copy("self-down", type, "k", "k"),
             };
 
+            // P11-014 review item 4: the two writes now differ (true, then false), so a lost or undone second write
+            // ends true; the check after the first write fails the run if that write was lost (a bool cannot
+            // differ from both the start value and the first write at the end). In the other cases the final
+            // value (low) differs from the start and from the first write (high), so a lost second write changes it.
             yield return Case("copy-bool", S + "copy-bool",
-                new[] { Bool("k", false), Bool("high", true), Bool("low", true) }, CopyNodes("copy-bool"), ("k", true));
+                new[] { Bool("k", false), Bool("high", true), Bool("low", false) },
+                new[]
+                {
+                    Composite("root", "aibt.core.memory-sequence", "up", "self-up", "after-up", "down", "self-down"),
+                    Copy("up", "copy-bool", "high", "k"), Copy("self-up", "copy-bool", "k", "k"),
+                    Leaf("after-up", S + "bool-is-true", null, "\"key\": \"k\""),
+                    Copy("down", "copy-bool", "low", "k"), Copy("self-down", "copy-bool", "k", "k"),
+                }, ("k", false));
             yield return Case("copy-int", S + "copy-int",
                 new[] { Int("k", -7), Int("high", 11), Int("low", -20) }, CopyNodes("copy-int"), ("k", -20));
             yield return Case("copy-float", S + "copy-float",

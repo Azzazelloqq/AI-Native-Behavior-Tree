@@ -15,11 +15,27 @@ namespace AIBT.Tests.Consumer
     /// </summary>
     public sealed class TestAssemblyIsolationTests
     {
+        /// <summary>
+        /// Assemblies the check must see: the three fixtures of the F14 finding and the two test assemblies
+        /// that reference most fixtures. P11-014 review item 4: without this, a wrong root (no asmdef found)
+        /// passed.
+        /// </summary>
+        private static readonly string[] Expected =
+        {
+            "AIBT.SampleCustomTool", "AIBT.NodeDevelopment.ShardFixture", "AIBT.NodeDevelopment.CatalogFixture",
+            "AIBT.Editor.Tests", "AIBT.Integration.Tests",
+        };
+
         [Test]
         public void EveryAssemblyDefinitionUnderTests_IsATestAssembly()
         {
             var root = AIBT.Tests.Editor.EditorTestPackagePaths.Resolve("Tests");
-            var offenders = Directory.GetFiles(root, "*.asmdef", SearchOption.AllDirectories)
+            var files = Directory.GetFiles(root, "*.asmdef", SearchOption.AllDirectories);
+            var names = files.Select(path => (string)JObject.Parse(File.ReadAllText(path))["name"]).ToArray();
+            UnityEngine.Debug.Log("P11-014 review item 4: " + files.Length + " assembly definitions under " + root);
+            Assert.That(files.Length, Is.GreaterThanOrEqualTo(Expected.Length), "assembly definitions found under " + root);
+            Assert.That(names, Is.SupersetOf(Expected), "the check read the package's Tests folder");
+            var offenders = files
                 .Where(path => !IsTestAssembly(JObject.Parse(File.ReadAllText(path))))
                 .Select(path => path.Substring(root.Length + 1).Replace('\\', '/'))
                 .OrderBy(path => path, System.StringComparer.Ordinal)
