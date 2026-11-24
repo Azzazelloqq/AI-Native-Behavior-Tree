@@ -60,7 +60,7 @@ namespace AIBT
         [SerializeField] private ulong _randomStreamId;
         [Tooltip("Trace channel of the host (what read_trace and the Trace Viewer read). Auto: on in the Editor, off in a Player. Read when a run starts.")]
         [SerializeField] private NativeTreeAgentTraceMode _trace = NativeTreeAgentTraceMode.Auto;
-        [Tooltip("Records the trace channel holds when it is on (the first records - 1 are kept); it stops after twice as many emissions.")]
+        [Tooltip("Records the trace channel holds when it is on (the first records - 1 are kept); it stops after twice as many emissions. Each record costs 168 B of native memory per agent (a 152 B record and two 8 B emission slots): 256 records are 43,008 B.")]
         [SerializeField, Min(MinimumTraceRecords)] private int _traceRecords = DefaultTraceRecords;
 
         private readonly Dictionary<string, FactSlot> _factsByKey = new Dictionary<string, FactSlot>(StringComparer.Ordinal);
@@ -143,7 +143,8 @@ namespace AIBT
         /// <summary>
         /// P11-016: records of the trace channel when there is one; the channel keeps the first records - 1
         /// and stops after twice as many emissions. Clamped to [<see cref="MinimumTraceRecords"/>, 1048576].
-        /// Read when a run starts.
+        /// Each record costs 168 B of native memory per agent (a 152 B record and two 8 B emission slots):
+        /// 256 records are 43,008 B, 1048576 records 168 MiB. Read when a run starts.
         /// </summary>
         public int TraceRecordCapacity { get => _traceRecords; set => _traceRecords = value; }
 

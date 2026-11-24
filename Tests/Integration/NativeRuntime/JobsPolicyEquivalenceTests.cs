@@ -272,6 +272,58 @@ namespace AIBT.Tests.Integration.NativeRuntime
             AssertSame(immediate, agentFrame, "two hosts of one catalog in one agent-frame job");
         }
 
+        [Test]
+        public void JobsAgentFrame_AHostWithoutATraceChannel_HasNoAgentFrameTraceList()
+        {
+            // P11-016 follow-up A6: the job writes an agent's trace list only while a recorder records,
+            // so a host without a channel never creates it; a host with one does and records.
+            var tree = Prepare(LoopTree);
+            var worldObject = Track(new GameObject("AIBT.Tests.P11016.TraceListWorld"));
+            var scheduler = worldObject.AddComponent<ProductionTreeScheduler>();
+            var world = worldObject.AddComponent<ProductionTreeWorld>();
+            InvokePrivate(world, "Awake");
+            InvokePrivate(world, "OnEnable");
+            scheduler.AgentFrameMinimumBatchSize = 1;
+            var agents = new List<NativeTreeAgent>();
+            try
+            {
+                foreach (var mode in new[] { NativeTreeAgentTraceMode.Off, NativeTreeAgentTraceMode.On })
+                {
+                    var agent = Track(new GameObject("AIBT.Tests.P11016.TraceList." + mode)).AddComponent<NativeTreeAgent>();
+                    agent.Tree = tree;
+                    agent.World = world;
+                    agent.TraceMode = mode;
+                    agent.RestartMode = NativeTreeRestartMode.Never;
+                    agent.Profile = SchedulingProfile.JobsAgentFrame;
+                    agent.Activate();
+                    agent.SetFact("live-target", 1f);
+                    agents.Add(agent);
+                }
+                for (var frame = 0; frame < 5; frame++)
+                {
+                    InvokePrivate(scheduler, "Update");
+                    Assert.That(scheduler.FrameEntryCount, Is.EqualTo(2));
+                    for (var index = 0; index < 2; index++)
+                    {
+                        Assert.That(scheduler.TryGetFrameEntry(index, out var entry), Is.True);
+                        Assert.That(entry.SelectedPolicy, Is.EqualTo(SchedulingPolicy.JobsAgentFrame));
+                        Assert.That(entry.AgentFrameRanInPlace, Is.False, "frame " + frame + ": ran in the job");
+                    }
+                }
+                Assert.That(agents[0].Host.TraceChannelOwner, Is.Null);
+                Assert.That(agents[0].Host.AgentFrameTraceListCreatedForTests, Is.False, "No channel, no list.");
+                Assert.That(agents[1].Host.TraceChannelOwner, Is.Not.Null);
+                Assert.That(agents[1].Host.AgentFrameTraceListCreatedForTests, Is.True);
+                Assert.That(agents[1].Host.TraceChannelOwner.TryGetSnapshot(out var snapshot, out var failure), Is.True, failure.ToString());
+                Assert.That(snapshot.RecordCount, Is.GreaterThan(0), "The traced host recorded from the job.");
+                Assert.That(agents.All(a => a.LastError == null), Is.True);
+            }
+            finally
+            {
+                foreach (var agent in agents) if (agent != null) agent.Deactivate();
+            }
+        }
+
         [TestCase(63, false)]
         [TestCase(64, true)]
         public void JobsAgentFrame_MinimumBatchBoundary(int agents, bool expectJob)

@@ -156,7 +156,9 @@ node's command burst; 4 is the small example's choice, not a scheduler setting. 
 use the same program. The default host clock is scaled Unity time. Without a trace capacity the
 host traces in the Editor (256 records, 512 emissions) and has no trace channel in a Player;
 `NativeTraceChannelCapacityV1.None` turns tracing off everywhere and any other capacity is used as
-given. A `NativeTreeAgent` has the same choice as its **Trace** field (Auto, Off, On). Catalog
+given. A `NativeTreeAgent` has the same choice as its **Trace** field (Auto, Off, On), with
+**Trace Records** as the capacity: each record costs 168 B of native memory per agent (a 152 B
+record and two 8 B emission slots), so the default 256 records are 43,008 B. Catalog
 mismatch is an explicit failure.
 
 Implement `IProductionTreeWorldParticipant`: resolve typed input handles once, stage Unity facts

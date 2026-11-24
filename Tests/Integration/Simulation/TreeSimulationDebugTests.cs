@@ -302,6 +302,41 @@ namespace AIBT.Tests.Integration.Simulation
         }
 
         /// <summary>
+        /// P11-016 follow-up: tracing switched on after the agent already thought in the job (its agent-frame
+        /// entry is kept by the group) records the next thinks exactly as on the main-thread path.
+        /// </summary>
+        [Test]
+        public void TracingSwitchedOnAfterAJobThink_RecordsTheSameAsTheMainThreadPath()
+        {
+            List<string> Script(bool useJobs)
+            {
+                using (var rig = NewRig(DebugTree, useJobs, Stopping(2), ThinkSchedule.Every(50, 1), wake: true))
+                {
+                    var group = rig.Group;
+                    Assert.That(rig.Simulation.Step(1), Is.EqualTo(SimulationResult.Success));
+                    var first = SingleEvent(group, ActionEventKind.Started);
+                    Assert.That(group.TrySetTraced(rig.Agent, true), Is.EqualTo(SimulationResult.Success));
+                    Assert.That(group.TryWake(rig.Agent), Is.EqualTo(SimulationResult.Success));
+                    Assert.That(rig.Simulation.Step(2), Is.EqualTo(SimulationResult.Success));
+                    Assert.That(group.TryComplete(first.Action, ActionOutcome.Succeeded, new JobResult { Score = 2.5f, Hits = 3 }), Is.EqualTo(SimulationResult.Success));
+                    Assert.That(rig.Simulation.Step(3), Is.EqualTo(SimulationResult.Success));
+                    rig.Sense[0] = new CrewSense { Threat = 0.5f, Alarm = true };
+                    Assert.That(rig.Simulation.Step(4), Is.EqualTo(SimulationResult.Success));
+                    Assert.That(group.GetRootCompletions().Length, Is.EqualTo(1));
+                    var lines = Lines(group, rig.Agent, out var info);
+                    Assert.That(info.Dropped, Is.Zero);
+                    return lines;
+                }
+            }
+
+            var mainThread = Script(false);
+            var jobs = Script(true);
+            TestContext.WriteLine(string.Join(Environment.NewLine, jobs));
+            Assert.That(mainThread.Count(l => l.Contains("UpdateStarted")), Is.GreaterThanOrEqualTo(3), "The thinks after the switch are traced.");
+            Assert.That(jobs, Is.EqualTo(mainThread));
+        }
+
+        /// <summary>
         /// The ring keeps the newest records: with room for 8, the oldest are dropped and counted, sequences stay
         /// contiguous, and a clear empties the ring and its counters while tracing goes on.
         /// </summary>

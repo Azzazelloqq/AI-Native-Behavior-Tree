@@ -32,6 +32,37 @@ namespace AIBT.Tests.Editor.Trace
         }
 
         [Test]
+        public void SelectedLiveHostWithoutAChannelSaysSo()
+        {
+            // P11-016 follow-up A6: a running host bootstrapped without a channel is not told to bootstrap.
+            var node = new NodeDocument(new NodeId("wait"), "aibt.stdlib.wait", 1,
+                parameters: new SemanticObject(new[] { new SemanticProperty("ticks", SemanticValue.FromUInt64(1)) }), tags: TagSet.Empty);
+            var document = new TreeDocument(TreeDocument.CurrentFormat, 1, new TreeId("tree.test.selected-trace-none"), "Trace",
+                node.Id, new[] { node }, tags: TagSet.Empty, metadata: SemanticObject.Empty);
+            var compiled = ReferenceCompiler.Compile(document, NodeRegistryBuilder.CreateWithBuiltIns().Build().Registry,
+                new ReferenceCompilerOptions("trees/trace.aibt.json", ReferenceCompilationPolicy.Phase1, new CompiledCompilerVersion(1, 0, 0, 1)));
+            Assert.That(compiled.Success, Is.True);
+            var gameObject = new GameObject("trace host without channel");
+            var host = gameObject.AddComponent<ProductionTreeHost>();
+            try
+            {
+                Assert.That(host.TryBootstrap(compiled.Program, _ => NodeStatus.Success, NativeTraceChannelCapacityV1.None, out var failure),
+                    Is.True, failure.Code.ToString());
+                Assert.That(host.TraceChannelOwner, Is.Null);
+                Assert.That(SelectedHostTraceMenu.TryCreateSession(host, out var session, out var explanation), Is.False);
+                Assert.That(session, Is.Null);
+                Assert.That(explanation, Does.Contain("runs without a trace channel"));
+                Assert.That(explanation, Does.Contain("Trace"));
+                Assert.That(explanation, Does.Not.Contain("bootstrap it"));
+            }
+            finally
+            {
+                typeof(ProductionTreeHost).GetMethod("OnDestroy", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(host, null);
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
         public void SelectedBootstrappedHostAttachesItsOwnedChannel()
         {
             var node = new NodeDocument(new NodeId("wait"), "aibt.stdlib.wait", 1,

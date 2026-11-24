@@ -434,13 +434,20 @@ namespace AIBT
             agent.EffectFree = _effectQueue != null ? _effectQueue.Free : -1;
             agent.SimulationMode = _simulation != null ? (byte)1 : (byte)0;
             agent.TraceEnabled = _recorder != null && _recorder.IsRecording ? (byte)1 : (byte)0;
+            // P11-016: the job appends to the trace list only while a recorder records, so the list is
+            // created then, not for every agent; a container's kept entry gets it when tracing starts later.
+            if (agent.TraceEnabled != 0 && !_agentFrameTrace.IsCreated)
+                _agentFrameTrace = new UnsafeList<AgentFrameTraceEventV1>(64, Allocator.Persistent);
+            agent.Trace = _agentFrameTrace;
             agent.Outcome = AgentFrameOutcomeV1.None;
         }
 
+        /// <summary>P11-016: whether the agent-frame trace list exists; for tests.</summary>
+        internal bool AgentFrameTraceListCreatedForTests => _agentFrameTrace.IsCreated;
+
         private void EnsureAgentFrameStorage()
         {
-            if (_agentFrameTrace.IsCreated) return;
-            _agentFrameTrace = new UnsafeList<AgentFrameTraceEventV1>(64, Allocator.Persistent);
+            if (_agentFrameEffects.IsCreated) return;
             _agentFrameEffects = new UnsafeList<ProductionTreeEffect>(_effectQueue != null ? 8 : 1, Allocator.Persistent);
             _agentFrameEmptyBytes = new NativeArray<byte>(0, Allocator.Persistent);
             _agentFrameEmptyParallel = new NativeArray<NativeParallelBranchStateV1>(0, Allocator.Persistent);

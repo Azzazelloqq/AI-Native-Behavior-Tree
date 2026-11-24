@@ -196,6 +196,9 @@ namespace AIBT
         /// </summary>
         internal GeneratedTreeDispatchAdapterV2 GeneratedDispatchAdapter => _core.GeneratedDispatch;
 
+        /// <summary>P11-016: whether the agent-frame trace list exists (only while a recorder recorded); for tests.</summary>
+        internal bool AgentFrameTraceListCreatedForTests => _core.AgentFrameTraceListCreatedForTests;
+
         /// <summary>
         /// This host's own machine value -- a bundle of <c>NativeArray</c> handles, not a snapshot;
         /// any copy observes the same underlying native state. For a
@@ -332,6 +335,9 @@ namespace AIBT
         /// state -- this host remains the sole owner of its machine, trace channel and disposal.
         /// </summary>
         public bool IsCoordinatorOwned => _owner != null;
+
+        /// <summary>P11-016: bootstrapped and not yet destroyed (the Editor's trace menu tells this apart from no channel).</summary>
+        internal bool IsBootstrappedAndLive => _core.Bootstrapped && !_core.Disposed && !_core.DestroyRequested;
 
         /// <summary>
         /// Opaque, per-host handle for one Tree-scope blackboard slot resolved for external write

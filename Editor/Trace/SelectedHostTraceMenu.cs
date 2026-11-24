@@ -27,6 +27,13 @@ namespace AIBT.Editor.Trace
                 return false;
             }
             var channel = host.TraceChannelOwner;
+            if (channel == null && host.IsBootstrappedAndLive)
+            {
+                // P11-016: a host started with no trace level (ADR-P7-010, amendment 2026-11-24).
+                explanation = "The selected host runs without a trace channel: its NativeTreeAgent's Trace is Off (or Auto in a Player), "
+                    + "or it was bootstrapped with NativeTraceChannelCapacityV1.None. Set Trace to On (or pass a capacity) and start it again.";
+                return false;
+            }
             if (channel == null || channel.State == NativeOwnerStateV1.Disposed)
             {
                 explanation = "The selected host has no live trace channel. Start and bootstrap it in Play mode first.";
