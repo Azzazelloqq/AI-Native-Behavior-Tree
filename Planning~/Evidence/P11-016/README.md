@@ -339,3 +339,64 @@ Not implemented, as the brief asks: the orchestrator decides on a second round f
   table and was made test first.
 - **Known limitations.** Two lines added: the trace channel keeps the first records only, and every
   generated leaf costs its own allocations.
+
+## Stage 1 acceptance (orchestrator, 2026-11-24)
+
+Stage 1 (`51dfaed..72db77b`, records `2f1c0d7`) is accepted. The item stays `in_progress`: stages 2 and 3
+and a second round of memory follow.
+
+- **Read by the orchestrator.** The session's report; the whole diff `32c8bfa..2f1c0d7` under `Runtime/`;
+  the ADR-P7-010 amendment; the changed lines of the existing tests; this file.
+- **Protected paths.** `git diff --name-status 32c8bfa..2f1c0d7` is empty for
+  `Tests/Editor/CodeGen/Contracts/ExpectedPublicAbiV2.txt`, `CodeGen~`, `package.json` and `Tests/Fixtures`.
+  Under `Documentation~/specifications` one file, `native-runtime-v1.md`: one sentence added after the
+  `AIBT4310` rule, covered by the amendment. The independent review finds the sentence wider than the code
+  (see below).
+- **Numbers.** The N = 1000 rows of the native, managed and private tables were recomputed from the raw
+  `SIZE|MEM` and `SIZE|MEMORY` lines of the `s1base` and `s1i3b` runs: they match.
+- **Job time, checked because the raw lines suggested a regression.** The stage's own runs show the
+  agent-frame job counter of the last build (`s1i3b`) about 50 % above the build before it, in both passes
+  (`native100`, N = 1000: 201 and 195 ms against 133 and 134 ms over 31 batches). Those runs were not
+  interleaved. An interleaved comparison of the same three Players (4 rounds, rotating order, one worker):
+  `s1i2` 133.6, 115.6, 117.7, 120.9 ms; `s1i3` 129.9, 115.6, 120.5, 118.2 ms; `s1i3b` 116.7, 119.0, 116.7,
+  119.2 ms. No difference between the builds; the earlier figure was machine load. Raw:
+  `C:\UnityProjects\_aibt_acceptance\P11-016\acceptance\ab-jobtime-stage1.txt`. This is not a timing claim beyond "no regression seen".
+- **Independent review** of `32c8bfa..2f1c0d7` (a reader given the code and neutral questions): no blocker.
+  Checked and found correct: the lifetime of the borrowed arrays on every dispose path, the absence of
+  writers and of job-safety conflicts (all eight arrays are `[ReadOnly]` in the backing), every caller of
+  the changed shapes, the equivalence of the slot-table control flow, null checks on every use of the trace
+  channel, additions only on the public surface. Four should-fix findings, all in documents and records,
+  given back to the session: the `ProductionTreeHost.TraceChannelOwner` summary still says "available until
+  destruction"; the specification sentence says "by default in a Player" although only
+  `ProductionTreeProgram` and `NativeTreeAgent` choose that default; "stage 1 does not change managed
+  memory" against this file's own table for `hosts`; three different per-leaf figures for item 1. Notes
+  (thin spots of the new tests, the unbounded `TraceRecordCapacity`, the trace menu's message for a host
+  with Trace Off, and others) are in the full text: `C:\UnityProjects\_aibt_acceptance\P11-016\acceptance\independent-review-stage1.md`.
+- **Full run of ten assemblies on `2f1c0d7`** (20:33-20:52, Editor started at 17:02), all green. Editor-log
+  counters did not move during it (unknown-command 0, main-thread-timeout 13 before and after). Raw:
+  `C:\UnityProjects\_aibt_acceptance\P11-016\acceptance\full-run-2f1c0d7.txt`.
+
+| Assembly | `3862964` | `2f1c0d7` |
+|---|---|---|
+| `AIBT.Runtime.Tests` | 815/815 | 821/821 |
+| `AIBT.Integration.Tests` | 588/588 | 601/601 |
+| `AIBT.Editor.Tests` | 892/892 | 893/893 |
+| `AIBT.BehaviorCases.Tests` | 65/65 | 65/65 |
+| `AIBT.NativeBurstDispatch.Tests` | 79/79 | 79/79 |
+| `AIBT.NativeTreeAgentBlackboard.Tests` | 33/33 | 33/33 |
+| `AIBT.NativeSharedBlackboard.Tests` | 36/36 | 36/36 |
+| `AIBT.CodeGen.ContractTests` | 6/6 | 6/6 |
+| `AIBT.CodeGen.GenerationTests` | 14/14 | 14/14 |
+| `AIBT.PlayMode.Tests` (PlayMode) | 2/2 | 2/2 |
+
+- **Decision on a second round of memory** (orchestrator, under the owner's delegation, after an independent
+  options read: `C:\UnityProjects\_aibt_acceptance\P11-016\second-round-read.md`; the decision with its reasons: `C:\UnityProjects\_aibt_acceptance\P11-016\decision-second-round.md`).
+  Done next, after stage 2: one dispatch workspace per adapter instead of one per leaf, with the state that
+  must survive between a leaf's requests kept per leaf, tests first for what today's tests would not catch,
+  and a prototype measurement as a gate. Before it, the measurements this file lacks: simulation-container
+  agents, and a same-catalog pair of trees that separates per-node from per-leaf cost. Not now: packing a
+  leaf's arrays into fewer allocations (decided again from the numbers after the first change). Not done:
+  sizing scratch by the case (it reverses a pinned behaviour for 7 % or less).
+
+Not done by the orchestrator: the new test files were read by the independent reviewer, not by the
+orchestrator; no Player was run with a trace channel on; nothing was measured in a development build.
