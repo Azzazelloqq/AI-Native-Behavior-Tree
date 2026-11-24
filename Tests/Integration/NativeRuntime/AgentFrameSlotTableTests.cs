@@ -157,6 +157,9 @@ namespace AIBT.Tests.Integration.NativeRuntime
             Assert.That(slotOfNode.Length, Is.EqualTo(6), "The root and five leaves.");
             Assert.That(slots.Length, Is.EqualTo(5), "Five generated leaves; the memory sequence has no slot.");
             Assert.That(slotOfNode[0], Is.EqualTo(-1), "The root composite.");
+            // UnsafeList rounds a capacity up to a power of two (75 and 109 both give 128); the table is trimmed.
+            Assert.That(slots.Capacity, Is.EqualTo(slots.Length), "The slot table holds exactly one slot per leaf.");
+            Assert.That(slotOfNode.Capacity, Is.EqualTo(slotOfNode.Length), "The map holds exactly one entry per node.");
             for (var node = 1; node < slotOfNode.Length; node++)
             {
                 var slot = slotOfNode[node];

@@ -719,6 +719,10 @@ namespace AIBT
                     map.Add(table.Length);
                     table.Add(_slots[index].CreateAgentFrameSlot(_definition.Binding, _catalog, _agentBaseOffset));
                 }
+                // UnsafeList rounds its capacity up to a power of two (75 leaves get 128 slots); keep exactly
+                // what is used. An empty list stays as created (trimming it to 0 would free it).
+                if (table.Length > 0) table.TrimExcess();
+                if (map.Length > 0) map.TrimExcess();
                 _agentFrameSlots = table;
                 _agentFrameSlotOfNode = map;
                 _agentFrameCatalog = shared;
