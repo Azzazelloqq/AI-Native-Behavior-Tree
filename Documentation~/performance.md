@@ -17,6 +17,11 @@ the GC disabled. Worker-thread time of Jobs policies is not measured.
 These are synthetic trees with trivial leaves. They show the cost of AIBT itself, not of your
 nodes; a node that raycasts or moves a NavMeshAgent costs what that Unity call costs.
 
+**Runs before and after `a02d2f4` (P11-016) are not comparable.** Since that commit a
+`NativeTreeAgent` whose **Trace** is Auto, which the harness uses, has no trace channel in a Player;
+before it every native agent had one (43 KB of native memory, and the recorder appended every
+update). Every native number on this page was measured before it and was not measured again.
+
 ## Managed layer (`BehaviorTreeAgent`)
 
 A warmed-up tick allocates nothing (0 B per agent-tick in every managed scenario, no GC during

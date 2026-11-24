@@ -8,6 +8,11 @@ made with it; their analysis is in `Documentation~/performance.md` and
 
 This folder is source only. It is not compiled by the package (`Benchmarks~` is ignored by Unity).
 
+**Runs before and after `a02d2f4` (P11-016) are not comparable.** The harness's `NativeTreeAgent`s
+keep the default **Trace** (Auto), which since that commit means no trace channel in a Player; before
+it every native agent had one (43 KB of native memory, and the recorder appended every update).
+Compare a run only with runs on the same side of that commit.
+
 ## Setup
 
 1. A Unity 6 consumer project that references the AIBT package and has imported the **Simple
