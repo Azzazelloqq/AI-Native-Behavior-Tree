@@ -4,6 +4,37 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Consumer-install fixes (P11-015)
+
+- **MCP and the CLI agree with the Graph window when the project has no `.aibt/policy.json`.**
+  `validate`, `compile` and `prepare_runtime` check a tree with managed nodes with the managed layer's
+  policy and any other tree with the native default, which allows Agent and Shared scope, as the tree
+  list does. Before, the Simple Agent trees were invalid through MCP and `prepare_runtime` refused a
+  native tree with Agent-scope keys. `get_project_manifest` lists the trees with `"policy": null`
+  instead of returning only an error. A policy file that cannot be read is reported as warning
+  `AIBT9008` naming the problem. With a readable file nothing changes (ADR-P9-001, amendment
+  2026-11-24). A `compile` without the file has a different `contentHash` than before, because the
+  program records the policy.
+- **Test fixtures no longer compile into a consumer's Editor.** Three fixture assemblies under
+  `Tests/` were not test assemblies, so every consumer exposed the fixture MCP tool
+  `aibt_custom_sample_write_marker`.
+- **Swarm Arena works in a Built-in or URP project.** **AIBT > Samples > Swarm Arena > Create Demo**
+  builds the scene with materials of the project's render pipeline. It replaces the shipped
+  `SwarmArena.unity`, which needed URP. The agents are drawn in a Player, nothing is drawn without a
+  graphics device (no exception per frame), and the keys need the legacy Input Manager. The
+  `PipelinedJobs` half of the swarm moves: agents apply their last decision every frame.
+- **The `PipelinedJobs` cadence is documented.** A group makes one logical update per (lifecycle
+  steps of its slowest tree + 1) frames, and a test pins it. The performance page no longer reads the
+  pipelined rows as "a third of the work per frame".
+- **The package is smaller.** `git archive` and `npm pack` leave out `Planning~`, `Benchmarks~` and
+  `Spikes~` (`.gitattributes`, `.npmignore`). A 370 MB raw benchmark report left the tree; it stays in
+  Git history.
+- Documentation:
+  - the README names the verified Editor (`6000.6.9f1`) and the two verified install routes (local
+    checkout, `git archive` tarball);
+  - only a `NativeTreeAgent` Player never compiles JSON;
+  - `BehaviorTreeSource.Status` is the import-time check against built-in nodes only.
+
 ### Finishing batch (P11-014)
 
 - **One observer rule everywhere.** MCP `validate` and `compile` now report `AIBT2051` for a managed tree
