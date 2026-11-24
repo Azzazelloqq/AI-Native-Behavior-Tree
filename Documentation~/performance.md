@@ -108,10 +108,25 @@ Main-thread µs per agent and frame (worker time not included):
 | | `PipelinedJobs` | 2.6 | 4.6 | 10.8 | ≈65–110 |
 
 `BatchedJobsSameFrame` costs more main-thread time than the default at every measured N and
-allocates every round. `PipelinedJobs` costs less main-thread time at N=1 000 but advances each
-tree about once every three frames (a round spans frames), so it does a third of the work per frame;
-per unit of work it is not cheaper. Keep the default unless a measurement of your own tree on your
-target says otherwise.
+allocates every round.
+
+<a id="pipelinedjobs-cadence"></a>**`PipelinedJobs` cadence.** A `PipelinedJobs` group advances one
+lifecycle step per frame, so it makes one logical update per (lifecycle steps of its slowest tree +
+1) frames, where the default makes one update per frame. A group is the agents of one tree asset with
+one profile, and the whole group waits for its slowest member. A tree waiting in one leaf
+(`io-wait1`) takes 2 steps, so it updates every 3 frames. The looping `shared-loop16` takes 2, 25
+or 43 steps depending on where it is (one update every 3, 26 or 44 frames; on average every 6.6
+frames over 120 frames). The Swarm Arena sample's tree takes about 32 frames (31.2 to 31.9 measured
+in a Player), so at 60 FPS a pipelined agent decides about twice a second. `PipelinedJobsCadenceTests`
+pins the rule by counting frames and steps.
+
+The `PipelinedJobs` rows above are therefore the main-thread cost of a frame in which an agent does a
+third of an `io-wait1` update, or about a sixth of a `shared-loop16` update on average. They are not
+the cost of an update. Per logical update the cost is higher than the default's: about 2.9 × 3 ≈ 8.7
+µs against 3.8 µs for `io-wait1`, and about 2.6 × 6.6 ≈ 17 µs against 8.3 µs for `shared-loop16`, at
+N=1 000. Choose `PipelinedJobs` only for trees that tolerate that latency. To run whole updates in
+jobs every frame, use [`JobsAgentFrame`](#jobsagentframe-p10-004). Keep the default unless a
+measurement of your own tree on your target says otherwise.
 
 The table above was measured before P10-002. Since P10-002, `BatchedJobsSameFrame` reuses its round
 storage and schedules one parallel job per round, and a warmed-up frame allocates 0 B. The quick

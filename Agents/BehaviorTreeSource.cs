@@ -42,9 +42,20 @@ namespace AIBT
 
         public int NodeCount => _nodeCount;
 
-        /// <summary>Import-time validation summary shown in the inspector.</summary>
+        /// <summary>
+        /// The importer's status of the tree: checked at import time against the built-in node registry only
+        /// (core composites and decorators and built-in leaves). A tree that uses other nodes (the package's
+        /// <c>aibt.unity.*</c> nodes, the native library, a project's own nodes) reads "Needs registry" here
+        /// even when it is valid. Project nodes are validated by this asset's inspector and by the Graph
+        /// window (its tree list and the open graph), which use the project's node catalog; the inspector does
+        /// not show this value. P11-015 (D6): documented, behaviour unchanged.
+        /// </summary>
         public string Status => _status;
 
+        /// <summary>
+        /// The detail text of <see cref="Status"/>, from the same import-time check against the built-in
+        /// registry only; for "Needs registry" it lists the node types that check did not know.
+        /// </summary>
         public string Details => _details;
 
         /// <summary>Creates a tree asset in memory from JSON text, for trees built or loaded at runtime.</summary>

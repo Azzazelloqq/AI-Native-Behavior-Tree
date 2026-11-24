@@ -38,7 +38,8 @@ Limits that a guide already explains are linked, not repeated.
 - **`PipelinedJobs` updates a group less often than once per frame.** A group makes one logical
   update per (lifecycle steps of its slowest tree + 1) frames: 3 frames for a tree waiting in one
   leaf, about 32 for the Swarm Arena tree (`NativeBatchedLifecycleOwnerV1.cs`, `AdvanceJob`;
-  `ProductionTreeScheduler.cs`, `AdvancePipelinedRuns`).
+  `ProductionTreeScheduler.cs`, `AdvancePipelinedRuns`). What that means for cost and when to choose
+  it: [Performance, `PipelinedJobs` cadence](performance.md#pipelinedjobs-cadence).
 
 ## MCP and tools
 

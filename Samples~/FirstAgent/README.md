@@ -30,7 +30,7 @@ boundary. Effects are the node's command ids (`[AibtCommand]`), delivered on the
 node's update commits.
 
 The node and catalog are separate generated assemblies, as required by the supported Burst ABI.
-The Player never reads JSON or compiles trees: the asset is compiled in the Editor. The agent finds
+This sample's Player never reads JSON or compiles its tree: a `NativeTreeAgent` runs the asset compiled in the Editor. The agent finds
 the catalog recorded in the asset by name; the package's build step keeps that catalog type in a
 stripped Player. To choose the catalog yourself, assign
 `NativeTreeAgent.CatalogFactory = YourCatalog.TryCreateRuntimeCatalog` before the agent is enabled.

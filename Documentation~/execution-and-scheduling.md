@@ -16,7 +16,7 @@ AIBT does not assign operating-system threads. Unity Job System owns worker thre
 | --- | --- | --- |
 | `Immediate` | Small workloads, tests, debugging | Current frame |
 | `BatchedJobsSameFrame` | Parallel speed-up where results are needed immediately | Current frame after completion |
-| `PipelinedJobs` | High throughput where one-frame delay is acceptable | Next frame or explicit pipeline stage |
+| `PipelinedJobs` | Latency-tolerant trees; a round spans frames | One logical update per (lifecycle steps of the group's slowest tree + 1) frames: 3 for a tree waiting in one leaf, about 32 for the Swarm Arena tree. The whole group (one tree asset, one profile) waits for its slowest member. `JobsAgentFrame` runs whole updates in jobs every frame. See [Performance, `PipelinedJobs` cadence](performance.md#pipelinedjobs-cadence) |
 | `Budgeted` | Very large populations or non-critical AI updates | Configurable |
 | `Auto` | Explainable selection among supported policies | Determined by allowed latency |
 

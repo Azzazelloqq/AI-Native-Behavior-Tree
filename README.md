@@ -20,18 +20,42 @@ It has two runtime layers that share one tree format and one editor:
 
 Start with the managed layer. Move a tree to the native layer when you need what it guarantees (zero GC while running, deterministic Burst execution).
 
-Requirements: Unity 6 (`6000.0` or newer; this release is verified on `6000.7.0b1`), Burst
-`1.8.29`, Collections `6.5.0`, Newtonsoft JSON `3.2.2` (installed as dependencies). The package is
-`0.1.0` and its editor and AI integration are experimental. MIT license.
+Requirements: Unity 6. This release is verified on `6000.6.9f1`. The package asks for Burst
+`1.8.29`, Collections `6.5.0` and Newtonsoft JSON `3.2.2`. An Editor that ships newer built-in
+versions resolves those: `6000.6.9f1` uses Burst `2.0.0` and Collections `6.6.0`, and the package
+compiles and runs with them. `package.json` declares `"unity": "6000.0"`, but no Editor older than
+`6000.6` was tested. The package is `0.1.0` and its editor and AI integration are experimental. MIT
+license.
 
 ## Install
 
-Add the package to `Packages/manifest.json` from a local checkout (or use **Add package from disk**
-in Package Manager):
+Two routes are verified.
+
+From a local checkout: add it to `Packages/manifest.json`, or use **Add package from disk** in
+Package Manager and pick its `package.json`.
 
 ```json
 "com.azzazello.aibt": "file:C:/path/to/AIBT"
 ```
+
+From a tarball made with `git archive` (an immutable copy of one commit; `.gitattributes` leaves out
+the development folders). Run in PowerShell:
+
+```powershell
+git -C C:/path/to/AIBT archive --format=tar --prefix=package/ -o aibt.tar HEAD
+New-Item -ItemType Directory src | Out-Null
+tar -xf aibt.tar -C src
+tar --format=pax -czf com.azzazello.aibt-0.1.0.tgz -C src package
+```
+
+Then reference the tarball in `Packages/manifest.json`:
+
+```json
+"com.azzazello.aibt": "file:C:/path/to/com.azzazello.aibt-0.1.0.tgz"
+```
+
+A git URL in Package Manager was not tested. The repository's published state is behind this
+release, so do not rely on that route yet.
 
 Then open **Window > Package Manager > AI-Native Behavior Tree > Samples** and import **Simple
 Agent** (managed layer) and **First Agent** (native layer). Each has a setup menu that builds a demo

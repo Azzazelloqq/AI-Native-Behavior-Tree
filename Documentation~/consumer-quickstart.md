@@ -169,7 +169,10 @@ still stops execution and does not automatically restart or pool an instance.
 
 ## Player builds
 
-The Player never reads JSON or compiles native trees; the runtime asset is compiled in the Editor.
+A `NativeTreeAgent` Player never reads JSON or compiles its tree: the runtime asset is compiled
+in the Editor. That holds only for `NativeTreeAgent`. A `BehaviorTreeAgent` parses its tree's JSON
+and compiles it in the Player when it first loads it. So does a scene that builds its native trees
+from JSON at run time, as Swarm Arena's low-level path does.
 `NativeTreeAgent` resolves the catalog type recorded in the asset by reflection and
 `BehaviorTreeAgent` creates `[BtNode]` classes by reflection, so a Player with managed code
 stripping would lose them. The package's build step `AibtLinkXmlProcessor` writes an additional
