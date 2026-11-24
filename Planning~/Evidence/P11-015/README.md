@@ -528,7 +528,8 @@ Player, so they are still running (pids 55472 and 60396, `build\D-Minimal\SizePl
 
 ## Open findings (not fixed here)
 
-- **Authoring tools and the graph's edit session still use the old default.** Without a policy file,
+- **Authoring tools and the graph's edit session still use the old default** (review follow-up item 5:
+  shown, not changed; see "Review follow-up"). Without a policy file,
   the MCP authoring tools (`BuildRegistryAndOptions`) and the Graph window's edit session
   (`BehaviorTreeGraphWindow.CompilerOptions()`) still validate native trees with the Phase 1 default.
   The brief named `validate`, `compile`, `prepare_runtime` and the manifest, and these were outside it.
@@ -592,6 +593,83 @@ Player, so they are still running (pids 55472 and 60396, `build\D-Minimal\SizePl
     `ProductionTreeWorld.TryRegister`, `ProductionTreeScheduler`, the jobs drivers
     `ProductionAgentFrameDriverV1` and `ProductionPipelinedGroupDriverV1`), or Unity's job-system
     allocators on first use.
+
+## Review follow-up (2026-11-24)
+
+Brief: `C:\UnityProjects\_aibt_acceptance\P11-014\brief-review-fixes.md`; review:
+`C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\independent-review-824a378-87ef22a.md`. Items 1-3 and the
+P11-014 half of item 4 are in the P11-014 evidence. Raw: `C:\UnityProjects\_aibt_acceptance\P11-015\raw\review-followup\`.
+
+| Commit | Item | Content |
+| --- | --- | --- |
+| `d433a1a` | 4 | `TestAssemblyIsolationTests` and `PipelinedJobsCadenceTests` (with the P11-014 tests) |
+| `5534826` | 5 | default policy after a failed subtree expansion; `prepare_runtime` and edit-tool wording |
+| `9901ebf` | 6 | shipped docs and `Tools~` no longer point into excluded folders |
+
+**4. Weak tests (this task's half).** `TestAssemblyIsolationTests` passed with a wrong root (no asmdef found);
+it now asserts at least five assembly definitions and the names of the three F14 fixtures plus
+`AIBT.Editor.Tests` and `AIBT.Integration.Tests` (26 found). 1/1. `PipelinedJobsCadenceTests`: the
+`shared-loop16` case resolves its tree through the package path helper instead of a fixed path and stays
+Inconclusive without `Benchmarks~` (logged: 18 updates in 120 frames, intervals 3, 26 or 44, mean 6.56). 5/5.
+
+**5. One default policy for every tool (D1 tail).**
+- The disagreement exists. A temporary test (not committed) wrote a native tree with an Agent-scope key, no
+  policy file: `validate` returned `valid: true`; `add_node` with `dryRun` on the same tree was refused with
+  AIBT2030 (raw `item5-policy-probes.txt`).
+- **Stop (brief condition), not routed.** Routing the authoring tools through `ProjectNodeCatalog.DefaultPolicy`
+  inverts `McpAuthoringToolDispatcherTests.CreateTreeWithAgentScopeKeyRequiresPolicyOptInAndWritesV2` ("Without a
+  project policy opting in, Agent scope must still be rejected exactly as before"), which the ADR-P9-001
+  amendment keeps ("`simulate` and the MCP authoring tools without the file still use it for a native tree").
+  The graph session (`BehaviorTreeGraphWindow.CompilerOptions()`) is a static `Phase1` that never reads the
+  file, with or without one; no reason for that is recorded. Neither was changed, so the authoring tools still
+  ignore an unreadable file without AIBT9008. `ai-and-mcp.md` now says what each tool does.
+- **Failed expansion (fixed).** Without a file, `validate`/`compile` chose the default on the unexpanded parent
+  when the expansion failed. A parent whose managed nodes all sit in a subtree, with a second reference to a
+  missing tree, got AIBT2039 three times and AIBT2040 for the subtree's managed nodes beside the real AIBT3020.
+  `ProjectNodeCatalog.DefaultPolicy(document, resolver, sourceId)` now decides on the parent and every subtree
+  that resolves when the expansion fails. Test
+  `McpSubtreeToolsTests.WithoutAPolicyFile_AFailedExpansion_ReportsItsCause_NotTheNativeDefaultRefusingTheSubtreesManagedNodes`:
+  failed before (AIBT2039, AIBT2040, AIBT3020), passes after (AIBT3020 only). The tree list is not affected: it
+  stops at a failed expansion before choosing a policy.
+- **`prepare_runtime`.** It applies the policy only through its `validate` gate; the bake compiles every native
+  tree with `Phase1` (`ProductionTreeAssetBaker.cs:60`), and the header records `Phase1`'s policy hash. Without
+  a file the outcome cannot differ: `NativeDefaultPolicy` differs from `Phase1` only in the scope flags, and the
+  generated compiler validates with both scope flags on (`GeneratedCompiledProgramV2.cs:353-357`). With a file
+  that relaxes a rule `Phase1` keeps, `validate` accepts and the bake refuses: a temporary test with
+  `"unreachableNodes": "warning"` and an orphan node got `valid: true` with warning AIBT2020, then
+  `prepare_runtime` `success: false` with AIBT2020 as an error. A native node declared `Deterministic = false`
+  under `"requireDeterministicNodes": false` is the same case by code reading. So no asset is ever built that
+  `validate` accepted under different outcomes; a refusal can follow an acceptance. Not changed (it would change
+  every baked asset's policy hash); documented in `ai-and-mcp.md` and `ProjectNodeCatalog.cs`.
+- Tests: McpSubtreeTools 30/30, McpVerificationToolDispatcher 33/33, McpAuthoringToolDispatcher 20/20.
+
+**6. Shipped docs and `Tools~` (finding: links into excluded folders).**
+- Links in `README.md`, `scheduling-benchmark-report.md`, `compatibility-matrix.md` and ADR-P7-011 now give the
+  repository path as text and say it is in the AIBT repository only; `performance.md`, `compatibility-matrix.md`,
+  `hot-reload.md`, `roadmap.md` and `scheduling-benchmark-report.md` carry one such note per page,
+  `ai-and-mcp.md` and the generated `recipes.md` (and its generator) one per sentence, `decisions.md` one for the
+  ADRs. The numbers of "Size and memory" in `performance.md` are untouched. The report's chart is copied to
+  `Documentation~/images/jobs-vs-non-jobs.svg`; the original stays.
+- What the consumer docs tell a consumer to run: only `Tools~/aibt.ps1` (`cli.md:17`). It ran from the
+  extracted archive: it built `MCP~/Cli` and printed the usage, exit 0 (raw `item6-aibt-ps1-from-archive.txt`).
+  `development-commands.md` addresses the repository and now says which scripts are repository-only.
+- Repository-only scripts get `export-ignore` and `.npmignore` lines: `Verify-Static.ps1`, `Verify-Schemas.ps1`
+  (read `Planning~`), `Tools~/Verification/P2/` (reads `Benchmarks~`). The CI workflows that call
+  `Verify-Static.ps1` run in the repository. The folders themselves are now excluded too: `git archive` had kept
+  `Planning~/` and `Benchmarks~/` as empty directory entries.
+- Proof, `git archive HEAD` at `9901ebf`: 2 419 entries, none under the excluded folders, none of the three
+  scripts (raw `archive-9901ebf-listing.txt`). Grep for the three names: 206 hits in 80 files, **0 Markdown
+  links**; every hit is classed in `archive-9901ebf-grep-explained.txt`: the exclusion rules (9); shipped docs
+  with the repository-only note (39); ADRs, covered by the note in `decisions.md` (83); the protected normative
+  specification `agent-shared-blackboard-v1.md` (2, unchanged); CHANGELOG history (19); `AGENTS.md` and the
+  `.github` workflows, which run in the repository (5); the Swarm Arena README's benchmark command (1, left to
+  the other session); `PipelinedJobsCadenceTests`, the one code path that reads an excluded folder and is
+  Inconclusive without it (3); comments in shipped `Tools~` scripts (3) and in code (42).
+- `Verify-Static.ps1` passes: 195 work items, 7 schemas.
+
+Not verified: an `npm pack` (only `git archive`); a consumer install of the new tarball (the archive was
+extracted and `aibt.ps1` run, no Unity project imported it); the authoring tools and graph session with an
+Agent-scope native tree in a consumer project.
 
 ## Deviations
 

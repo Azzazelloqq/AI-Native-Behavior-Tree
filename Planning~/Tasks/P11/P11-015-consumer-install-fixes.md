@@ -56,7 +56,10 @@ No history rewrite and no other evidence file.
 ## Acceptance criteria
 
 - Behaviour changes test first (failing before), one commit per item or small group of one kind.
-- With a policy file present, MCP results do not change.
+- With a readable policy file present, MCP results do not change. (Narrowed at the review follow-up, as
+  ADR-P9-001's amendment states: a file that exists but cannot be read is not applied; the tools use the
+  Editor's defaults and report warning AIBT9008. Without a file, `compile` returns a different `contentHash`
+  than before, because the program records the policy.)
 - Only the touched tests are run; the Console is free of new errors; the submodule checkout is clean.
 - `Tools~/Verification/Verify-Static.ps1` passes.
 - The fresh install shows, with no `.aibt/policy.json`:

@@ -4,6 +4,30 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Review follow-up (P11-014, P11-015)
+
+- **`CapacityExceeded` names the node and the cause.** A host stopped with `Callback rejected:
+  CapacityExceeded` now says at which node and which capacity: the effect queue or the simulation command
+  quota (the node was not called), the capture of the published effects, a group's batched dispatch, or the
+  callback's own limits (value sessions, command and operation capacity). Before, every site blamed the
+  value-session limit.
+- **Trees with registered blackboard types work in subtrees and at import.** The project tree index and the
+  importer (version 4, so `.aibt` files reimport once) read registered types; a parent whose subtree has such
+  a key is no longer listed as "Errors" or left unexpanded. An import that needs the project catalog
+  ("Needs registry") puts its own message before the compile's.
+- **MCP `validate` and `compile` without a policy file name a missing subtree, not the subtree's managed
+  nodes.** When a subtree cannot be expanded, the default policy is chosen on the tree and the subtrees that
+  resolve.
+- Documentation: `prepare_runtime` applies the policy only through its `validate` gate and bakes with the
+  built-in options; the authoring tools without a policy file and the Graph window check native trees without
+  Agent or Shared scope. Links into `Planning~`, `Benchmarks~` and `Spikes~` became repository paths marked
+  "in the AIBT repository only"; those folders are not in the package, which also applies to the paths in older
+  entries below.
+- Packaging: `git archive` no longer keeps the excluded folders as empty directories, and the repository-only
+  scripts `Verify-Static.ps1`, `Verify-Schemas.ps1` and `Tools~/Verification/P2` leave the package.
+- Tests: the Burst parity check of the native library compared two managed runs; it now runs on the
+  `JobsAgentFrame` job, the one path whose node bodies run Burst-compiled in the Editor, against `Immediate`.
+
 ### Consumer-install fixes (P11-015)
 
 - **MCP and the CLI agree with the Graph window when the project has no `.aibt/policy.json`.**

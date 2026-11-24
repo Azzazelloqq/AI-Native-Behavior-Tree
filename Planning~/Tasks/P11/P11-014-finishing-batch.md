@@ -14,6 +14,11 @@ independent review of P11-012 and P11-013 left open, as the orchestrator's brief
   rule for the value-session limit (item 7); two wrong comments (item 8); aliased-key tests that tell a
   lost write from an applied one (item 9).
 - **B. Confirm with one test each, then act:** U3, U4, U6, U9, U10.
+  - U3, corrected at the review follow-up (2026-11-24): the first test compared two runs whose node bodies were
+    both managed (`BatchedJobsSameFrame` does not run them under Burst), so it showed reproducibility, not
+    Burst-versus-managed parity. `BurstExecutionPathTests` replaces it: it reports from inside a node body which
+    paths run Burst-compiled (only the `JobsAgentFrame` job in the Editor) and compares that path with `Immediate`
+    bit for bit. Path table: the evidence, "Review follow-up".
 - **C. Document:** N1, N5, N8 and a Known limitations page.
 - **D. Record:** a table of every second-tier finding with its class and reason.
 - **E. From the independent review of P11-012 and P11-013:** a finished host failed by the scheduler under
@@ -42,7 +47,8 @@ Runtime, Editor, MCP and test files named per item in the evidence; `Documentati
 - Behaviour changes test first (failing before), one commit per item or per small group of one kind.
 - Every confirmation has one test and its outcome with numbers in the evidence.
 - Only the touched tests are run (not the ten assemblies); the Console free of new errors; the submodule
-  checkout clean; `Tools~/Verification/Verify-Static.ps1` passes with 193 work items.
+  checkout clean; `Tools~/Verification/Verify-Static.ps1` passes with 193 work items (195 since the P11-011
+  and P11-015 work items were added in `3a1f061`).
 - `Planning~/Evidence/P11-014/README.md` with raw files in `C:\UnityProjects\_aibt_acceptance\P11-014\`.
 
 ## Evidence

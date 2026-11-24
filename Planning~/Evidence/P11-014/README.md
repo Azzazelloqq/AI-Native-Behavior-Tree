@@ -128,14 +128,18 @@ unaligned ordinary loads; 32-bit ARMv7 Android can fault on 8-byte `LDRD`/`VLDR`
 
 | Item | Test | Outcome | Action |
 | --- | --- | --- | --- |
-| U3 | `NativeLibraryBurstParityTests` | `random-float3-in-radius` under `BatchedJobsSameFrame`, one agent, seed and stream id fixed, 240 frames: **240 points flat and 240 in 3D, 0 differ bit for bit** between Burst compilation off and on | claim kept, test kept |
-| U4 | `MixedScopeNativeTreeTests.U4_*` | `PipelinedJobs` agent, looping tree, 100 frames: `TryGetValue` succeeded **5/100 before** the scheduler's Update and **4/100 after** it (LateUpdate); the host was executing after 96/100 updates | above zero: `production-host.md` "mostly unreadable" holds; shares recorded here; test pins 1..20 |
+| U3 | `NativeLibraryBurstParityTests` (replaced, see "Review follow-up") | `random-float3-in-radius` under `BatchedJobsSameFrame`, one agent, seed and stream id fixed, 240 frames: **240 points flat and 240 in 3D, 0 differ bit for bit** between Burst compilation off and on. **Corrected at the review follow-up:** under `BatchedJobsSameFrame` node bodies run managed whatever the Burst setting, so both runs were managed; the test showed reproducibility, not Burst-versus-managed parity | test replaced by `BurstExecutionPathTests`; claim now verified on the agent-frame job |
+| U4 | `MixedScopeNativeTreeTests.U4_*` | `PipelinedJobs` agent, looping tree, 100 frames: `TryGetValue` succeeded **5/100 before** the scheduler's Update and **4/100 after** it (LateUpdate); the host was executing after 96/100 updates | above zero: `production-host.md` "mostly unreadable" holds; shares recorded here; test pinned 1..20, now the relations (review follow-up item 4) |
 | U6 | `MixedScopeNativeTreeTests.U6_*` | two agents on one catalog under forced `BatchedJobsSameFrame`: only the over-reading agent stops (`NativeLifetimeStateInvalid`); the neighbour completed **12 runs in 12 frames**, world failure None | one stops: test kept, no doc change |
 | U9 | `TreeCatalogRegisteredTypeTests` | before: the tree list showed **"Errors"** (`AIBT1008: Registered blackboard type 'aibt.tests.p10010.sense' requires an explicit accepted catalog`) for a tree with a registered-type key (`raw/u9-before-u3-u4.txt`) | fixed: `TreeCatalogEntry.ReadAll` takes the catalog's registered types and passes them to the parse, the expansion and the validation; the graph window passes its catalog's; after 1/1 |
 | U10 | `BehaviorTreeAgentComponentTests.U10_*` | `Restart(true)` on an idle root after one tick, and `Stop()` then `Restart(true)`: **no fault**, blackboard back to 3, running again | test kept, no fix |
 
-U3 limits: the second run set `EnableBurstCompilation` and `EnableBurstCompileSynchronously`; that the job
-then ran Burst-compiled code rather than a managed fallback was not observed directly. U9: the parse failed
+U3 limits (corrected at the review follow-up): the second run set `EnableBurstCompilation` and
+`EnableBurstCompileSynchronously`, but the node bodies did not run Burst-compiled in either run. Burst patches
+direct calls only inside types that carry `[BurstCompile]` (Burst 1.8.29, `ILPostProcessing.cs:169`), and the
+generated catalog facade does not, so `BatchedJobsSameFrame` calls the bodies managed. What U3 established:
+the same seed and stream id give the same 240 points in two managed runs. What it did not: Burst-versus-managed
+parity. The replacement is under "Review follow-up", item 1. U9: the parse failed
 before any expansion, so the test uses a tree without references; the fix also passes the types to
 `ProjectTreeIndex.Expand` (the review's `TreeCatalogEntry.cs:61`), which no test exercises with a subtree.
 U4: "before" stands for a script whose Update runs before the scheduler's; EditMode drives the scheduler
@@ -191,6 +195,91 @@ No "dropped" or "deferred" claim was found wrong.
   a misleading reason (`ProductionTreeWorld.cs:73-76`).
 - `NativeTreeAgent.Restart()` keeps the previous `LastError` (its `Restart` does not clear it; pinned as
   unchanged behaviour in `AFaultedRun_ResetsAgentKeys`).
+- From the independent review (recorded, no code change): under `PipelinedJobs`, a group whose members all
+  failed inside `TryBeginBatchedRound` takes the `started && driver == null` branch
+  (`ProductionTreeScheduler.cs:682-710`), so those members are recorded `Executed` while their `LastFailure`
+  is set. The same-frame path does the same (`ProductionBatchedGroupDriverV1.cs:84-87`); `AddDirectEntry`
+  (`:1254-1255`) differs.
+- From the independent review (recorded, no code change): a finished host left registered under forced
+  `PipelinedJobs` goes through group formation and `TryStart` on every due frame (`:664`, `:675`),
+  allocations included.
+
+## Review follow-up (2026-11-24)
+
+Brief: `C:\UnityProjects\_aibt_acceptance\P11-014\brief-review-fixes.md`; review:
+`C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\independent-review-824a378-87ef22a.md`. Base `87ef22a`.
+Raw: `C:\UnityProjects\_aibt_acceptance\P11-014\raw\review-followup\`. Items 5 and 6 concern P11-015 and are in
+its evidence. Only the touched test classes were run.
+
+| Commit | Item | Content |
+| --- | --- | --- |
+| `407cf1f` | 1 | the U3 parity test replaced by a probe of where node bodies run |
+| `77966db` | 2 | `CapacityExceeded` names the node and the cause at each site |
+| `8bd2d51` | 3 | registered blackboard types in subtree files and at import; W3 message order |
+| `2e70915` | 3 | fix-up: `api-reference-editor.md` regenerated (the importer's summary changed) |
+| `d433a1a` | 4 | tests that could not fail or asserted less than the evidence |
+
+**1. U3 replaced (finding: the parity test compared two managed runs).** `BurstExecutionPathTests` (new; fixture
+shard `BurstProbeFixtureShard` with a node that adds 1 when its body runs managed and 1000 under Burst, through a
+`[BurstDiscard]` marker). `EveryPath_ReportsFromInsideTheNodeBody_WhetherItRunsBurstCompiled` pins this table
+(Editor, Burst enabled, raw `item1-burst-paths.txt`):
+
+| Path | Node bodies | Notes |
+| --- | --- | --- |
+| `JobsAgentFrame`, the job (batch at or above the minimum; the test sets the minimum to 1) | **Burst** | Burst compiles asynchronously: the first Burst frame was 618 after a domain reload (31.5 s); an earlier run did not reach it within 8 s |
+| `JobsAgentFrame` in place (below the default minimum batch of 64) | managed | |
+| `Immediate` | managed | |
+| `BatchedJobsSameFrame`, 1 agent | managed | |
+| `BatchedJobsSameFrame`, 4 agents | managed | |
+| `PipelinedJobs`, 1 agent | managed | |
+| `PipelinedJobs`, 4 agents | managed | |
+| `CatalogJob` (`Executor.Schedule`) | not probed | reachable only through `GeneratedTreeDispatchAdapterV2.DispatchScheduledForTests` |
+| Simulation `TreeGroup` (agent-frame job) | not probed | |
+
+The two parity tests `RandomFloat3InRadius_Flat_IsBitIdentical_BurstCompiledAndManaged` and `_3D_` warm the
+agent-frame job up until its bodies run under Burst, then record 240 frames there and 240 under `Immediate`
+(managed) with the same seed and stream id: **240 distinct points, 0 differ bit for bit**, flat and 3D. 3/3.
+`NativeLibraryBurstParityTests` was deleted. Finding for the docs (not changed here): `README.md:14, 19, 21, 334`
+and `performance.md:79` promise Burst execution of the native layer; under the default `Immediate` policy and
+under `BatchedJobsSameFrame` and `PipelinedJobs` the node bodies run managed. `performance.md:198`
+(`JobsAgentFrame`) is right.
+
+**2. `CapacityExceeded` blamed the value-session limit at every site.** The message now reads
+`Callback rejected: CapacityExceeded at node '<id>'.` followed by the cause the site knows: the effect queue or
+the simulation command quota (reserved before the callback; the node was not called), the capture of the
+published effects or commands (after the callback), the group's batched dispatch (every member stops; the
+group does not record which), or, inside a callback, the list of its limits (value sessions and staging bytes,
+command, command payload and operation capacity) with the "read once" advice. The agent-frame job records the
+rejecting node and site. `CapacityExceededMessageTests.AFullEffectQueue_IsNamedAsTheCause_NotTheValueSessionLimit`
+(an earlier shape of it failed before with the value-session text; its final shape ran after the fix only) 1/1;
+`MixedScopeNativeTreeTests.SessionLimit` with the new
+`ValueSessionLimit_OnTheAgentFrameJob_TheMessageNamesTheNode` 4/4. `burst-node-authoring.md` quotes the new text.
+Item 7's quote above is the text before this change.
+
+**3. Registered types in subtree files and at import (finding: U9's fix stopped at the tree list).**
+`ProjectTreeIndex.Scan` reads files with the project catalog's registered types (cached per types); the
+importer (version 4) parses, expands and inspects with them when the tree needs the project catalog, and depends
+on the registry hash including the registered types; `ProductionTreeAssetBaker.CurrentSourceHash` parses with
+them. W3: `BehaviorTreeSource` puts the import's message first for "Needs registry" as for "Errors". Tests:
+`TreeCatalogRegisteredTypeTests.ProjectTreeIndex_ASubtreeWithARegisteredTypeKey_IsFound_AndItsParentIsNotListedAsErrors`
+(before: not found), `ImporterRegisteredTypeAndStatusTests` 3/3 (new; the importer hook did not exist before, so
+the two registered-type cases were written with the fix; the W3 case failed before). Regression: TreeCatalogRegisteredType 2/2,
+SubtreeImportAndBake 6/6, SubtreeManaged 5/5, TreeCatalogNativeStatus 5/5, TreeListScan 2/2,
+ProjectTreeIndexPackage 4/4, ProjectTreeIndexReload 2/2, ProductionTreeAssetStaleness 6/6, McpSubtreeTools 29/29,
+ProductionTreeAssetInspectorState 1/1, SubtreeGraphEditor 13/13, McpDocumentationGenerators 14/14 (after the
+fix-up). Observation: AIBT2021 does not name the unknown node type.
+
+**4. Weak tests.** `NativeLibraryAliasedKeyTests`: copy-bool now writes true then false (start false), with a
+check after the first write, so a lost or undone second write changes the end; in the other cases the final
+value differs from the start and the first write. 20/20. `MixedScopeNativeTreeTests`: a new kind
+`forced-agent-frame-in-place` (default minimum batch, asserted) restores the in-place path the class lost when
+`forced-agent-frame` moved to the job (`JobsPolicyEquivalenceTests` still covered in-place for other trees);
+U4 pins readable exactly when the host is not executing, `after == frames - executing`, `before` from `after`,
+and `after` in 1..34 instead of 1..20 (measured 5/100 and 4/100 again, 96 executing). 94/94. The P11-015 tests of
+this item are in that evidence.
+
+Not verified: a Player (IL2CPP) for any of the four; the `CatalogJob` and simulation paths of the table; the
+docs' Burst promise (reported, not changed).
 
 ## Deviations and stops
 
@@ -205,7 +294,8 @@ No "dropped" or "deferred" claim was found wrong.
 ## Not verified
 
 - The full ten assemblies (not run, by instruction).
-- U3 on a device or with an IL2CPP Player; Burst code actually executing in the second run (see above).
+- U3 on a device or with an IL2CPP Player. Burst execution is now observed in the Editor on the agent-frame job
+  (review follow-up item 1), not in a Player.
 - Item 15's platform statement on a 32-bit ARM device.
 - U9 with a subtree-using tree that has registered-type keys.
 - Swarm Arena's 1/32 rate in a Player (not changed here).
