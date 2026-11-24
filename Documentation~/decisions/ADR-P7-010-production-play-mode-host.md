@@ -202,3 +202,62 @@ entirely via Unity MCP against the real, unmodified `6000.5.8f1` Editor) proved 
   `GameObject`/component ran in the spike.
 - Domain reload occurring mid-Play-session, and process-exit teardown in a built Player (as opposed to
   exiting Editor Play mode, which was exercised and proven leak-free), were not exercised.
+
+## Amendment 2026-11-24 (P11-016): no trace channel by default in a Player
+
+Decision 4 is unchanged in shape: a host that has a trace channel constructs and owns it and exposes
+it as `TraceChannelOwner`. What changes is when a host has one by default.
+
+Decision:
+
+- In the Editor (Edit and Play Mode) the default stays as it is: 256 records, 512 emissions, level
+  `Detailed`.
+- In any Player build, development builds included, a host gets no channel unless the caller passes a
+  capacity. `TraceChannelOwner` is then null and nothing is recorded.
+- `NativeTraceChannelCapacityV1.None` (new, additive; equal to `default`) means "no channel"
+  everywhere, in the Editor too. Every bootstrap that takes a capacity accepts it. Before this
+  amendment a zero capacity failed bootstrap at the channel's creation; no caller or test relied on
+  that.
+- `ProductionTreeProgram.TryBootstrap` with no `traceCapacity` takes the default of the place it
+  runs in. A capacity passed by the caller is used as it is, in the Editor and in a Player.
+- `NativeTreeAgent` gets one serialized setting, Auto / Off / On, with a record capacity for On.
+  Auto is the default of the place it runs in; scenes and prefabs saved before this amendment read
+  as Auto.
+- The choice of the default is one pure function of "is this the Editor" and the requested capacity,
+  so that both branches are tested in the Editor.
+
+Why:
+
+- Nothing in a Player reads the channel. Its only readers are the trace menu, the debugger session,
+  the MCP `read_trace` tool and the Swarm Arena trace menu, all in Editor-only assemblies.
+- The channel is not a ring. It keeps the first 255 records (one record slot is reserved), counts
+  later ones as dropped, and is faulted for good after 512 emissions, so in a long Player session it
+  holds the first moments of the tree and then nothing.
+- It costs about 43 KB of native memory per host (256 records of 152 B, 512 seen sequences of 8 B),
+  independent of the tree's size: 85% of a one-node host. The recorder also takes a lease and
+  appends every update after the channel is faulted.
+- Precedent: the simulation container already creates its channel only on request (ADR-P10-008), and
+  its debug registration is limited to the Editor and development builds.
+
+Rejected:
+
+- Off everywhere: breaks `read_trace`, the trace menu and the debugger in the Editor for no saving
+  that matters there.
+- A smaller default buffer: the channel still dies at its emission cap, so a smaller first-records
+  buffer is worth even less.
+- On in development builds: no Player-side reader exists, and development builds are where memory is
+  profiled.
+
+Consequences:
+
+- A Player host bootstrapped without a capacity has a null `TraceChannelOwner`. Player code that
+  reads it must check for null; callers that pass a capacity (the Swarm Arena sample, the benchmarks)
+  are not affected.
+- Editor behaviour, the MCP tools and saved assets are unchanged. Player debugging becomes an
+  explicit opt-in: pass a capacity, or set a `NativeTreeAgent` to On.
+- No execution-semantics, compiled-format, ABI or generator change; existing public signatures are
+  unchanged (`None`, the agent setting and its properties are additions).
+
+Not in this amendment (open findings): the recorder keeps taking a lease and appending after the
+channel is faulted; enabling or disabling a trace on a live host (the container-only
+`TryAttachTrace` / `TryDetachTrace`) is not public.
