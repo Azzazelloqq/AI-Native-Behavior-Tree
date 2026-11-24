@@ -529,7 +529,7 @@ Player, so they are still running (pids 55472 and 60396, `build\D-Minimal\SizePl
 ## Open findings (not fixed here)
 
 - **Authoring tools and the graph's edit session still use the old default** (review follow-up item 5:
-  shown, not changed; see "Review follow-up"). Without a policy file,
+  shown, not changed; **resolved** by the "Policy default" part of the review follow-up). Without a policy file,
   the MCP authoring tools (`BuildRegistryAndOptions`) and the Graph window's edit session
   (`BehaviorTreeGraphWindow.CompilerOptions()`) still validate native trees with the Phase 1 default.
   The brief named `validate`, `compile`, `prepare_runtime` and the manifest, and these were outside it.
@@ -670,6 +670,69 @@ Inconclusive without `Benchmarks~` (logged: 18 updates in 120 frames, intervals 
 Not verified: an `npm pack` (only `git archive`); a consumer install of the new tarball (the archive was
 extracted and `aibt.ps1` run, no Unity project imported it); the authoring tools and graph session with an
 Agent-scope native tree in a consumer project.
+
+### Policy default (decision after item 5's stop)
+
+Brief: `C:\UnityProjects\_aibt_acceptance\P11-014\brief-policy-default.md`; independent read:
+`C:\UnityProjects\_aibt_acceptance\P11-015\acceptance\policy-default-read.md` (confirmed where tested; one
+correction below).
+
+| Commit | Content |
+| --- | --- |
+| `fe43768` | ADR-P9-001, second amendment (the authoring tools leave `Phase1`; `simulate` keeps it) |
+| `b7378b3` | the authoring tools and the graph edit session use the shared default; neighbours (a) and (b); the `prepare_runtime` note |
+| `dcb1b2d` | `ai-and-mcp.md`, `data-formats.md`, `known-limitations.md`, CHANGELOG, the Burst wording |
+
+What changes for a user without `.aibt/policy.json`:
+- `create_tree`, `add_node`, `set_blackboard_keys` and the other edit tools accept a native tree with Agent
+  or Shared keys, as `validate` does (before: AIBT2030, nothing written). A tree with a managed node and such a
+  key is still refused.
+- The Graph window's edit session no longer shows AIBT2030 for a tree its list calls Valid
+  (`BehaviorTreeGraphWindow.CompilerOptions()` is `NativeDefaultPolicy`; `ValidateAuthoring` switches managed
+  trees as before).
+- An unreadable file: the authoring tools report warning AIBT9008 (through `ReadProjectPolicy`) instead of
+  ignoring it, and use the default.
+- With a readable file: unchanged for native trees; the file decides for managed trees too (neighbour a).
+
+Neighbours, reproduced before deciding:
+- (a) With `allowManagedNodes: false`, `add_node` of `aibt.unity.wait-seconds` (dry run) was **accepted**
+  (`ValidateAuthoring` replaced any options with the managed policy). Fixed: the switch happens only from a
+  built-in default (`ProjectNodeCatalog.IsBuiltInDefault`); now refused (AIBT2040 under that file).
+- (b) Correction to the read: the bypass needs a subtree node without a reference handler. My first test used
+  `aibt.stdlib.wait`, which has one, so the reference compiler checked the scope and refused (the test passed
+  before). With `aibt.native.fail` (no reference handler) it reproduced: under a file with `supportsAgentScope: false`, `add_node` on the tree without a reference was
+  refused (AIBT2030) and on the same tree with a subtree reference **accepted** (the native compiler expands with
+  both scope flags on). Fixed: the resolver overload makes `validate`'s check (expansion under the policy, then
+  the expanded tree) before compiling.
+
+AIBT2030's text ("recognized but unsupported by the selected execution capabilities") names no opt-in, so it is
+true everywhere it can now appear: a file with the flag false, a managed tree, `simulate` and the previews.
+Not changed.
+
+Tests (failed before the fix unless noted):
+- `McpAuthoringToolDispatcherTests`: `CreateTreeWithAgentScopeKey_UsesTheEditorDefaultWithoutAPolicyFile_AndThePolicyWithOne`
+  (rewritten from `CreateTreeWithAgentScopeKeyRequiresPolicyOptInAndWritesV2`, the only inverted expectation),
+  `EditToolsOnANativeAgentScopeTree_AreAcceptedWithoutAPolicyFile_AndRefusedByAFileWithTheFlagFalse`,
+  `AnUnreadablePolicyFile_IsReportedAsAIBT9008_ByCreateTreeAndTheEditTools`,
+  `WithAFileThatForbidsManagedNodes_AddingAManagedNode_IsRefused_AsValidateRefusesTheTree`,
+  `AnAgentScopeTreeWithASubtreeReference_IsCheckedLikeTheSameTreeWithoutOne`,
+  `CreateTree_OfAManagedTreeWithAnAgentScopeKey_IsStillRefusedWithoutAPolicyFile` (passed before: a pin). 25/25.
+- `GraphSessionDefaultPolicyTests.ANativeAgentScopeTree_TheListCallsValid_HasNoAIBT2030InTheEditSession` 1/1.
+- `McpVerificationToolDispatcherTests.PrepareRuntime_OfATreeAPolicyFileRelaxes_IsRefusedByTheBake_AndSaysWhy`
+  (the refusal's new `note`) 34/34.
+- Unchanged and green: McpSubtreeTools 30/30, AgentConsumerTools 14/14, McpSimulationTools 4/4,
+  ManagedObserverRefusal 3/3, NativeObserverWarning 10/10, TreeScopeSlotNeverWrittenNativeBinding 19/19,
+  SubtreeGraphEditor 13/13, GraphEditSession 6/6, SemanticEditTransaction 3/3, SemanticPatchTransaction 4/4,
+  BehaviorTreeGraphAdapter 15/15, GraphConsumerWorkflow 4/4, GraphEditorWorkflow 15/15,
+  GraphNativeLiveBlackboard 15/15, McpAuthoringJson 2/2, McpCustomToolsToolDispatcher 7/7,
+  McpDocumentationGenerators 14/14.
+
+Documented limitations (`known-limitations.md`): the Graph window does not read the file; the bake compiles
+with the built-in options; `simulate` and the previews run Tree scope only.
+
+Not verified: the Graph window opened on such a tree (the session's check is tested through
+`ValidateAuthoring` with the window's options, not through the window); the CLI against a running Editor; a
+consumer project.
 
 ## Deviations
 

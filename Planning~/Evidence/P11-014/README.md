@@ -278,8 +278,31 @@ U4 pins readable exactly when the host is not executing, `after == frames - exec
 and `after` in 1..34 instead of 1..20 (measured 5/100 and 4/100 again, 96 executing). 94/94. The P11-015 tests of
 this item are in that evidence.
 
-Not verified: a Player (IL2CPP) for any of the four; the `CatalogJob` and simulation paths of the table; the
-docs' Burst promise (reported, not changed).
+Not verified: a Player (IL2CPP) for any of the four; the `CatalogJob` and simulation paths of the table.
+The docs' Burst promise was corrected later (README, `performance.md`): text only.
+
+**Open finding for the owner: node bodies off the agent-frame job run managed.** Not changed. Why: the
+generated catalog facade (`CodeGen~/AIBT.CodeGen/BurstNodeGenerator.cs`, `EmitFacade`, around lines 1413-1476) is
+a `public static partial class` without `[BurstCompile]`. Its `ExecuteImmediate` carries `[BurstCompile]`, but
+Burst 1.8 redirects a direct call to a compiled method only when the declaring type carries the attribute too
+(`ILPostProcessing.cs:169`), and the runtime calls it through `IGeneratedBurstCatalogExecutorV2.ExecuteImmediate`
+(`GeneratedTreeDispatchAdapterV2.cs:1348` for `Immediate`, `GeneratedDispatchGroupExecutorV2.cs:219` and
+`GeneratedDispatchGroupWorkspaceV2.cs:220` for the batched and pipelined groups). Only the jobs
+(`AibtAgentFrameJob`, `CatalogJob`) are Burst-compiled. What it would take, one of:
+- `[BurstCompile]` on the generated facade, so the existing direct call from `GeneratedExecutor` to the static
+  `ExecuteImmediate` is redirected; the signature (`ref BurstExecutionBatch`, blittable return) has to qualify
+  for a direct call.
+- A cached `BurstCompiler.CompileFunctionPointer` per catalog, called by the executor.
+- Running the `Immediate`, same-frame batched and pipelined node dispatch inside a Burst job, as the agent-frame
+  path does (a scheduling change).
+Each changes `CodeGen~` and every generated catalog (protected; a recorded decision first) or execution paths.
+Each also needs the evidence the agent-frame row has:
+- `BurstExecutionPathTests` rows flipping to Burst;
+- bit parity with the managed run per path (Float32 results can differ under Burst's float mode);
+- zero GC per update;
+- the first frames before asynchronous compilation finishes;
+- managed exceptions and `[BurstDiscard]` code inside bodies;
+- an IL2CPP Player run.
 
 ## Deviations and stops
 
