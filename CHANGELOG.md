@@ -13,8 +13,9 @@ All notable changes to this project will be documented here. The project follows
   **Trace** setting, Auto / Off / On, with a record capacity; Auto is on in the Editor and off in a Player,
   and scenes saved earlier read as Auto (ADR-P7-010, amendment 2026-11-24).
 - **Generated leaves no longer copy the catalog's metadata.** Each leaf's dispatch workspace reads the
-  catalog's own tables instead of a private copy: about 8.9 KB less per generated leaf with the standard
-  library catalog (670 KB less per agent of a 75-leaf tree). The catalog already refused disposal while a
+  catalog's own tables instead of a private copy: 8,880 B less per generated leaf with the Native Guard
+  sample catalog (670 KB less per agent of its 75-leaf test tree), 376 B with First Agent's catalog; the
+  saving is the size of the catalog's tables. The catalog already refused disposal while a
   host used it.
 - **The agent-frame job's table has one slot per generated leaf**, not one per node, sized exactly, and the
   fields every slot shared are held once per agent: about 69 KB less per `NativeTreeAgent` of a 75-leaf

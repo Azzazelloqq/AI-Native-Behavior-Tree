@@ -1309,7 +1309,8 @@ namespace AIBT
                     created._firstOperationSequence = capacity.BindingCapacity.FirstOperationSequence;
                     var shape = catalog.CreateWorkspaceShape();
                     // P11-016: the leaf's workspace reads the catalog's own metadata arrays instead of a
-                    // private copy of them (about 7.5 KB per leaf with the standard library catalog).
+                    // private copy of them (8,880 B per leaf with the Native Guard sample catalog, 376 B with
+                    // First Agent's; P11-016 evidence).
                     // The adapter retains the catalog until it is disposed, so they outlive the workspace.
                     var workspaceCreated = catalog.TryLendWorkspaceMetadata(out var metadata)
                         ? NativeBurstDispatchWorkspaceOwnerV2.TryCreateBorrowing(
