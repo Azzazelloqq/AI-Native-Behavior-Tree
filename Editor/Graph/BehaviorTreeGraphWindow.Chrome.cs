@@ -450,7 +450,7 @@ namespace AIBT.Editor.Graph
             _catalog.AddRange(TreeCatalogEntry.ReadAll(AssetDatabase.GetAllAssetPaths().Where(TreeSourcePaths.IsTree)
                 .Where(path => !path.StartsWith("Assets/AIBT/Tests/", StringComparison.OrdinalIgnoreCase) &&
                                !path.StartsWith("Packages/com.azzazello.aibt/Tests/", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(p => p, StringComparer.Ordinal), _projectCatalog.Registry, facts));
+                .OrderBy(p => p, StringComparer.Ordinal), _projectCatalog.Registry, facts, _projectCatalog.RegisteredTypes));
             var selectedTag = _tag.value;
             _tag.choices = new[] { "All tags" }.Concat(_catalog.SelectMany(e => e.Tags).Distinct().OrderBy(t => t)).ToList();
             _tag.SetValueWithoutNotify(_tag.choices.Contains(selectedTag) ? selectedTag : "All tags");

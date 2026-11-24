@@ -31,11 +31,20 @@ namespace AIBT.Editor.Graph
         /// read at most once for all of them, and only if one of them uses subtrees (P11-007, review F4).
         /// </summary>
         internal static List<TreeCatalogEntry> ReadAll(IEnumerable<string> paths, NodeRegistry registry, NativeFacts facts)
+            => ReadAll(paths, registry, facts, null);
+
+        /// <summary>
+        /// As <see cref="ReadAll(IEnumerable{string}, NodeRegistry, NativeFacts)"/>, reading keys of the
+        /// project's registered blackboard types with <paramref name="registeredTypes"/> (P11-014 U9: without
+        /// them a tree with such a key was listed as "Errors" although it imports and compiles).
+        /// </summary>
+        internal static List<TreeCatalogEntry> ReadAll(IEnumerable<string> paths, NodeRegistry registry, NativeFacts facts,
+            RegisteredBlackboardTypeCatalog registeredTypes)
         {
             ProjectTreeIndex.Snapshot snapshot = null;
             Func<ProjectTreeIndex.Snapshot> scan = () => snapshot ?? (snapshot = ProjectTreeIndex.Scan());
             var entries = new List<TreeCatalogEntry>();
-            foreach (var path in paths) entries.Add(Read(path, registry, null, facts, scan));
+            foreach (var path in paths) entries.Add(Read(path, registry, null, facts, scan, registeredTypes));
             return entries;
         }
 
@@ -57,15 +66,17 @@ namespace AIBT.Editor.Graph
         /// a native tree; when null they are not checked and the entry says so.
         /// </param>
         internal static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion, NativeFacts facts)
-            => Read(path, registry, expansion, facts, ProjectTreeIndex.Scan);
+            => Read(path, registry, expansion, facts, ProjectTreeIndex.Scan, null);
 
         private static TreeCatalogEntry Read(string path, NodeRegistry registry, SubtreeExpansion expansion, NativeFacts facts,
-            Func<ProjectTreeIndex.Snapshot> scan)
+            Func<ProjectTreeIndex.Snapshot> scan, RegisteredBlackboardTypeCatalog registeredTypes)
         {
             var entry = new TreeCatalogEntry { Path = path, Name = System.IO.Path.GetFileName(path), TreeId = "", Status = "Errors" };
             try
             {
-                var parsed = CanonicalTreeJson.Parse(File.ReadAllBytes(path), path);
+                var parsed = registeredTypes == null
+                    ? CanonicalTreeJson.Parse(File.ReadAllBytes(path), path)
+                    : CanonicalTreeJson.Parse(File.ReadAllBytes(path), registeredTypes, path);
                 entry.Details = string.Join("\n", parsed.Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
                 if (!parsed.Success) return entry;
                 var document = parsed.Document;
@@ -75,7 +86,7 @@ namespace AIBT.Editor.Graph
                 entry.NodeCount = document.Nodes.Count;
                 if (SubtreeExpander.RequiresExpansion(document))
                 {
-                    entry.Expansion = expansion ?? ProjectTreeIndex.Expand(path, document, registry, null, scan());
+                    entry.Expansion = expansion ?? ProjectTreeIndex.Expand(path, document, registry, registeredTypes, scan());
                     if (!entry.Expansion.Success)
                     {
                         entry.Details = string.Join("\n", entry.Expansion.Diagnostics.Select(d => d.Code.Value + ": " + d.Message));
@@ -107,7 +118,7 @@ namespace AIBT.Editor.Graph
                 var options = managed
                     ? ManagedTreeProgram.CreateOptions(path).Policy.CreateValidationOptions(path)
                     : new ValidationOptions(path, supportsAgentScope: true, supportsSharedScope: true);
-                var diagnostics = TreeValidator.Validate(document, registry, options);
+                var diagnostics = TreeValidator.Validate(document, registry, options, registeredTypes);
                 // P11-008 (review F10): BehaviorTreeAgent refuses an observer block when it loads the tree.
                 // P11-009 (review F10, native half): a native host does not re-evaluate observers (warning AIBT2054).
                 diagnostics = new DiagnosticCollection(diagnostics.Concat(ProjectNodeCatalog.ObserverDiagnostics(document, registry, path)));
