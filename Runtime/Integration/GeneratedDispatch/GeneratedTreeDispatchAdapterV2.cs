@@ -926,6 +926,17 @@ namespace AIBT
             for (var shift = 0; shift < 64; shift += 8) into.Add((byte)(value >> shift));
         }
 
+        /// <summary>
+        /// P11-016, for tests: the dispatch workspace of every generated leaf (null entries are not
+        /// leaves), in node order.
+        /// </summary>
+        internal NativeBurstDispatchWorkspaceOwnerV2[] LeafWorkspacesForTests()
+        {
+            var workspaces = new NativeBurstDispatchWorkspaceOwnerV2[_slots.Length];
+            for (var index = 0; index < _slots.Length; index++) workspaces[index] = _slots[index]?.Workspace;
+            return workspaces;
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -1082,6 +1093,7 @@ namespace AIBT
             internal uint LastPublishedCommandCount => _publishedCommandCount;
             internal uint MaximumEffectCommandCount => _maximumEffectCommandCount;
             internal uint CaseIndex => _caseIndex;
+            internal NativeBurstDispatchWorkspaceOwnerV2 Workspace => _workspace;
 
             internal static bool TryCreate(
                 GeneratedTreeRuntimeDefinitionV2 definition,
@@ -1259,9 +1271,17 @@ namespace AIBT
                     created._transaction[0] = transaction;
                     created._firstOperationSequence = capacity.BindingCapacity.FirstOperationSequence;
                     var shape = catalog.CreateWorkspaceShape();
-                    if (!NativeBurstDispatchWorkspaceOwnerV2.TryCreate(
+                    // P11-016: the leaf's workspace reads the catalog's own metadata arrays instead of a
+                    // private copy of them (about 7.5 KB per leaf with the standard library catalog).
+                    // The adapter retains the catalog until it is disposed, so they outlive the workspace.
+                    var workspaceCreated = catalog.TryLendWorkspaceMetadata(out var metadata)
+                        ? NativeBurstDispatchWorkspaceOwnerV2.TryCreateBorrowing(
+                            in shape, in metadata, in capacity, Allocator.Persistent,
+                            out created._workspace, out failure)
+                        : NativeBurstDispatchWorkspaceOwnerV2.TryCreate(
                             in shape, in capacity, Allocator.Persistent,
-                            out created._workspace, out failure))
+                            out created._workspace, out failure);
+                    if (!workspaceCreated)
                     {
                         created.Dispose();
                         return false;

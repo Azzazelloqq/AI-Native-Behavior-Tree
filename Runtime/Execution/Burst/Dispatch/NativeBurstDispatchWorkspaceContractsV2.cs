@@ -69,6 +69,60 @@ namespace AIBT.Execution.Burst.Dispatch
         internal NativeBurstDispatchCanonicalInputV2 CanonicalInput { get; }
     }
 
+    /// <summary>
+    /// P11-016: a catalog's own immutable dispatch metadata arrays, lent to a workspace that reads
+    /// them instead of holding a private copy (<see cref="NativeBurstDispatchWorkspaceOwnerV2.TryCreateBorrowing"/>).
+    /// The lender owns and disposes them; it must outlive every borrower (the tree adapter retains
+    /// its catalog, and the catalog refuses disposal while retained). Nothing writes them after the
+    /// lender created them, so a borrower only ever reads.
+    /// </summary>
+    internal readonly struct NativeBurstDispatchWorkspaceMetadataV2
+    {
+        internal NativeBurstDispatchWorkspaceMetadataV2(
+            NativeArray<NativeBurstDispatchCaseV2> cases,
+            NativeArray<NativeBurstDispatchFieldV2> configurationFields,
+            NativeArray<NativeBurstDispatchFieldV2> memoryFields,
+            NativeArray<NativeBurstDispatchBindingV2> bindings,
+            NativeArray<NativeBurstDispatchFieldV2> valueFields,
+            NativeArray<NativeBurstDispatchCanonicalRangeV2> caseCanonicalRanges,
+            NativeArray<NativeBurstDispatchCanonicalRangeV2> bindingCanonicalRanges,
+            NativeArray<NativeBurstDispatchCanonicalRuleV2> canonicalRules)
+        {
+            Cases = cases;
+            ConfigurationFields = configurationFields;
+            MemoryFields = memoryFields;
+            Bindings = bindings;
+            ValueFields = valueFields;
+            CaseCanonicalRanges = caseCanonicalRanges;
+            BindingCanonicalRanges = bindingCanonicalRanges;
+            CanonicalRules = canonicalRules;
+        }
+
+        internal NativeArray<NativeBurstDispatchCaseV2> Cases { get; }
+        internal NativeArray<NativeBurstDispatchFieldV2> ConfigurationFields { get; }
+        internal NativeArray<NativeBurstDispatchFieldV2> MemoryFields { get; }
+        internal NativeArray<NativeBurstDispatchBindingV2> Bindings { get; }
+        internal NativeArray<NativeBurstDispatchFieldV2> ValueFields { get; }
+        internal NativeArray<NativeBurstDispatchCanonicalRangeV2> CaseCanonicalRanges { get; }
+        internal NativeArray<NativeBurstDispatchCanonicalRangeV2> BindingCanonicalRanges { get; }
+        internal NativeArray<NativeBurstDispatchCanonicalRuleV2> CanonicalRules { get; }
+
+        /// <summary>True when every array is created and each length equals the shape's view of it.</summary>
+        internal bool Matches(in NativeBurstDispatchWorkspaceShapeV2 shape)
+            => Cases.IsCreated && ConfigurationFields.IsCreated && MemoryFields.IsCreated
+               && Bindings.IsCreated && ValueFields.IsCreated
+               && CaseCanonicalRanges.IsCreated && BindingCanonicalRanges.IsCreated && CanonicalRules.IsCreated
+               && Cases.Length == shape.Cases.Length
+               && ConfigurationFields.Length == shape.ConfigurationFields.Length
+               && MemoryFields.Length == shape.MemoryFields.Length
+               && Bindings.Length == (shape.Bindings.IsCreated ? shape.Bindings.Length : 0)
+               && ValueFields.Length == (shape.ValueFields.IsCreated ? shape.ValueFields.Length : 0)
+               && shape.CanonicalInput.IsCreated
+               && CaseCanonicalRanges.Length == shape.CanonicalInput.CaseRanges.Length
+               && BindingCanonicalRanges.Length == shape.CanonicalInput.BindingRanges.Length
+               && CanonicalRules.Length == shape.CanonicalInput.Rules.Length;
+    }
+
     // These arrays are borrowed for one lease. Their owner keeps them alive and does not
     // mutate read-only inputs or transaction metadata until the lease is consumed/reset
     // and any registered dependency has completed.

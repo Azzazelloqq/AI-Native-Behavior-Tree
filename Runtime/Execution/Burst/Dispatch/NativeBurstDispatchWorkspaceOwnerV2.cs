@@ -60,6 +60,7 @@ namespace AIBT.Execution.Burst.Dispatch
         private JobHandle _dependency;
         private bool _hasDependency;
         private bool _disposed;
+        private bool _borrowsMetadata;
 
         private NativeBurstDispatchWorkspaceOwnerV2() { }
 
@@ -104,6 +105,53 @@ namespace AIBT.Execution.Burst.Dispatch
             uint initialGeneration,
             out NativeBurstDispatchWorkspaceOwnerV2 owner,
             out BurstContextResult failure)
+            => TryCreateCore(
+                in shape, in capacity, allocator, failAfterAllocation, initialGeneration,
+                false, default, out owner, out failure);
+
+        /// <summary>
+        /// P11-016: like <see cref="TryCreate(in NativeBurstDispatchWorkspaceShapeV2, in NativeBurstDispatchWorkspaceCapacityV2, Allocator, out NativeBurstDispatchWorkspaceOwnerV2, out BurstContextResult)"/>,
+        /// but the eight catalog metadata arrays (cases, configuration, memory and value fields,
+        /// bindings, canonical ranges and rules) are the lender's own arrays, read in place instead
+        /// of copied. The shape is still validated in full. The workspace never writes and never
+        /// disposes borrowed arrays; the lender must outlive it. Used only by the tree adapter,
+        /// whose catalog lends (<c>GeneratedBurstCatalogV2.TryLendWorkspaceMetadata</c>) and stays
+        /// retained until the adapter is disposed.
+        /// </summary>
+        internal static bool TryCreateBorrowing(
+            in NativeBurstDispatchWorkspaceShapeV2 shape,
+            in NativeBurstDispatchWorkspaceMetadataV2 metadata,
+            in NativeBurstDispatchWorkspaceCapacityV2 capacity,
+            Allocator allocator,
+            out NativeBurstDispatchWorkspaceOwnerV2 owner,
+            out BurstContextResult failure)
+        {
+            if (!metadata.Matches(in shape))
+            {
+                owner = null;
+                failure = BurstContextResult.InvalidEncoding;
+                return false;
+            }
+
+            return TryCreateCore(in shape, in capacity, allocator, -1, 1u, true, in metadata, out owner, out failure);
+        }
+
+        /// <summary>True when the catalog metadata arrays are borrowed, not owned (P11-016).</summary>
+        internal bool BorrowsCatalogMetadata => _borrowsMetadata;
+
+        /// <summary>The cases array this workspace reads (owned or borrowed); for tests of sharing.</summary>
+        internal NativeArray<NativeBurstDispatchCaseV2> CasesForTests => _cases;
+
+        private static bool TryCreateCore(
+            in NativeBurstDispatchWorkspaceShapeV2 shape,
+            in NativeBurstDispatchWorkspaceCapacityV2 capacity,
+            Allocator allocator,
+            int failAfterAllocation,
+            uint initialGeneration,
+            bool borrow,
+            in NativeBurstDispatchWorkspaceMetadataV2 metadata,
+            out NativeBurstDispatchWorkspaceOwnerV2 owner,
+            out BurstContextResult failure)
         {
             owner = null;
             failure = BurstContextResult.InvalidEncoding;
@@ -123,42 +171,60 @@ namespace AIBT.Execution.Burst.Dispatch
                     allocator, failAfterAllocation, ref allocations);
                 created._frameCompletionClaim = AllocateFrameClaim(
                     allocator, failAfterAllocation, ref allocations);
-                created._cases = Allocate<NativeBurstDispatchCaseV2>(
-                    shape.Cases.Length, allocator, failAfterAllocation, ref allocations);
-                created._requests = Allocate<NativeBurstDispatchRequestV2>(
-                    1, allocator, failAfterAllocation, ref allocations);
-                created._configurationFields = Allocate<NativeBurstDispatchFieldV2>(
-                    shape.ConfigurationFields.Length, allocator, failAfterAllocation, ref allocations);
-                created._memoryFields = Allocate<NativeBurstDispatchFieldV2>(
-                    shape.MemoryFields.Length, allocator, failAfterAllocation, ref allocations);
-                // Unity's job transport requires every nested native container to be
-                // constructed, including logically absent zero-length tables. Presence
-                // remains explicit below; IsCreated is transport state, not semantics.
-                created._bindings = Allocate<NativeBurstDispatchBindingV2>(
-                    shape.Bindings.IsCreated ? shape.Bindings.Length : 0,
-                    allocator,
-                    failAfterAllocation,
-                    ref allocations);
-                created._valueFields = Allocate<NativeBurstDispatchFieldV2>(
-                    shape.ValueFields.IsCreated ? shape.ValueFields.Length : 0,
-                    allocator,
-                    failAfterAllocation,
-                    ref allocations);
-                created._caseCanonicalRanges = Allocate<NativeBurstDispatchCanonicalRangeV2>(
-                    shape.CanonicalInput.IsCreated ? shape.CanonicalInput.CaseRanges.Length : 0,
-                    allocator,
-                    failAfterAllocation,
-                    ref allocations);
-                created._bindingCanonicalRanges = Allocate<NativeBurstDispatchCanonicalRangeV2>(
-                    shape.CanonicalInput.IsCreated ? shape.CanonicalInput.BindingRanges.Length : 0,
-                    allocator,
-                    failAfterAllocation,
-                    ref allocations);
-                created._canonicalRules = Allocate<NativeBurstDispatchCanonicalRuleV2>(
-                    shape.CanonicalInput.IsCreated ? shape.CanonicalInput.Rules.Length : 0,
-                    allocator,
-                    failAfterAllocation,
-                    ref allocations);
+                if (borrow)
+                {
+                    // Set before anything else can fail, so DisposeOwnedArrays never frees the lender's arrays.
+                    created._borrowsMetadata = true;
+                    created._requests = Allocate<NativeBurstDispatchRequestV2>(
+                        1, allocator, failAfterAllocation, ref allocations);
+                    created._cases = metadata.Cases;
+                    created._configurationFields = metadata.ConfigurationFields;
+                    created._memoryFields = metadata.MemoryFields;
+                    created._bindings = metadata.Bindings;
+                    created._valueFields = metadata.ValueFields;
+                    created._caseCanonicalRanges = metadata.CaseCanonicalRanges;
+                    created._bindingCanonicalRanges = metadata.BindingCanonicalRanges;
+                    created._canonicalRules = metadata.CanonicalRules;
+                }
+                else
+                {
+                    created._cases = Allocate<NativeBurstDispatchCaseV2>(
+                        shape.Cases.Length, allocator, failAfterAllocation, ref allocations);
+                    created._requests = Allocate<NativeBurstDispatchRequestV2>(
+                        1, allocator, failAfterAllocation, ref allocations);
+                    created._configurationFields = Allocate<NativeBurstDispatchFieldV2>(
+                        shape.ConfigurationFields.Length, allocator, failAfterAllocation, ref allocations);
+                    created._memoryFields = Allocate<NativeBurstDispatchFieldV2>(
+                        shape.MemoryFields.Length, allocator, failAfterAllocation, ref allocations);
+                    // Unity's job transport requires every nested native container to be
+                    // constructed, including logically absent zero-length tables. Presence
+                    // remains explicit below; IsCreated is transport state, not semantics.
+                    created._bindings = Allocate<NativeBurstDispatchBindingV2>(
+                        shape.Bindings.IsCreated ? shape.Bindings.Length : 0,
+                        allocator,
+                        failAfterAllocation,
+                        ref allocations);
+                    created._valueFields = Allocate<NativeBurstDispatchFieldV2>(
+                        shape.ValueFields.IsCreated ? shape.ValueFields.Length : 0,
+                        allocator,
+                        failAfterAllocation,
+                        ref allocations);
+                    created._caseCanonicalRanges = Allocate<NativeBurstDispatchCanonicalRangeV2>(
+                        shape.CanonicalInput.IsCreated ? shape.CanonicalInput.CaseRanges.Length : 0,
+                        allocator,
+                        failAfterAllocation,
+                        ref allocations);
+                    created._bindingCanonicalRanges = Allocate<NativeBurstDispatchCanonicalRangeV2>(
+                        shape.CanonicalInput.IsCreated ? shape.CanonicalInput.BindingRanges.Length : 0,
+                        allocator,
+                        failAfterAllocation,
+                        ref allocations);
+                    created._canonicalRules = Allocate<NativeBurstDispatchCanonicalRuleV2>(
+                        shape.CanonicalInput.IsCreated ? shape.CanonicalInput.Rules.Length : 0,
+                        allocator,
+                        failAfterAllocation,
+                        ref allocations);
+                }
 
                 created._memoryStaging = Allocate<byte>(
                     (int)capacity.MaxMemoryBytes, allocator, failAfterAllocation, ref allocations);
@@ -182,20 +248,23 @@ namespace AIBT.Execution.Burst.Dispatch
                     failAfterAllocation,
                     ref allocations);
 
-                Copy(shape.Cases, created._cases);
-                Copy(shape.ConfigurationFields, created._configurationFields);
-                Copy(shape.MemoryFields, created._memoryFields);
-                if (shape.Bindings.IsCreated)
+                if (!borrow)
                 {
-                    Copy(shape.Bindings, created._bindings);
-                    Copy(shape.ValueFields, created._valueFields);
-                }
+                    Copy(shape.Cases, created._cases);
+                    Copy(shape.ConfigurationFields, created._configurationFields);
+                    Copy(shape.MemoryFields, created._memoryFields);
+                    if (shape.Bindings.IsCreated)
+                    {
+                        Copy(shape.Bindings, created._bindings);
+                        Copy(shape.ValueFields, created._valueFields);
+                    }
 
-                if (shape.CanonicalInput.IsCreated)
-                {
-                    Copy(shape.CanonicalInput.CaseRanges, created._caseCanonicalRanges);
-                    Copy(shape.CanonicalInput.BindingRanges, created._bindingCanonicalRanges);
-                    Copy(shape.CanonicalInput.Rules, created._canonicalRules);
+                    if (shape.CanonicalInput.IsCreated)
+                    {
+                        Copy(shape.CanonicalInput.CaseRanges, created._caseCanonicalRanges);
+                        Copy(shape.CanonicalInput.BindingRanges, created._bindingCanonicalRanges);
+                        Copy(shape.CanonicalInput.Rules, created._canonicalRules);
+                    }
                 }
 
                 if (!NativeOwnerIdentityV1.TryNext(out var ownerId))
@@ -1215,15 +1284,30 @@ namespace AIBT.Execution.Burst.Dispatch
             Dispose(ref _requestStatuses);
             Dispose(ref _memoryWritten);
             Dispose(ref _memoryStaging);
-            Dispose(ref _canonicalRules);
-            Dispose(ref _bindingCanonicalRanges);
-            Dispose(ref _caseCanonicalRanges);
-            Dispose(ref _valueFields);
-            Dispose(ref _bindings);
-            Dispose(ref _memoryFields);
-            Dispose(ref _configurationFields);
+            if (_borrowsMetadata)
+            {
+                // P11-016: the catalog's arrays; only the lender disposes them.
+                _canonicalRules = default;
+                _bindingCanonicalRanges = default;
+                _caseCanonicalRanges = default;
+                _valueFields = default;
+                _bindings = default;
+                _memoryFields = default;
+                _configurationFields = default;
+                _cases = default;
+            }
+            else
+            {
+                Dispose(ref _canonicalRules);
+                Dispose(ref _bindingCanonicalRanges);
+                Dispose(ref _caseCanonicalRanges);
+                Dispose(ref _valueFields);
+                Dispose(ref _bindings);
+                Dispose(ref _memoryFields);
+                Dispose(ref _configurationFields);
+                Dispose(ref _cases);
+            }
             Dispose(ref _requests);
-            Dispose(ref _cases);
             Dispose(ref _frameCompletionClaim);
             Dispose(ref _executionClaim);
             Dispose(ref _control);

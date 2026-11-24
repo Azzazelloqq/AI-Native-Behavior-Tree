@@ -30,6 +30,8 @@ namespace AIBT
         private NativeArray<NativeBurstDispatchCanonicalRuleV2> _canonicalRules;
         private int _retainedUsers;
         private bool _disposed;
+        private Allocator _allocator;
+        private bool _lendingDisabledForTests;
 
         private GeneratedBurstCatalogV2() { }
 
@@ -83,6 +85,7 @@ namespace AIBT
                 created._canonicalRules = new NativeArray<NativeBurstDispatchCanonicalRuleV2>(decoded.CanonicalRules, allocator);
                 created.Handshake = handshake;
                 created.Executor = executor;
+                created._allocator = allocator;
 
                 if (!created.ValidateShape(out failure) || !NativeOwnerIdentityV1.TryNext(out var ownerId))
                 {
@@ -158,6 +161,29 @@ namespace AIBT
                 _bindings.Length == 0 ? default : _bindings.AsReadOnly(),
                 _bindings.Length == 0 ? default : _valueFields.AsReadOnly(),
                 CanonicalInput);
+
+        /// <summary>
+        /// P11-016: lends this catalog's own metadata arrays to a workspace that borrows them
+        /// (<see cref="NativeBurstDispatchWorkspaceOwnerV2.TryCreateBorrowing"/>) instead of copying them
+        /// once per leaf of every host. Only a usable catalog whose arrays live as long as it does
+        /// (allocated Persistent) lends; otherwise the caller copies. The borrower must retain this
+        /// catalog for its whole life: <see cref="TryDispose"/> refuses while it is retained.
+        /// </summary>
+        internal bool TryLendWorkspaceMetadata(out NativeBurstDispatchWorkspaceMetadataV2 metadata)
+        {
+            metadata = default;
+            if (!IsCreated || _allocator != Allocator.Persistent || _lendingDisabledForTests) return false;
+            metadata = new NativeBurstDispatchWorkspaceMetadataV2(
+                _cases, _configurationFields, _memoryFields, _bindings, _valueFields,
+                _caseRanges, _bindingRanges, _canonicalRules);
+            return true;
+        }
+
+        /// <summary>
+        /// Test seam (P11-016): <see cref="TryCreate"/> accepts only <see cref="Allocator.Persistent"/>,
+        /// so the copying fallback of a catalog that cannot lend is otherwise unreachable.
+        /// </summary>
+        internal void DisableWorkspaceMetadataLendingForTests() => _lendingDisabledForTests = true;
 
         internal NativeBurstDispatchWorkspaceCapacityV2 CreateWorkspaceCapacity()
         {
