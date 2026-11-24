@@ -1,6 +1,6 @@
 # AIBT MCP recipes (generated)
 
-Verification evidence is recorded under `Planning~/Evidence/P6-011/`, for the updated node-compilation protocol `Planning~/Evidence/P7-031/`, and for the native node library recipes `Planning~/Evidence/P11-002/`. Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command.
+Verification evidence is recorded under `Planning~/Evidence/P6-011/`, for the updated node-compilation protocol `Planning~/Evidence/P7-031/`, and for the native node library recipes `Planning~/Evidence/P11-002/` (in the AIBT repository only, not in the package). Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command.
 
 ## Recipe: create and validate a tree
 

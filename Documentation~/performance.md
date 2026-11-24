@@ -2,7 +2,8 @@
 
 What both runtime layers cost in a Player, measured, and how to keep the cost low. Numbers are
 from P10-001 (`Planning~/Evidence/P10-001/README.md`); the harness is in
-`Benchmarks~/Phase10/PlayerPerf/`.
+`Benchmarks~/Phase10/PlayerPerf/`. Paths under `Planning~/` and `Benchmarks~/` on this page are
+in the AIBT repository only, not in the package.
 
 ## Machine and method
 

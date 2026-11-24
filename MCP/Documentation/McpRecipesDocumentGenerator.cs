@@ -18,7 +18,7 @@ namespace AIBT.Mcp.Documentation
         {
             var builder = new StringBuilder();
             builder.Append("# AIBT MCP recipes (generated)\n\n");
-            builder.Append("Verification evidence is recorded under `Planning~/Evidence/P6-011/`, for the updated node-compilation protocol `Planning~/Evidence/P7-031/`, and for the native node library recipes `Planning~/Evidence/P11-002/`. ");
+            builder.Append("Verification evidence is recorded under `Planning~/Evidence/P6-011/`, for the updated node-compilation protocol `Planning~/Evidence/P7-031/`, and for the native node library recipes `Planning~/Evidence/P11-002/` (in the AIBT repository only, not in the package). ");
             builder.Append("Regenerate with the `AIBT/MCP/Regenerate Documentation` Editor menu command.\n\n");
 
             builder.Append("## Recipe: create and validate a tree\n\n");

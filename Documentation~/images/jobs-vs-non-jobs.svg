@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="720" viewBox="0 0 1240 720">
+<rect width="1240" height="720" fill="#ffffff"/>
+<style>text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#172033}.title{font-size:26px;font-weight:700}.subtitle{font-size:15px;fill:#526174}.axis{font-size:13px;fill:#526174}.panel{font-size:18px;font-weight:650}.legend{font-size:13px}</style>
+<text x="620" y="42" text-anchor="middle" class="title">Same-frame Jobs cost relative to the fastest plain loop</text>
+<text x="620" y="70" text-anchor="middle" class="subtitle">Median ns/agent; lower is better. Every point is one committed Player scenario.</text>
+<text x="350" y="112" text-anchor="middle" class="panel">Windows x64 Player</text>
+<line x1="100" y1="565.0" x2="600" y2="565.0" stroke="#dbe2ea" stroke-width="1"/>
+<text x="88" y="570.0" text-anchor="end" class="axis">10x</text>
+<line x1="100" y1="469.5" x2="600" y2="469.5" stroke="#dbe2ea" stroke-width="1"/>
+<text x="88" y="474.5" text-anchor="end" class="axis">15x</text>
+<line x1="100" y1="374.1" x2="600" y2="374.1" stroke="#dbe2ea" stroke-width="1"/>
+<text x="88" y="379.1" text-anchor="end" class="axis">20x</text>
+<line x1="100" y1="278.6" x2="600" y2="278.6" stroke="#dbe2ea" stroke-width="1"/>
+<text x="88" y="283.6" text-anchor="end" class="axis">25x</text>
+<line x1="100" y1="183.2" x2="600" y2="183.2" stroke="#dbe2ea" stroke-width="1"/>
+<text x="88" y="188.2" text-anchor="end" class="axis">30x</text>
+<line x1="100" y1="565" x2="600" y2="565" stroke="#7b8794"/>
+<line x1="100" y1="145" x2="100" y2="565" stroke="#7b8794"/>
+<text x="100.0" y="591" text-anchor="middle" class="axis">16</text>
+<text x="266.7" y="591" text-anchor="middle" class="axis">64</text>
+<text x="433.3" y="591" text-anchor="middle" class="axis">256</text>
+<text x="600.0" y="591" text-anchor="middle" class="axis">1024</text>
+<text x="350" y="620" text-anchor="middle" class="axis">Agent count</text>
+<path d="M 100.0 351.7 L 266.7 414.7 L 433.3 470.4 L 600.0 478.9" fill="none" stroke="#2563eb" stroke-width="2.5" opacity="0.9"/>
+<circle cx="100.0" cy="351.7" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="266.7" cy="414.7" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="433.3" cy="470.4" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="600.0" cy="478.9" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 100.0 273.7 L 266.7 341.2 L 433.3 474.6 L 600.0 517.7" fill="none" stroke="#0f766e" stroke-width="2.5" opacity="0.9"/>
+<circle cx="100.0" cy="273.7" r="4" fill="#0f766e" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="266.7" cy="341.2" r="4" fill="#0f766e" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="433.3" cy="474.6" r="4" fill="#0f766e" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="600.0" cy="517.7" r="4" fill="#0f766e" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 100.0 193.6 L 266.7 289.5 L 433.3 485.2 L 600.0 527.8" fill="none" stroke="#dc2626" stroke-width="2.5" opacity="0.9"/>
+<circle cx="100.0" cy="193.6" r="4" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="266.7" cy="289.5" r="4" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="433.3" cy="485.2" r="4" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="600.0" cy="527.8" r="4" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 100.0 219.0 L 266.7 299.0 L 433.3 445.2 L 600.0 470.3" fill="none" stroke="#9333ea" stroke-width="2.5" opacity="0.9"/>
+<circle cx="100.0" cy="219.0" r="4" fill="#9333ea" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="266.7" cy="299.0" r="4" fill="#9333ea" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="433.3" cy="445.2" r="4" fill="#9333ea" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="600.0" cy="470.3" r="4" fill="#9333ea" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 100.0 310.0 L 266.7 334.3 L 433.3 451.5 L 600.0 468.8" fill="none" stroke="#d97706" stroke-width="2.5" opacity="0.9"/>
+<circle cx="100.0" cy="310.0" r="4" fill="#d97706" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="266.7" cy="334.3" r="4" fill="#d97706" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="433.3" cy="451.5" r="4" fill="#d97706" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="600.0" cy="468.8" r="4" fill="#d97706" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 100.0 325.5 L 266.7 381.7 L 433.3 466.4 L 600.0 467.2" fill="none" stroke="#475569" stroke-width="2.5" opacity="0.9"/>
+<circle cx="100.0" cy="325.5" r="4" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="266.7" cy="381.7" r="4" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="433.3" cy="466.4" r="4" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="600.0" cy="467.2" r="4" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
+<text x="950" y="112" text-anchor="middle" class="panel">Android ARM64 Player</text>
+<line x1="700" y1="565.0" x2="1200" y2="565.0" stroke="#dbe2ea" stroke-width="1"/>
+<text x="688" y="570.0" text-anchor="end" class="axis">10x</text>
+<line x1="700" y1="469.5" x2="1200" y2="469.5" stroke="#dbe2ea" stroke-width="1"/>
+<text x="688" y="474.5" text-anchor="end" class="axis">15x</text>
+<line x1="700" y1="374.1" x2="1200" y2="374.1" stroke="#dbe2ea" stroke-width="1"/>
+<text x="688" y="379.1" text-anchor="end" class="axis">20x</text>
+<line x1="700" y1="278.6" x2="1200" y2="278.6" stroke="#dbe2ea" stroke-width="1"/>
+<text x="688" y="283.6" text-anchor="end" class="axis">25x</text>
+<line x1="700" y1="183.2" x2="1200" y2="183.2" stroke="#dbe2ea" stroke-width="1"/>
+<text x="688" y="188.2" text-anchor="end" class="axis">30x</text>
+<line x1="700" y1="565" x2="1200" y2="565" stroke="#7b8794"/>
+<line x1="700" y1="145" x2="700" y2="565" stroke="#7b8794"/>
+<text x="700.0" y="591" text-anchor="middle" class="axis">16</text>
+<text x="950.0" y="591" text-anchor="middle" class="axis">64</text>
+<text x="1200.0" y="591" text-anchor="middle" class="axis">256</text>
+<text x="950" y="620" text-anchor="middle" class="axis">Agent count</text>
+<path d="M 700.0 330.5 L 950.0 434.3 L 1200.0 431.4" fill="none" stroke="#2563eb" stroke-width="2.5" opacity="0.9"/>
+<circle cx="700.0" cy="330.5" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="950.0" cy="434.3" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="1200.0" cy="431.4" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 700.0 360.7 L 950.0 489.7 L 1200.0 486.6" fill="none" stroke="#0f766e" stroke-width="2.5" opacity="0.9"/>
+<circle cx="700.0" cy="360.7" r="4" fill="#0f766e" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="950.0" cy="489.7" r="4" fill="#0f766e" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="1200.0" cy="486.6" r="4" fill="#0f766e" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 700.0 310.2 L 950.0 473.1 L 1200.0 496.8" fill="none" stroke="#dc2626" stroke-width="2.5" opacity="0.9"/>
+<circle cx="700.0" cy="310.2" r="4" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="950.0" cy="473.1" r="4" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="1200.0" cy="496.8" r="4" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 700.0 339.6 L 950.0 445.9 L 1200.0 438.7" fill="none" stroke="#9333ea" stroke-width="2.5" opacity="0.9"/>
+<circle cx="700.0" cy="339.6" r="4" fill="#9333ea" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="950.0" cy="445.9" r="4" fill="#9333ea" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="1200.0" cy="438.7" r="4" fill="#9333ea" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 700.0 376.9 L 950.0 448.9 L 1200.0 416.9" fill="none" stroke="#d97706" stroke-width="2.5" opacity="0.9"/>
+<circle cx="700.0" cy="376.9" r="4" fill="#d97706" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="950.0" cy="448.9" r="4" fill="#d97706" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="1200.0" cy="416.9" r="4" fill="#d97706" stroke="#ffffff" stroke-width="1.5"/>
+<path d="M 700.0 416.4 L 950.0 463.9 L 1200.0 417.7" fill="none" stroke="#475569" stroke-width="2.5" opacity="0.9"/>
+<circle cx="700.0" cy="416.4" r="4" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="950.0" cy="463.9" r="4" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
+<circle cx="1200.0" cy="417.7" r="4" fill="#475569" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="105" y1="645" x2="129" y2="645" stroke="#2563eb" stroke-width="3"/>
+<circle cx="117" cy="645" r="4" fill="#2563eb"/>
+<text x="139" y="650" class="legend">Baseline leaf</text>
+<line x1="490" y1="645" x2="514" y2="645" stroke="#0f766e" stroke-width="3"/>
+<circle cx="502" cy="645" r="4" fill="#0f766e"/>
+<text x="524" y="650" class="legend">Shallow sequence</text>
+<line x1="875" y1="645" x2="899" y2="645" stroke="#dc2626" stroke-width="3"/>
+<circle cx="887" cy="645" r="4" fill="#dc2626"/>
+<text x="909" y="650" class="legend">Deep traversal</text>
+<line x1="105" y1="672" x2="129" y2="672" stroke="#9333ea" stroke-width="3"/>
+<circle cx="117" cy="672" r="4" fill="#9333ea"/>
+<text x="139" y="677" class="legend">Wide failures</text>
+<line x1="490" y1="672" x2="514" y2="672" stroke="#d97706" stroke-width="3"/>
+<circle cx="502" cy="672" r="4" fill="#d97706"/>
+<text x="524" y="677" class="legend">Running actions</text>
+<line x1="875" y1="672" x2="899" y2="672" stroke="#475569" stroke-width="3"/>
+<circle cx="887" cy="672" r="4" fill="#475569"/>
+<text x="909" y="677" class="legend">Many-program placeholder</text>
+</svg>

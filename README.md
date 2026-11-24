@@ -353,7 +353,8 @@ need an optional Unity module are compiled only when the module is enabled.
   (`AibtLinkXmlProcessor`) that preserves every `[BtNode]` class and `[AibtCatalogSet]` catalog in
   the Player's assemblies, verified with IL2CPP and stripping level High. If you load node or
   catalog types some other way, assign `NativeTreeAgent.CatalogFactory = YourCatalog.TryCreateRuntimeCatalog`
-  before the agent is enabled. See the [P9-006 evidence](Planning~/Evidence/P9-006/README.md).
+  before the agent is enabled. The Player verification is recorded in `Planning~/Evidence/P9-006/README.md`
+  (in the AIBT repository only, not in the package).
 - MCP `search_nodes` returns 50 nodes per page by default; pass `count` or page with `offset`.
 - Condition interrupts (`ConditionInterrupt`) exist only in the managed layer.
 - `BehaviorTreeAgent` does not run tree `observer` blocks: a tree with one is refused when it is
@@ -411,5 +412,5 @@ assets and read a running host's trace through the same Editor operations. See
 - [Benchmarks](Documentation~/benchmarks.md), [Testing strategy](Documentation~/testing.md)
 - [Roadmap and phase history](Documentation~/roadmap.md), [Changelog](CHANGELOG.md)
 - [Samples](Samples~/README.md), [Contributing](CONTRIBUTING.md)
-- Planning: [master plan](Planning~/MASTER_PLAN.md), [work items](Planning~/work-items.json),
-  [user and infrastructure actions](Planning~/USER_ACTIONS.md)
+- Planning (in the AIBT repository only, not in the package): the master plan `Planning~/MASTER_PLAN.md`, the work items
+  `Planning~/work-items.json`, and user and infrastructure actions `Planning~/USER_ACTIONS.md`

@@ -1,5 +1,8 @@
 # Hot reload
 
+> Paths under `Planning~/` and `Benchmarks~/` on this page (evidence, measurements, harnesses) are
+> in the AIBT repository only, not in the package.
+
 This document consolidates Phase 5's contract. Every rule below already exists
 as a decision scattered across `architecture.md`, `scope.md`, `roadmap.md`,
 `decisions.md` (`AIBT-008`), `testing.md`, `benchmarks.md`, and the

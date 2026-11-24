@@ -238,5 +238,5 @@ the old instance or invoke application callbacks; existing active-path rejection
 
 This decision does not add V2 versions/revision, observer/RNG migration, or production-host reload.
 P7-039 external writes use `GeneratedTreeDispatchAdapterV2`'s separate storage; this fix does not
-claim to migrate that storage. Verification and limits are recorded in
-[P7-040 evidence](../../Planning~/Evidence/P7-040/README.md).
+claim to migrate that storage. Verification and limits are recorded in the P7-040 evidence,
+`Planning~/Evidence/P7-040/README.md` (in the AIBT repository only, not in the package).

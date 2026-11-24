@@ -4,6 +4,10 @@
 Planning~/
 Benchmarks~/
 Spikes~/
+# P11-015 review follow-up (item 6): repository-only scripts that read those folders.
+Tools~/Verification/Verify-Static.ps1
+Tools~/Verification/Verify-Schemas.ps1
+Tools~/Verification/P2/
 
 # From .gitignore
 # Unity-generated directories

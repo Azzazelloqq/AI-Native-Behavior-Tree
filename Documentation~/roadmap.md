@@ -1,5 +1,8 @@
 # Development roadmap
 
+> Paths under `Planning~/` and `Benchmarks~/` on this page (evidence, measurements, harnesses) are
+> in the AIBT repository only, not in the package.
+
 The order minimizes architectural rework and delivers verifiable vertical slices. Later phases may be refined, but their prerequisites should not be skipped.
 
 ## Phase 0 — foundation

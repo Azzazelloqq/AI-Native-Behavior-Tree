@@ -5,13 +5,16 @@ specific to the measured workloads: for six small built-in tree shapes and popul
 agents, completing Unity Jobs in the same frame costs more per agent than running the same update in
 an `Immediate` or `Budgeted` loop.
 
-![Same-frame Jobs cost relative to the fastest plain loop](../Planning~/Evidence/P7-024/jobs-vs-non-jobs.svg)
+![Same-frame Jobs cost relative to the fastest plain loop](images/jobs-vs-non-jobs.svg)
+
+Paths under `Planning~/` and `Benchmarks~/` on this page are in the AIBT repository only, not in the package. The chart above is a
+copy of `Planning~/Evidence/P7-024/jobs-vs-non-jobs.svg`.
 
 The chart contains all 42 comparable Player points: 24 Windows points (6 scenarios x 4 populations)
 and 18 Android points (6 scenarios x 3 populations). For each point it divides the
 `BatchedJobsSameFrame` median ns/agent by the lower median from `Immediate` and `Budgeted` for the
 same platform, scenario and population. The ratio ranges from **11.95x to 29.46x on Windows** and
-**13.57x to 23.34x on Android**. The committed [derived data and source hashes](../Planning~/Evidence/P7-024/derived-data.json)
+**13.57x to 23.34x on Android**. The committed derived data and source hashes, `Planning~/Evidence/P7-024/derived-data.json`,
 make every plotted value traceable.
 
 ## What was measured
@@ -50,8 +53,8 @@ Windows used a release IL2CPP/Burst Player on an Intel Core Ultra 9 275HX with 2
 five warmups and fifteen measured samples at 16/64/256/1,024 agents. Android used a release
 IL2CPP/Burst Player on one physical Google Pixel 10 Pro, three warmups and seven measured samples at
 16/64/256 agents. Both used Unity 6000.5.8f1. The exact source files are the
-[Windows Player JSON](../Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821.json)
-and [Android Player JSON](../Benchmarks~/Phase4/Platform/Android/Results/android-player-scheduling-20260821.json).
+Windows Player JSON `Benchmarks~/Phase4/Platform/Windows/Results/windows-player-scheduling-20260821.json`
+and the Android Player JSON `Benchmarks~/Phase4/Platform/Android/Results/android-player-scheduling-20260821.json`.
 
 ## Auto was recalibrated after the original comparison
 
@@ -59,12 +62,12 @@ The original same-frame Editor comparison selected a policy through `Auto` for 2
 underperformed the best measured fixed policy in **23 of 24**. When it selected
 `BatchedJobsSameFrame`, the gap was **+188.30% to +1,773.99%**. Every selection had `Low`
 confidence because the estimator was cold-started with one observation per case. These historical
-numbers remain in the [original Auto JSON](../Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json).
+numbers remain in the original Auto JSON, `Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260821.json`.
 
 P6-019 then changed the deterministic same-frame preference to try `Immediate`/`Budgeted` before
 `BatchedJobsSameFrame`, without adding a new threshold. The same 24-case methodology was rerun on
 2026-08-31: current `Auto` selected `Immediate` and matched the best fixed policy in **24 of 24**
-cases. The [post-recalibration JSON](../Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260831-124156.json)
+cases. The post-recalibration JSON, `Benchmarks~/Phase4/AutoComparison/Results/auto-comparison-windows-editor-20260831-124156.json`,
 is the current behavior evidence. Both comparisons are Editor measurements and must not be mixed
 with the Player medians above.
 
@@ -83,7 +86,8 @@ kept visible instead of being filled with estimates or a new unreviewed benchmar
 
 ## Reproduce the figure
 
-From the package root, use Python 3 with no third-party dependencies:
+From the AIBT repository root (the script and its inputs are in the AIBT repository only, not in the package), use Python 3 with no
+third-party dependencies:
 
 ```powershell
 python Planning~/Evidence/P7-024/generate_report_data.py --check

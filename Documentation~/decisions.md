@@ -1,6 +1,8 @@
 # Architectural decisions
 
 This file records accepted direction. Detailed ADR files may be introduced when implementation begins.
+The ADRs cite evidence, spikes and benchmarks under `Planning~/`, `Spikes~/` and `Benchmarks~/`; those folders are
+in the AIBT repository only, not in the package.
 
 | ID | Decision | Status |
 | --- | --- | --- |

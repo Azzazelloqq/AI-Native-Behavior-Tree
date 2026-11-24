@@ -1,6 +1,7 @@
 # Development commands
 
-All commands are run from the AIBT repository unless stated otherwise.
+All commands are run from the AIBT repository unless stated otherwise. `Verify-Static.ps1`, `Verify-Schemas.ps1`
+and `Tools~/Verification/P2/` read the planning and benchmark folders and are in the AIBT repository only, not in the package.
 
 ## Static verification
 

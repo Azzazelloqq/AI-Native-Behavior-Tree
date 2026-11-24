@@ -16,3 +16,13 @@
 Planning~/** export-ignore
 Benchmarks~/** export-ignore
 Spikes~/** export-ignore
+# P11-015 review follow-up (item 6): the folders themselves too (without these lines the archive kept
+# them as empty directory entries), and the repository-only scripts that read them. The CI workflows
+# run Verify-Static.ps1 in the repository, not in a tarball.
+Planning~ export-ignore
+Benchmarks~ export-ignore
+Spikes~ export-ignore
+Tools~/Verification/Verify-Static.ps1 export-ignore
+Tools~/Verification/Verify-Schemas.ps1 export-ignore
+Tools~/Verification/P2 export-ignore
+Tools~/Verification/P2/** export-ignore

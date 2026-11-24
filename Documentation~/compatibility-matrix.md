@@ -1,5 +1,8 @@
 # Supported-platform matrix and regression thresholds
 
+> Paths under `Planning~/` and `Benchmarks~/` on this page (evidence, measurements, harnesses) are
+> in the AIBT repository only, not in the package.
+
 > **Status: ACCEPTED** — approved by the owner as-is on 2026-09-02 (recorded in
 > `Planning~/Evidence/P7-002/README.md`), satisfying `Planning~/USER_ACTIONS.md`'s "Approve the
 > exact supported browser/version policy" and "Approve performance hardware classes and acceptable
@@ -29,7 +32,7 @@ expected tree and matched input hashes and catalog fingerprint.
 This supports absence of per-tree code growth in this fixed-catalog comparison, not constant
 total Player size. The probe ships Authoring plus JSON; runtime-only precompiled packaging,
 catalog-size scaling, archive/download size and Android/Web size are unmeasured. Reproduction,
-inventories and exact attribution: [P7-026 evidence](../Planning~/Evidence/P7-026/README.md).
+inventories and exact attribution: the P7-026 evidence, `Planning~/Evidence/P7-026/README.md`.
 
 ## Regression-threshold proposal
 

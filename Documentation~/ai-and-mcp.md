@@ -176,6 +176,6 @@ Successful apply removes the staging-only companion catalog source after moving 
 the verification catalog is never shipped with the destination. Native test dispatch owns
 background-thread-compatible storage and disposes it after the request.
 
-Approved protocol decision: `Planning~/Evidence/P7-031/implementation-proposal.md`.
+Approved protocol decision: `Planning~/Evidence/P7-031/implementation-proposal.md` (in the AIBT repository only, not in the package).
 
 The MCP server is an external `dotnet` process built on the official C# MCP SDK (stdio transport), launched by the AI client's own MCP configuration, never code loaded into Unity's Editor assembly graph. A thin, dependency-free Editor-side listener bridges it to a running Unity Editor instance over a discovery file. This requires the .NET SDK installed on the user's machine; no server binary is vendored inside the AIBT package. Full rationale and rejected alternatives: [ADR P6-001](decisions/ADR-P6-001-mcp-transport-and-permission-model.md).
