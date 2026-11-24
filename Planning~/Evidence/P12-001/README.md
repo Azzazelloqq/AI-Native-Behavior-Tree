@@ -176,6 +176,9 @@ long-lived simulations (4 variants × in place / jobs, `MinimumJobBatch = 1`); 7
 D for both paths with the path order alternating; 60 warm-up and 300 measured steps per block; per block the
 median step time; per variant the median of the 7 round medians and their range; differences paired inside each
 round. A difference whose range across rounds contains 0 is "not confirmed". The whole run was done twice.
+Within a path the variants always ran in the order A, B, C, D (only the path order alternates), so an order
+effect inside a path is not excluded; B − A is about 45 % of the A step with a tight range over 14 rounds and C − B is
+zero, which makes it unlikely but not proven.
 
 **Where.** The Unity Editor 6000.6.9f1 (not a Player), Burst compilation on, **Burst safety checks on, jobs
 debugger on**, 23 job workers, 24 logical processors. In the Editor the agent-frame job runs Burst-compiled
@@ -229,7 +232,8 @@ stopped on a counter error at 00:03, after both runs).
   agents think at every step (400 woken by input per step): 2.8 ms instead of 0.48 ms per step in jobs, and
   about 5 times the in-place step. That is the cost the dedicated trigger channel avoids.
 - These are Editor numbers with safety checks and the jobs debugger on, on a busy machine; the ratios, not the
-  absolute values, are the result. A Player measurement is open (below).
+  absolute values, are the result. A Player measurement was not done (open, below); the 0.4 µs per compared
+  agent is Editor code with safety checks.
 
 **About the two runs.** Run 1 finished and wrote all 16 800 rows, but the pipeline marked it failed: NUnit's
 default 180 s timeout applies to an EditMode test and the run took about 12.5 minutes. The test then got
@@ -246,8 +250,59 @@ killed. Both runs give the same picture; the table shows both.
 | `Tools/Unity/Invoke-UnityTests.ps1 -Filter TreeSimulationWakeCostBenchmark` with `AIBT_P12001_BENCHMARK=1` | run 2: 1/1 passed (run 1: data complete, marked failed by the 180 s timeout, see above) |
 | `Tools~/Verification/Verify-Static.ps1` | passed (200 work items, 7 schemas) |
 
-Not run: the full run of the ten assemblies (the orchestrator's, at acceptance). In that run the benchmark shows as
-ignored ("set AIBT_P12001_BENCHMARK=1 …"), which is expected.
+Acceptance full run on 85bd41a, 2026-11-25 00:06–00:24: Runtime 821/821, Integration 716/717 (1 ignored: the
+benchmark), Editor 917/917, BehaviorCases 65/65, NativeBurstDispatch 79/79, NativeTreeAgentBlackboard 33/33,
+NativeSharedBlackboard 36/36, CodeGen.ContractTests 6/6, CodeGen.GenerationTests 14/14, PlayMode 2/2; noise
+unknown-command=0, main-thread-timeout=13 (unchanged); raw:
+`C:\UnityProjects\_aibt_acceptance\P12-001\acceptance\full-run-85bd41a.txt`.
+
+## Review fixes round 1
+
+From the independent review (`C:\UnityProjects\_aibt_acceptance\P12-001\acceptance\independent-review.md`,
+S1–S5, N3, N7), on the orchestrator's request of 2026-11-25:
+
+- **S1, limits of `aibt.core.timeout` / `cooldown`, and 0.** New test
+  `TimeoutAndCooldown_ZeroOrAboveInt64_AreRefused` (9 cases: timeout, cooldown on-enter, cooldown
+  on-successful-exit × 0, `long.MaxValue + 1`, `ulong.MaxValue`; in place and in jobs). It walks the consumer's
+  path (read the tree JSON, compile, `TryCreateProgram`, `TryAddGroup`, `TryAdd`, `Step`) and names the first
+  stage that refuses. **Neither value reaches the container.** 0 is a compile error, `AIBT2028` (parameter
+  constraint). A value above `long.MaxValue` is not even read: `CanonicalTreeJson.ReadSemanticValue` throws
+  `InvalidCastException` (Newtonsoft reads the number as a `BigInteger`; the reader's `UInt64` fallback catches
+  only `OverflowException` and `FormatException`, `Authoring/Serialization/Json/CanonicalTreeJson.cs:504-509`).
+  That is an exception where a diagnostic was intended, an authoring bug outside this item; not fixed here.
+  The runtime decoders' refusal (`NativeDecoratorPolicyV1.cs:71,83`) is therefore not reachable from a tree
+  file. New test `ZeroDuration_InTheNativeTimeNodes` (4 cases, in place and in jobs): `wait-microseconds` 0 and
+  `wait-random-microseconds` `min = max = 0` succeed on the entering think; `wait-until-true` timeout 0 means no
+  timeout; `set-deadline` 0 writes the current time, so the probe that re-arms it fires at every think.
+- **N3.** The `TickMicroseconds = 1` maximum of 4 294 967 295 ticks holds only for a timer started at tick 0
+  (the tick counter ends at `uint.MaxValue`); said in the Limits bullet and the test comment.
+- **S2.** New test `PositionsWithWakeOn_RewrittenEveryTick_WakeEveryAgentEveryTick` (`NewRig(positionWake:
+  true)`): every agent that has thought once thinks at every tick, off schedule with `InputChanged`, and the
+  woken-by-input count per tick equals those thinks; nothing is cancelled; in place and in jobs. Named in the
+  "Wake is per channel" bullet.
+- **S3.** CHANGELOG: "ends at the agent's first think at or after its deadline"; "preempts inside the next step
+  after the write".
+- **S4.** The overflow fault is its own test, `DeadlineBeyondInt64_FaultsTheAgentAtItsFirstThink` (3 cases:
+  timeout, cooldown on-enter, cooldown on-successful-exit): two agents, each faults once at tick 1 with
+  `NativeCapacityArithmeticOverflow`, in place and in jobs (job batches asserted), the same signals on both
+  paths. The exactness test is now `LargeUInt64Duration_IsExact` and also covers cooldown on-successful-exit
+  (3 cases).
+- **S5.** Not rerun; the order caveat is in the method of section 5.
+- **N7.** The snippet calls the `TreeGroup` `group`. The earlier examples of `simulation-container.md` (before
+  P12-001) call it `guards`; the snippet says so in a comment, and the older examples were not changed.
+
+Tests after the fixes: `-Filter SimulationTickDurationTests` 122/122 (105 − 2 old UInt64 cases + 3 + 3 + 9 + 4),
+`-Filter TreeSimulationReactivePatternTests` 8/8. `Verify-Static.ps1` passed. Section 1's table above is the
+state before the fixes; the renamed and added tests are listed here.
+
+## Open follow-ups (not done in P12-001)
+
+- The generated node descriptions that still say "host time" / "`aibt.stdlib.wait` counts ticks" (section 2,
+  items 1-5); they need the catalog-hash check first.
+- The Player measurement of the wake cost.
+- Rotating the variant order in the benchmark (ABCD, BCDA, …).
+- `CanonicalTreeJson` throws `InvalidCastException` for an integer above `long.MaxValue` instead of reading it as
+  `UInt64` or giving a diagnostic (found in round 1).
 
 ## What is not done
 
@@ -273,4 +328,5 @@ Local, on `feature/aibt-consumer-workflow`, not pushed:
 | --- | --- |
 | `7303f62` | tests, the fixture assembly and the asmdef reference |
 | `d81c74a` | `simulation-container.md`, `native-node-library.md`, `CHANGELOG.md` |
-| the commit that adds this file | P12-001…P12-003 cards, work items, `MASTER_PLAN.md`, this evidence |
+| `85bd41a` | P12-001…P12-003 cards, work items, `MASTER_PLAN.md`, this evidence |
+| the commit that adds "Review fixes round 1" | the review fixes: tests, `simulation-container.md`, `CHANGELOG.md`, this evidence |

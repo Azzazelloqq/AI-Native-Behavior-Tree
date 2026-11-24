@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AIBT.Simulation;
+using AIBT.StandardNodes;
 using AIBT.Tests.Integration.NativeRuntime;
 using NUnit.Framework;
 using static AIBT.Tests.Integration.NativeRuntime.LibraryTrees;
@@ -128,6 +129,7 @@ namespace AIBT.Tests.Integration.Simulation
             internal int Faults;
             internal long JobBatches;
             internal AgentFault[] FaultList = Array.Empty<AgentFault>();
+            internal readonly List<uint> FaultTicks = new List<uint>();
         }
 
         private static Outcome Run(NativeLibraryKit.Prepared prepared, uint tickMicroseconds, bool spread, bool useJobs,
@@ -153,7 +155,11 @@ namespace AIBT.Tests.Integration.Simulation
                     for (var item = 0; item < commands.Length; item++)
                         outcome.Signals.Add((tick, commands[item].Agent.Index, commands[item].Value));
                     var stepFaults = group.GetFaults();
-                    for (var item = 0; item < stepFaults.Length; item++) faults.Add(stepFaults[item]);
+                    for (var item = 0; item < stepFaults.Length; item++)
+                    {
+                        faults.Add(stepFaults[item]);
+                        outcome.FaultTicks.Add(tick);
+                    }
                     for (var agent = 0; agent < agents; agent++)
                     {
                         if (ThoughtOn(group, handles[agent], tick)) outcome.Thinks.Add((tick, agent));
@@ -312,7 +318,8 @@ namespace AIBT.Tests.Integration.Simulation
 
         /// <summary>
         /// UInt32 microseconds (the native nodes): at 33333 µs per tick the largest exact duration is 128 850
-        /// ticks (4 294 957 050 µs); with TickMicroseconds = 1 it is 4 294 967 295 ticks, the whole tick range.
+        /// ticks (4 294 957 050 µs); with TickMicroseconds = 1 it is 4 294 967 295 ticks, the whole tick range,
+        /// for a timer started at tick 0 (a timer started at tick s can run at most 4 294 967 295 − s ticks).
         /// The ticks are skipped (Step accepts any increasing tick), so the cases run in four steps.
         /// </summary>
         [Test]
@@ -350,12 +357,13 @@ namespace AIBT.Tests.Integration.Simulation
 
         /// <summary>
         /// UInt64 microseconds (aibt.core.timeout and cooldown): any duration whose end tick is inside the
-        /// tick range is exact in both recipes (here uint.MaxValue ticks at 30 Hz, and uint.MaxValue with
-        /// TickMicroseconds = 1). A deadline beyond Int64 microseconds faults the agent at activation
-        /// (the runtime accepts at most long.MaxValue − now).
+        /// tick range is exact in both recipes (here 4 294 967 294 ticks at 30 Hz, and with
+        /// TickMicroseconds = 1). The deadline overflow is pinned by
+        /// <see cref="DeadlineBeyondInt64_FaultsTheAgentAtItsFirstThink"/>, the refused values by
+        /// <see cref="TimeoutAndCooldown_ZeroOrAboveInt64_AreRefused"/>.
         /// </summary>
         [Test]
-        public void LargeUInt64Duration_IsExact_AndADeadlineBeyondInt64FaultsTheAgent([Values("aibt.core.timeout", "aibt.core.cooldown on-enter")] string name)
+        public void LargeUInt64Duration_IsExact([Values("aibt.core.timeout", "aibt.core.cooldown on-enter", "aibt.core.cooldown on-successful-exit")] string name)
         {
             var probe = TimeProbes.Single(p => p.Name == name);
             using (var kit = new NativeLibraryKit())
@@ -369,11 +377,133 @@ namespace AIBT.Tests.Integration.Simulation
                 outcome = RunBothPaths(kit.Prepare(probe.Json(n)), 1u, false, name + " at T = 1", new[] { 1u, uint.MaxValue - 1u, uint.MaxValue });
                 for (var agent = 0; agent < Agents; agent++)
                     Assert.That(Timer(outcome, probe, agent), Is.EqualTo((1u, uint.MaxValue)), name + ": 4 294 967 294 ticks at T = 1");
-
-                var beyond = Run(kit.Prepare(probe.Json(long.MaxValue)), 1u, false, false, new[] { 1u, 2u }, agents: 1);
-                Assert.That(beyond.Faults, Is.EqualTo(1), name + ": now + d overflows Int64 microseconds: the agent faults");
             }
         }
+
+        /// <summary>
+        /// A timeout or cooldown of long.MaxValue µs (the largest the runtime accepts) started at tick 1 with
+        /// TickMicroseconds = 1: now + d overflows Int64 microseconds and the agent faults with
+        /// NativeCapacityArithmeticOverflow at that think, in place and in jobs alike, for both cooldown start
+        /// policies (on-successful-exit computes the deadline when the child succeeds, in the same think).
+        /// </summary>
+        [Test]
+        public void DeadlineBeyondInt64_FaultsTheAgentAtItsFirstThink([Values("aibt.core.timeout", "aibt.core.cooldown on-enter", "aibt.core.cooldown on-successful-exit")] string name)
+        {
+            var probe = TimeProbes.Single(p => p.Name == name);
+            using (var kit = new NativeLibraryKit())
+            {
+                var prepared = kit.Prepare(probe.Json(long.MaxValue));
+                var inPlace = Run(prepared, 1u, false, false, new[] { 1u, 2u, 3u }, agents: 2);
+                var jobs = Run(prepared, 1u, false, true, new[] { 1u, 2u, 3u }, agents: 2);
+                Assert.That(jobs.JobBatches, Is.GreaterThan(0), name + ": the agent-frame job ran");
+                foreach (var outcome in new[] { inPlace, jobs })
+                {
+                    Assert.That(outcome.FaultTicks, Is.EqualTo(new[] { 1u, 1u }), name + ": each agent faults once, at its first think");
+                    Assert.That(outcome.FaultList.Select(f => f.Failure.Code),
+                        Is.All.EqualTo(NativeRuntimeDiagnosticCodeV1.NativeCapacityArithmeticOverflow), name + ": the failure code");
+                    Assert.That(outcome.FaultList.Select(f => f.Agent.Index), Is.EquivalentTo(new[] { 0, 1 }));
+                }
+                Assert.That(jobs.Signals, Is.EqualTo(inPlace.Signals), name + ": the same signals in place and in jobs");
+                TestContext.WriteLine(name + " signals: " + string.Join(", ", inPlace.Signals));
+            }
+        }
+
+        /// <summary>
+        /// aibt.core.timeout and cooldown are authored as UInt64 and compile for any value, but the runtime
+        /// decoders accept only 1 to long.MaxValue µs. This pins where the consumer meets the refusal of 0 and
+        /// of a value above long.MaxValue, in place and in jobs alike. Neither reaches the container: 0 is a
+        /// compile error (AIBT2028, parameter constraint); a value above long.MaxValue is not even read from
+        /// the tree JSON: <c>CanonicalTreeJson</c> throws InvalidCastException (Newtonsoft reads the number as
+        /// a BigInteger, and the reader's UInt64 fallback catches only OverflowException and FormatException).
+        /// </summary>
+        [Test]
+        public void TimeoutAndCooldown_ZeroOrAboveInt64_AreRefused(
+            [Values("aibt.core.timeout", "aibt.core.cooldown on-enter", "aibt.core.cooldown on-successful-exit")] string name,
+            [Values(0ul, (ulong)long.MaxValue + 1ul, ulong.MaxValue)] ulong duration)
+        {
+            var probe = TimeProbes.Single(p => p.Name == name);
+            var inPlace = WhereRefused(probe.Json(duration), useJobs: false);
+            var jobs = WhereRefused(probe.Json(duration), useJobs: true);
+            TestContext.WriteLine(name + " d=" + duration + ": " + inPlace);
+            Assert.That(jobs, Is.EqualTo(inPlace), "the same in place and in jobs");
+            Assert.That(inPlace, Is.EqualTo(duration == 0ul ? "compile refused: AIBT2028" : "reading the tree JSON throws InvalidCastException"),
+                name + " d=" + duration);
+        }
+
+        /// <summary>Reads, compiles, prepares and runs one agent for three ticks at TickMicroseconds = 1; names the first stage that refuses.</summary>
+        private static string WhereRefused(string json, bool useJobs)
+        {
+            AIBT.Authoring.GeneratedCompiledProgramV2Result compiled;
+            try { compiled = NativeLibraryKit.CompileResult(json); }
+            catch (Exception exception) { return "reading the tree JSON throws " + exception.GetType().Name; }
+            // AIBT2053 is an Info note on the probe's unused Tree keys, not a refusal.
+            if (!compiled.Success)
+            {
+                foreach (var diagnostic in compiled.Diagnostics) TestContext.WriteLine(diagnostic.Code.Value + ": " + diagnostic.Message);
+                return "compile refused: " + string.Join(", ", compiled.Diagnostics.Select(d => d.Code.Value).Where(code => code != "AIBT2053"));
+            }
+            var standard = NativeLibraryKit.Materialize(typeof(StandardNativeShard));
+            var asset = ProductionTreeAsset.Create(compiled.Program.CreateNativeBlackboardBindingV2(standard.RegisteredTypes), NativeLibraryCatalog.Fingerprint);
+            try
+            {
+                asset.RecordPreparation(string.Empty, string.Empty,
+                    typeof(NativeLibraryCatalog).FullName + ", " + typeof(NativeLibraryCatalog).Assembly.GetName().Name);
+                if (!asset.TryCreateProgram(NativeLibraryCatalog.TryCreateRuntimeCatalog, out var program, out var programFailure))
+                    return "TryCreateProgram refused: " + programFailure;
+                try
+                {
+                    var settings = TreeSimulationSettings.Default(1u);
+                    settings.UseJobs = useJobs;
+                    settings.MinimumJobBatch = 1;
+                    using (var simulation = new TreeSimulation(settings))
+                    {
+                        var added = simulation.TryAddGroup(program, TreeGroupSettings.Default(1), out var group);
+                        if (added != SimulationResult.Success) return "TryAddGroup refused: " + added;
+                        var agentAdded = group.TryAdd(ThinkSchedule.Every(1, 0), out _);
+                        if (agentAdded != SimulationResult.Success) return "TryAdd refused: " + agentAdded;
+                        for (uint tick = 1; tick <= 3; tick++)
+                        {
+                            var stepped = simulation.Step(tick);
+                            if (stepped != SimulationResult.Success) return "Step(" + tick + ") refused: " + stepped;
+                            var faults = group.GetFaults();
+                            if (faults.Length > 0) return "fault at tick " + tick + ": " + faults[0].Failure.Code;
+                        }
+                        return "runs";
+                    }
+                }
+                finally { program.Dispose(); }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(asset); }
+        }
+
+        /// <summary>
+        /// A duration of 0 in the native time nodes, TickMicroseconds = 1, one agent thinking every tick, in
+        /// place and in jobs: what each node does with it (the signals of the probe tree over six ticks).
+        /// </summary>
+        [Test]
+        public void ZeroDuration_InTheNativeTimeNodes([Values("wait-microseconds", "wait-until-true timeout", "set-deadline + deadline-passed", "wait-random-microseconds (min = max)")] string name)
+        {
+            var probe = TimeProbes.Single(p => p.Name == name);
+            using (var kit = new NativeLibraryKit())
+            {
+                var outcome = RunBothPaths(kit.Prepare(probe.Json(0ul)), 1u, false, name + " d=0", Range(1, 6), agents: 1);
+                var signals = string.Join(" ", outcome.Signals.Select(s => s.Tick + ":" + s.Code));
+                TestContext.WriteLine(name + " d=0: " + signals);
+                Assert.That(signals, Is.EqualTo(ZeroExpected[name]), name + " with 0");
+            }
+        }
+
+        private static readonly Dictionary<string, string> ZeroExpected = new Dictionary<string, string>
+        {
+            // Ends on the think that enters it.
+            ["wait-microseconds"] = "1:1 1:2",
+            // 0 = no timeout: waits for the flag, which is never set.
+            ["wait-until-true timeout"] = "1:1",
+            // Writes now: deadline-passed holds at once, so the probe fires at every think.
+            ["set-deadline + deadline-passed"] = "1:7 2:7 3:7 4:7 5:7 6:7",
+            // min = max = 0: ends on the think that enters it.
+            ["wait-random-microseconds (min = max)"] = "1:1 1:2",
+        };
 
         // ---- aibt.stdlib.wait counts thinks ---------------------------------------------------------------
 

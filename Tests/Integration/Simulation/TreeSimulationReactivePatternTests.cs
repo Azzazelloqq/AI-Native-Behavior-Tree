@@ -214,13 +214,14 @@ namespace AIBT.Tests.Integration.Simulation
         }
 
         /// <summary>Runs the scenario in place and in the job; the two logs must be equal. Returns the in-place log.</summary>
-        private Rig[] Both(string tree, bool triggerWake, uint lastTick, Action<Rig, uint> beforeStep, bool addAgents = true)
+        private Rig[] Both(string tree, bool triggerWake, uint lastTick, Action<Rig, uint> beforeStep, bool addAgents = true,
+            bool positionWake = false)
         {
             var program = Program(tree);
             var rigs = new Rig[2];
             for (var path = 0; path < 2; path++)
             {
-                var rig = NewRig(program, useJobs: path == 1, triggerWake, addAgents: addAgents);
+                var rig = NewRig(program, useJobs: path == 1, triggerWake, positionWake, addAgents: addAgents);
                 rigs[path] = rig;
                 try
                 {
@@ -257,6 +258,37 @@ namespace AIBT.Tests.Integration.Simulation
             Assert.That(log.Count(line => line.Contains(" Started ")), Is.EqualTo(Agents), "Each walk started once");
             Assert.That(log.Where(line => line.Contains(" Cancelled ") || line.Contains(" signal ") || line.Contains(" fault ") || line.Contains("woken-by-input")),
                 Is.Empty);
+        }
+
+        /// <summary>
+        /// The other half: with wake on for the positions channel, rewritten at every tick, the whole row
+        /// differs at every step, so every agent that has thought once thinks at every tick, off schedule with
+        /// the reason InputChanged; before its first think an agent is not woken. Nothing is cancelled.
+        /// </summary>
+        [Test]
+        public void PositionsWithWakeOn_RewrittenEveryTick_WakeEveryAgentEveryTick()
+        {
+            var log = Both(SelectorTree, triggerWake: true, lastTick: 30, beforeStep: null, positionWake: true)[0].Log;
+            uint FirstThink(int agent) => agent % 5 == 0 ? 5u : (uint)(agent % 5);
+            var expected = new List<string>();
+            for (uint tick = 1; tick <= 30; tick++)
+            {
+                var woken = 0;
+                for (var agent = 0; agent < Agents; agent++)
+                {
+                    if (tick % 5u == (uint)agent % 5u) expected.Add(tick + " think " + agent);
+                    else if (tick > FirstThink(agent))
+                    {
+                        expected.Add(tick + " think " + agent + " off-schedule InputChanged");
+                        woken++;
+                    }
+                }
+                if (woken != 0) expected.Add(tick + " woken-by-input " + woken);
+            }
+            Assert.That(log.Where(line => line.Contains(" think ") || line.Contains("woken-by-input")), Is.EqualTo(expected),
+                "every agent that has thought thinks at every tick, woken by the changed position row");
+            Assert.That(log.Count(line => line.Contains(" Started ")), Is.EqualTo(Agents), "Each walk started once");
+            Assert.That(log.Where(line => line.Contains(" Cancelled ") || line.Contains(" signal ") || line.Contains(" fault ")), Is.Empty);
         }
 
         /// <summary>
