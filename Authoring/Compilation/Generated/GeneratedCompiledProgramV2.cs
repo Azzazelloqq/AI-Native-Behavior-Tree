@@ -668,7 +668,10 @@ namespace AIBT.Authoring
             // P11-009 (review F9): the semantic projection labels every key Tree, while each scope keeps
             // its own zero-based offsets. A tree with Tree keys and Agent or Shared keys therefore had two
             // "Tree" ranges at offset 0. The projection now places each scope past the previous one
-            // (Tree, then Agent, then Shared, as the host's value buffer does), and its default blob
+            // (Tree, then Agent, then Shared), aligned to the next scope's largest alignment. The host's
+            // value buffer also puts the Agent range after the Tree range, but without that alignment
+            // (GeneratedTreeDispatchAdapterV2.TreeValueByteCount), so the two offsets can differ
+            // (P11-014 item 8). Its default blob
             // follows the scope order of the v2 slot table, whose DefaultOffset the host reads from this
             // blob. With keys of one scope only both are exactly what they were.
             var scopeBase = ScopeBaseOffsets(scopes.Slots);

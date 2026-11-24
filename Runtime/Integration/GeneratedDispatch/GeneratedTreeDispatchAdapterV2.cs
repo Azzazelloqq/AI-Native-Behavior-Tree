@@ -1148,9 +1148,11 @@ namespace AIBT
                         }
                         // P11-007 (review F1): two handles of one node bound to one key share the
                         // key's live offset (the request check requires live bindings with one target
-                        // to share an offset). Writes are staged and published after the tick, so
-                        // every read sees the value from before the tick. The region keeps one block
-                        // per binding, as the batched workspace expects; the later handle's is unused.
+                        // to share an offset). Writes are staged and published after the tick, so a
+                        // read sees the value from before the tick unless the same callback already
+                        // wrote that target: TryAllocateBlackboardReader (BurstBindingBridgeCoreV2) then
+                        // serves the staged write (P11-014 item 8). The region keeps one block per
+                        // binding, as the batched workspace expects; the later handle's is unused.
                         for (uint previous = 0; previous < local; previous++)
                         {
                             if (!resolutions[previous].IsBlackboard || resolutions[previous].TargetOrdinal != slotIndex) continue;
