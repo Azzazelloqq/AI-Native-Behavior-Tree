@@ -913,15 +913,30 @@ namespace AIBT.Execution.Burst.Dispatch
         internal NativeBurstDispatchWorkspaceArraysV1 GetAgentFrameArrays()
             => new NativeBurstDispatchWorkspaceArraysV1
             {
-                Handshake = _handshake,
                 Capacity = _capacity,
-                HasBindings = _hasBindings ? (byte)1 : (byte)0,
-                HasCanonicalMetadata = _hasCanonicalMetadata ? (byte)1 : (byte)0,
                 Control = _control,
                 ExecutionClaim = _executionClaim,
                 FrameCompletionClaim = _frameCompletionClaim,
-                Cases = _cases,
                 Requests = _requests,
+                MemoryStaging = _memoryStaging,
+                MemoryWritten = _memoryWritten,
+                RequestStatuses = _requestStatuses,
+                ValueSessions = _valueSessions,
+                ValueStagingBytes = _valueStagingBytes,
+                ValueMarks = _valueMarks,
+            };
+
+        /// <summary>
+        /// P11-016: this owner's catalog-wide fields for the JobsAgentFrame framing, held once per agent.
+        /// Equal for every owner created from one catalog's shape; the owner keeps ownership.
+        /// </summary>
+        internal NativeBurstDispatchWorkspaceSharedArraysV1 GetAgentFrameSharedArrays()
+            => new NativeBurstDispatchWorkspaceSharedArraysV1
+            {
+                Handshake = _handshake,
+                HasBindings = _hasBindings ? (byte)1 : (byte)0,
+                HasCanonicalMetadata = _hasCanonicalMetadata ? (byte)1 : (byte)0,
+                Cases = _cases,
                 ConfigurationFields = _configurationFields,
                 MemoryFields = _memoryFields,
                 Bindings = _bindings,
@@ -929,12 +944,6 @@ namespace AIBT.Execution.Burst.Dispatch
                 CaseCanonicalRanges = _caseCanonicalRanges,
                 BindingCanonicalRanges = _bindingCanonicalRanges,
                 CanonicalRules = _canonicalRules,
-                MemoryStaging = _memoryStaging,
-                MemoryWritten = _memoryWritten,
-                RequestStatuses = _requestStatuses,
-                ValueSessions = _valueSessions,
-                ValueStagingBytes = _valueStagingBytes,
-                ValueMarks = _valueMarks,
             };
 
         private BurstDispatchBackingV2 CreateBacking()

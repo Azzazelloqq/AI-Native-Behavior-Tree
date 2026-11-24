@@ -414,7 +414,7 @@ namespace AIBT
             EnsureAgentFrameStorage();
             agent.Machine = _agents[0].Machine;
             agent.Machine.TryAttachCreatedEmptyJobStorage(_agentFrameEmptyBytes, _agentFrameEmptyParallel);
-            agent.Slots = _generatedDispatch.GetAgentFrameSlots();
+            _generatedDispatch.GetAgentFrameTable(out agent.Slots, out agent.SlotOfNode, out agent.Catalog);
             agent.TreeValues = _generatedDispatch.TreeValues;
             agent.TreeVersions = _generatedDispatch.TreeVersions;
             agent.Trace = _agentFrameTrace;

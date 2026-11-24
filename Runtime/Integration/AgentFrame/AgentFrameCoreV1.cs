@@ -46,7 +46,6 @@ namespace AIBT
     /// <summary>Handles to one generated leaf slot's native storage; ownership stays with the adapter slot.</summary>
     internal struct AgentFrameSlotV1
     {
-        internal byte Present;
         internal byte ActivationMemory;
         internal uint NodeIndex;
         internal uint CaseIndex;
@@ -113,7 +112,11 @@ namespace AIBT
     {
         // Inputs (main thread, before scheduling).
         internal NativeLifecycleMachineV1 Machine;
+        // P11-016: one slot per generated leaf, the slot of each node (-1: none), and the catalog-wide
+        // fields every slot's workspace shares.
         internal UnsafeList<AgentFrameSlotV1> Slots;
+        internal UnsafeList<int> SlotOfNode;
+        internal NativeBurstDispatchWorkspaceSharedArraysV1 Catalog;
         internal NativeArray<byte> TreeValues;
         internal NativeArray<ulong> TreeVersions;
         internal long TimeMicroseconds;
@@ -186,7 +189,7 @@ namespace AIBT
                     BurstContextResult result;
                     NodeStatus status;
                     var site = AgentFrameRejectionSiteV1.Callback;
-                    if (step.NodeIndex >= (uint)agent.Slots.Length)
+                    if (step.NodeIndex >= (uint)agent.SlotOfNode.Length)
                     {
                         // Same results as the adapter's reservation and Dispatch for an unknown node.
                         result = agent.EffectFree >= 0 ? BurstContextResult.CapacityExceeded : BurstContextResult.InvalidHandle;
@@ -194,8 +197,8 @@ namespace AIBT
                     }
                     else
                     {
-                        ref var slot = ref agent.Slots.ElementAt((int)step.NodeIndex);
-                        if (slot.Present == 0)
+                        var slotIndex = agent.SlotOfNode[(int)step.NodeIndex];
+                        if (slotIndex < 0)
                         {
                             // The adapter has no slot for this node: same result as its Dispatch.
                             if (agent.EffectFree >= 0)
@@ -209,14 +212,14 @@ namespace AIBT
                                 status = NodeStatus.Running;
                             }
                         }
-                        else if (agent.EffectFree >= 0 && slot.MaximumEffectCommandCount > (uint)agent.EffectFree)
+                        else if (agent.EffectFree >= 0 && agent.Slots.ElementAt(slotIndex).MaximumEffectCommandCount > (uint)agent.EffectFree)
                         {
                             result = BurstContextResult.CapacityExceeded;
                             status = NodeStatus.Failure;
                             site = AgentFrameRejectionSiteV1.Reservation;
                         }
                         else if (agent.SimulationMode != 0
-                            && (result = AIBT.Simulation.SimulationAgentRoutinesV1.TryReserve(ref agent.Simulation, slot.CommandChannels))
+                            && (result = AIBT.Simulation.SimulationAgentRoutinesV1.TryReserve(ref agent.Simulation, agent.Slots.ElementAt(slotIndex).CommandChannels))
                                 != BurstContextResult.Success)
                         {
                             // The container's command quota (the effect-capacity rule): same as its in-place reservation.
@@ -225,6 +228,7 @@ namespace AIBT
                         }
                         else
                         {
+                            ref var slot = ref agent.Slots.ElementAt(slotIndex);
                             agent.Dispatches++;
                             result = ExecuteSlot(ref agent, ref slot, in step, ref body, out status);
                             if (result == BurstContextResult.Success && agent.EffectFree >= 0
@@ -350,10 +354,11 @@ namespace AIBT
                 slot.BindingCount, step.AbortReason, step.ExitReason);
 
             ref var workspace = ref slot.Workspace;
-            if (!TryBeginRequest(ref slot, ref workspace, in request, out var requestMutationVersion, out var failure))
+            ref var catalog = ref agent.Catalog;
+            if (!TryBeginRequest(ref slot, ref workspace, ref catalog, in request, out var requestMutationVersion, out var failure))
                 return failure;
             if (workspace.ExecutionClaim[0] != 0) return BurstContextResult.PhaseViolation;
-            var batch = new BurstExecutionBatch(CreateBacking(ref slot, ref workspace), NativeBurstBatchRoleV2.Host);
+            var batch = new BurstExecutionBatch(CreateBacking(ref slot, ref workspace, ref catalog), NativeBurstBatchRoleV2.Host);
             body.Execute(ref batch);
 
             // TryConsumeResult.
@@ -435,6 +440,7 @@ namespace AIBT
         private static bool TryBeginRequest(
             ref AgentFrameSlotV1 slot,
             ref NativeBurstDispatchWorkspaceArraysV1 workspace,
+            ref NativeBurstDispatchWorkspaceSharedArraysV1 catalog,
             in NativeBurstDispatchRequestV2 request,
             out ulong requestMutationVersion,
             out BurstContextResult failure)
@@ -446,7 +452,7 @@ namespace AIBT
                 return false;
             }
             workspace.Requests[0] = request;
-            if (!ValidateRequest(ref slot, ref workspace, in request, out failure))
+            if (!ValidateRequest(ref slot, ref workspace, ref catalog, in request, out failure))
             {
                 workspace.Requests[0] = default;
                 return false;
@@ -475,16 +481,17 @@ namespace AIBT
         private static bool ValidateRequest(
             ref AgentFrameSlotV1 slot,
             ref NativeBurstDispatchWorkspaceArraysV1 workspace,
+            ref NativeBurstDispatchWorkspaceSharedArraysV1 catalog,
             in NativeBurstDispatchRequestV2 request,
             out BurstContextResult failure)
         {
-            if (request.CatalogCaseIndex >= (uint)workspace.Cases.Length
+            if (request.CatalogCaseIndex >= (uint)catalog.Cases.Length
                 || slot.Transaction.Length != 1)
             {
                 failure = BurstContextResult.InvalidEncoding;
                 return false;
             }
-            var dispatchCase = workspace.Cases[(int)request.CatalogCaseIndex];
+            var dispatchCase = catalog.Cases[(int)request.CatalogCaseIndex];
             var expectedRandomCount = dispatchCase.HasRandomStream != 0 ? 1 : 0;
             if (request.ResolvedBindingCount != dispatchCase.BindingCount
                 || slot.Configuration.Length != dispatchCase.ConfigurationSize
@@ -508,14 +515,14 @@ namespace AIBT
                     slot.CommandPayload.Length, slot.Operations.Length, false, out failure))
                 return false;
 
-            var canonical = workspace.HasCanonicalMetadata != 0
+            var canonical = catalog.HasCanonicalMetadata != 0
                 ? new NativeBurstDispatchCanonicalInputV2(
-                    workspace.CaseCanonicalRanges.AsReadOnly(),
-                    workspace.BindingCanonicalRanges.AsReadOnly(),
-                    workspace.CanonicalRules.AsReadOnly())
+                    catalog.CaseCanonicalRanges.AsReadOnly(),
+                    catalog.BindingCanonicalRanges.AsReadOnly(),
+                    catalog.CanonicalRules.AsReadOnly())
                 : default;
             NativeBurstDispatchBindingInputV2 bindingInput;
-            if (workspace.HasBindings != 0)
+            if (catalog.HasBindings != 0)
             {
                 if (slot.ResolvedBindings.Length != dispatchCase.BindingCount)
                 {
@@ -523,9 +530,9 @@ namespace AIBT
                     return false;
                 }
                 bindingInput = new NativeBurstDispatchBindingInputV2(
-                    workspace.Bindings.AsReadOnly(),
+                    catalog.Bindings.AsReadOnly(),
                     slot.ResolvedBindings.AsReadOnly(),
-                    workspace.ValueFields.AsReadOnly(),
+                    catalog.ValueFields.AsReadOnly(),
                     slot.BindingValues.AsReadOnly(),
                     slot.Completions.AsReadOnly(),
                     slot.CompletionPayload.AsReadOnly(),
@@ -543,11 +550,11 @@ namespace AIBT
                 bindingInput = default;
             }
             var input = new NativeBurstDispatchCreateInputV2(
-                workspace.Handshake,
-                workspace.Cases.AsReadOnly(),
+                catalog.Handshake,
+                catalog.Cases.AsReadOnly(),
                 workspace.Requests.AsReadOnly(),
-                workspace.ConfigurationFields.AsReadOnly(),
-                workspace.MemoryFields.AsReadOnly(),
+                catalog.ConfigurationFields.AsReadOnly(),
+                catalog.MemoryFields.AsReadOnly(),
                 slot.Configuration.AsReadOnly(),
                 slot.Memory.AsReadOnly(),
                 slot.RandomStates.AsReadOnly(),
@@ -604,16 +611,19 @@ namespace AIBT
             return true;
         }
 
-        private static BurstDispatchBackingV2 CreateBacking(ref AgentFrameSlotV1 slot, ref NativeBurstDispatchWorkspaceArraysV1 workspace)
+        private static BurstDispatchBackingV2 CreateBacking(
+            ref AgentFrameSlotV1 slot,
+            ref NativeBurstDispatchWorkspaceArraysV1 workspace,
+            ref NativeBurstDispatchWorkspaceSharedArraysV1 catalog)
             => new BurstDispatchBackingV2(
-                workspace.Handshake,
+                catalog.Handshake,
                 workspace.Control,
                 workspace.ExecutionClaim,
                 workspace.FrameCompletionClaim,
-                workspace.Cases,
+                catalog.Cases,
                 workspace.Requests,
-                workspace.ConfigurationFields,
-                workspace.MemoryFields,
+                catalog.ConfigurationFields,
+                catalog.MemoryFields,
                 slot.Configuration,
                 slot.Memory,
                 workspace.MemoryStaging,
@@ -621,12 +631,12 @@ namespace AIBT
                 slot.RandomStates,
                 slot.RandomIncrements,
                 workspace.RequestStatuses,
-                workspace.Bindings,
+                catalog.Bindings,
                 slot.ResolvedBindings,
-                workspace.ValueFields,
-                workspace.CaseCanonicalRanges,
-                workspace.BindingCanonicalRanges,
-                workspace.CanonicalRules,
+                catalog.ValueFields,
+                catalog.CaseCanonicalRanges,
+                catalog.BindingCanonicalRanges,
+                catalog.CanonicalRules,
                 slot.BindingValues,
                 slot.Completions,
                 slot.CompletionPayload,

@@ -22,6 +22,8 @@ namespace AIBT
         private NativeArray<byte> _treeValues;
         private NativeArray<ulong> _treeVersions;
         private UnsafeList<AgentFrameSlotV1> _agentFrameSlots;
+        private UnsafeList<int> _agentFrameSlotOfNode;
+        private NativeBurstDispatchWorkspaceSharedArraysV1 _agentFrameCatalog;
         // P10-010: set only for simulation-container agents; hosts never have one.
         private readonly AIBT.Simulation.SimulationAgentBridgeV1 _simulation;
         private bool _disposed;
@@ -682,24 +684,55 @@ namespace AIBT
             return AgentFrameFallbackReason.None;
         }
 
-        /// <summary>P10-004: this tree's slot table for the JobsAgentFrame job (indexed by node), built once.</summary>
-        internal UnsafeList<AgentFrameSlotV1> GetAgentFrameSlots()
+        /// <summary>
+        /// P10-004: this tree's slot table for the JobsAgentFrame job, built once. P11-016: one slot per
+        /// generated leaf in node order, the slot of every node (-1 for a node without one), and the
+        /// catalog-wide workspace fields once (every leaf's workspace comes from the catalog's one shape).
+        /// </summary>
+        internal void GetAgentFrameTable(
+            out UnsafeList<AgentFrameSlotV1> slots,
+            out UnsafeList<int> slotOfNode,
+            out NativeBurstDispatchWorkspaceSharedArraysV1 catalog)
         {
-            if (_disposed) return default;
-            if (_agentFrameSlots.IsCreated) return _agentFrameSlots;
-            var slots = new UnsafeList<AgentFrameSlotV1>(_slots.Length, Allocator.Persistent);
-            for (var index = 0; index < _slots.Length; index++)
+            if (_disposed)
             {
-                slots.Add(_slots[index] == null
-                    ? default
-                    : _slots[index].CreateAgentFrameSlot(_definition.Binding, _catalog, _agentBaseOffset));
+                slots = default;
+                slotOfNode = default;
+                catalog = default;
+                return;
             }
-            _agentFrameSlots = slots;
-            return _agentFrameSlots;
+            if (!_agentFrameSlots.IsCreated)
+            {
+                var leaves = 0;
+                for (var index = 0; index < _slots.Length; index++) if (_slots[index] != null) leaves++;
+                var table = new UnsafeList<AgentFrameSlotV1>(Math.Max(1, leaves), Allocator.Persistent);
+                var map = new UnsafeList<int>(Math.Max(1, _slots.Length), Allocator.Persistent);
+                var shared = default(NativeBurstDispatchWorkspaceSharedArraysV1);
+                for (var index = 0; index < _slots.Length; index++)
+                {
+                    if (_slots[index] == null)
+                    {
+                        map.Add(-1);
+                        continue;
+                    }
+                    if (table.Length == 0) shared = _slots[index].Workspace.GetAgentFrameSharedArrays();
+                    map.Add(table.Length);
+                    table.Add(_slots[index].CreateAgentFrameSlot(_definition.Binding, _catalog, _agentBaseOffset));
+                }
+                _agentFrameSlots = table;
+                _agentFrameSlotOfNode = map;
+                _agentFrameCatalog = shared;
+            }
+            slots = _agentFrameSlots;
+            slotOfNode = _agentFrameSlotOfNode;
+            catalog = _agentFrameCatalog;
         }
 
         private void DisposeAgentFrameSlots()
         {
+            if (_agentFrameSlotOfNode.IsCreated) _agentFrameSlotOfNode.Dispose();
+            _agentFrameSlotOfNode = default;
+            _agentFrameCatalog = default;
             if (!_agentFrameSlots.IsCreated) return;
             for (var index = 0; index < _agentFrameSlots.Length; index++)
             {
@@ -1592,7 +1625,6 @@ namespace AIBT
                 }
                 return new AgentFrameSlotV1
                 {
-                    Present = 1,
                     ActivationMemory = node.MemoryLifetime == NodeMemoryLifetime.Activation ? (byte)1 : (byte)0,
                     NodeIndex = _nodeIndex,
                     CaseIndex = _caseIndex,
