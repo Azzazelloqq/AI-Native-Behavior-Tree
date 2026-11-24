@@ -9,3 +9,10 @@
 *.dll binary
 *.png binary
 *.jpg binary
+
+# P11-015 (D8): development folders a consumer does not need stay out of `git archive` tarballs
+# (and of git-URL installs that use one). Tools~ stays: Documentation~/cli.md tells consumers to run
+# Tools~/aibt.ps1.
+Planning~/** export-ignore
+Benchmarks~/** export-ignore
+Spikes~/** export-ignore

@@ -13,6 +13,16 @@ The raw report is `swarm-arena-player-20260917-090844.raw.json` (370.3 MB); it r
 tree SHA-256 `bc3c0e0ea7a807376267c427018b959a743e19b2d66153a75f0bb50605944c33` and generated-catalog
 descriptor hash `6bc66d6ead4bce3e12507819912e7c3e2bf443673953677b106a73951817237b`.
 
+**Where the raw report is now (P11-015, 2026-11-24).** The raw report left the repository tree so
+that it no longer ships in a tarball of the package. It is kept outside the repository at
+`C:\UnityProjects\_aibt_acceptance\P7-035\swarm-arena-player-20260917-090844.raw.json`:
+370,292,632 bytes, SHA-256 `94af8a809094fd0d1194514b45ec64e13f193b7a69d77e715d856e4e7608768d`
+(Git blob `eba55a920ec5973169d0e2fb409cb7d4c0d265df`). The copy's SHA-256 was compared with the
+original before the removal. The file is still in Git history: commit `abca014` added it, and every
+commit from `abca014` up to and including `545f520` (the parent of the P11-015 commit that removed
+it) holds it, so `git show 545f520:Planning~/Evidence/P7-035/swarm-arena-player-20260917-090844.raw.json`
+restores it. History was not rewritten.
+
 ## AIBT scheduler time
 
 Each table cell is `median/p95/p99` AIBT scheduler milliseconds per frame. These are
