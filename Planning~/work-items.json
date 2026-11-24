@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P11-014", "phase": 11, "title": "Finishing batch of the P11 review follow-ups: one observer rule in MCP validate/compile, the bake and the built-in-only warning; create_tree defaults to format 2 (W10); a failed import reports its own errors (W3); ProductionTreeHost.IsExecuting public (W6); the value-session refusal names the node and the rule; two comments; aliased-key tests that see lost writes; confirmations U3, U4, U6, U9 (tree list reads registered types), U10; N1, N5, N8 and a Known limitations page; record of every second-tier finding; P11-012/P11-013 review follow-ups (finished pipelined host no longer failed, missing tests, combine-function text, ADR-P11-013 text, inspector hint cache, unaligned Agent read record)", "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P11/P11-014-finishing-batch.md",
+      "dependsOn": ["P11-013"],
+      "owns": ["Planning~/Evidence/P11-014/"]
+    },
+    {
       "id": "P11-013", "phase": 11, "title": "Agent-scope memory of NativeTreeAgent (ADR-P11-013 accepted, AIBT-053): Agent keys belong to the component (defaults on enable; kept across automatic restarts, Restart(), Stop then Restart and a Tree with the same Agent contract; reset on disable, after a faulted run, on another contract and on new Restart(bool resetAgentMemory) with true); copied out of the idle host after leaving the world and into the next host before its first update; TryGetValue and the graph read Agent keys (ADR-P11-004 D3 amended for the agent); public host read, SetFact, library nodes and TreeSimulation unchanged; accepted 2026-11-24 (e70dbea)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-013-native-agent-memory.md",
       "dependsOn": ["P11-009", "P11-012"],
