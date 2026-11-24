@@ -456,8 +456,12 @@ namespace AIBT
         public bool CanReadTreeValues
             => _core.Bootstrapped && _core.GeneratedDispatch != null && !_core.Disposed && !_core.DestroyRequested && !_driving;
 
-        /// <summary>P11-004: true while this host runs a round or holds its drive lock (a PipelinedJobs job in flight).</summary>
-        internal bool IsExecuting => _driving && !_core.Disposed;
+        /// <summary>
+        /// P11-004: true while this host runs a round or holds its drive lock (a <c>PipelinedJobs</c> job in
+        /// flight, between scheduler frames). While it is true <see cref="CanReadTreeValues"/> is false and
+        /// reads and writes of Tree values are refused; it is not a failure. Public since P11-014.
+        /// </summary>
+        public bool IsExecuting => _driving && !_core.Disposed;
 
         /// <summary>
         /// Opaque, per-host handle for one Tree-scope blackboard slot resolved for external read

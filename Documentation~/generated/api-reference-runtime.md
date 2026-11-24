@@ -3351,6 +3351,7 @@ Drives one native tree in Unity Update with an optional per-frame step budget. C
 - `PROPERTY System.Boolean CanAcceptExternalTreeWrites`
 - `PROPERTY System.Boolean CanReadTreeValues`
 - `PROPERTY System.Boolean IsCoordinatorOwned`
+- `PROPERTY System.Boolean IsExecuting`
 - `PROPERTY System.Nullable`1<AIBT.NodeStatus> LastRootResult`
 - `PROPERTY System.Nullable`1<System.UInt32> StepBudget`
 - `PROPERTY System.UInt32 MaximumStepsPerUpdate`

@@ -446,6 +446,30 @@ namespace AIBT.Tests.Integration.NativeRuntime
             LogAssert.NoUnexpectedReceived();
         }
 
+        /// <summary>P11-014 item 6 (W6): IsExecuting is public and true while a PipelinedJobs round is in flight.</summary>
+        [Test]
+        public void IsExecuting_IsPublic_AndTrueWhileAPipelinedRoundIsInFlight()
+        {
+            Assert.That(typeof(ProductionTreeHost).GetProperty(nameof(ProductionTreeHost.IsExecuting))?.GetMethod?.IsPublic ?? false, Is.True);
+            var agent = Spawn(PrepareAsset(MixedTree), ProfileFor("forced-pipelined-jobs"));
+            agent.RestartMode = NativeTreeRestartMode.Never;
+            var host = agent.Host;
+            Assert.That(host.IsExecuting, Is.False, "before the first frame");
+            var sawExecuting = false;
+            for (var frame = 0; frame < 80 && agent.CompletedRuns == 0; frame++)
+            {
+                Frame();
+                if (host.IsExecuting)
+                {
+                    sawExecuting = true;
+                    Assert.That(host.CanReadTreeValues, Is.False, "executing: not readable");
+                }
+            }
+            Assert.That(sawExecuting, Is.True, "a pipelined round spans frames");
+            Assert.That(agent.CompletedRuns, Is.EqualTo(1));
+            Assert.That(host.IsExecuting, Is.False, "after the run");
+        }
+
         /// <summary>11c: a tree with only Agent keys (the Agent range at offset 0) keeps them across runs.</summary>
         [TestCaseSource(nameof(Kinds))]
         public void AnAgentOnlyTree_KeepsItsAgentKeys(string kind)
