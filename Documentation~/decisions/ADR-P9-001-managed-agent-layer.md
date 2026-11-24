@@ -118,5 +118,33 @@ from an agent. The managed policy is still the only one a managed tree is checke
 Consequences: a `compile` without the file records the default policy in the program header, so its
 `contentHash` differs from the earlier Phase 1 compile of the same tree.
 `ReferenceCompilationPolicy.Phase1` is unchanged; `simulate` and the MCP authoring tools without the
-file still use it for a native tree. `Schemas~/project-manifest.schema.json` makes `policy` nullable
+file still use it for a native tree (replaced for the authoring tools by the second amendment below).
+`Schemas~/project-manifest.schema.json` makes `policy` nullable
 and adds the optional `policyWarnings`; the error-only shape is no longer produced.
+
+## Second amendment 2026-11-24 (P11-015 review follow-up)
+
+The first amendment kept the MCP authoring tools (`create_tree` and the edit tools) on
+`ReferenceCompilationPolicy.Phase1` without the file, and the Graph window's edit session was on
+`Phase1` with or without it. So without the file a native tree with an Agent or Shared key was
+valid for `validate`, `compile`, `prepare_runtime` and the tree list, while the authoring tools
+refused to create or edit it (AIBT2030) and the edit session showed AIBT2030 for a tree its own list
+called valid and its own bake accepted.
+
+Decision: without the file the authoring tools and the edit session use the same default as
+`validate` and the tree list: `ProjectNodeCatalog.NativeDefaultPolicy` for a native tree and the
+managed layer's policy for a tree with a managed node. The authoring tools read the file as
+`validate` does and report a file that cannot be read as warning AIBT9008 instead of ignoring it.
+With a readable file the file decides for every tree, managed or native, in the authoring tools as in
+`validate`. The Graph window still does not read the file.
+
+Why: the Agent and Shared opt-in (blackboard-v1, ADR-P6-014, P7-018) was a capability flag of the
+reference executor, which runs Tree scope only, and in P7-018 the file was the only way for a
+project to say its trees are native. It was not a safety boundary. The Editor now tells managed from
+native trees itself, native hosts bind Agent and Shared keys, and the file sets stricter or
+different rules; it is not a precondition.
+
+Consequences: `ReferenceCompilationPolicy.Phase1` is unchanged, and `simulate` and the previews keep
+it: the reference executor runs Tree scope only. No persisted output changes: tree files, their
+format version and baked assets are the same. A file with `supportsAgentScope` or
+`supportsSharedScope` false still refuses such keys in every tool.
