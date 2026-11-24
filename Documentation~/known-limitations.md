@@ -43,6 +43,17 @@ Limits that a guide already explains are linked, not repeated.
 
 ## MCP and tools
 
+- **The Graph window does not read `.aibt/policy.json`.** Its tree list, edit session, Check Native
+  Compile and Prepare Runtime Asset use the built-in defaults whatever the file says; MCP and the CLI
+  apply the file (ADR-P9-001, second amendment).
+- **The bake compiles with the built-in options.** `prepare_runtime` applies the policy file only
+  through its `validate` gate, so a tree that passes `validate` because the file relaxes a rule (for
+  example `"unreachableNodes": "warning"`) is still refused by the bake; the refusal says so in `note`
+  (`ProductionTreeAssetBaker.cs`; test
+  `PrepareRuntime_OfATreeAPolicyFileRelaxes_IsRefusedByTheBake_AndSaysWhy`).
+- **`simulate` and the previews run Tree scope only.** The reference executor has no Agent or Shared
+  storage, so they refuse a tree with such keys (AIBT2030) with or without a policy file
+  (`Authoring/Execution/ReferencePreviewDriver.cs`).
 - **`get_node_contract` shows no blackboard access for generated nodes.** The answer carries the
   manifest and the behaviour-case contract, not the node's bindings (`GetNodeContract` in
   `MCP/McpToolDispatcher.cs`).

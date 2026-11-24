@@ -77,7 +77,7 @@ Two things allocate:
   restart rate, not the facts.
 
 At the same N the managed layer is faster for these small trees: the native layer's strengths are
-zero GC while running, deterministic Burst execution and a world that stays off the scene.
+zero GC while running, deterministic execution and a world that stays off the scene. Its node bodies run Burst-compiled in the `JobsAgentFrame` job and as managed code on the `Immediate`, in-place, same-frame batched and pipelined paths (measured in the Editor, not in a Player).
 
 ### Jobs policies
 

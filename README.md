@@ -11,14 +11,14 @@ It has two runtime layers that share one tree format and one editor:
 | --- | --- | --- |
 | Component | `BehaviorTreeAgent` | `NativeTreeAgent` |
 | Tree asset | the `.aibt` file itself | a prepared `ProductionTreeAsset` (made from the `.aibt` file) |
-| Custom node | a class deriving from `BtAction` / `BtCondition` | a `partial struct` with `[AibtAction]` / `[AibtCondition]`, compiled by a source generator to Burst |
+| Custom node | a class deriving from `BtAction` / `BtCondition` | a `partial struct` with `[AibtAction]` / `[AibtCondition]`, for which a source generator writes the native dispatch; the body runs Burst-compiled in the `JobsAgentFrame` job |
 | Node touches the scene | directly (Transform, components, other objects) | never; it reads facts and emits effects |
 | Standard nodes | 52 `aibt.unity.*` nodes (movement, navigation, animation, ...) | 33 `aibt.native.*` nodes (blackboard, Float3 distance, flow, timing, signals, random), plus the core composites and decorators |
 | Live debugging in the graph | every node, live blackboard values | active path, just-finished nodes, root result |
 | Main-thread cost, IL2CPP Player ([measured](Documentation~/performance.md)) | ≈1.2 µs per agent-tick for a 15-node tree, 0 B allocated | ≈3.8 µs per agent-update waiting in one leaf, ≈8 µs for a looping 16-node tree, 0 B while the tree runs; each restart allocates |
-| Best for | gameplay AI, fast iteration; about 800 agents ticking every frame in 1 ms of main thread, thousands with `Interval` ticking | zero GC while running, deterministic Burst execution, a simulation kept off the scene |
+| Best for | gameplay AI, fast iteration; about 800 agents ticking every frame in 1 ms of main thread, thousands with `Interval` ticking | zero GC while running, deterministic execution, Burst-compiled node bodies in the `JobsAgentFrame` job, a simulation kept off the scene |
 
-Start with the managed layer. Move a tree to the native layer when you need what it guarantees (zero GC while running, deterministic Burst execution).
+Start with the managed layer. Move a tree to the native layer when you need what it guarantees (zero GC while running, deterministic execution). Its node bodies run Burst-compiled in the `JobsAgentFrame` job and as managed code on the `Immediate`, in-place, same-frame batched and pipelined paths (measured in the Editor, not in a Player).
 
 Requirements: Unity 6. This release is verified on `6000.6.9f1`. The package asks for Burst
 `1.8.29`, Collections `6.5.0` and Newtonsoft JSON `3.2.2`. An Editor that ships newer built-in
@@ -331,7 +331,8 @@ need an optional Unity module are compiled only when the module is enabled.
   iterate on gameplay. A tree is ready as soon as it is saved. A warmed-up tick allocates nothing;
   a 15-node tree costs about 1.2 µs per agent-tick in an IL2CPP Player, so about 800 agents ticking
   every frame fit in 1 ms of main thread, and many more with `TickMode = Interval`.
-- **Native** for deterministic Burst execution and zero GC while trees run, when the game can
+- **Native** for deterministic execution and zero GC while trees run (Burst-compiled node bodies in the
+  `JobsAgentFrame` job only), when the game can
   express the world as facts and effects. It needs a shard and a catalog assembly and a prepared
   runtime asset. For small trees it costs more main-thread time per agent than the managed layer
   (see [Performance](Documentation~/performance.md)); choose it for its guarantees, not for speed.

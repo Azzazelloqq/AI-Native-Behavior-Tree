@@ -18,9 +18,20 @@ All notable changes to this project will be documented here. The project follows
 - **MCP `validate` and `compile` without a policy file name a missing subtree, not the subtree's managed
   nodes.** When a subtree cannot be expanded, the default policy is chosen on the tree and the subtrees that
   resolve.
+- **The MCP authoring tools and the Graph window's edit session check a tree like `validate` and the tree
+  list when the project has no `.aibt/policy.json`.** `create_tree` and the edit tools accept a native tree
+  with Agent or Shared keys (before: refused with AIBT2030 although `validate` accepted it), the edit session
+  no longer shows AIBT2030 for a tree its list calls Valid, and the authoring tools report an unreadable file
+  as warning AIBT9008 instead of ignoring it. With a file, the file decides for every tree in the authoring
+  tools too: an edit adding a managed node under `allowManagedNodes: false` is refused, and a tree with a
+  subtree reference no longer escapes the scope rule. Managed trees with such keys stay refused
+  (ADR-P9-001, second amendment).
+- `prepare_runtime` refused after `validate` accepted under a policy file says why in `note`: the bake uses
+  the built-in options.
 - Documentation: `prepare_runtime` applies the policy only through its `validate` gate and bakes with the
-  built-in options; the authoring tools without a policy file and the Graph window check native trees without
-  Agent or Shared scope. Links into `Planning~`, `Benchmarks~` and `Spikes~` became repository paths marked
+  built-in options; the Graph window does not read the policy file; the README and the performance page no
+  longer say the native layer executes under Burst on every path (node bodies run Burst-compiled in the
+  `JobsAgentFrame` job, as managed code on the others, measured in the Editor). Links into `Planning~`, `Benchmarks~` and `Spikes~` became repository paths marked
   "in the AIBT repository only"; those folders are not in the package, which also applies to the paths in older
   entries below.
 - Packaging: `git archive` no longer keeps the excluded folders as empty directories, and the repository-only
