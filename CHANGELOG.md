@@ -33,7 +33,9 @@ All notable changes to this project will be documented here. The project follows
   - the README names the verified Editor (`6000.6.9f1`) and the two verified install routes (local
     checkout, `git archive` tarball);
   - only a `NativeTreeAgent` Player never compiles JSON;
-  - `BehaviorTreeSource.Status` is the import-time check against built-in nodes only.
+  - `BehaviorTreeSource.Status` is the import-time check against built-in nodes only;
+  - the performance page has a "Size and memory" section: what AIBT adds to a Windows IL2CPP Player,
+    the tree asset bytes per node, and the memory per agent.
 
 ### Finishing batch (P11-014)
 

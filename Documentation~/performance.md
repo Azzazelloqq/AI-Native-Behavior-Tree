@@ -293,6 +293,46 @@ benchmarks need between a few and a few hundred steps per update; only a tree th
 (for example a repeater over an instant leaf) reaches the default. Lower it on a host to catch such
 a tree sooner.
 
+## Size and memory (P11-015)
+
+Windows x64, IL2CPP, release build, Unity 6000.6.9f1, Built-in pipeline, managed stripping `Minimal`
+unless named. Compared with the same project without AIBT. Raw data and method:
+`Planning~/Evidence/P11-015/README.md`, section "Size and memory".
+
+| Player | Shipped size added | `GameAssembly.dll` added | Burst library |
+| --- | --- | --- | --- |
+| Native trees only (First Agent sample) | 22.6 MB | 17.3 MB | 0.39 MB |
+| Native trees only, stripping `High` | 15.2 MB | 11.8 MB | 0.37 MB |
+| Managed trees only (Simple Agent sample) | 22.5 MB | 17.3 MB | 0.31 MB |
+
+- Both kinds of Player contain `AIBT.Runtime`, `AIBT.Authoring` and `AIBT.Agents`. `AIBT.Authoring`
+  stays in a native-only Player under `High` stripping (230 KB of IL).
+
+| Tree asset in the build, per node | Bytes |
+| --- | --- |
+| Prepared native tree (`.runtime.asset`) | 353 (705 on disk) |
+| Managed tree (`.aibt`, carried as JSON) | 230 |
+
+Measured on generated trees of 10, 100 and 1000 nodes; size grows linearly with the node count. The
+prepared asset stores the program twice, and every node's debug entry holds the tree's source path,
+so a longer path makes every node larger.
+
+Memory per added agent, measured after every agent has updated once; a line fitted to N = 100 and
+1000 (and 300 for `NativeTreeAgent`), Windows x64 IL2CPP release Player:
+
+| Agent | Tree nodes | Managed | Native |
+| --- | --- | --- | --- |
+| `NativeTreeAgent` | 1 | 6.1 KB | 60 KB |
+| `NativeTreeAgent` | 109 | 143 KB | 963 KB |
+| `BehaviorTreeAgent` | 17 | 16.5 KB | 0.7 KB |
+
+- `NativeTreeAgent` adds a one-time native block of about 74 MB with the first agents, on top of the
+  per-agent figures (100 agents took 63 MB in one run and 89 MB in another).
+- A native agent's memory grows by about 7.3 KB native and 1.3 KB managed per tree node: 1000 agents of
+  a 109-node tree take 1.0 GB native and 144 MB managed.
+- `BehaviorTreeAgent` adds about 0.7 MB managed and 3.2 MB native once.
+- Not measured: other platforms, Mono, development builds, mobile devices.
+
 ## Advice
 
 - Start with the managed layer and `EveryFrame`; switch slow-changing agents to `Interval`, and turn
