@@ -66,3 +66,45 @@ prepared from, so a tree edit or a catalog change left a silently stale snapshot
   is driving or has a pipelined job in flight.
 - Resolving the catalog by type name works in the Editor; Player builds with stripping need
   `CatalogFactory` or a preserved catalog type. A Player build check is a separate card (P9-006).
+
+## Amendment 2026-11-24 (P11-016 stage 2): the managed node rows are kept only when the Player uses `AIBT.Agents`
+
+Context. Decision 5's stripping support (P9-006) writes one generated link.xml with a
+`preserve="all"` row for every `[BtNode]` class, `[AibtCatalogSet]` catalog and `[AibtBurstValue]`
+type in the Player's assemblies. The rows of the package's own managed nodes (`AIBT.Agents`) made
+every Player keep `AIBT.Agents` and, through it, `AIBT.Authoring`, also a game that never uses the
+managed layer. P11-016 stage 0c measured it in temporary copies of the package (raw files under
+`C:\UnityProjects\_aibt_f14\size\`, report `P11-016-stage0-report.md`; evidence
+`Planning~/Evidence/P11-016/README.md`):
+
+- A native-only game (no code reference to `AIBT.Agents`) with the `AIBT.Agents` rows removed ships
+  without `AIBT.Agents` and `AIBT.Authoring` at Minimal and at High: 2.86 MB less shipped at Minimal
+  (2.30 MB less `GameAssembly.dll`), 2.24 MB less at High (1.87 MB). `Newtonsoft.Json` stayed,
+  because `AIBT.Runtime` referenced it (removed by P11-016 item 4).
+- With the rows removed, a managed game that uses standard nodes only from a scene (a
+  `BehaviorTreeAgent` in a scene, no code reference to `AIBT.Agents`) fails at High: its node types
+  are stripped (`AIBT2021`).
+- With the rows written on an `<assembly fullname="AIBT.Agents" ignoreIfUnreferenced="1">` element,
+  that managed game runs at High with a PASS verdict, and the native-only Player is as small as
+  without the rows (within 2.6 KB at Minimal, 17.6 KB at High).
+
+Decision.
+
+1. The `AIBT.Agents` element of the generated link.xml always carries `ignoreIfUnreferenced="1"`: its
+   rows apply when anything the linker keeps references `AIBT.Agents` (a scene or prefab with a
+   `BehaviorTreeAgent`, code), and are ignored otherwise.
+2. Rows of every other assembly, the project's own `[BtNode]`, `[AibtCatalogSet]` and
+   `[AibtBurstValue]` types included, stay unconditional, as before.
+3. One override restores the output before this amendment byte for byte: the scripting define
+   `AIBT_LINKXML_KEEP_MANAGED_NODES` in the Player Settings of the build target. A scripting define is
+   used because the package has no project settings asset and already uses defines for build options
+   (`AIBT_SCHEDULER_FRAME_PROFILE`).
+
+Consequences.
+
+- A Player that uses only the native layer no longer ships `AIBT.Agents` and `AIBT.Authoring`.
+- A managed game that reaches `AIBT.Agents` only through content the linker cannot see (for example
+  a `BehaviorTreeAgent` that exists only in AssetBundle or Addressables content built separately)
+  loses the managed node types, as any unreferenced assembly would. Such a game sets the define.
+- The generated XML is covered per case by Editor tests, and the override's output is compared with
+  the output before this amendment.
