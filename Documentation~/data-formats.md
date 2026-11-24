@@ -32,6 +32,30 @@ Describes a node type independently of its C# implementation. The manifest power
 
 Defines project-specific validation and style rules. Unknown rules are reported instead of silently ignored. Policy versions are recorded in diagnostics and compiled metadata.
 
+The file is optional. It is read by MCP and the CLI (`validate`, `compile`, `prepare_runtime`, `get_project_manifest`, the authoring tools); the Graph window does not read it. Without it, `validate`, `compile` and `prepare_runtime` check a tree as the Graph window's tree list does: a tree with a managed node with the managed layer's policy (what a `BehaviorTreeAgent` accepts), any other tree with the native default, which allows Agent and Shared scope; `get_project_manifest` returns `"policy": null` (ADR-P9-001, amendment 2026-11-24). MCP authoring edits without the file check a native tree without Agent or Shared scope.
+
+Add the file to make the rules stricter or different for the whole project: forbid managed or main-thread nodes, require descriptions or a naming style, forbid node types, set the unreachable-node level, or opt Agent and Shared scope in or out. With the file, every tree is checked against it, whatever its host. A file that exists but cannot be read (for example a missing required field) is not applied: the tools use the defaults above and report a warning AIBT9008 that names the problem. Every field below is required (`Schemas~/policy.schema.json`); `maxTreeDepth`, `maxNodesPerTree` and `performance.maxEstimatedCost` are optional. A minimal file that accepts the package's samples:
+
+```json
+{
+  "format": "aibt.policy",
+  "formatVersion": 1,
+  "allowManagedNodes": true,
+  "allowMainThreadNodes": true,
+  "requireTreeDescription": false,
+  "requireNodeDescriptions": false,
+  "blackboardNaming": "any",
+  "forbiddenNodeTypes": [],
+  "requireDeterministicNodes": false,
+  "allowSideEffects": true,
+  "unreachableNodes": "error",
+  "supportsAgentScope": true,
+  "supportsSharedScope": true,
+  "warningsAsErrors": [],
+  "performance": { "forbidUnboundedRepeaters": false, "requireEventDrivenServices": false }
+}
+```
+
 ## Behavior case: `.aibtcase.json`
 
 Defines initial blackboard and world inputs, events and ticks, expected statuses, commands, blackboard effects, and optional invariants. Cases test observable behavior rather than implementation order.

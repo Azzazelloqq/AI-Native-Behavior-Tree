@@ -97,7 +97,13 @@ after changing registered providers.
 
 CLI is not a standalone Unity replacement. `tree compile` uses the **reference** compiler.
 Native-only nodes require `tree prepare`; reference simulation does not silently execute them.
-Discovery, semantic authoring and validation share the project catalog and policy. Native
+Discovery, semantic authoring and validation share the project catalog and, when the project has
+one, `<project>/.aibt/policy.json`. The file is optional: without it `tree validate`, `tree compile`
+and `tree prepare` check a tree as the Graph window's tree list does (the managed policy for a tree
+with managed nodes, otherwise the native default with Agent and Shared scope allowed), and
+`get_project_manifest` lists the trees with `"policy": null`. A file that exists but cannot be read
+is reported as warning AIBT9008 naming the problem and is not applied. What the file is for and a
+minimal one: [Data formats](data-formats.md#project-policy-aibtpolicyjson). Native
 preparation additionally checks that the selected catalog declares every non-core leaf.
 
 A tree built only from `aibt.core.*` and the package's native node library (`aibt.native.*`)

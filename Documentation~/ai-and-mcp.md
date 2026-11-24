@@ -123,6 +123,8 @@ Diagnostics include a stable code, severity, tree and node identity, JSON path, 
 
 `.aibt/policy.json` expresses checkable conventions such as allowed execution domains, maximum depth, naming, required descriptions, forbidden nodes, warning levels, performance budgets, and preferred patterns. Prose guidance explains intent; the validator enforces what can be formalized.
 
+The file is optional. Without it, `validate`, `compile` and `prepare_runtime` use the options the Graph window's tree list uses: a tree with a managed node is checked with the managed layer's policy (what a `BehaviorTreeAgent` accepts), any other tree with the native default, which allows Agent and Shared scope. `validate` then reports `"policyApplied": false`, and `get_project_manifest` returns the trees and capabilities with `"policy": null`. Add the file to set stricter or different rules for every tree in the project; a file that exists but cannot be read is not applied and is reported as warning AIBT9008 naming the problem (in `diagnostics`, and in the manifest's `policyWarnings`). The authoring tools without the file check a native tree without Agent or Shared scope. Fields and a minimal file: [Data formats](data-formats.md#project-policy-aibtpolicyjson); the decision: ADR-P9-001, amendment 2026-11-24.
+
 ## Custom MCP tools
 
 Projects may register high-level tools, for example creating a combat subtree or validating an ability-system integration. A tool declares stable name, description, JSON input/output schemas, permissions, side effects, cancellation behavior, dry-run support, and owning assembly.

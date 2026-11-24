@@ -87,3 +87,36 @@ actions belong under a memory composite with an interrupting condition.
   priority composite with the same meaning to both machines would need its own decision.
 - The fixture-based reference preview cannot run a managed node, which needs its authored
   parameters and agent; it reports a clear fault.
+
+## Amendment 2026-11-24 (P11-015)
+
+The consequence "the editor validates a tree that uses a managed node with the managed policy" held
+for the Graph window's tree list and not for MCP and the CLI. Without `<project>/.aibt/policy.json`,
+MCP `validate` and `compile` used the built-in default (`ReferenceCompilationPolicy.Phase1`: no
+managed, main-thread or non-deterministic nodes, no Agent or Shared scope), `prepare_runtime`
+refused what `validate` refused, and `get_project_manifest` returned only an error. In a consumer
+project without the file (P11-011, finding D1) the Simple Agent sample's trees were valid in the
+tree list and invalid through MCP and the CLI, and a native tree with Agent-scope keys that the
+graph bakes was refused by `prepare_runtime`.
+
+Decision: the tree list's behaviour is the default. Without the file, `validate`, `compile` and
+`prepare_runtime` (which is gated on `validate`) take their policy from one helper,
+`ProjectNodeCatalog.DefaultPolicy`, which the tree list uses too: the managed layer's policy
+(`ManagedTreeProgram.Policy`) for a tree with a managed node, decided on the expanded tree when it
+references subtrees, otherwise the native default, which is the built-in default with Agent and
+Shared scope allowed. `get_project_manifest` returns the trees and capabilities with
+`"policy": null`. A file that exists and cannot be read (for example a missing required field) is
+not applied and not silently ignored: the tools use the default and report warning AIBT9008 naming
+the problem, in the `diagnostics` of `validate` and `compile` and in the manifest's
+`policyWarnings`. With a readable file nothing changes: the file decides, for every tree.
+
+Why: the file is how a project sets stricter or different rules, not a precondition for checking a
+tree. A consumer who imports a sample and has no file must get the same answer from the graph and
+from an agent. The managed policy is still the only one a managed tree is checked with, so a tree a
+`BehaviorTreeAgent` refuses (an Agent-scope key, an observer block) is still refused.
+
+Consequences: a `compile` without the file records the default policy in the program header, so its
+`contentHash` differs from the earlier Phase 1 compile of the same tree.
+`ReferenceCompilationPolicy.Phase1` is unchanged; `simulate` and the MCP authoring tools without the
+file still use it for a native tree. `Schemas~/project-manifest.schema.json` makes `policy` nullable
+and adds the optional `policyWarnings`; the error-only shape is no longer produced.
