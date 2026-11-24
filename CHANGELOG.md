@@ -4,6 +4,23 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Memory per agent (P11-016 stage 1)
+
+- **A host has no trace channel by default in a Player.** In the Editor nothing changes (256 records, 512
+  emissions). In any Player build, development builds included, a host bootstrapped without a trace
+  capacity has no channel (`TraceChannelOwner` is null): about 48 KB less per host. Pass a capacity to trace
+  in a Player. `NativeTraceChannelCapacityV1.None` (new) means no channel everywhere. `NativeTreeAgent` has a
+  **Trace** setting, Auto / Off / On, with a record capacity; Auto is on in the Editor and off in a Player,
+  and scenes saved earlier read as Auto (ADR-P7-010, amendment 2026-11-24).
+- **Generated leaves no longer copy the catalog's metadata.** Each leaf's dispatch workspace reads the
+  catalog's own tables instead of a private copy: about 8.9 KB less per generated leaf with the standard
+  library catalog (670 KB less per agent of a 75-leaf tree). The catalog already refused disposal while a
+  host used it.
+- **The agent-frame job's table has one slot per generated leaf**, not one per node, sized exactly, and the
+  fields every slot shared are held once per agent: about 69 KB less per `NativeTreeAgent` of a 75-leaf
+  tree. With the two changes above, such an agent went from about 964 KB to 176 KB of native memory in a
+  Player, and a one-node First Agent from about 60 KB to 11 KB (P11-016 evidence, in the AIBT repository only).
+
 ### Review follow-up (P11-014, P11-015)
 
 - **`CapacityExceeded` names the node and the cause.** A host stopped with `Callback rejected:

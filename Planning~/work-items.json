@@ -4,6 +4,12 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P11-016", "phase": 11, "title": "Memory per agent and build weight (owner request after P11-015 item 8): stage 0 measurements accepted (the ~74 MB block is Unity job-worker allocator state; native-only build; link.xml variants); stage 1: leaf dispatch workspaces borrow the catalog metadata, no trace channel by default in a Player (ADR-P7-010 amended 2026-11-24, NativeTraceChannelCapacityV1.None, NativeTreeAgent Trace Auto/Off/On), leaf-only agent-frame slot table; stages 2 (build weight) and 3 (prepared asset envelope 2) pending", "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P11/P11-016-memory-and-build-weight.md",
+      "dependsOn": ["P11-015"],
+      "owns": ["Planning~/Evidence/P11-016/"]
+    },
+    {
       "id": "P11-015", "phase": 11, "title": "Consumer-install fixes (findings of P11-011): without .aibt/policy.json MCP validate, compile and prepare_runtime use the Editor's default policy and get_project_manifest lists the trees with policy null, an unreadable policy is warning AIBT9008 (D1, ADR-P9-001 amended 2026-11-24); the three fixture assemblies are test assemblies (no aibt_custom_sample_write_marker in a consumer); Swarm Arena Create Demo for Built-in and URP, no exception without a device, pipelined agents move (D2-D5); PipelinedJobs cadence documented and pinned by a test (D5); importer status, verified Editor, install routes and where the Player compiles documented (D6, D7, D9); Planning~, Benchmarks~ and Spikes~ left out of git archive and npm pack and the 370 MB raw report out of the tree (D8); fresh-install proof and size measurements; accepted 2026-11-24 (3862964)", "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P11/P11-015-consumer-install-fixes.md",
       "dependsOn": ["P11-011", "P11-014"],

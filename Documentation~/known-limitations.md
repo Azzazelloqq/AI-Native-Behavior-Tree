@@ -27,6 +27,15 @@ Limits that a guide already explains are linked, not repeated.
   [Native node library, A cooldown shared by several branches](native-node-library.md#a-cooldown-shared-by-several-branches).
 - **Observers run only in the reference executor.** Native hosts ignore `observer` blocks
   (warning `AIBT2054`). See [Native node library, Guarding a branch](native-node-library.md#guarding-a-branch).
+- **The trace channel keeps the first records only.** A host's channel keeps its first `records - 1`
+  records and stops for good after its emission capacity (in the Editor by default 255 records, 512
+  emissions); after that the recorder still takes its lease and appends every update. A channel cannot be
+  attached to a host that is already running: choose it at bootstrap (a capacity, or a `NativeTreeAgent`'s
+  **Trace** setting). See ADR-P7-010, amendment 2026-11-24.
+- **Every generated leaf costs its own allocations.** Each leaf of a native tree owns about 25 small native
+  allocations (its dispatch slot and workspace) and two managed objects, whatever the node does; part of
+  the scratch is sized by the largest node of the catalog, not by the leaf. Measured figures:
+  `Planning~/Evidence/P11-016/README.md` (in the AIBT repository only).
 - **A node may touch each binding once per callback.** See
   [Burst node authoring, Read a binding once per callback](burst-node-authoring.md#read-a-binding-once-per-callback).
 
