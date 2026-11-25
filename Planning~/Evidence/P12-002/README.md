@@ -138,11 +138,11 @@ Paired differences inside each round (µs; "confirmed" = the same sign in all 8 
 | jobs | I − S | +22 (−33–69) | −16 (−50–60) | not confirmed in either run (±3%) |
 | jobs | IW − SW | +27 (−19–83) | +49 (+23–92), confirmed | about +1.5–3% (27–49 µs at 100 + 40 thinks): confirmed in run1 only |
 
-- **What the numbers say.** Without wake, reading squad data through the index costs nothing measurable on
-  either path. With wake on, the jobs path may pay a few tens of µs per step for the index-aware compare: it
-  stages each not-due agent's value on the main thread through `SelectRow` (the in-place path is too noisy to
-  see it). The game's own writes drop from about 15 µs to about 2.5 µs per step (50 rows instead of 500),
-  roughly what a confirmed wake cost would be.
+- **What the numbers say.** Without wake, reading squad data through the index: no difference was detected at
+  this resolution (about ±5 % of a 0.7 ms step), on either path. With wake on, the jobs path may pay a few tens
+  of µs per step for the index-aware compare: it stages each not-due agent's value on the main thread through
+  `SelectRow` (the in-place path is too noisy to see it). The three-run table in "Acceptance" below is the
+  reference for both readings.
 - **Correctness inside the measurement.** 64 blocks per run:
   - 0 GC.Alloc samples over the measured steps (with wake, with rows written every tick);
   - 0 faults;
@@ -240,3 +240,29 @@ Accepted on `8ed016a`; the status stays `Review` as for every item of phases 11 
 - **What the acceptance does not cover.** The overload never ran in a Player (IL2CPP) and never in a freshly
   started Editor; the Burst finding above was met and cleared in a long-lived Editor and its cause is not
   established. Unity 7 is not verified (stage G5 is postponed by the owner).
+
+## Review follow-up (2026-11-25)
+
+The should-fix findings of the independent read and the orchestrator's two process notes. Status stays `Review`.
+
+| Finding | Change |
+| --- | --- |
+| Benchmarks overwrote a run folder | `TreeSimulationIndexedInputBenchmark` and `TreeSimulationWakeCostBenchmark` refuse (fail before writing anything) a folder that already holds `steps.csv`. From now on a benchmark switch is cleared in the same step that reads the result. |
+| S1: jobs variants did not prove Burst | New `[UnityTest] AgentFrameJob_RunsTheIndexedRoutineBurstCompiled`, built as P11-014's `BurstExecutionPathTests`. One step per Editor frame. Every step's orders must be the values only the indexed routine reading this step's copy gives: rows are rewritten every step, no slot reads its own row, slot 11 reads -1. The test waits until `AgentFrameAgentV1.RanManaged` is 0 for every agent for 10 steps in a row. Burst off: `Assume` (Inconclusive). Not settled within 120 steps and 90 s: `Assert.Inconclusive`. `BurstCompiler.Options` is never changed. |
+| Allocation assertion that cannot fail | `GC.GetAllocatedBytesForCurrentThread` removed from `Step_WithIndexedInputAndWake_AllocatesNothing_AfterWarmUp`; the `GC.Alloc` recorder assertion stays. |
+| S2: result texts | The XML docs of `SimulationResult.InvalidArgument` and `TreeSimulation.Step`, the `SimulationResult` row and "One step" item 1 of `simulation-container.md` now name the causes: an index array shorter than `Capacity`, or an index in a live agent's slot at or beyond the rows' length. Doc comments only. `api-reference-runtime.md` lists signatures only, so it is unchanged and was not regenerated. |
+| S3: measurement sentence | "Measurement" now says "no difference was detected at this resolution (about ±5 % of a 0.7 ms step)". The comparison with the saved game writes is removed. It points to the three-run table in "Acceptance". |
+| S4 (decided, not changed) | One sentence in "Group data" of `simulation-container.md`: the index array is checked before it is copied, so do not write it from a job that can still run when `Step` is called. |
+| §4 untested cases | Seven tests, each in place and in jobs: a rows array of length 0 with a live index of 0 or above (refused); a group with no agents and an indexed channel (steps, and a later agent is checked); unbind then bind indexed again (new arrays read, old index array not read); indexed to indexed with rows of another length (6 then 3 rows); `TryReserve` with wake on (what agents last saw is kept, no spurious wake, a grown slot reads its row); a mode switch with wake on; rows longer than `Capacity`. |
+
+**The pinned behaviour of a mode switch with wake on.** `BindRows` does not touch an agent's last-seen value. The first compare after a switch therefore sets the value the agent now reads (its slot row, or the row its index selects) against the value it read at its last think under the old mode. An agent that is not due wakes when, and only when, the two differ. The switch itself wakes no one.
+
+**Tests run** (`Tools/Unity/Invoke-UnityTests.ps1`, one run at a time):
+
+- `TreeSimulationIndexedInputTests`: 45/45. Before this follow-up there were 30 cases; the S1 test adds 1 and the seven §4 tests add 14.
+  - The S1 test settled under Burst at once: 10 steps, 0.5 s, the first step already Burst, 0 managed steps. The job was already compiled in this Editor, so the Inconclusive branch did not run.
+- `TreeSimulationIndexedInputBenchmark` and `TreeSimulationWakeCostBenchmark` with the switches cleared: ignored, 0/1 each.
+- The refusal, exercised once: `AIBT_P12002_BENCHMARK=1` was set with a scratch folder that held a dummy `steps.csv`. The benchmark failed at once with the refusal message and left the file unchanged. The switches were cleared in the same command and read back as unset.
+  - The P12-001 refusal was not exercised: its folder name is a per-second time stamp, so it cannot be seeded in advance.
+
+**Left out.** The case of a teardown that reads an input: no fixture node reads an input outside `Tick` (every `TryReadSnapshot` in `Tests/Editor/CodeGen` is in a `Tick`), and `Tests/Fixtures` is protected.
