@@ -11,14 +11,14 @@
       "owns": ["Planning~/Evidence/P12-006/"]
     },
     {
-      "id": "P12-005", "phase": 12, "title": "Two compiler warnings every consumer sees (SweetKingdom feedback on 0.2.0, item B): CS0618 FindObjectsByType with FindObjectsSortMode in McpRuntimeTools (the overload without a sort mode under UNITY_6000_6_OR_NEWER) and CS0114 BtNodeAttribute.TypeId (the new modifier, byte-identical assembly); edits made, compile waits for the Editor",
+      "id": "P12-005", "phase": 12, "title": "Two compiler warnings every consumer sees (SweetKingdom feedback on 0.2.0, item B): CS0618 FindObjectsByType with FindObjectsSortMode in McpRuntimeTools (the overload without a sort mode under UNITY_6000_6_OR_NEWER) and CS0114 BtNodeAttribute.TypeId (the new modifier, byte-identical assembly); also CS0652 in the pipelined scheduler (an always-false check removed); test-assembly warnings of the first Unity 7 compile left as follow-ups; edits made, compile on 7000.0.0a8 waits for the Editor",
       "status": "in_progress", "kind": "implementation",
       "card": "Planning~/Tasks/P12/P12-005-consumer-compiler-warnings.md",
       "dependsOn": [],
       "owns": ["Planning~/Evidence/P12-005/"]
     },
     {
-      "id": "P12-004", "phase": 12, "title": "Burst path tests independent of a warm Burst cache (SweetKingdom feedback on 0.2.0, item A): BurstExecutionPathTests compiles synchronously for its own run and restores the option, and waits in seconds rather than a 6000-frame cap; test only; edits made, the cold and warm runs wait for the Editor",
+      "id": "P12-004", "phase": 12, "title": "Burst path tests independent of a warm Burst cache (SweetKingdom feedback on 0.2.0, item A): BurstExecutionPathTests compiles synchronously for its own run and restores the option, and waits in seconds rather than a 6000-frame cap; test only; edits made, the cold and warm runs wait for the Editor (Modules now on 7000.0.0a8 with built-in Burst 2.0.0)",
       "status": "in_progress", "kind": "implementation",
       "card": "Planning~/Tasks/P12/P12-004-burst-path-tests-cold-cache.md",
       "dependsOn": ["P11-014"],

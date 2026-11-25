@@ -95,9 +95,28 @@ is not readable here, so whether it persists the option the same way is not esta
    folder). Start the Editor and run the changed class as its first run.
 4. Close the Editor and put `JIT.warm-<date>` back.
 
-A cold cache in Modules is not the consumer's: Burst 2.0 is built into 6000.6.9f1 here, while the consumer has
-Burst 1.8.29 on 7000.0.0a8. Step 2 may pass in Modules because a frame takes about 50 ms, so 6000 frames is
-about 300 s. If it does, the consumer's failure is not reproduced, and the record says so.
+## Unity 7 in Modules (fact change, 2026-11-25)
+
+The owner moved Modules to 7000.0.0a8 on 2026-11-25. Everything above that cites Burst 1.8.29 source is
+from the 1.8.29 package source; what runs here now is different:
+
+- `Packages/packages-lock.json` resolves `com.unity.burst` to `2.0.0`, `source: builtin`, although
+  `com.unity.cloud.gltfast` 6.19.0 asks for `1.8.29` (and the render pipeline core for `1.8.14`). Collections
+  resolves to the built-in `6.7.0` (dependencies ask for 2.4.3 and 2.6.6).
+- So the consumer's "Burst 1.8.29" on the same Editor may be the version their manifest asks for, not the one
+  that ran. Ask them for the resolved version (their `packages-lock.json`).
+- Do not assume the cold-cache behaviour of 1.8.29 for Burst 2.0. The fix uses only the public
+  `BurstCompiler.Options.EnableBurstCompileSynchronously`, which Burst 2.0 exposes (read from metadata). Whether
+  setting it triggers a recompilation, whether Burst 2.0 persists it to EditorPrefs, and where its JIT cache
+  lives (step 1 of the reproduction names `Library/BurstCache/JIT` from 1.8.29) are not established. The
+  reproduction above is done on this setup (7000.0.0a8, Burst 2.0.0) when the Editor is up. Check the cache
+  folder before moving it.
+- With Modules and the consumer on the same Editor, a cold cache here should match theirs, unless their
+  resolved Burst differs. If step 2 passes here, the record says the failure was not reproduced.
+- The P12-002 finding of a stale Burst view after internal struct changes
+  (`Planning~/Evidence/P12-002/README.md`, "What exactly cleared the stale Burst view") was made on Burst 2.0
+  of 6000.6.9f1. It has to be looked at again on Burst 2.0 of 7000.0.0a8 during the same runs: the probe's
+  "ran managed" signal is checked before any jobs result is trusted.
 
 ## Forbidden changes
 
