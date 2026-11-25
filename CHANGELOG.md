@@ -4,6 +4,8 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-25
+
 ### Simulation container: an indexed input channel for group data (P12-002)
 
 - **New overload `TreeGroup.TryBindInput<T>(InputChannel<T>, NativeArray<T> rows, NativeArray<int> rowOfSlot)`:**

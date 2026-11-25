@@ -24,7 +24,7 @@ Requirements: Unity 6. This release is verified on `6000.6.9f1`. The package ask
 `1.8.29`, Collections `6.5.0` and Newtonsoft JSON `3.2.2`. An Editor that ships newer built-in
 versions resolves those: `6000.6.9f1` uses Burst `2.0.0` and Collections `6.6.0`, and the package
 compiles and runs with them. `package.json` declares `"unity": "6000.0"`, but no Editor older than
-`6000.6` was tested. The package is `0.1.0` and its editor and AI integration are experimental. MIT
+`6000.6` was tested. The package is `0.2.0` and its editor and AI integration are experimental. MIT
 license.
 
 ## Install
@@ -46,13 +46,13 @@ full path because `git -C` resolves a relative one inside the checkout:
 git -C C:/path/to/AIBT archive --format=tar --prefix=package/ -o "$PWD/aibt.tar" HEAD
 New-Item -ItemType Directory src | Out-Null
 tar -xf aibt.tar -C src
-tar --format=pax -czf com.azzazello.aibt-0.1.0.tgz -C src package
+tar --format=pax -czf com.azzazello.aibt-0.2.0.tgz -C src package
 ```
 
 Then reference the tarball in `Packages/manifest.json`:
 
 ```json
-"com.azzazello.aibt": "file:C:/path/to/com.azzazello.aibt-0.1.0.tgz"
+"com.azzazello.aibt": "file:C:/path/to/com.azzazello.aibt-0.2.0.tgz"
 ```
 
 A git URL in Package Manager was not tested. The repository's published state is behind this
