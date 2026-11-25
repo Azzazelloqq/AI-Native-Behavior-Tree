@@ -178,8 +178,8 @@ namespace AIBT
         {
             using var _ = s_ScheduleExecuteRoundMarker.Auto();
             scheduled = default;
-            if (_phase != NativePipelinedPhaseV1.ExecuteReady
-                || activeLaneCount <= 0 || activeLaneCount > uint.MaxValue)
+            // P12-005: no upper bound check; an int never exceeds uint.MaxValue (the old check was CS0652).
+            if (_phase != NativePipelinedPhaseV1.ExecuteReady || activeLaneCount <= 0)
                 return Fail(out failure);
             if (!_execution.TrySchedule(
                     batchSize, activeLaneIds, activeLaneCount, dependency, out scheduled, out failure))

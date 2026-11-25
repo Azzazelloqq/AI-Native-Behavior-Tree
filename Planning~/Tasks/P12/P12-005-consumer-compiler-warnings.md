@@ -1,8 +1,8 @@
 # P12-005 — Two compiler warnings every consumer sees
 
-Status: `In progress` — filed 2026-11-25 from the SweetKingdom feedback on 0.2.0 (item B). The edits are made and
-not committed: the Modules Editor is closed, so nothing is compiled yet. Modules moved to 7000.0.0a8 the same
-day; the compile and tests happen there.
+Status: `Review` — filed 2026-11-25 from the SweetKingdom feedback on 0.2.0 (item B). Compiled and tested on
+7000.0.0a8 the same day: the three warnings are gone and the eight test classes pass. Evidence:
+`Planning~/Evidence/P12-005/README.md`.
 
 ## Objective
 
@@ -66,7 +66,7 @@ edits above, so it shows the package as committed. Besides the consumer's two it
 
 No other warning of the log is in `Assets\AIBT`.
 
-## Changes (uncommitted until the Editor is back)
+## Changes
 
 - `MCP/McpRuntimeTools.cs`: `FindHosts` uses `FindObjectsByType<T>(FindObjectsInactive.Include)` under
   `UNITY_6000_6_OR_NEWER`, else the old call.
@@ -95,4 +95,4 @@ execution semantics (the CS0652 change removes a condition that is false for eve
 
 ## Evidence
 
-`Planning~/Evidence/P12-005/README.md` (to be written after the compile).
+`Planning~/Evidence/P12-005/README.md`.

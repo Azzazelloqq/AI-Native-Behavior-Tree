@@ -4,6 +4,14 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Fixes
+
+- **No CS0618, CS0114 and CS0652 in a consumer's Console (P12-005).** `McpRuntimeTools` lists hosts with
+  `FindObjectsByType<T>(FindObjectsInactive)` on 6000.6 and later (the overloads that take
+  `FindObjectsSortMode` are obsolete there and on 7000.0); `BtNodeAttribute.TypeId` declares that it hides
+  `Attribute.TypeId` (`new`; the compiled assembly is unchanged). `AIBT.Runtime` no longer reports CS0652: an
+  always-false `int > uint.MaxValue` check is removed from the pipelined scheduler (no change of behaviour).
+
 ### Documentation
 
 - **Simulation container: "API stability" (P12-006).** A new section of `simulation-container.md` lists what

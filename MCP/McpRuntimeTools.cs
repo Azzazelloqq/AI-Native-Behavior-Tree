@@ -215,9 +215,18 @@ namespace AIBT.Mcp
 
         // FindObjectsByType skips objects marked DontSave, and a NativeTreeAgent marks the host it
         // creates so; those hosts are reached through their agents (P11-007, review F7).
+        // The overloads without FindObjectsSortMode exist, not obsolete, in 6000.6.9f1 and 7000.0.0a8 (read from
+        // UnityEngine.CoreModule.dll); the sort-mode overloads are obsolete in both (CS0618). Before 6000.6 the
+        // old call is kept: the package accepts 6000.0, where the new overloads were not checked. Both calls ask
+        // for no sort (FindObjectsSortMode.None), so the result is the same.
         private static ProductionTreeHost[] FindHosts()
+#if UNITY_6000_6_OR_NEWER
+            => UnityEngine.Object.FindObjectsByType<ProductionTreeHost>(FindObjectsInactive.Include)
+                .Concat(UnityEngine.Object.FindObjectsByType<NativeTreeAgent>(FindObjectsInactive.Include).Select(agent => agent.Host))
+#else
             => UnityEngine.Object.FindObjectsByType<ProductionTreeHost>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Concat(UnityEngine.Object.FindObjectsByType<NativeTreeAgent>(FindObjectsInactive.Include, FindObjectsSortMode.None).Select(agent => agent.Host))
+#endif
                 .Where(host => host != null)
                 .Distinct()
                 .ToArray();

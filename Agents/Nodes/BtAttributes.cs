@@ -15,8 +15,12 @@ namespace AIBT
             TypeId = typeId;
         }
 
-        /// <summary>Stable node type ID, such as <c>game.move-to</c>.</summary>
-        public string TypeId { get; }
+        /// <summary>
+        /// Stable node type ID, such as <c>game.move-to</c>. It hides <see cref="Attribute.TypeId"/> (an
+        /// object that identifies attribute instances); <c>new</c> states that on purpose (CS0114) and
+        /// changes nothing in the compiled assembly.
+        /// </summary>
+        public new string TypeId { get; }
 
         /// <summary>Menu path in the node search, such as <c>Movement</c>. Defaults to <c>Project</c>.</summary>
         public string Category { get; set; }
