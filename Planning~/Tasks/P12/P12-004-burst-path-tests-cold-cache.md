@@ -1,7 +1,12 @@
 # P12-004 — Burst path tests independent of a warm Burst cache
 
-Status: `In progress` — filed 2026-11-25 from the SweetKingdom feedback on 0.2.0 (item A). The test edit is made
-and not committed: the Modules Editor is closed, so nothing is compiled or run yet.
+Status: `Review` — filed 2026-11-25 from the SweetKingdom feedback on 0.2.0 (item A). Run on 7000.0.0a8 with
+built-in Burst 2.0.0 the same day:
+- the old test failed cold (1/3), reproducing the consumer's report;
+- the changed test passed cold (3/3) and again warm (3/3);
+- the option was the same before and after the class.
+
+Evidence: `Planning~/Evidence/P12-004/README.md`.
 
 ## Objective
 
@@ -66,7 +71,8 @@ Side effect to know: Burst writes its options to EditorPrefs on every change
 (`BurstEditorOptions.GlobalOnOptionsChanged`, Burst 1.8.29). If the Editor dies between the set-up and the
 teardown, "Synchronous Compilation" stays checked in the Jobs > Burst menu until someone clears it. Burst 2.0
 (built into 6000.6) exposes the same public property (read from `UnityEngine.BurstModule.dll`). Its source
-is not readable here, so whether it persists the option the same way is not established.
+is not readable here, so whether it persists the option the same way is not established. Answered on
+7000.0.0a8 below: it does.
 
 ## Acceptance
 
@@ -74,7 +80,7 @@ is not readable here, so whether it persists the option the same way is not esta
   is moved aside (cold). The log of each run shows the first Burst frame of the agent-frame path and whether
   synchronous compilation was on.
 - After the class: `BurstCompiler.Options.EnableBurstCompileSynchronously` and its EditorPrefs value are what
-  they were before (read before and after with `unity command eval_file`).
+  they were before (read before and after with `unity command script eval --file`).
 - The class still fails when the agent-frame path runs managed. The verdict rule is unchanged
   (`outcome.Burst != path.Burst` is a mismatch, and no `Inconclusive` is added). The six managed paths are
   still reported managed with synchronous compilation on, which shows the probe still sees managed bodies.
@@ -118,6 +124,30 @@ from the 1.8.29 package source; what runs here now is different:
   of 6000.6.9f1. It has to be looked at again on Burst 2.0 of 7000.0.0a8 during the same runs: the probe's
   "ran managed" signal is checked before any jobs result is trusted.
 
+### What the runs established (2026-11-25, details in the evidence)
+
+- **Burst 2.0.0 here is a shim package.** It forwards the Burst types to the Editor's `UnityEngine.BurstModule` and
+  `UnityEditor.BurstModule`. The answers below are read from the running Editor by reflection.
+- **No recompilation from the option.** `set_EnableBurstCompileSynchronously` calls only `OnOptionsChanged`, not
+  `MaybeTriggerRecompilation`.
+- **The option is persisted.** `BurstEditorOptions.GlobalOnOptionsChanged` writes every option to EditorPrefs
+  (key `BurstCompileSynchronously`) and to SessionState. So the side effect named above holds on Burst 2.0.0.
+- **JIT cache: `Library/BurstCache/JIT`** (`BurstCompilerOptions.DefaultCacheFolder`).
+- **Old test, cold: 1/3.** The agent-frame path was managed for 6000 frames, 2.3 s, and the 3D parity test's
+  90 s wait was not enough. This is the consumer's failure, reproduced.
+- **Changed test, cold: 3/3.** The agent-frame path was Burst from its first frame, but that frame blocked for
+  about 173 s while the job compiled, inside the 900 s timeout.
+- **Changed test, warm: 3/3**, as the second run in the same domain; the first Burst frame came after 0.5 s.
+- **The option is unchanged by the class:** False before and after, in the options and in EditorPrefs.
+- **Not run:**
+  - a warm cache in a freshly started Editor;
+  - the failing branch with the new test;
+  - Burst off.
+- **After the runs**, only a doc comment of the test was changed (it named 1.8.29 only). The class compiled
+  again but was not rerun.
+- **The P12-002 stale view was not re-provoked** (no internal struct change). No Burst error was logged in this
+  Editor session, and the probes show the current code on Burst.
+
 ## Forbidden changes
 
 `CodeGen~`, `ExpectedPublicAbiV2.txt`, the compiled program format, `Documentation~/specifications`,
@@ -125,4 +155,4 @@ from the 1.8.29 package source; what runs here now is different:
 
 ## Evidence
 
-`Planning~/Evidence/P12-004/README.md` (to be written after the runs).
+`Planning~/Evidence/P12-004/README.md`.

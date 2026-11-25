@@ -11,6 +11,9 @@ All notable changes to this project will be documented here. The project follows
   `FindObjectsSortMode` are obsolete there and on 7000.0); `BtNodeAttribute.TypeId` declares that it hides
   `Attribute.TypeId` (`new`; the compiled assembly is unchanged). `AIBT.Runtime` no longer reports CS0652: an
   always-false `int > uint.MaxValue` check is removed from the pipelined scheduler (no change of behaviour).
+- **`BurstExecutionPathTests` no longer depend on a warm Burst cache (P12-004).** The class compiles Burst
+  jobs synchronously while it runs and restores the option after; the wait for the agent-frame job is
+  bounded in seconds, not by a 6000-frame cap. A path that runs managed still fails. Test only.
 
 ### Documentation
 

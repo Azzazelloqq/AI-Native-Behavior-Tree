@@ -28,9 +28,16 @@ namespace AIBT.Tests.Integration.NativeRuntime
     /// the Editor, observed from inside the body (<c>aibt.tests.burst-probe</c>: a <c>[BurstDiscard]</c>
     /// call that only managed code executes), and a bit-for-bit comparison of
     /// <c>aibt.native.random-float3-in-radius</c> on a path observed Burst-compiled with a path observed
-    /// managed. No test here changes <c>BurstCompiler.Options</c>: Burst compiles asynchronously in the
-    /// Editor, so a path is updated, one Editor frame apart, until the probe reports Burst or a bound
-    /// passes; a path that never reports Burst is recorded as managed, not failed.
+    /// managed. A path is updated, one Editor frame apart, until the probe reports Burst or a bound passes.
+    /// Cold Burst cache (consumer report on 0.2.0): the generated agent-frame job carries
+    /// <c>[BurstCompile]</c> without <c>CompileSynchronously</c>, so the Editor compiles it asynchronously
+    /// on first use and runs it managed until the compilation ends; on a fresh <c>Library</c> that took
+    /// longer than the old 6000-frame bound. The class therefore turns on
+    /// <c>BurstCompiler.Options.EnableBurstCompileSynchronously</c> for its own run (only when Burst is
+    /// enabled and the option is off) and restores it in <see cref="RestoreCompilation"/>: a job whose
+    /// compilation is requested while it is on is compiled before it first runs, cold cache or warm. A job
+    /// whose compilation was requested earlier in the domain is still waited for, by seconds, not frames.
+    /// A path that never reports Burst within the bound fails as before.
     /// </summary>
     public sealed class BurstExecutionPathTests
     {
@@ -38,10 +45,14 @@ namespace AIBT.Tests.Integration.NativeRuntime
         private const int ManagedTally = 1;
         private const int BurstTally = 1000;
         private const int MinimumFrames = 120;
-        private const int MaximumFrames = 6000;
         private const double MinimumSeconds = 8.0;
-        // The first asynchronous compilation of the catalog's agent-frame job took more than 8 s here.
-        private const double CompileWaitSeconds = 90.0;
+        // The wait for the path expected to compile. With synchronous compilation on, the first frame is
+        // normally Burst already; the bound covers a compilation that was requested asynchronously before
+        // this class ran. It is counted in seconds only: on a consumer's machine the old frame cap ended the
+        // wait after 6000 frames, whatever the seconds.
+        private const double CompileWaitSeconds = 300.0;
+        // Above the test runner's default of 180 s: one compile wait, six other paths, and the frames recorded.
+        private const int TestTimeoutMilliseconds = 900_000;
         private const int SettledFrames = 10;
         private const int RecordedFrames = 240;
         private const ulong Seed = 20261124ul;
@@ -51,6 +62,30 @@ namespace AIBT.Tests.Integration.NativeRuntime
         private readonly List<NativeTreeAgent> _agents = new List<NativeTreeAgent>();
         private ProductionTreeScheduler _scheduler;
         private ProductionTreeWorld _world;
+        private bool _restoreSynchronous;
+
+        /// <summary>
+        /// Turns on synchronous Burst compilation for this class when Burst is enabled and the option is off.
+        /// Burst writes its options to EditorPrefs on every change (<c>BurstEditorOptions.GlobalOnOptionsChanged</c>,
+        /// in Burst 1.8.29 and in the built-in Burst 2.0.0 of 7000.0.0a8), so the old value is written back in
+        /// <see cref="RestoreCompilation"/>. The option triggers no recompilation in either.
+        /// </summary>
+        [OneTimeSetUp]
+        public void CompileSynchronously()
+        {
+            if (!BurstCompiler.IsEnabled || BurstCompiler.Options.EnableBurstCompileSynchronously) return;
+            BurstCompiler.Options.EnableBurstCompileSynchronously = true;
+            _restoreSynchronous = true;
+        }
+
+        /// <summary>Restores the synchronous-compilation option this class turned on.</summary>
+        [OneTimeTearDown]
+        public void RestoreCompilation()
+        {
+            if (!_restoreSynchronous) return;
+            _restoreSynchronous = false;
+            BurstCompiler.Options.EnableBurstCompileSynchronously = false;
+        }
 
         [TearDown]
         public void TearDown()
@@ -64,18 +99,19 @@ namespace AIBT.Tests.Integration.NativeRuntime
         /// Every production path that runs a node body, with the probe as the only leaf after a wait. Each
         /// path is updated until the probe has reported Burst for <see cref="SettledFrames"/> frames in a
         /// row, or until at least <see cref="MinimumFrames"/> frames and <see cref="MinimumSeconds"/>
-        /// seconds (<see cref="CompileWaitSeconds"/> for the path expected to compile) have passed (at most
-        /// <see cref="MaximumFrames"/>). The seconds only bound the wait; nothing is concluded from them. The table is in the log; the test
+        /// seconds (<see cref="CompileWaitSeconds"/> for the path expected to compile) have passed. The
+        /// seconds only bound the wait; nothing is concluded from them. The table is in the log; the test
         /// pins it, so a change of a path's compilation shows here.
         /// </summary>
-        [UnityTest]
+        [UnityTest, Timeout(TestTimeoutMilliseconds)]
         public IEnumerator EveryPath_ReportsFromInsideTheNodeBody_WhetherItRunsBurstCompiled()
         {
             Assume.That(BurstCompiler.IsEnabled, Is.True, "Burst compilation is off in this Editor (Jobs > Burst > Enable Compilation)");
             var asset = Prepare(ProbeTree("tests.p11014.burst-path-probe", roll: null));
             var expected = new (string Path, int Agents, bool Burst)[]
             {
-                // Measured first: it starts the asynchronous compilation of the catalog's jobs.
+                // Measured first: its first schedule requests the compilation of the catalog's agent-frame job
+                // (synchronous while this class runs, unless it was requested earlier in the domain).
                 ("agent-frame-job", 1, true),
                 ("agent-frame-in-place", 1, false),
                 ("immediate", 1, false),
@@ -96,8 +132,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
                 rows.Add(row);
                 if (outcome.Burst != path.Burst) mismatches.Add(row + ", expected " + (path.Burst ? "Burst" : "managed"));
             }
-            Debug.Log("P11-014 item 1, execution paths (Burst enabled: " + BurstCompiler.IsEnabled + "):\n" + string.Join("\n", rows));
-            Assert.That(mismatches, Is.Empty, string.Join("\n", mismatches));
+            Debug.Log("P11-014 item 1, execution paths (Burst enabled: " + BurstCompiler.IsEnabled + ", " + Compilation() + "):\n" + string.Join("\n", rows));
+            Assert.That(mismatches, Is.Empty, Compilation() + "\n" + string.Join("\n", mismatches));
         }
 
         /// <summary>
@@ -106,14 +142,14 @@ namespace AIBT.Tests.Integration.NativeRuntime
         /// tree reports Burst in every recorded frame, and on the Immediate path, where it reports managed
         /// code in every recorded frame. The two point sequences are compared bit for bit.
         /// </summary>
-        [UnityTest]
+        [UnityTest, Timeout(TestTimeoutMilliseconds)]
         public IEnumerator RandomFloat3InRadius_Flat_IsBitIdentical_BurstCompiledAndManaged()
         {
             yield return CompareBurstWithManaged(flat: true);
         }
 
         /// <summary>As the flat case, with points in a ball (<c>flat: false</c>).</summary>
-        [UnityTest]
+        [UnityTest, Timeout(TestTimeoutMilliseconds)]
         public IEnumerator RandomFloat3InRadius_3D_IsBitIdentical_BurstCompiledAndManaged()
         {
             yield return CompareBurstWithManaged(flat: false);
@@ -131,7 +167,7 @@ namespace AIBT.Tests.Integration.NativeRuntime
             var warm = new ProbeOutcome();
             yield return Probe(asset, "agent-frame-job", 1, warm, CompileWaitSeconds);
             Assert.That(warm.Burst, Is.True, "the JobsAgentFrame job ran the node body Burst-compiled within the bound ("
-                + warm.Frames + " frames, " + warm.Seconds.ToString("0.0") + " s)");
+                + warm.Frames + " frames, " + warm.Seconds.ToString("0.0") + " s, " + Compilation() + ")");
 
             var burst = Record(asset, "agent-frame-job", BurstTally);
             var managed = Record(asset, "immediate", ManagedTally);
@@ -202,7 +238,8 @@ namespace AIBT.Tests.Integration.NativeRuntime
             var previous = new int[count];
             var settled = 0;
             var clock = Stopwatch.StartNew();
-            for (var frame = 0; frame < MaximumFrames; frame++)
+            // No frame cap: the bound is MinimumFrames and waitSeconds, both passed.
+            for (var frame = 0; ; frame++)
             {
                 Frame(agents);
                 var burstFrame = true;
@@ -248,6 +285,10 @@ namespace AIBT.Tests.Integration.NativeRuntime
             Assert.That(outcome.ManagedFrames + outcome.BurstFrames, Is.GreaterThan(0), path + ": the probe ran");
             DestroyWorld();
         }
+
+        /// <summary>How this run compiled: whether this class turned synchronous compilation on, or found it on.</summary>
+        private string Compilation()
+            => "synchronous Burst compilation " + (_restoreSynchronous ? "on for this class" : BurstCompiler.Options.EnableBurstCompileSynchronously ? "already on" : "off");
 
         private static string ProbeTree(string treeId, string roll)
         {
