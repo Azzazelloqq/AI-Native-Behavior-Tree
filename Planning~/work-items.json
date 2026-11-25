@@ -4,6 +4,27 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P12-006", "phase": 12, "title": "Simulation container API stability (SweetKingdom feedback on 0.2.0, item C): a section of simulation-container.md, built from the code, with what is frozen (the node ABI v2 handles and bindings), what is experimental with no change planned, and what may still change before stable, with the reason and what to wrap; documentation only",
+      "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P12/P12-006-simulation-api-stability.md",
+      "dependsOn": ["P12-002"],
+      "owns": ["Planning~/Evidence/P12-006/"]
+    },
+    {
+      "id": "P12-005", "phase": 12, "title": "Two compiler warnings every consumer sees (SweetKingdom feedback on 0.2.0, item B): CS0618 FindObjectsByType with FindObjectsSortMode in McpRuntimeTools (the overload without a sort mode under UNITY_6000_6_OR_NEWER) and CS0114 BtNodeAttribute.TypeId (the new modifier, byte-identical assembly); edits made, compile waits for the Editor",
+      "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P12/P12-005-consumer-compiler-warnings.md",
+      "dependsOn": [],
+      "owns": ["Planning~/Evidence/P12-005/"]
+    },
+    {
+      "id": "P12-004", "phase": 12, "title": "Burst path tests independent of a warm Burst cache (SweetKingdom feedback on 0.2.0, item A): BurstExecutionPathTests compiles synchronously for its own run and restores the option, and waits in seconds rather than a 6000-frame cap; test only; edits made, the cold and warm runs wait for the Editor",
+      "status": "in_progress", "kind": "implementation",
+      "card": "Planning~/Tasks/P12/P12-004-burst-path-tests-cold-cache.md",
+      "dependsOn": ["P11-014"],
+      "owns": ["Planning~/Evidence/P12-004/"]
+    },
+    {
       "id": "P12-003", "phase": 12, "title": "Read-only game arrays in nodes (SweetKingdom request 2): ADR with an independent read and a prototype (copy per step against a job-safe view; AtomicSafetyHandle against game jobs) before any code; not started, after P12-002",
       "status": "draft", "kind": "spike",
       "card": "Planning~/Tasks/P12/P12-003-read-only-game-arrays.md",

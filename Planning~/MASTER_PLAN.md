@@ -1231,6 +1231,11 @@ to the decided shape (`Planning~/Evidence/P12-002/decision.md`), 18 tests, the A
 interleaved measurement (`Planning~/Evidence/P12-002/README.md`). `P12-003` (read-only game arrays in nodes)
 is `Draft`: an ADR and a prototype first, after `P12-002`. On 2026-11-25, on the owner's word, the package
 version went from `0.1.0` to `0.2.0` with phases 2 to 12 as its changelog section.
+On 2026-11-25 the consumer's feedback on 0.2.0 gave three items. `P12-004` makes `BurstExecutionPathTests`
+independent of a warm Burst cache: synchronous compilation for its own run, restored after, and a wait in
+seconds. `P12-005` removes two compiler warnings every consumer sees (CS0618, CS0114). Both are `In progress`:
+their edits wait for the Editor. `P12-006` documents what of the simulation container is frozen and what may
+still change before stable; it is in `Review`.
 
 Phase 12 candidates, recorded and not started (no work item until they are taken up):
 
