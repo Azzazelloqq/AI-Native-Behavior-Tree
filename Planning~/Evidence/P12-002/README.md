@@ -184,3 +184,59 @@ Paired differences inside each round (µs; "confirmed" = the same sign in all 8 
 - What exactly cleared the stale Burst view: the reloads, the internal notify calls, or removing the probe
   jobs. The record above is what I did and what I saw.
 - Whether the wake-on cost in jobs (IW − SW) is real: confirmed in one run of two, about 2–3%.
+
+## Acceptance (orchestrator, 2026-11-25)
+
+Accepted on `8ed016a`; the status stays `Review` as for every item of phases 11 and 12.
+
+- **Diff read.** `14d3070` adds one public overload (`TreeGroup.TryBindInput<T>(channel, rows, rowOfSlot)`) and
+  one public property (`AgentTraceRecord.InputRow`); no existing public signature changes. One routine,
+  `SimulationAgentRoutinesV1.SelectRow`, chooses the row for the job path, the in-place path, wake on change and
+  the trace, and bounds-checks the slot and the row. Nothing under `CodeGen~`, `Tests/Editor/CodeGen/Contracts`,
+  `Tests/Fixtures`, `Documentation~/specifications`; `package.json` is untouched by this item (the version
+  change below is a separate commit on the owner's word).
+- **Full run of the ten assemblies on `8ed016a`, 2026-11-25 11:18–11:48:** Runtime 821/821, Integration 765
+  passed and 1 ignored (the opt-in P12-001 benchmark), Editor 917/917, BehaviorCases 65/65, NativeBurstDispatch
+  79/79, NativeTreeAgentBlackboard 33/33, NativeSharedBlackboard 36/36, CodeGen.ContractTests 6/6,
+  CodeGen.GenerationTests 14/14, PlayMode 2/2; noise unknown-command=0, main-thread-timeout=17 (13 before this
+  item; constant through the run, so the four new lines come from the work before it, not from the tests). Raw:
+  `C:\UnityProjects\_aibt_acceptance\P12-002\acceptance\full-run-8ed016a.txt`.
+- **An unintended third measurement inside that run.** The Editor process still had
+  `AIBT_P12002_BENCHMARK=1`, so `TreeSimulationIndexedInputBenchmark` ran as part of the Integration assembly
+  (11:23–11:38, passed) and overwrote `steps.csv`, `blocks.csv` and `environment.json` of
+  `run1-20261125-070402\` (its `summary.json` and `summary.md` are still run 1's; a note file in the folder says
+  so). The orchestrator had recomputed run 1 from the original file before that. The third run is kept as
+  `run2-inside-full-run-20261125-1138\`. The variables were cleared in the Editor afterwards.
+- **Numbers recomputed** with a script of the orchestrator's own (per round, path and variant the median of 300
+  steps; median of the eight round medians; differences paired inside a round), jobs path, µs per step:
+
+  | | run 0 | run 1 | run 2 (inside the full run) |
+  | --- | --- | --- | --- |
+  | S / I | 715.1 / 735.9 | 739.0 / 723.6 | 676.8 / 670.9 |
+  | I − S | 21.9 [−32.7, 68.5], 7 of 8 positive | −15.7 [−50.3, 59.9], 2 of 8 | −0.2 [−35.8, 19.9], 4 of 8 |
+  | SW / IW | 1741.2 / 1795.1 | 1764.6 / 1816.3 | 1738.0 / 1787.0 |
+  | IW − SW | 27.3 [−18.6, 83.1], 5 of 8 | 49.2 [23.0, 91.9], 8 of 8 | 42.8 [8.4, 71.2], 8 of 8 |
+
+  Runs 0 and 1 equal the table of "Measurement". In all three: 64 blocks, zero `GC.Alloc` samples, zero faults,
+  no agent whose last job ran without Burst, and one order digest per round and wake setting across indexed and
+  slot rows, jobs and in place. Reading: without wake no difference was detected at this resolution (about
+  ±5 % of a 0.7 ms step); with wake the indexed channel costs about 45 µs per step (2.5 %), with one sign in
+  every round of two runs out of three. The sentence of "Measurement" that compares this with the game's saved
+  writes is not supported (about 12.5 µs saved against 27–49 µs) and is to be corrected.
+- **Independent read** (a reader given the commit, the decision and neutral questions; it ran nothing):
+  `C:\UnityProjects\_aibt_acceptance\P12-002\acceptance\independent-review.md`. No blocker: the nine semantics
+  items are built as written; no path still assumes row = slot for an indexed channel; no out-of-bounds read
+  is reachable; programs that do not use the overload behave as before (additions only: the MCP `row` key, four
+  more bytes in a trace record); the `AIBT.Mcp` reference of the integration tests is Editor-only on both sides.
+  Should-fix findings, sent back as a follow-up and not a gate (owner, 2026-11-25: "остальное если что
+  поправим"): S1 the jobs variants assert that a job batch ran, not that it ran under Burst; the
+  `GetAllocatedBytesForCurrentThread` assertion cannot fail in this Editor; S2 the result-code texts
+  (`SimulationResult`, `TreeSimulation.Step`, the table of `simulation-container.md`) do not name the new cause
+  of `InvalidArgument`; S3 the measurement sentence above; the untested cases listed in §4 of the read.
+- **Decided, not changed (S4).** `ValidateInputs` checks the game's index array, and the step then copies it.
+  A game job that writes the array between the two is already refused where collection checks exist, is a
+  misuse without them, and the worst outcome is zeros for that agent (`SelectRow` bounds the row). Recorded as
+  a known limit rather than reordered.
+- **What the acceptance does not cover.** The overload never ran in a Player (IL2CPP) and never in a freshly
+  started Editor; the Burst finding above was met and cleared in a long-lived Editor and its cause is not
+  established. Unity 7 is not verified (stage G5 is postponed by the owner).

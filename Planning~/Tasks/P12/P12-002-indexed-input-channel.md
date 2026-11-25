@@ -1,6 +1,7 @@
 # P12-002 — Indexed input channel: group or squad data read by every member
 
-Status: `Review` — built 2026-11-25 (brief `C:\UnityProjects\_aibt_acceptance\SweetKingdom\brief-P12-002.md`)
+Status: `Review` — accepted by the orchestrator on `8ed016a` (2026-11-25: full run of ten assemblies green,
+numbers recomputed, independent read without a blocker; its should-fix findings follow); built 2026-11-25 (brief `C:\UnityProjects\_aibt_acceptance\SweetKingdom\brief-P12-002.md`)
 to the shape decided on 2026-11-24 (`Planning~/Evidence/P12-002/decision.md`, after the independent design read
 `Planning~/Evidence/P12-002/design-read.md`). Evidence: `Planning~/Evidence/P12-002/README.md`. Acceptance is the
 orchestrator's.
