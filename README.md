@@ -399,7 +399,8 @@ Editor by default and not in a Player unless given a trace capacity). See
 - [Production tree host](Documentation~/production-host.md)
 - [Execution and scheduling](Documentation~/execution-and-scheduling.md)
 - [Simulation container](Documentation~/simulation-container.md) (experimental): trees stepped by
-  the game with `Step(tick)`, without GameObjects.
+  the game with `Step(tick)`, without GameObjects. Its section "API stability" lists what is frozen and
+  what may still change before it is marked stable.
 - [Hot reload](Documentation~/hot-reload.md)
 - [Known limitations](Documentation~/known-limitations.md): what is known and not yet fixed, with
   where to look.

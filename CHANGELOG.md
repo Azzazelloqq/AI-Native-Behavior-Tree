@@ -4,6 +4,13 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Documentation
+
+- **Simulation container: "API stability" (P12-006).** A new section of `simulation-container.md` lists what
+  is frozen (the node ABI v2 handles and binding attributes a node uses to reach the container), what is
+  experimental with no change planned, and what may still change before the container is marked stable,
+  each with the reason and what a game should wrap.
+
 ## [0.2.0] - 2026-11-25
 
 ### Simulation container: an indexed input channel for group data (P12-002)

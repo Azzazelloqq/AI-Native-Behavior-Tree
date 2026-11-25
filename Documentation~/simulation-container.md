@@ -7,7 +7,8 @@ a fixed-step game loop, a server tick, an EditMode test or a tool.
 > **Experimental.** Stages G1–G3 of `Documentation~/decisions/ADR-P10-008-simulation-container.md`.
 > Names and members may change until stage G5. Generated nodes may use Tree/Agent-scope blackboard
 > keys, game inputs (`SnapshotReadHandle`), commands (`CommandHandle`) and (G3) external
-> long-running actions (`AsyncOperationHandle`, `CompletionHandle`).
+> long-running actions (`AsyncOperationHandle`, `CompletionHandle`). What is frozen, what is not
+> planned to change, and what may still change: "API stability" below.
 
 ## Model
 
@@ -515,7 +516,63 @@ TreeSimulationDebug.Register(simulation, "guards");
 - Call the container from one thread at a time. Calls made while `Step` runs (from a callback)
   return `Busy`.
 
-## Not yet (G5 and later)
+## API stability
+
+The container is experimental. Its own code says so ("Experimental (ADR-P10-008) until stage G5"), and
+ADR-P10-008 (owner decision D1) ties that mark to stage G5: a run of every AIBT test on Unity 7000.0.0a8 and
+the 500-agent benchmark (P10-013). G5 is not started, and no date is given. Until then, the lists below say
+what a game can build on. They are built from the code of 0.2.0, not from plans. "May still change" means a
+change is possible before the container is marked stable. It does not mean a change is planned.
+
+**Frozen.** Nothing under `AIBT.Simulation` is frozen: no contract file or specification covers it. What a
+node uses to reach the container is frozen, because it is the node ABI:
+
+- `SnapshotReadHandle<T>`, `CommandHandle<T>`, `AsyncOperationHandle<TStart, TCancel>`,
+  `CompletionHandle<T>`, `BurstCompletionOutcome`, and the long binding attributes
+  `AibtSnapshotBinding`, `AibtCommandBinding`, `AibtAsyncOperationBinding` and `AibtCompletionBinding`
+  (all in `AIBT.Burst`). Contract: `Tests/Editor/CodeGen/Contracts/ExpectedPublicAbiV2.txt`, checked by
+  `PublicBurstAbiContractTests`, and `Documentation~/specifications/burst-node-abi-v2.md`.
+- The compiled program a group runs is the same compiled program a host runs
+  (`Documentation~/specifications/compiled-program-v1.md`). The container adds nothing to it.
+
+**Experimental, with no change planned.** These keep their names and meaning unless a reason appears before
+stable:
+
+- `TreeSimulation`: the constructor, `Dispose`, `TryAddGroup`, `TryRemoveGroup`, `CopyGroups`, `Settings`,
+  `LastTick`, `GroupCount`, `IsStepping`, `IsDisposed`.
+- `TreeGroup`, agents and schedules: `TryAdd` (both), `TryRemove`, `TryRestart`, `TryReserve`, `TryWake`,
+  `TryWakeMany`, `TrySetThinkSchedule`, `IsAlive`, `TryGetAgentAt`, `Capacity`, `Count`,
+  `HighWaterIndex`, `Id`, `IsValid`, `Program`, `Settings`.
+- `TreeGroup`, inputs: both `TryBindInput` overloads, including the indexed rules of "Group data" (a
+  reused slot keeps its index), plus `TryUnbindInput` and `TrySetWakeOnChange`.
+- `TreeGroup`, outputs and actions: `GetCommands`, `TryGetCommands`, `GetFaults`, `GetRootCompletions`,
+  `GetActionEvents`, both `TryComplete` overloads, `TryGetStartPayload`, `TryGetCancelPayload`.
+- Value types: `AgentHandle`, `ActionHandle`, `Command<T>`, `ThinkSchedule`, `RootCompletion`, `AgentFault`,
+  `ActionEvent`, `ActionOutcome`, `RootCompletionPolicy`.
+- `InputChannel<T>` and `CommandChannel<T>`. A channel's id is FNV-1a 64 of its UTF-8 name, and generated
+  catalogs record that number. No specification names this binding id, so changing it would mean
+  regenerating every catalog. None is planned.
+- The short form `[AibtCommand("id")]` (`AIBT.Native`, ADR-P9-005). Hosts use it as well, and it expands to
+  the frozen `AibtCommandBinding`.
+- The rules of "One step", "Determinism" and "Lifetime rules". Digest tests pin them (in place and in jobs,
+  across worker counts), but they are written in a proposed ADR, not in a specification.
+
+**May still change before stable.** For each: why, and what to wrap.
+
+| Member | Why it may change | What a game should do |
+| --- | --- | --- |
+| `TreeSimulation.Step(uint)` | A variant that returns a job handle has been discussed; nothing is designed or recorded in the package yet. A new overload would be added beside `Step(uint)`. | Call `Step` from one place in your loop. |
+| `TreeSimulationSettings.Default`, `TreeGroupSettings.Default`, `AgentTraceSettings.Default` and their `Default…` constants | Defaults are tuned from measurements. `MaximumStepsPerThink` already went from 1 000 000 to 10 000 (P10-011), and G5's 500-agent benchmark may retune `MinimumJobBatch` (64), the command quota (4), the action capacity (2) or the trace capacities (8, 1024, 256). | Set every field you rely on explicitly instead of taking `Default` as it is. |
+| `SimulationResult` | Values were added in G2, G3 and G4. `Unsupported` is no longer returned since G3 and is kept for later stages. The documented code of one misuse was corrected once: the ADR sketch said `InputMissing` for a short input array, and the code returns `InvalidArgument`. | Treat every value other than `Success` as a failure, keep a default branch, and do not store the numbers. |
+| `ThinkReasons`, `AgentTraceFact`, `ActionCancelReason`, `AgentRunState`, `ActionEventKind` | Enums that grow when the container learns a new reason or fact (`ThinkReasons` is a set of flags). | Keep a default branch. Test flags with `&`, not `==`. |
+| `AgentTraceRecord` and the rest of the debugging surface: `AgentTraceInfo`, `AgentTraceSettings`, `AgentDebugState`, `ActivePathNode`, `LiveAction`, `TreeSimulationDebug`, `RegisteredSimulation`, `TrySetTraced`, `TryCopyTrace`, `TryClearTrace`, `TryConfigureTracing`, `TryGetActivePath`, `TryCopyLiveActions`, `DescribeAgent`, `IsTraced`, `TracedCount`, `TraceSettings` | It grows with the tools. 0.2.0 added `AgentTraceRecord.InputRow`, and a value is shown truncated to 16 bytes. The Graph window does not attach to a container agent yet. | Keep it in debug-only code. Do not persist records or parse `DescribeAgent` text. |
+| MCP `runtime_simulations`, `describe_agent`, `read_agent_trace`, and the CLI `runtime simulations` and `agent describe|trace` | The output is JSON for tools. Keys are added: `row` in 0.2.0. | Read keys by name and ignore unknown ones. |
+| `[AibtInput("id")]` | Its own documentation says it is experimental until G5. ADR-P10-008 lists its name under decision D1. | Where a node must not depend on it, write the long form it expands to, which is frozen: `[AibtConfigField(id, "GeneratedHandle", 1u), AibtSnapshotBinding(id, valueTypeId, version)]`. |
+| Generated `BurstAccess` helpers (`TryReadSnapshot`, `TryEmit`, `TryStart`, `TryConsume`, …) | They are generator output in your catalog, not part of the ABI contract. They call the frozen context calls. | None needed beyond regenerating catalogs on a package update. |
+
+Additions that would not break code: a group-shared context (ADR-P10-008, "Provisional slots"), a
+deadline-aware wake, and P12-003's question of how a node reads another squad's row (that one would need a
+node ABI change by ADR).
 
 - The AIBT Graph window's live highlighting and trace timeline for a container agent (G4 gives the
   data and the MCP/CLI tools; the window still binds to hosts only).
