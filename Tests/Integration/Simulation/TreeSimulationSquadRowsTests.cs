@@ -356,9 +356,11 @@ namespace AIBT.Tests.Integration.Simulation
         // ---- 5. reading one input more than once in one callback -----------------------------------------
 
         /// <summary>
-        /// A node that reads "own" twice in one callback (and aims once) needs three value sessions. This catalog
-        /// has three, because compare-squads needs them, so both reads succeed and return the same row. The
-        /// second read works only because of another node in the catalog: see the next test.
+        /// A node that reads "own" twice in one callback (and aims once) needs three value sessions and 28 staging
+        /// bytes (8 + 8 + 12). This catalog has that room because compare-squads needs the same (two inputs, one
+        /// command), so the second read succeeds. The aim carries the first read's members as Own and the second
+        /// read's as Target, so the expected pairs show that the second read returned the agent's row. Here the
+        /// room comes from another node; the next test shows the refusal when there is none.
         /// </summary>
         [TestCase(false)]
         [TestCase(true)]
@@ -368,9 +370,8 @@ namespace AIBT.Tests.Integration.Simulation
                        agents: 4, squads: 3, bindTarget: false))
             {
                 rig.Step(1);
-                Assert.That(rig.Aims(), Is.EquivalentTo(new Dictionary<int, (int, int)> { [0] = (10, 10), [1] = (11, 11), [2] = (12, 12), [3] = (10, 10) }));
-                var aims = rig.Group.GetCommands(Aim);
-                for (var index = 0; index < aims.Length; index++) Assert.That(aims[index].Value.Edge, Is.EqualTo(1f), "both reads agree");
+                Assert.That(rig.Aims(), Is.EquivalentTo(new Dictionary<int, (int, int)> { [0] = (10, 10), [1] = (11, 11), [2] = (12, 12), [3] = (10, 10) }),
+                    "(first read, second read) members per agent");
                 Assert.That(rig.Group.GetFaults().Length, Is.Zero);
                 AssertPath(rig, useJobs);
             }

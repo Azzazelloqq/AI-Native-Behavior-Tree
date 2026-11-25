@@ -75,3 +75,23 @@ testName TreeSimulationSquadRowsTests 13/13 (failed=0 skipped=0)
   purpose (`Callback rejected: TypeMismatch`); that test passed.
 
 **The verifier case was not run again:** the full P2 matrix still fails at baseline.
+
+### After the independent review of `8396202..dccab95` (2026-11-25)
+
+- **`ReadingOneInputTwice_WithRoomInTheCatalog_ReadsTheSameRowTwice` shows only the case with room.** The
+  review found that its `Edge == 1` loop compared a value with itself. That loop is removed. The test keeps
+  the assertion that each agent's order holds (first read, second read) members, both from the row its index
+  selects. Its comment now says where the room comes from: three sessions and 28 staging bytes (8 + 8 + 12),
+  given by the compare-squads node of the same catalog. It does not show that a second read always succeeds,
+  and the documents no longer say so (below).
+- **Documents.** `simulation-container.md`, "Read each input once per callback", and
+  `burst-node-authoring.md`, "Read a binding once per callback", now say what the code does:
+  - each read takes a value session and staging bytes;
+  - the catalog sizes the room for the largest need of any node;
+  - a second read fits or not depending on the rest of the catalog and on what the node already did;
+  - a host that dispatches members together sizes the room for the group (not traced or tested);
+  - so a second read must not be relied on;
+  - the verifier case runs once, outside the package; the full verifier matrix stops before it.
+- **Run** (recompiled first, 23:35–23:37, with `TreeSimulationIndexedInputTests` and
+  `BurstExecutionPathTests`): `testName TreeSimulationSquadRowsTests 13/13 (failed=0 skipped=0)`. No Console
+  error.

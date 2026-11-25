@@ -284,3 +284,46 @@ Modules moved to 7000.0.0a8, with built-in Burst 2.0.0, a shim that forwards to 
   a stale view is therefore not established. The rule above stands: after an internal struct change, check the
   "ran managed" signal before trusting a jobs result.
 - Details: `Planning~/Evidence/P12-004/README.md`.
+
+## After the independent review of `8396202..dccab95` (2026-11-25)
+
+The review noted that the S1 test still ended Inconclusive under the old caps (at least 120 steps; at
+most 6000 steps or 90 s), so it could not fail when the job ran managed, as it did after the recompile at
+23:05.
+
+**Decision: the same approach as P12-004, and a failure instead of Inconclusive.** A test meant to prove that
+the indexed routine runs Burst-compiled proves nothing if a managed run only makes it Inconclusive. The test
+now:
+- turns `BurstCompiler.Options.EnableBurstCompileSynchronously` on for its own run if it was off, and turns it
+  back off in a `finally`;
+- waits up to 300 s (`BurstWaitSeconds`), counted in seconds only, with at least 120 steps; the 6000-step cap
+  is gone;
+- fails (`Assert.That(settled, Is.GreaterThanOrEqualTo(10))`) when the agents did not run Burst for 10 steps
+  in a row within that bound;
+- has `[Timeout(900000)]`, as P12-004's class.
+
+The cost is the same as P12-004's: on a cold cache the first step blocks the Editor's main thread while Burst
+compiles, and an Editor killed during the test leaves the option on in EditorPrefs. The 300 s bound is still
+needed: a request scheduled asynchronously earlier in the same domain may still be compiling when the option
+is turned on. Burst off still gives `Assume` (Inconclusive): there is nothing to prove then.
+
+**Run** (recompiled first; with `TreeSimulationSquadRowsTests` and `BurstExecutionPathTests`, 23:35–23:37):
+
+```
+testName TreeSimulationIndexedInputTests 45/45 (failed=0 skipped=0)
+P12-002 review S1: 10 steps, 47,9 s, first Burst step 1, managed steps 0, Burst steps 10, synchronous Burst compilation on for this test
+```
+
+- The recompile had made the job stale, as at 23:05. This time the first step waited about 48 s for the
+  compilation and every step ran Burst; nothing ran managed.
+- The option read before and after the run: False both times, in the options and in EditorPrefs.
+- **Not run:** the failing branch, and Burst off.
+
+**`TryReserve_WithWakeOn_KeepsWhatEachAgentLastSaw` (a §4 test above) is strengthened.** The review found that
+it could not tell a kept last-seen value from a cleared seen flag: `InputChanged` skips an agent whose seen
+flag is 0, so an agent that lost its flag would also not wake, and the old checks passed either way. The test
+now changes row 0 before tick 7, when agent 0 is not due (it last thought at tick 5, before the reserve),
+and asserts that tick 7 runs exactly agents 0, 2 and 4: agent 0 woken by the input against what it saw
+before the reserve, agent 2 due, the newcomer every tick, and both readers of row 0 read 444. A cleared seen
+flag would leave agent 0 asleep and fail that assertion. The rest of the test is unchanged. Passed in the
+run above (both `False` and `True` cases are among the 45).

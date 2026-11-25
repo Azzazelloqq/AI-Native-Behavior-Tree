@@ -828,9 +828,12 @@ namespace AIBT.Tests.Integration.Simulation
 
         private const int BurstSettledSteps = 10;
         private const int BurstMinimumSteps = 120;
-        private const int BurstMaximumSteps = 6000;
-        // As P11-014's BurstExecutionPathTests: the first asynchronous compilation of a catalog's job can take long.
-        private const double BurstWaitSeconds = 90.0;
+        // As P12-004's BurstExecutionPathTests: counted in seconds only. With synchronous compilation on, a job
+        // whose compilation this test requests runs Burst from its first step; the bound covers a compilation
+        // that another test of the assembly requested asynchronously earlier in the domain (90 to 206 s were
+        // seen after a recompile, Planning~/Evidence/P12-004/README.md).
+        private const double BurstWaitSeconds = 300.0;
+        private const int BurstTestTimeoutMilliseconds = 900_000;
 
         /// <summary>
         /// Review follow-up S1, built as P11-014's <c>BurstExecutionPathTests</c>: the agent-frame job runs the
@@ -839,66 +842,79 @@ namespace AIBT.Tests.Integration.Simulation
         /// step (Ally = 1000 × tick + row), so only the indexed routine reading this step's copy gives the expected
         /// orders. One step per Editor frame, every step checked, until every agent's last job run is Burst
         /// (<c>AgentFrameAgentV1.RanManaged</c> is set by a <c>[BurstDiscard]</c> call) for
-        /// <see cref="BurstSettledSteps"/> steps in a row. Burst off, or not settled within
-        /// <see cref="BurstMinimumSteps"/> steps and <see cref="BurstWaitSeconds"/> seconds (at most
-        /// <see cref="BurstMaximumSteps"/>): Inconclusive, not passed. A job compiled against a stale runtime
+        /// <see cref="BurstSettledSteps"/> steps in a row. A job compiled against a stale runtime
         /// (Planning~/Evidence/P12-002/README.md, "The Burst finding") gives wrong orders and fails.
+        /// As P12-004's <c>BurstExecutionPathTests</c>, the test turns on synchronous Burst compilation for its
+        /// own run when it is off and restores it after, so a job compiled at its first schedule is Burst from
+        /// the first step. On a cold cache that first step blocks the Editor until the job is compiled.
+        /// Not settled within <see cref="BurstMinimumSteps"/> steps and <see cref="BurstWaitSeconds"/> seconds:
+        /// fails (it was Inconclusive before; a proof that cannot fail when the job runs managed proves nothing).
+        /// Burst off: not run (<c>Assume</c>).
         /// </summary>
-        [UnityTest]
+        [UnityTest, Timeout(BurstTestTimeoutMilliseconds)]
         public IEnumerator AgentFrameJob_RunsTheIndexedRoutineBurstCompiled()
         {
             Assume.That(BurstCompiler.IsEnabled, Is.True, "Burst compilation is off in this Editor (Jobs > Burst > Enable Compilation)");
             const int agents = 12;
             const int rows = 5;
-            using (var rig = NewRig(Program(ReportTree), true, agents, rows, slot => slot == 11 ? -1 : (slot + 2) % rows, capacity: 16))
+            var restoreSynchronous = !BurstCompiler.Options.EnableBurstCompileSynchronously;
+            try
             {
-                var clock = System.Diagnostics.Stopwatch.StartNew();
-                var settled = 0;
-                var firstBurstTick = 0u;
-                var managedSteps = 0;
-                var burstSteps = 0;
-                uint tick = 0;
-                while (tick < BurstMaximumSteps)
+                if (restoreSynchronous) BurstCompiler.Options.EnableBurstCompileSynchronously = true;
+                using (var rig = NewRig(Program(ReportTree), true, agents, rows, slot => slot == 11 ? -1 : (slot + 2) % rows, capacity: 16))
                 {
-                    tick++;
-                    for (var row = 0; row < rows; row++)
-                        rig.Rows[row] = new SenseInput { Threat = row / 8f, Ally = (int)(1000 * tick) + row, Flag = (row & 1) != 0 };
-                    var batches = rig.Group.JobBatchesForTests;
-                    rig.Step(tick);
-                    Assert.That(rig.Group.JobBatchesForTests, Is.EqualTo(batches + 1), "tick " + tick + ": the agent-frame job ran");
-                    var orders = rig.Orders();
-                    Assert.That(orders.Keys, Is.EquivalentTo(Enumerable.Range(0, agents)), "tick " + tick);
-                    for (var slot = 0; slot < agents; slot++)
+                    var clock = System.Diagnostics.Stopwatch.StartNew();
+                    var settled = 0;
+                    var firstBurstTick = 0u;
+                    var managedSteps = 0;
+                    var burstSteps = 0;
+                    uint tick = 0;
+                    while (true)
                     {
-                        var row = slot == 11 ? -1 : (slot + 2) % rows;
-                        var expectedAlly = row < 0 ? 0 : (int)(1000 * tick) + row;
-                        Assert.That(orders[slot].Target, Is.EqualTo(expectedAlly), "tick " + tick + " slot " + slot);
-                        Assert.That(orders[slot].Strength, Is.EqualTo(row < 0 ? 0f : row / 8f), "tick " + tick + " slot " + slot);
-                    }
+                        tick++;
+                        for (var row = 0; row < rows; row++)
+                            rig.Rows[row] = new SenseInput { Threat = row / 8f, Ally = (int)(1000 * tick) + row, Flag = (row & 1) != 0 };
+                        var batches = rig.Group.JobBatchesForTests;
+                        rig.Step(tick);
+                        Assert.That(rig.Group.JobBatchesForTests, Is.EqualTo(batches + 1), "tick " + tick + ": the agent-frame job ran");
+                        var orders = rig.Orders();
+                        Assert.That(orders.Keys, Is.EquivalentTo(Enumerable.Range(0, agents)), "tick " + tick);
+                        for (var slot = 0; slot < agents; slot++)
+                        {
+                            var row = slot == 11 ? -1 : (slot + 2) % rows;
+                            var expectedAlly = row < 0 ? 0 : (int)(1000 * tick) + row;
+                            Assert.That(orders[slot].Target, Is.EqualTo(expectedAlly), "tick " + tick + " slot " + slot);
+                            Assert.That(orders[slot].Strength, Is.EqualTo(row < 0 ? 0f : row / 8f), "tick " + tick + " slot " + slot);
+                        }
 
-                    var managed = ManagedAgentsInTable(rig.Group, agents);
-                    if (managed == 0)
-                    {
-                        burstSteps++;
-                        settled++;
-                        if (firstBurstTick == 0) firstBurstTick = tick;
+                        var managed = ManagedAgentsInTable(rig.Group, agents);
+                        if (managed == 0)
+                        {
+                            burstSteps++;
+                            settled++;
+                            if (firstBurstTick == 0) firstBurstTick = tick;
+                        }
+                        else
+                        {
+                            managedSteps++;
+                            settled = 0;
+                        }
+                        if (settled >= BurstSettledSteps) break;
+                        if (tick >= BurstMinimumSteps && clock.Elapsed.TotalSeconds >= BurstWaitSeconds) break;
+                        // One Editor frame between steps, so the asynchronous Burst compilation can finish.
+                        yield return null;
                     }
-                    else
-                    {
-                        managedSteps++;
-                        settled = 0;
-                    }
-                    if (settled >= BurstSettledSteps) break;
-                    if (tick >= BurstMinimumSteps && clock.Elapsed.TotalSeconds >= BurstWaitSeconds) break;
-                    // One Editor frame between steps, so the asynchronous Burst compilation can finish.
-                    yield return null;
+                    var summary = "P12-002 review S1: " + tick + " steps, " + clock.Elapsed.TotalSeconds.ToString("0.0") + " s, first Burst step "
+                                  + (firstBurstTick == 0 ? "none" : firstBurstTick.ToString()) + ", managed steps " + managedSteps + ", Burst steps " + burstSteps
+                                  + ", synchronous Burst compilation " + (restoreSynchronous ? "on for this test" : "already on");
+                    UnityEngine.Debug.Log(summary);
+                    Assert.That(settled, Is.GreaterThanOrEqualTo(BurstSettledSteps),
+                        "The agent-frame job did not run Burst-compiled for " + BurstSettledSteps + " steps in a row within the bound (" + summary + ").");
                 }
-                var summary = "P12-002 review S1: " + tick + " steps, " + clock.Elapsed.TotalSeconds.ToString("0.0") + " s, first Burst step "
-                              + (firstBurstTick == 0 ? "none" : firstBurstTick.ToString()) + ", managed steps " + managedSteps + ", Burst steps " + burstSteps;
-                UnityEngine.Debug.Log(summary);
-                if (settled < BurstSettledSteps)
-                    Assert.Inconclusive("The agent-frame job did not run Burst-compiled for " + BurstSettledSteps + " steps in a row within the bound ("
-                                        + summary + "): Burst may still be compiling.");
+            }
+            finally
+            {
+                if (restoreSynchronous) BurstCompiler.Options.EnableBurstCompileSynchronously = false;
             }
         }
 
@@ -1027,9 +1043,14 @@ namespace AIBT.Tests.Integration.Simulation
         }
 
         /// <summary>
-        /// TryReserve with wake on keeps what each agent last saw. After the reserve (and the indices rebound, at
-        /// least Capacity long) nothing unchanged wakes anyone; a row change wakes exactly the members of that row
-        /// that are not due; an agent added in a grown slot reads its row.
+        /// TryReserve with wake on keeps what each agent last saw. Spread(5) makes slot s due at ticks ≡ s (mod 5).
+        /// After the reserve (and the indices rebound, at least Capacity long):
+        /// - at tick 6 nothing unchanged wakes anyone (what was seen is not zeroed while kept as seen);
+        /// - before tick 7, row 0 changes. Agent 0 last thought at tick 5, before the reserve, and is not due
+        ///   at 7, so it is woken only if what it saw before the reserve was kept. If the reserve dropped it
+        ///   (Seen cleared), agent 0 would not think at 7;
+        /// - a row 1 change wakes exactly the members of that row that are not due;
+        /// - an agent added in a grown slot reads its row.
         /// </summary>
         [TestCase(false)]
         [TestCase(true)]
@@ -1050,7 +1071,15 @@ namespace AIBT.Tests.Integration.Simulation
                 rig.Agents.Add(newcomer);
                 rig.Step(6);
                 Assert.That(rig.Thinks(6).Keys, Is.EquivalentTo(new[] { 1, 4 }), "agent 1 is due, the newcomer thinks every tick; nothing changed, nobody wakes");
+                rig.Rows[0] = new SenseInput { Threat = 0.25f, Ally = 444, Flag = false };
                 rig.Step(7);
+                var afterRowZero = rig.Thinks(7);
+                Assert.That(afterRowZero.Keys, Is.EquivalentTo(new[] { 0, 2, 4 }),
+                    "agent 0 is woken against what it saw before the reserve; agent 2 is due; the newcomer thinks every tick");
+                AssertWokenByInput(afterRowZero[0], "agent 0 (last thought at tick 5, before the reserve)");
+                var alliesAtSeven = rig.Allies();
+                Assert.That(alliesAtSeven[0], Is.EqualTo(444), "agent 0 reads the changed row 0");
+                Assert.That(alliesAtSeven[2], Is.EqualTo(444), "agent 2 reads the changed row 0");
                 rig.Rows[1] = new SenseInput { Threat = 0.5f, Ally = 555, Flag = true };
                 rig.Step(8);
                 var thinks = rig.Thinks(8);
