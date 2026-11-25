@@ -330,25 +330,42 @@ namespace AIBT.Tests.Runtime.NativeExecution.Blackboard.Shared
             }
         }
 
+        /// <summary>
+        /// The selection-window owner is created once, before the measured loop, as a host creates it at
+        /// initialization: creating one allocates the managed owner object (192 bytes on 7000.0.0a8 in the
+        /// Editor, P12-008), and that is set-up, not the update lifecycle this test pins. On Mono the thread
+        /// counter returned 0 in the Editor, so the assertion could not fail there; on CoreCLR it counts.
+        /// </summary>
         [Test]
         public void InitializedContributionLifecycleAllocatesNoManagedMemory()
         {
             using (var fixture = ContributionFixture.Create(1, 4))
             using (var candidate = One(7))
             {
-                RunOne(fixture, candidate);
-                var before = GC.GetAllocatedBytesForCurrentThread();
-                var success = true;
-                for (var index = 0; index < 32; index++) success &= RunOne(fixture, candidate);
-                var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-                Assert.That(success, Is.True);
-                Assert.That(allocated, Is.Zero);
+                Assert.That(NativeExecuteSelectionWindowOwnerV1.TryCreate(
+                    new NativeExecuteSelectionCapacityV1(1, 1), Allocator.Persistent,
+                    out var selectionOwner, out var failure), Is.True, failure.Code.ToString());
+                try
+                {
+                    RunOne(fixture, candidate, selectionOwner);
+                    var before = GC.GetAllocatedBytesForCurrentThread();
+                    var success = true;
+                    for (var index = 0; index < 32; index++) success &= RunOne(fixture, candidate, selectionOwner);
+                    var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+                    Assert.That(success, Is.True);
+                    Assert.That(allocated, Is.Zero);
+                }
+                finally
+                {
+                    Assert.That(selectionOwner.TryDispose(out failure), Is.True, failure.Code.ToString());
+                }
             }
         }
 
-        private static bool RunOne(ContributionFixture fixture, NativeArray<int> candidate)
+        private static bool RunOne(
+            ContributionFixture fixture, NativeArray<int> candidate, NativeExecuteSelectionWindowOwnerV1 selectionOwner)
         {
-            if (!fixture.TryBegin()) return false;
+            if (!fixture.TryBegin(selectionOwner)) return false;
             if (!fixture.TryAcquire(out var execution, out var contribution)) return false;
             if (NativeSharedBlackboardV1.TryContribute(
                 contribution.Writer, 0, 0,
@@ -466,10 +483,21 @@ namespace AIBT.Tests.Runtime.NativeExecution.Blackboard.Shared
                 };
             }
 
+            private bool _ownsSelectionOwner;
+
             internal void Begin() => Assert.That(TryBegin(), Is.True);
-            internal bool TryBegin()
+            internal bool TryBegin() => TryBegin(null);
+
+            /// <summary>
+            /// Begins one update. With <paramref name="reused"/> null the fixture creates a selection-window
+            /// owner for this update and disposes it in <see cref="TryAbort"/>; otherwise it uses the caller's
+            /// owner and leaves it alive.
+            /// </summary>
+            internal bool TryBegin(NativeExecuteSelectionWindowOwnerV1 reused)
             {
-                if (!NativeExecuteSelectionWindowOwnerV1.TryCreate(
+                _ownsSelectionOwner = reused == null;
+                if (reused != null) SelectionOwner = reused;
+                else if (!NativeExecuteSelectionWindowOwnerV1.TryCreate(
                     new NativeExecuteSelectionCapacityV1(1, 1), Allocator.Persistent,
                     out SelectionOwner, out _)) return false;
                 var entries = new NativeArray<NativeExecuteSelectionEntryV1>(1, Allocator.Temp);
@@ -505,7 +533,7 @@ namespace AIBT.Tests.Runtime.NativeExecution.Blackboard.Shared
             {
                 if (!Scenario.Context.TryAbortUpdate(Update, out _)) return false;
                 if (!SelectionOwner.TryAbort(Selection, out _)) return false;
-                if (!SelectionOwner.TryDispose(out _)) return false;
+                if (_ownsSelectionOwner && !SelectionOwner.TryDispose(out _)) return false;
                 SelectionOwner = null; Selection = default; Update = default;
                 return true;
             }
@@ -516,7 +544,7 @@ namespace AIBT.Tests.Runtime.NativeExecution.Blackboard.Shared
                 {
                     Scenario.Context.TryAbortUpdate(Update, out _);
                     SelectionOwner.TryAbort(Selection, out _);
-                    SelectionOwner.TryDispose(out _);
+                    if (_ownsSelectionOwner) SelectionOwner.TryDispose(out _);
                 }
                 Tree.Dispose();
                 Scenario.Dispose();

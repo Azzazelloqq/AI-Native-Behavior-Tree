@@ -21,6 +21,10 @@ All notable changes to this project will be documented here. The project follows
   `BlackboardReadHandle<int>` size with `Marshal.SizeOf<T>()`, which CoreCLR (Unity 7) refuses for a generic
   type; it now measures the same 8-byte pin with `Marshal.SizeOf(object)` and `UnsafeUtility.SizeOf<T>()`.
   Every pinned size and offset holds on Unity 7; the manifest is unchanged.
+- **The Shared contribution allocation test no longer counts its fixture (P12-008).** On CoreCLR the thread
+  allocation counter works and showed 192 bytes per update: the test fixture created a selection-window owner
+  (a class) per update. The test now creates one owner before the measured loop; the contribution lifecycle
+  itself allocates nothing.
 - **One rows array behind two input channels, and a second read of one input (P12-003).**
   `TreeSimulationSquadRowsTests` pins one rows array bound to two channels of one row type with two index
   arrays, read in one think, in place and in jobs: wake on one channel only, rebinding one channel, and an
