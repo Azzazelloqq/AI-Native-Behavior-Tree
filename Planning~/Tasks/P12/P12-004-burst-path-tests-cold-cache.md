@@ -58,7 +58,8 @@ they passed:
    mismatch, as before. No `Inconclusive` was added. The failure message now says whether synchronous
    compilation was on.
 4. **Timeouts.** The three tests get `[Timeout(900000)]`. One compile wait of 300 s plus six paths of 8 s
-   would exceed the runner's default of 180 s.
+   would exceed the runner's default of 180 s (that default is taken from the test framework's documentation
+   and was not checked in this Editor).
 
 Why not the other routes:
 
@@ -130,21 +131,29 @@ from the 1.8.29 package source; what runs here now is different:
   `UnityEditor.BurstModule`. The answers below are read from the running Editor by reflection.
 - **No recompilation from the option.** `set_EnableBurstCompileSynchronously` calls only `OnOptionsChanged`, not
   `MaybeTriggerRecompilation`.
-- **The option is persisted.** `BurstEditorOptions.GlobalOnOptionsChanged` writes every option to EditorPrefs
-  (key `BurstCompileSynchronously`) and to SessionState. So the side effect named above holds on Burst 2.0.0.
+- **The option is persisted.** `BurstEditorOptions.GlobalOnOptionsChanged` writes it to EditorPrefs (key
+  `BurstCompileSynchronously`), not to SessionState; its only SessionState write is `BurstSafetyChecks`. (An
+  earlier version of this card said SessionState too; the IL read after the review shows otherwise.)
+  EditorPrefs are per user and machine, so the side effect named above holds on Burst 2.0.0 for every project
+  of that user.
 - **JIT cache: `Library/BurstCache/JIT`** (`BurstCompilerOptions.DefaultCacheFolder`).
 - **Old test, cold: 1/3.** The agent-frame path was managed for 6000 frames, 2.3 s, and the 3D parity test's
   90 s wait was not enough. This is the consumer's failure, reproduced.
 - **Changed test, cold: 3/3.** The agent-frame path was Burst from its first frame, but that frame blocked for
-  about 173 s while the job compiled, inside the 900 s timeout.
+  about 173 s while the job compiled, inside the 900 s timeout. The block is on the Editor's main thread, so
+  no test timeout can stop it; a timeout would be reported only after it ends (inferred).
+- **What cold B ran on:** `f8ede04` plus 11 uncommitted working-tree entries (this item's test and the
+  P12-003 and P12-005 edits), not `a40e7cc`. The tables, the 173 s and the option reads come from the
+  Console and `script eval`, not from the raw files.
 - **Changed test, warm: 3/3**, as the second run in the same domain; the first Burst frame came after 0.5 s.
 - **The option is unchanged by the class:** False before and after, in the options and in EditorPrefs.
 - **Not run:**
   - a warm cache in a freshly started Editor;
   - the failing branch with the new test;
   - Burst off.
-- **After the runs**, only a doc comment of the test was changed (it named 1.8.29 only). The class compiled
-  again but was not rerun.
+- **After the runs**, only a doc comment of the test was changed (it named 1.8.29 only), and then, after the
+  independent review, the set-up: the restore flag is set before the option, and a setter that throws is
+  undone in the set-up itself. That text was run at 23:35–23:37: 3/3, option False before and after.
 - **The P12-002 stale view was not re-provoked** (no internal struct change). No Burst error was logged in this
   Editor session, and the probes show the current code on Burst.
 

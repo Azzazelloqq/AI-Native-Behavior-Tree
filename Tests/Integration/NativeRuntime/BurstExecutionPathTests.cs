@@ -69,13 +69,23 @@ namespace AIBT.Tests.Integration.NativeRuntime
         /// Burst writes its options to EditorPrefs on every change (<c>BurstEditorOptions.GlobalOnOptionsChanged</c>,
         /// in Burst 1.8.29 and in the built-in Burst 2.0.0 of 7000.0.0a8), so the old value is written back in
         /// <see cref="RestoreCompilation"/>. The option triggers no recompilation in either.
+        /// The flag is set before the option, and a setter that throws is undone here: NUnit runs a
+        /// one-time teardown only after a one-time set-up that completed.
         /// </summary>
         [OneTimeSetUp]
         public void CompileSynchronously()
         {
             if (!BurstCompiler.IsEnabled || BurstCompiler.Options.EnableBurstCompileSynchronously) return;
-            BurstCompiler.Options.EnableBurstCompileSynchronously = true;
             _restoreSynchronous = true;
+            try
+            {
+                BurstCompiler.Options.EnableBurstCompileSynchronously = true;
+            }
+            catch
+            {
+                RestoreCompilation();
+                throw;
+            }
         }
 
         /// <summary>Restores the synchronous-compilation option this class turned on.</summary>
