@@ -266,3 +266,21 @@ The should-fix findings of the independent read and the orchestrator's two proce
   - The P12-001 refusal was not exercised: its folder name is a per-second time stamp, so it cannot be seeded in advance.
 
 **Left out.** The case of a teardown that reads an input: no fixture node reads an input outside `Tick` (every `TryReadSnapshot` in `Tests/Editor/CodeGen` is in a `Tick`), and `Tests/Fixtures` is protected.
+
+## On Unity 7000.0.0a8 (2026-11-25)
+
+Modules moved to 7000.0.0a8, with built-in Burst 2.0.0, a shim that forwards to the Editor's Burst module.
+
+- **`AgentFrameJob_RunsTheIndexedRoutineBurstCompiled` (the S1 test) passed under Burst** at 23:04, in the Editor
+  that the P12-004 cold run B had started: `10 steps, 0,5 s, first Burst step 1, managed steps 0, Burst steps 10`.
+  Each step's orders are values that only the indexed routine gives, so the current routine ran Burst-compiled.
+- **After a recompile, its Inconclusive branch ran once, as designed.** At 23:05 `AIBT.Integration.Tests` was
+  recompiled after a doc-comment edit. The next run (23:07–23:09) gave
+  `1790 steps, 90,0 s, first Burst step none, managed steps 1790`, while the job compiled asynchronously.
+  The rerun at 23:11 passed under Burst. `TreeSimulationIndexedInputTests` in that run: 44/45, 0 failed.
+- **The stale Burst view was not re-provoked.** That needs a change to an internal struct in a running Editor;
+  no runtime struct was changed. No `Burst internal compiler error`, `Failed to resolve field` or
+  `Error while hashing` line is in `Logs/Editor.log` of that session. Whether Burst 2.0.0 of 7000.0.0a8 can keep
+  a stale view is therefore not established. The rule above stands: after an internal struct change, check the
+  "ran managed" signal before trusting a jobs result.
+- Details: `Planning~/Evidence/P12-004/README.md`.
