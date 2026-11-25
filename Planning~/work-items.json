@@ -4,6 +4,20 @@
   "sourceBranch": "main",
   "items": [
     {
+      "id": "P12-008", "phase": 12, "title": "Shared contribution allocation test on CoreCLR (full run on dccab95, Unity 7): the 192 bytes per cycle are the test fixture creating a selection-window owner (a class) per update; the test now creates one owner before the measured loop; the runtime lifecycle allocates nothing (measured step by step); test only",
+      "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P12/P12-008-shared-contribution-allocation-test.md",
+      "dependsOn": [],
+      "owns": ["Planning~/Evidence/P12-008/"]
+    },
+    {
+      "id": "P12-007", "phase": 12, "title": "ABI layout pin test on CoreCLR (full run on dccab95, Unity 7): Marshal.SizeOf<T>() refuses a generic type on CoreCLR, so the BlackboardReadHandle<int> size pin is measured with Marshal.SizeOf(object) and UnsafeUtility.SizeOf<T>(); every pinned size and offset holds on Unity 7; test only",
+      "status": "review", "kind": "implementation",
+      "card": "Planning~/Tasks/P12/P12-007-abi-pin-test-on-coreclr.md",
+      "dependsOn": [],
+      "owns": ["Planning~/Evidence/P12-007/"]
+    },
+    {
       "id": "P12-006", "phase": 12, "title": "Simulation container API stability (SweetKingdom feedback on 0.2.0, item C): a section of simulation-container.md, built from the code, with what is frozen (the node ABI v2 handles and bindings), what is experimental with no change planned, and what may still change before stable, with the reason and what to wrap; documentation only",
       "status": "review", "kind": "implementation",
       "card": "Planning~/Tasks/P12/P12-006-simulation-api-stability.md",

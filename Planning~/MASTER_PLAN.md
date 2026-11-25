@@ -1241,6 +1241,10 @@ Unity 7 compile). The owner moved Modules to 7000.0.0a8 that day, so both were c
 day and are in `Review`: the old Burst path test failed with a cold cache as the consumer's did and the changed one
 passes cold and warm; the warnings are gone and the affected tests pass. `P12-006` documents what of the simulation container is frozen and what may
 still change before stable; it is in `Review`.
+The full run on Unity 7 (`dccab95`) failed two tests that the move to CoreCLR exposed, both test defects:
+`P12-007` (an ABI pin measured with `Marshal.SizeOf<T>()`, which CoreCLR refuses for a generic type; every pin
+holds) and `P12-008` (an allocation test that counted its own fixture once the thread counter started working);
+both are in `Review`.
 
 Phase 12 candidates, recorded and not started (no work item until they are taken up):
 
