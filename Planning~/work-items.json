@@ -25,8 +25,8 @@
       "owns": ["Planning~/Evidence/P12-004/"]
     },
     {
-      "id": "P12-003", "phase": 12, "title": "Read-only game arrays in nodes (SweetKingdom request 2): ADR with an independent read and a prototype (copy per step against a job-safe view; AtomicSafetyHandle against game jobs) before any code; not started, after P12-002",
-      "status": "draft", "kind": "spike",
+      "id": "P12-003", "phase": 12, "title": "Read-only game arrays in nodes (SweetKingdom request 2): not built, settled 2026-11-25 with the consumer (0.2.0 is enough); recipes documented in simulation-container.md (Game data that is not per agent), the two-channel test and the second-read behaviour tested; shape E1, the reopen condition and the prototype plan recorded in the card",
+      "status": "review", "kind": "spike",
       "card": "Planning~/Tasks/P12/P12-003-read-only-game-arrays.md",
       "dependsOn": ["P12-002"],
       "owns": ["Planning~/Evidence/P12-003/"]
