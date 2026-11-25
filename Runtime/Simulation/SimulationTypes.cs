@@ -24,6 +24,10 @@ namespace AIBT.Simulation
         /// <summary>
         /// An argument is out of range: an interval of 0, a capacity below the current one, a tick whose
         /// time overflows, or a program the container cannot run (see <see cref="TreeSimulation.TryAddGroup"/>).
+        /// <see cref="TreeSimulation.Step"/> also returns it, without running anything, for an input array of
+        /// an active group shorter than its capacity and (P12-002) for an indexed input channel whose index
+        /// array is shorter than the group's capacity, or whose index in the slot of a live agent is at or
+        /// beyond the length of its rows array.
         /// </summary>
         InvalidArgument = 6,
         /// <summary>

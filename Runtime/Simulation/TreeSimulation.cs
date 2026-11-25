@@ -144,7 +144,9 @@ namespace AIBT.Simulation
         /// since the last step were applied when called; each woke its agent for this step.
         /// Returns <see cref="SimulationResult.TickNotIncreasing"/> (tick not greater than the last one),
         /// <see cref="SimulationResult.InvalidArgument"/> (time overflows a signed 64-bit microsecond
-        /// count), <see cref="SimulationResult.Busy"/> or <see cref="SimulationResult.Disposed"/> without
+        /// count; an input array of an active group is shorter than its capacity; P12-002: an indexed input
+        /// channel's index array is shorter than the group's capacity, or its index in the slot of a live
+        /// agent is at or beyond the length of its rows array), <see cref="SimulationResult.Busy"/> or <see cref="SimulationResult.Disposed"/> without
         /// running anything. A failing agent never fails the step: it is reported in
         /// <see cref="TreeGroup.GetFaults"/>. Allocates no managed memory after warm-up and logs nothing.
         /// </summary>

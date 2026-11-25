@@ -52,11 +52,14 @@ namespace AIBT.Tests.Integration.Simulation
         {
             if (System.Environment.GetEnvironmentVariable(Switch) != "1")
                 Assert.Ignore("P12-001 measurement: set the Editor process environment variable " + Switch + "=1 to run it.");
+            var folder = Path.Combine(Path.GetTempPath(), "aibt-p12001-wake-cost", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
+            // P12-002 review follow-up: never overwrite an earlier run's raw data.
+            if (File.Exists(Path.Combine(folder, "steps.csv")))
+                Assert.Fail("P12-001 measurement: " + folder + " already holds steps.csv from an earlier run; start it again in a new second.");
+            Directory.CreateDirectory(folder);
             var asset = TreeSimulationReactivePatternTests.PrepareAsset(TreeSimulationReactivePatternTests.SelectorTree);
             Assert.That(asset.TryCreateProgram(ReactivePatternCatalog.TryCreateRuntimeCatalog, out var program, out var failure), Is.True, failure.ToString());
             var cells = new List<Cell>();
-            var folder = Path.Combine(Path.GetTempPath(), "aibt-p12001-wake-cost", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
-            Directory.CreateDirectory(folder);
             var csv = new StringBuilder("round,order,path,variant,step,tick,us,thinks,wokenByInput\n");
             try
             {

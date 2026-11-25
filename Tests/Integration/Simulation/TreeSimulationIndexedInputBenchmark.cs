@@ -73,13 +73,16 @@ namespace AIBT.Tests.Integration.Simulation
         {
             if (System.Environment.GetEnvironmentVariable(Switch) != "1")
                 Assert.Ignore("P12-002 measurement: set the Editor process environment variable " + Switch + "=1 to run it.");
-            var asset = TreeSimulationIoTests.PrepareIoAsset(TreeSimulationIndexedInputTests.ReportTree);
-            Assert.That(asset.TryCreateProgram(SimulationIoCatalog.TryCreateRuntimeCatalog, out var program, out var failure), Is.True, failure.ToString());
-            var cells = new List<Cell>();
             var folder = System.Environment.GetEnvironmentVariable(FolderVariable);
             if (string.IsNullOrEmpty(folder))
                 folder = Path.Combine(Path.GetTempPath(), "aibt-p12002-indexed-input", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
+            // Review follow-up: never overwrite an earlier run's raw data.
+            if (File.Exists(Path.Combine(folder, "steps.csv")))
+                Assert.Fail("P12-002 measurement: " + folder + " already holds steps.csv from an earlier run; name a new folder in " + FolderVariable + ".");
             Directory.CreateDirectory(folder);
+            var asset = TreeSimulationIoTests.PrepareIoAsset(TreeSimulationIndexedInputTests.ReportTree);
+            Assert.That(asset.TryCreateProgram(SimulationIoCatalog.TryCreateRuntimeCatalog, out var program, out var failure), Is.True, failure.ToString());
+            var cells = new List<Cell>();
             var steps = new StringBuilder("round,order,position,path,variant,step,tick,us,writeUs,wokenByInput,orders\n");
             var blocks = new StringBuilder("round,order,position,path,variant,gcAllocSamples,digest,faults,jobBatches,managedAgentsLastBatch\n");
             var stepUs = new double[MeasuredSteps];

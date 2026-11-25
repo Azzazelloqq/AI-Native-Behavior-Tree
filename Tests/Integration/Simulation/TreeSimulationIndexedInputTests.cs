@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -7,9 +8,12 @@ using AIBT.Mcp;
 using AIBT.Simulation;
 using AIBT.Tests.CodeGen.GenerationP10010;
 using NUnit.Framework;
+using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Jobs.LowLevel.Unsafe;
+using UnityEngine.TestTools;
 using static AIBT.Tests.Integration.Simulation.SimulationTestPrograms;
 
 namespace AIBT.Tests.Integration.Simulation
@@ -671,7 +675,8 @@ namespace AIBT.Tests.Integration.Simulation
 
         /// <summary>
         /// S1, S2: 500 agents with Spread(5), 50 rows, wake on, every row and every index rewritten before
-        /// every step: no managed allocation in 100 warmed-up steps.
+        /// every step: no managed allocation in 100 warmed-up steps, counted by the GC.Alloc profiler recorder
+        /// (review follow-up: GC.GetAllocatedBytesForCurrentThread reports 0 in this Editor, so it is not used).
         /// </summary>
         [TestCase(false)]
         [TestCase(true)]
@@ -701,7 +706,6 @@ namespace AIBT.Tests.Integration.Simulation
                 recorder.enabled = false;
                 recorder.enabled = true;
                 orders = 0;
-                var before = GC.GetAllocatedBytesForCurrentThread();
                 for (var n = 0; n < 100; n++)
                 {
                     tick++;
@@ -709,12 +713,10 @@ namespace AIBT.Tests.Integration.Simulation
                     rig.Simulation.Step(tick);
                     orders += rig.Group.GetCommands(Order).Length;
                 }
-                var bytes = GC.GetAllocatedBytesForCurrentThread() - before;
                 recorder.enabled = false;
                 var blocks = recorder.sampleBlockCount;
                 Assert.That(rig.Simulation.LastTick, Is.EqualTo(tick), "Every measured step ran.");
                 Assert.That(orders, Is.GreaterThan(100 * agents / 5), "Agents read rows and give orders, woken ones included.");
-                Assert.That(bytes, Is.Zero, bytes + " managed bytes allocated in 100 warmed-up steps.");
                 Assert.That(blocks, Is.Zero, blocks + " GC.Alloc samples in 100 warmed-up steps.");
                 AssertPath(rig, useJobs);
             }
@@ -819,6 +821,301 @@ namespace AIBT.Tests.Integration.Simulation
                 {
                     TreeSimulationDebug.Unregister(rig.Simulation);
                 }
+            }
+        }
+
+        // ---- 18. review follow-up S1: the agent-frame job runs the indexed routine under Burst ----------------
+
+        private const int BurstSettledSteps = 10;
+        private const int BurstMinimumSteps = 120;
+        private const int BurstMaximumSteps = 6000;
+        // As P11-014's BurstExecutionPathTests: the first asynchronous compilation of a catalog's job can take long.
+        private const double BurstWaitSeconds = 90.0;
+
+        /// <summary>
+        /// Review follow-up S1, built as P11-014's <c>BurstExecutionPathTests</c>: the agent-frame job runs the
+        /// indexed routine Burst-compiled. Twelve agents (Capacity 16) read 5 rows through indices that are never
+        /// their slot (slot s reads (s + 2) % 5; slot 11 reads -1, "no row"); the rows are rewritten before every
+        /// step (Ally = 1000 × tick + row), so only the indexed routine reading this step's copy gives the expected
+        /// orders. One step per Editor frame, every step checked, until every agent's last job run is Burst
+        /// (<c>AgentFrameAgentV1.RanManaged</c> is set by a <c>[BurstDiscard]</c> call) for
+        /// <see cref="BurstSettledSteps"/> steps in a row. Burst off, or not settled within
+        /// <see cref="BurstMinimumSteps"/> steps and <see cref="BurstWaitSeconds"/> seconds (at most
+        /// <see cref="BurstMaximumSteps"/>): Inconclusive, not passed. A job compiled against a stale runtime
+        /// (Planning~/Evidence/P12-002/README.md, "The Burst finding") gives wrong orders and fails.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AgentFrameJob_RunsTheIndexedRoutineBurstCompiled()
+        {
+            Assume.That(BurstCompiler.IsEnabled, Is.True, "Burst compilation is off in this Editor (Jobs > Burst > Enable Compilation)");
+            const int agents = 12;
+            const int rows = 5;
+            using (var rig = NewRig(Program(ReportTree), true, agents, rows, slot => slot == 11 ? -1 : (slot + 2) % rows, capacity: 16))
+            {
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                var settled = 0;
+                var firstBurstTick = 0u;
+                var managedSteps = 0;
+                var burstSteps = 0;
+                uint tick = 0;
+                while (tick < BurstMaximumSteps)
+                {
+                    tick++;
+                    for (var row = 0; row < rows; row++)
+                        rig.Rows[row] = new SenseInput { Threat = row / 8f, Ally = (int)(1000 * tick) + row, Flag = (row & 1) != 0 };
+                    var batches = rig.Group.JobBatchesForTests;
+                    rig.Step(tick);
+                    Assert.That(rig.Group.JobBatchesForTests, Is.EqualTo(batches + 1), "tick " + tick + ": the agent-frame job ran");
+                    var orders = rig.Orders();
+                    Assert.That(orders.Keys, Is.EquivalentTo(Enumerable.Range(0, agents)), "tick " + tick);
+                    for (var slot = 0; slot < agents; slot++)
+                    {
+                        var row = slot == 11 ? -1 : (slot + 2) % rows;
+                        var expectedAlly = row < 0 ? 0 : (int)(1000 * tick) + row;
+                        Assert.That(orders[slot].Target, Is.EqualTo(expectedAlly), "tick " + tick + " slot " + slot);
+                        Assert.That(orders[slot].Strength, Is.EqualTo(row < 0 ? 0f : row / 8f), "tick " + tick + " slot " + slot);
+                    }
+
+                    var managed = ManagedAgentsInTable(rig.Group, agents);
+                    if (managed == 0)
+                    {
+                        burstSteps++;
+                        settled++;
+                        if (firstBurstTick == 0) firstBurstTick = tick;
+                    }
+                    else
+                    {
+                        managedSteps++;
+                        settled = 0;
+                    }
+                    if (settled >= BurstSettledSteps) break;
+                    if (tick >= BurstMinimumSteps && clock.Elapsed.TotalSeconds >= BurstWaitSeconds) break;
+                    // One Editor frame between steps, so the asynchronous Burst compilation can finish.
+                    yield return null;
+                }
+                var summary = "P12-002 review S1: " + tick + " steps, " + clock.Elapsed.TotalSeconds.ToString("0.0") + " s, first Burst step "
+                              + (firstBurstTick == 0 ? "none" : firstBurstTick.ToString()) + ", managed steps " + managedSteps + ", Burst steps " + burstSteps;
+                UnityEngine.Debug.Log(summary);
+                if (settled < BurstSettledSteps)
+                    Assert.Inconclusive("The agent-frame job did not run Burst-compiled for " + BurstSettledSteps + " steps in a row within the bound ("
+                                        + summary + "): Burst may still be compiling.");
+            }
+        }
+
+        /// <summary>How many of the first <paramref name="count"/> agent-frame entries ran managed code in their last job run.</summary>
+        private static int ManagedAgentsInTable(TreeGroup group, int count)
+        {
+            var field = typeof(TreeGroup).GetField("_table", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            Assert.That(field, Is.Not.Null, "TreeGroup._table");
+            var table = (UnsafeList<AgentFrameAgentV1>)field.GetValue(group);
+            var managed = 0;
+            for (var index = 0; index < Math.Min(table.Length, count); index++)
+                if (table[index].RanManaged != 0) managed++;
+            return managed;
+        }
+
+        // ---- 19. review follow-up: the cheap untested cases of the independent review's section 4 -------------
+
+        /// <summary>
+        /// A rows array of length 0 with a live agent's index at 0 or above: the index is at or beyond the rows'
+        /// length, so the step is refused with InvalidArgument and nothing runs; with -1 ("no row") it runs.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void EmptyRowsArray_WithALiveIndexAtZeroOrAbove_RefusesTheStep(bool useJobs)
+        {
+            using (var rig = NewRig(Program(ReportTree), useJobs, agents: 2, rows: 0, rowOf: slot => slot == 0 ? 0 : -1))
+            {
+                Assert.That(rig.Simulation.Step(1), Is.EqualTo(SimulationResult.InvalidArgument), "index 0 of a rows array of length 0");
+                Assert.That(rig.Simulation.LastTick, Is.Zero);
+                for (var slot = 0; slot < 2; slot++) Assert.That(rig.Group.CoreForTests(slot).TotalUpdates, Is.Zero, "Nothing ran.");
+                rig.RowOf[0] = -1;
+                rig.Step(1);
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [0] = 0, [1] = 0 }), "no row: zeros");
+                AssertPath(rig, useJobs);
+            }
+        }
+
+        /// <summary>
+        /// A group with no agent and an indexed channel steps: no index is checked (every slot holds 7, beyond
+        /// the 3 rows), no job runs. An agent added later is checked: its slot's 7 refuses the step until the
+        /// game writes its index, then it reads its row.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void NoAgents_WithAnIndexedChannel_Steps_AndALaterAgentIsChecked(bool useJobs)
+        {
+            using (var rig = NewRig(Program(ReportTree), useJobs, agents: 0, rows: 3, rowOf: _ => 7, capacity: 4))
+            {
+                rig.Step(1);
+                rig.Step(2);
+                Assert.That(rig.Simulation.LastTick, Is.EqualTo(2u));
+                Assert.That(rig.Group.GetCommands(Order).Length, Is.Zero);
+                Assert.That(rig.Group.JobBatchesForTests, Is.Zero, "no agent, no job");
+                Assert.That(rig.Group.TryAdd(ThinkSchedule.Every(1, 0), out var agent), Is.EqualTo(SimulationResult.Success));
+                Assert.That(rig.Simulation.Step(3), Is.EqualTo(SimulationResult.InvalidArgument), "its slot holds 7");
+                rig.RowOf[agent.Index] = 2;
+                rig.Step(3);
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [agent.Index] = 102 }));
+                AssertPath(rig, useJobs);
+            }
+        }
+
+        /// <summary>
+        /// Unbinding an indexed channel and binding it indexed again, to new rows and new indices: steps read the
+        /// new arrays; the old index array is no longer read (an index there beyond the new rows refuses nothing).
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void UnbindThenBindIndexedAgain_ReadsTheNewArrays(bool useJobs)
+        {
+            using (var rig = NewRig(Program(ReportTree), useJobs, agents: 3, rows: 2, rowOf: slot => slot % 2))
+            using (var newRowsOwner = new NativeArray<SenseInput>(4, Allocator.Persistent))
+            using (var newRowOfOwner = new NativeArray<int>(3, Allocator.Persistent))
+            {
+                var newRows = newRowsOwner;
+                var newRowOf = newRowOfOwner;
+                rig.Step(1);
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [0] = 100, [1] = 101, [2] = 100 }));
+                Assert.That(rig.Group.TryUnbindInput(Sense), Is.EqualTo(SimulationResult.Success));
+                Assert.That(rig.Simulation.Step(2), Is.EqualTo(SimulationResult.InputMissing));
+                for (var row = 0; row < 4; row++) newRows[row] = new SenseInput { Ally = 300 + row };
+                newRowOf[0] = 3;
+                newRowOf[1] = -1;
+                newRowOf[2] = 0;
+                Assert.That(rig.Group.TryBindInput(Sense, newRows, newRowOf), Is.EqualTo(SimulationResult.Success));
+                rig.RowOf[0] = 99;
+                rig.Step(2);
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [0] = 303, [1] = 0, [2] = 300 }));
+                AssertPath(rig, useJobs);
+            }
+        }
+
+        /// <summary>
+        /// Binding indexed again with a rows array of another length (2, then 6, then 3): the group's row copy
+        /// follows the new length. An index valid only for the longer array is read; after the shorter array is
+        /// bound the same index refuses the step until the game fixes it.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void IndexedToIndexed_WithARowsArrayOfAnotherLength(bool useJobs)
+        {
+            using (var rig = NewRig(Program(ReportTree), useJobs, agents: 3, rows: 2, rowOf: slot => slot % 2))
+            using (var longOwner = new NativeArray<SenseInput>(6, Allocator.Persistent))
+            using (var shortOwner = new NativeArray<SenseInput>(3, Allocator.Persistent))
+            {
+                var longRows = longOwner;
+                var shortRows = shortOwner;
+                for (var row = 0; row < 6; row++) longRows[row] = new SenseInput { Ally = 400 + row };
+                for (var row = 0; row < 3; row++) shortRows[row] = new SenseInput { Ally = 500 + row };
+                rig.Step(1);
+                Assert.That(rig.Group.TryBindInput(Sense, longRows, rig.RowOf), Is.EqualTo(SimulationResult.Success));
+                rig.RowOf[0] = 5;
+                rig.RowOf[1] = 0;
+                rig.RowOf[2] = 3;
+                rig.Step(2);
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [0] = 405, [1] = 400, [2] = 403 }), "6 rows");
+                Assert.That(rig.Group.TryBindInput(Sense, shortRows, rig.RowOf), Is.EqualTo(SimulationResult.Success));
+                Assert.That(rig.Simulation.Step(3), Is.EqualTo(SimulationResult.InvalidArgument), "indices 5 and 3 are beyond 3 rows");
+                Assert.That(rig.Simulation.LastTick, Is.EqualTo(2u));
+                rig.RowOf[0] = 2;
+                rig.RowOf[2] = 1;
+                rig.Step(3);
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [0] = 502, [1] = 500, [2] = 501 }), "3 rows");
+                AssertPath(rig, useJobs);
+            }
+        }
+
+        /// <summary>
+        /// TryReserve with wake on keeps what each agent last saw. After the reserve (and the indices rebound, at
+        /// least Capacity long) nothing unchanged wakes anyone; a row change wakes exactly the members of that row
+        /// that are not due; an agent added in a grown slot reads its row.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TryReserve_WithWakeOn_KeepsWhatEachAgentLastSaw(bool useJobs)
+        {
+            using (var rig = NewRig(Program(ReportTree), useJobs, agents: 4, rows: 2, rowOf: slot => slot % 2, schedule: _ => ThinkSchedule.Spread(5), wake: true))
+            using (var grownOwner = new NativeArray<int>(8, Allocator.Persistent))
+            {
+                var grown = grownOwner;
+                for (uint tick = 1; tick <= 5; tick++) rig.Step(tick);
+                Assert.That(rig.Group.TryReserve(8), Is.EqualTo(SimulationResult.Success));
+                Assert.That(rig.Simulation.Step(6), Is.EqualTo(SimulationResult.InvalidArgument), "rowOfSlot shorter than the new Capacity");
+                for (var slot = 0; slot < 8; slot++) grown[slot] = slot < 4 ? slot % 2 : -1;
+                grown[4] = 1;
+                Assert.That(rig.Group.TryBindInput(Sense, rig.Rows, grown), Is.EqualTo(SimulationResult.Success));
+                Assert.That(rig.Group.TryAdd(ThinkSchedule.Every(1, 0), out var newcomer), Is.EqualTo(SimulationResult.Success));
+                Assert.That(newcomer.Index, Is.EqualTo(4), "the first grown slot");
+                rig.Agents.Add(newcomer);
+                rig.Step(6);
+                Assert.That(rig.Thinks(6).Keys, Is.EquivalentTo(new[] { 1, 4 }), "agent 1 is due, the newcomer thinks every tick; nothing changed, nobody wakes");
+                rig.Step(7);
+                rig.Rows[1] = new SenseInput { Threat = 0.5f, Ally = 555, Flag = true };
+                rig.Step(8);
+                var thinks = rig.Thinks(8);
+                Assert.That(thinks.Keys, Is.EquivalentTo(new[] { 1, 3, 4 }), "agent 1 is woken; agent 3 and the newcomer are due");
+                AssertWokenByInput(thinks[1], "agent 1");
+                Assert.That(thinks[3] & ThinkReasons.InputChanged, Is.EqualTo(ThinkReasons.None), "agent 3 is due");
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [1] = 555, [3] = 555, [4] = 555 }));
+                AssertPath(rig, useJobs);
+            }
+        }
+
+        /// <summary>
+        /// Switching modes with wake on: what each agent last saw is kept, so the first compare after a switch
+        /// sets the value the agent now reads (its slot row, or the row its index selects) against the value it
+        /// read at its last think under the old mode. An agent that is not due wakes when, and only when, the two
+        /// differ; the switch itself wakes no one.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void SwitchingModes_WithWakeOn_TheFirstCompareIsAgainstTheValueReadUnderTheOldMode(bool useJobs)
+        {
+            using (var rig = NewRig(Program(ReportTree), useJobs, agents: 4, rows: 2, rowOf: slot => slot % 2, schedule: _ => ThinkSchedule.Spread(5), wake: true))
+            using (var slotRowsOwner = new NativeArray<SenseInput>(4, Allocator.Persistent))
+            {
+                var slotRows = slotRowsOwner;
+                for (uint tick = 1; tick <= 5; tick++) rig.Step(tick);
+                slotRows[0] = Row(0);
+                slotRows[1] = Row(1);
+                slotRows[2] = new SenseInput { Ally = 202 };
+                slotRows[3] = new SenseInput { Ally = 203 };
+                Assert.That(rig.Group.TryBindInput(Sense, slotRows), Is.EqualTo(SimulationResult.Success));
+                rig.Step(6);
+                var thinks = rig.Thinks(6);
+                Assert.That(thinks.Keys, Is.EquivalentTo(new[] { 1, 2, 3 }), "agent 1 is due; agents 2 and 3 read another value; agent 0 reads the value it read before");
+                AssertWokenByInput(thinks[2], "agent 2, indexed to slot rows");
+                AssertWokenByInput(thinks[3], "agent 3, indexed to slot rows");
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [1] = 101, [2] = 202, [3] = 203 }));
+
+                Assert.That(rig.Group.TryBindInput(Sense, rig.Rows, rig.RowOf), Is.EqualTo(SimulationResult.Success));
+                rig.Step(7);
+                thinks = rig.Thinks(7);
+                Assert.That(thinks.Keys, Is.EquivalentTo(new[] { 2, 3 }), "agent 2 is due; agent 3 reads row 1 after 203; agents 0 and 1 read what they read before");
+                AssertWokenByInput(thinks[3], "agent 3, slot rows to indexed");
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [2] = 100, [3] = 101 }));
+                AssertPath(rig, useJobs);
+            }
+        }
+
+        /// <summary>
+        /// A rows array longer than Capacity (10 rows, Capacity 4): agents read rows beyond Capacity, in place and
+        /// in the agent-frame job, and every bound row is copied at step entry.
+        /// </summary>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void RowsLongerThanCapacity_AreReadBeyondCapacity(bool useJobs)
+        {
+            var indices = new[] { 9, 7, 4, 0 };
+            using (var rig = NewRig(Program(ReportTree), useJobs, agents: 4, rows: 10, rowOf: slot => indices[slot]))
+            {
+                rig.Step(1);
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [0] = 109, [1] = 107, [2] = 104, [3] = 100 }));
+                rig.Rows[9] = new SenseInput { Ally = 999 };
+                rig.Step(2);
+                Assert.That(rig.Allies(), Is.EquivalentTo(new Dictionary<int, int> { [0] = 999, [1] = 107, [2] = 104, [3] = 100 }), "row 9 is copied at step entry");
+                AssertPath(rig, useJobs);
             }
         }
     }

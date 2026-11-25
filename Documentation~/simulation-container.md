@@ -20,7 +20,7 @@ a fixed-step game loop, a server tick, an EditMode test or a tool.
 | `ActionHandle`, `ActionEvent` (G3) | An external action a node started (agent, operation id, channel) and one Started or Cancelled event of the last step. |
 | `AgentHandle` | Slot index + generation + group id. A handle stays valid until its agent is removed. After that, every call with it returns `StaleHandle`, also when the slot is reused. |
 | `ThinkSchedule` | `Every(interval, phase)`: thinks on ticks where `tick % interval == phase`. `Spread(interval)`: the group assigns phases 0, 1, 2, … round-robin. |
-| `SimulationResult` | Every mutating call returns one: `Success`, `Busy` (called during `Step`), `Disposed`, `StaleHandle`, `CapacityExceeded`, `TickNotIncreasing`, `InvalidArgument`; from G2 also `InputMissing`, `TypeMismatch`, `CatalogTooOld`, `Unsupported` (no longer returned since G3), `UnknownChannel`; from G3 `StaleAction`, `AlreadyCompleted`. |
+| `SimulationResult` | Every mutating call returns one: `Success`, `Busy` (called during `Step`), `Disposed`, `StaleHandle`, `CapacityExceeded`, `TickNotIncreasing`, `InvalidArgument` (from `Step` also for an input array shorter than the group's capacity and, from P12-002, for an indexed channel whose index array is shorter than `Capacity` or whose index in a live agent's slot is at or beyond its rows' length); from G2 also `InputMissing`, `TypeMismatch`, `CatalogTooOld`, `Unsupported` (no longer returned since G3), `UnknownChannel`; from G3 `StaleAction`, `AlreadyCompleted`. |
 
 ## One step
 
@@ -28,7 +28,9 @@ a fixed-step game loop, a server tick, an EditMode test or a tool.
 
 1. It refuses a tick that is not greater than the last one (`TickNotIncreasing`), and (G2) a group
    with an input channel that is unbound or whose array was disposed (`InputMissing`) or is shorter
-   than the group's capacity (`InvalidArgument`). A refused step changes nothing.
+   than the group's capacity (`InvalidArgument`), and (P12-002) an indexed channel whose index array is
+   shorter than `Capacity` or whose index in a live agent's slot is at or beyond the length of its rows
+   array (`InvalidArgument`). A refused step changes nothing.
 2. (G2) Every group forgets last step's commands and copies the first `HighWaterIndex` rows of each
    bound input array into its own buffer. This is the only copy a step makes: every agent of the
    step (in place or in a job) reads the same values, jobs never touch the game's arrays, and the
@@ -172,7 +174,8 @@ The node side does not change: a node reads the row with its `[AibtInput("squad"
   the index array into the group's own buffers before any agent runs. A step sees the values at its entry;
   jobs never read the game's arrays, and the game may write both again as soon as `Step` returns. A game
   job that still writes either array when `Step` starts refuses the step with `InputMissing` (collection
-  safety checks on).
+  safety checks on). The index array is checked before it is copied, so do not write it from a job that
+  can still run when `Step` is called.
 - **What it costs.** The copy follows the rows array the game binds (all of it, every step), not the
   number of agents that read it, plus one `int` per slot up to `HighWaterIndex`. Bind only the squads that
   exist, not a large reserve.
