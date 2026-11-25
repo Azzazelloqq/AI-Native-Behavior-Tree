@@ -1225,7 +1225,9 @@ reactive interrupts: tests, documentation, the wake-on-change cost at 500 agents
 change) is accepted (`1cb8628`, all ten assemblies green, independent read without a blocker) and in `Review`:
 122 duration cases and 8 reactive-pattern tests, two documentation sections, and the cost of wake on change
 measured in the Editor (`Planning~/Evidence/P12-001/README.md`). `P12-002` (an indexed input channel: group or
-squad data read by every member) is `Ready`: its shape is decided (`Planning~/Evidence/P12-002/decision.md`). `P12-003` (read-only game arrays in nodes)
+squad data read by every member) is in `Review`: the overload `TreeGroup.TryBindInput(channel, rows, rowOfSlot)`
+to the decided shape (`Planning~/Evidence/P12-002/decision.md`), 18 tests, the ADR-P10-008 amendment and an
+interleaved measurement (`Planning~/Evidence/P12-002/README.md`). `P12-003` (read-only game arrays in nodes)
 is `Draft`: an ADR and a prototype first, after `P12-002`.
 
 Phase 12 candidates, recorded and not started (no work item until they are taken up):

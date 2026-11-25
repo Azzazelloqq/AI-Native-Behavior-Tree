@@ -1,7 +1,9 @@
 # P12-002 — Indexed input channel: group or squad data read by every member
 
-Status: `Ready` — the shape is decided (2026-11-24, `Planning~/Evidence/P12-002/decision.md`, after the
-independent design read `Planning~/Evidence/P12-002/design-read.md`); starts after P12-001's acceptance.
+Status: `Review` — built 2026-11-25 (brief `C:\UnityProjects\_aibt_acceptance\SweetKingdom\brief-P12-002.md`)
+to the shape decided on 2026-11-24 (`Planning~/Evidence/P12-002/decision.md`, after the independent design read
+`Planning~/Evidence/P12-002/design-read.md`). Evidence: `Planning~/Evidence/P12-002/README.md`. Acceptance is the
+orchestrator's.
 
 ## Objective
 
@@ -46,4 +48,5 @@ the trace and MCP name the row if that is additive; an amendment to ADR-P10-008 
 
 ## Evidence
 
-`Planning~/Evidence/P12-002/README.md` (to be written).
+`Planning~/Evidence/P12-002/README.md`: 18 tests (30 cases), the interleaved measurement (two runs, rotated
+variant order), the documents, and a finding about a stale Burst cache in the running Editor.
