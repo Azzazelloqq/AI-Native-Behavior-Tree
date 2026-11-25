@@ -176,6 +176,8 @@ namespace AIBT.Mcp
                     json["channel"] = item.Channel.ToString("x16", CultureInfo.InvariantCulture);
                     json["valueSize"] = item.ValueSize;
                     json["value"] = item.ValueHex();
+                    // P12-002: the row read (the slot, or an indexed channel's index; -1 = none, zeros read).
+                    if (item.Fact == AgentTraceFact.Input) json["row"] = item.InputRow;
                     break;
                 case AgentTraceFact.ActionStarted:
                 case AgentTraceFact.ActionCancelled:

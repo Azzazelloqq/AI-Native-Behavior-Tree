@@ -3885,6 +3885,7 @@ P10-012: one entry of a traced agent's trace (<see cref="TreeGroup.TryCopyTrace"
 - `PROPERTY AIBT.Simulation.ActionCancelReason CancelReason`
 - `PROPERTY AIBT.Simulation.AgentTraceFact Fact`
 - `PROPERTY AIBT.Simulation.ThinkReasons Reasons`
+- `PROPERTY System.Int32 InputRow`
 - `PROPERTY System.UInt32 Tick`
 - `PROPERTY System.UInt32 ValueSize`
 - `PROPERTY System.UInt64 Channel`
@@ -4029,6 +4030,7 @@ P10-012 (ADR-P10-008 stage G4): tracing a few selected agents, and the "why is a
 - `METHOD AIBT.Simulation.SimulationResult TryAdd(AIBT.Simulation.AgentHandle&)`
 - `METHOD AIBT.Simulation.SimulationResult TryAdd(AIBT.Simulation.ThinkSchedule&,AIBT.Simulation.AgentHandle&)`
 - `METHOD AIBT.Simulation.SimulationResult TryBindInput(AIBT.Simulation.InputChannel`1<>,Unity.Collections.NativeArray`1<>)`
+- `METHOD AIBT.Simulation.SimulationResult TryBindInput(AIBT.Simulation.InputChannel`1<>,Unity.Collections.NativeArray`1<>,Unity.Collections.NativeArray`1<System.Int32>)`
 - `METHOD AIBT.Simulation.SimulationResult TryClearTrace(AIBT.Simulation.AgentHandle)`
 - `METHOD AIBT.Simulation.SimulationResult TryComplete(AIBT.Simulation.ActionHandle,AIBT.Simulation.ActionOutcome)`
 - `METHOD AIBT.Simulation.SimulationResult TryComplete(AIBT.Simulation.ActionHandle,AIBT.Simulation.ActionOutcome,)`

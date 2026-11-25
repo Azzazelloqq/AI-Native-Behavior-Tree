@@ -9,6 +9,9 @@ namespace AIBT.Simulation
     /// P10-010: one input channel of a group as the staging routine sees it: the bound game array as
     /// bytes (row i = agent slot i), its row stride, and the range of its leaf table. Unbound channels
     /// stage zeros (a valid canonical value), so teardown of a group whose inputs were unbound never faults.
+    /// P12-002: an indexed channel (<see cref="Indexed"/> 1) holds the group's copy of the game's rows (any
+    /// count) and of its per-slot row indices (<see cref="RowOf"/>); the row of slot i is <c>RowOf[i]</c>
+    /// (<see cref="SimulationAgentRoutinesV1.SelectRow"/>).
     /// </summary>
     internal struct SimulationInputChannelV1
     {
@@ -19,6 +22,8 @@ namespace AIBT.Simulation
         internal int LeafStart;
         internal int LeafCount;
         internal uint CanonicalSize;
+        internal byte Indexed;
+        internal NativeArray<int> RowOf;
     }
 
     /// <summary>
@@ -162,11 +167,29 @@ namespace AIBT.Simulation
     internal static class SimulationAgentRoutinesV1
     {
         /// <summary>
+        /// P12-002: the one routine that chooses which row of an input channel the agent in
+        /// <paramref name="slot"/> reads, for the job path, the in-place path, wake on change and the trace:
+        /// the slot itself for a slot-row channel, <c>RowOf[slot]</c> for an indexed one. -1 means "no row"
+        /// (zeros are staged): an unbound channel, a negative index, or a row outside the copied rows.
+        /// </summary>
+        internal static int SelectRow(in SimulationInputChannelV1 input, int slot)
+        {
+            if (input.Bound == 0) return -1;
+            var row = slot;
+            if (input.Indexed != 0)
+            {
+                if ((uint)slot >= (uint)input.RowOf.Length) return -1;
+                row = input.RowOf[slot];
+            }
+            return (uint)row < (uint)input.RowCount ? row : -1;
+        }
+
+        /// <summary>
         /// Writes this agent's row of input channel <paramref name="channel"/> into
         /// <paramref name="destination"/> at <paramref name="offset"/> in canonical form: padding zero,
         /// each leaf copied from its raw offset, -0.0 written as +0.0. NaN, infinities and bools above 1
         /// are copied as they are; the dispatch refuses them (the agent faults with InvalidEncoding). An
-        /// unbound channel or a row outside the array stages zeros.
+        /// unbound channel or a row outside the array stages zeros. The row is <see cref="SelectRow"/>'s.
         /// </summary>
         internal static bool TryStage(
             ref SimulationAgentNativeV1 agent, int channel, NativeArray<byte> destination, uint offset, uint size)
@@ -176,8 +199,9 @@ namespace AIBT.Simulation
             if ((uint)channel >= (uint)agent.Inputs.Length) return false;
             var input = agent.Inputs[channel];
             if (input.CanonicalSize != size) return false;
-            if (input.Bound == 0 || (uint)agent.Row >= (uint)input.RowCount) return true;
-            var rowBase = agent.Row * input.RowStride;
+            var row = SelectRow(input, agent.Row);
+            if (row < 0) return true;
+            var rowBase = row * input.RowStride;
             for (var leafIndex = 0; leafIndex < input.LeafCount; leafIndex++)
             {
                 var leaf = agent.Leaves[input.LeafStart + leafIndex];

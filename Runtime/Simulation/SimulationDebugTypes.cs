@@ -66,8 +66,9 @@ namespace AIBT.Simulation
         internal AgentTraceRecord(
             uint tick, AgentTraceFact fact, in NativeTraceRecordV1 record, ThinkReasons reasons, ulong channel,
             OperationId operation, ActionCancelReason cancelReason, NativeRuntimeFailureV1 failure,
-            uint valueSize, ulong valueLow, ulong valueHigh)
+            uint valueSize, ulong valueLow, ulong valueHigh, int inputRow = -1)
         {
+            InputRow = inputRow;
             Tick = tick;
             Fact = fact;
             Record = record;
@@ -106,6 +107,12 @@ namespace AIBT.Simulation
         public ulong ValueLow { get; }
         /// <summary>Canonical value bytes 8-15 (little-endian), zero past <see cref="ValueSize"/>.</summary>
         public ulong ValueHigh { get; }
+        /// <summary>
+        /// P12-002, Input: the row of the bound array the value was read from: the agent's slot for a
+        /// slot-row channel, its <c>rowOfSlot</c> entry for an indexed channel. -1 when no row was read and
+        /// the value is zeros (a negative index), and for every other fact.
+        /// </summary>
+        public int InputRow { get; }
 
         /// <summary>Canonical value byte <paramref name="index"/> (0-15); 0 past the kept bytes.</summary>
         public byte GetValueByte(int index)

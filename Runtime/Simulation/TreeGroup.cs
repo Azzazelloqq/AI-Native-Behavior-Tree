@@ -75,6 +75,11 @@ namespace AIBT.Simulation
             internal bool Wake;
             internal NativeArray<byte> LastSeen;   // owned: canonical row each agent saw at its last think
             internal NativeArray<byte> Seen;       // owned: 1 once the agent thought with wake on
+            // P12-002: an indexed channel (TryBindInput with rowOfSlot): Game holds rows of any count.
+            internal bool Indexed;
+            internal int RowCount;                 // indexed: the bound rows' count
+            internal NativeArray<int> GameIndex;   // indexed: the bound rowOfSlot array (not owned)
+            internal NativeArray<int> IndexStaging; // owned copy of rowOfSlot, made once per step
         }
 
         private abstract class CommandCacheBase : IDisposable
@@ -324,17 +329,28 @@ namespace AIBT.Simulation
         private void EnsureStaging(int channel, int stride)
         {
             var state = _inputStates[channel];
-            var bytes = checked(_slots.Length * stride);
+            // P12-002: an indexed channel stages every bound row (any count) and one index per slot.
+            var rowCount = state.Indexed ? state.RowCount : _slots.Length;
+            var bytes = checked(rowCount * stride);
             if (!state.Staging.IsCreated || state.Staging.Length != bytes)
             {
                 var staging = new NativeArray<byte>(bytes, Allocator.Persistent, NativeArrayOptions.ClearMemory);
                 if (state.Staging.IsCreated) state.Staging.Dispose();
                 state.Staging = staging;
             }
+            if (state.Indexed && (!state.IndexStaging.IsCreated || state.IndexStaging.Length != _slots.Length))
+            {
+                var indices = new NativeArray<int>(_slots.Length, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                for (var slot = 0; slot < indices.Length; slot++) indices[slot] = -1;
+                if (state.IndexStaging.IsCreated) state.IndexStaging.Dispose();
+                state.IndexStaging = indices;
+            }
             ref var input = ref _inputs.ElementAt(channel);
             input.Rows = state.Staging;
             input.RowStride = stride;
-            input.RowCount = _slots.Length;
+            input.RowCount = rowCount;
+            input.Indexed = state.Indexed ? (byte)1 : (byte)0;
+            input.RowOf = state.Indexed ? state.IndexStaging : default;
         }
 
         private void EnsureWakeStorage(int channel)
@@ -364,6 +380,9 @@ namespace AIBT.Simulation
         /// Adds an agent in the lowest free slot as a fresh instance (next container instance id,
         /// blackboard defaults, random streams seeded). Its first think is the first step whose tick
         /// matches its schedule (or the next step if woken). Nothing of the tree runs in this call.
+        /// P12-002: it does not write an indexed input channel's <c>rowOfSlot</c> array: a reused slot keeps
+        /// the index the game left there (the previous occupant's), so write the newcomer's index, or -1 for
+        /// "no row", before the next step.
         /// </summary>
         public SimulationResult TryAdd(in ThinkSchedule schedule, out AgentHandle agent)
         {
@@ -770,9 +789,11 @@ namespace AIBT.Simulation
             {
                 var state = _inputStates[channel];
                 if (state.Staging.IsCreated) state.Staging.Dispose();
+                if (state.IndexStaging.IsCreated) state.IndexStaging.Dispose();
                 if (state.LastSeen.IsCreated) state.LastSeen.Dispose();
                 if (state.Seen.IsCreated) state.Seen.Dispose();
                 state.Game = default;
+                state.GameIndex = default;
                 state.Bound = false;
             }
             for (var channel = 0; channel < _commandCaches.Length; channel++)
@@ -816,6 +837,44 @@ namespace AIBT.Simulation
             var index = _map.FindInput(channel.Id);
             if (index < 0) return SimulationResult.UnknownChannel;
             if (!rows.IsCreated || rows.Length < _slots.Length) return SimulationResult.InvalidArgument;
+            return BindRows(index, rows, false, default);
+        }
+
+        /// <summary>
+        /// P12-002: binds an indexed input channel: the agent in slot <c>i</c> reads row
+        /// <c>rowOfSlot[i]</c> of <paramref name="rows"/> (one row per squad or group, say) through its
+        /// ordinary <c>SnapshotReadHandle&lt;T&gt;</c>. <paramref name="rows"/> may have any length, zero
+        /// included; <paramref name="rowOfSlot"/> must be at least <see cref="Capacity"/> long (rebind it
+        /// after growing the group). The group keeps both arrays without copying or owning them: write them
+        /// between steps; every <see cref="TreeSimulation.Step"/> copies all of <paramref name="rows"/> and
+        /// the first <see cref="HighWaterIndex"/> entries of <paramref name="rowOfSlot"/> once, before any
+        /// agent runs, so a step sees the values at its entry and the game may write both again as soon as
+        /// Step returns. The copy costs what the bound rows array weighs, not what the agents read.
+        /// A negative index means "no row": the agent reads zeros. An index at or beyond the rows' length in
+        /// the slot of a live agent refuses the whole step with <see cref="SimulationResult.InvalidArgument"/>
+        /// before anything runs; slots without a live agent are not checked. <c>TryAdd</c> does not
+        /// touch the array: a reused slot keeps the index the game left there, so write the newcomer's
+        /// index (or -1) when adding it. Wake on change (<see cref="TrySetWakeOnChange{T}"/>) compares the
+        /// value the agent would read, so a changed row or a changed index wakes it when the value differs.
+        /// Several channels may share one <paramref name="rowOfSlot"/> array. Binding the channel again with
+        /// either overload replaces the arrays and switches the mode. Returns
+        /// <see cref="SimulationResult.UnknownChannel"/> and <see cref="SimulationResult.TypeMismatch"/> as
+        /// the slot-row overload, <see cref="SimulationResult.InvalidArgument"/> for an array that is not
+        /// created or a <paramref name="rowOfSlot"/> shorter than <see cref="Capacity"/>.
+        /// </summary>
+        public SimulationResult TryBindInput<T>(InputChannel<T> channel, NativeArray<T> rows, NativeArray<int> rowOfSlot) where T : unmanaged
+        {
+            var usable = Usable();
+            if (usable != SimulationResult.Success) return usable;
+            if (!channel.IsValid) return SimulationResult.InvalidArgument;
+            var index = _map.FindInput(channel.Id);
+            if (index < 0) return SimulationResult.UnknownChannel;
+            if (!rows.IsCreated || !rowOfSlot.IsCreated || rowOfSlot.Length < _slots.Length) return SimulationResult.InvalidArgument;
+            return BindRows(index, rows, true, rowOfSlot);
+        }
+
+        private SimulationResult BindRows<T>(int index, NativeArray<T> rows, bool indexed, NativeArray<int> rowOfSlot) where T : unmanaged
+        {
             var state = _inputStates[index];
             var stride = UnsafeUtility.SizeOf<T>();
             if (state.RowType != typeof(T))
@@ -829,6 +888,9 @@ namespace AIBT.Simulation
             }
             state.Stride = stride;
             state.Game = rows.Reinterpret<byte>(stride);
+            state.Indexed = indexed;
+            state.RowCount = indexed ? rows.Length : 0;
+            state.GameIndex = rowOfSlot;
             state.Bound = true;
             EnsureStaging(index, stride);
             _inputs.ElementAt(index).Bound = 1;
@@ -845,6 +907,7 @@ namespace AIBT.Simulation
             if (index < 0) return SimulationResult.UnknownChannel;
             var state = _inputStates[index];
             state.Game = default;
+            state.GameIndex = default;
             state.Bound = false;
             _inputs.ElementAt(index).Bound = 0;
             return SimulationResult.Success;
@@ -854,7 +917,11 @@ namespace AIBT.Simulation
         /// Off by default. When on, an agent that is not due in a step thinks anyway when its row of this
         /// channel differs from the row it read at its last think (byte compare of the canonical value:
         /// -0.0 equals +0.0, padding ignored). Agents that have not thought since this was turned on, or
-        /// since they were added, are not woken. Allocates the per-agent last-seen rows now.
+        /// since they were added, are not woken. Allocates the per-agent last-seen rows now. P12-002: for
+        /// an indexed channel the compared value is the row the agent's index selects, so a changed row or
+        /// a changed index wakes it when, and only when, that value differs. A row that changes every step
+        /// (a moving anchor) wakes every agent that reads it at every step: keep such data in a channel
+        /// without wake.
         /// </summary>
         public SimulationResult TrySetWakeOnChange<T>(InputChannel<T> channel, bool enabled) where T : unmanaged
         {
@@ -877,7 +944,9 @@ namespace AIBT.Simulation
 
         /// <summary>
         /// Step phase 0 (before anything runs, for every active group): every input channel bound to a
-        /// readable array of at least <see cref="Capacity"/> rows.
+        /// readable array of at least <see cref="Capacity"/> rows. P12-002: an indexed channel needs readable
+        /// rows and indices, indices at least <see cref="Capacity"/> long, and no live agent's index at or
+        /// beyond the rows' length (a negative index is "no row"; slots without a live agent are not checked).
         /// </summary>
         internal SimulationResult ValidateInputs()
         {
@@ -889,20 +958,30 @@ namespace AIBT.Simulation
                 try
                 {
                     AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(state.Game));
+                    if (state.Indexed) AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(state.GameIndex));
                 }
                 catch (Exception)
                 {
                     return SimulationResult.InputMissing;
                 }
 #endif
-                if (state.Game.Length < _slots.Length * state.Stride) return SimulationResult.InvalidArgument;
+                if (!state.Indexed)
+                {
+                    if (state.Game.Length < _slots.Length * state.Stride) return SimulationResult.InvalidArgument;
+                    continue;
+                }
+                if (state.GameIndex.Length < _slots.Length) return SimulationResult.InvalidArgument;
+                for (var slot = 0; slot < _highWater; slot++)
+                    if (_slots[slot].State == SlotState.Alive && state.GameIndex[slot] >= state.RowCount)
+                        return SimulationResult.InvalidArgument;
             }
             return SimulationResult.Success;
         }
 
         /// <summary>
         /// Step phase 1 start: forgets last step's commands and copies every bound input's rows into the
-        /// group's own buffer (the only copy a step makes; see <see cref="TryBindInput{T}"/>).
+        /// group's own buffer (the only copy a step makes; see <see cref="TryBindInput{T}(InputChannel{T}, NativeArray{T})"/>
+        /// and, for an indexed channel, <see cref="TryBindInput{T}(InputChannel{T}, NativeArray{T}, NativeArray{int})"/>).
         /// </summary>
         internal void BeginStep(uint tick)
         {
@@ -928,6 +1007,13 @@ namespace AIBT.Simulation
             {
                 var state = _inputStates[channel];
                 if (!state.Bound || _highWater == 0) continue;
+                if (state.Indexed)
+                {
+                    // P12-002: every bound row (the cost follows the rows array), then the live slots' indices.
+                    NativeArray<byte>.Copy(state.Game, 0, state.Staging, 0, state.Staging.Length);
+                    NativeArray<int>.Copy(state.GameIndex, 0, state.IndexStaging, 0, _highWater);
+                    continue;
+                }
                 NativeArray<byte>.Copy(state.Game, 0, state.Staging, 0, _highWater * state.Stride);
             }
         }

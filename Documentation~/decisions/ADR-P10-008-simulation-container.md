@@ -1,7 +1,11 @@
 # ADR P10-008: A GameObject-free simulation container stepped by the game
 
-- Status: Proposed (stage G0 of the re-plan approved by the owner, 2026-11-16). Nothing in this ADR
-  is implemented. The owner decisions listed in "Owner decisions" are open.
+- Status: Proposed 2026-11-16 (stage G0 of the re-plan approved by the owner). The owner decisions D1–D9
+  were taken for stage G1, each the recommended option (`Planning~/Tasks/P10/P10-009-simulation-container-g1.md`,
+  "Owner decisions for this card"). Stages G1–G4 are implemented (P10-009 to P10-012, in review); stage G5
+  (Unity 7) is not started (a Phase 12 candidate in `Planning~/MASTER_PLAN.md`). The text below is the
+  design as proposed; the amendments at the end record where the built container differs or grew
+  (header corrected 2026-11-25, P12-002).
 - Decision ID: not assigned
 - Task: `Planning~/Tasks/P10/P10-008-simulation-container-design.md`
 - Review document for the game team: `Documentation~/proposals/simulation-container-review.md`
@@ -140,7 +144,7 @@ namespace AIBT.Simulation
         CapacityExceeded,
         /// <summary>Step(tick) with tick <= the previous tick.</summary>
         TickNotIncreasing,
-        /// <summary>The program reads an input channel that is not bound, or the bound array is shorter than Capacity.</summary>
+        /// <summary>The program reads an input channel that is not bound, or whose bound array was disposed or is still written by a running job (collection safety checks on). A bound array that is too short, or (P12-002) an out-of-range row index of a live agent, is InvalidArgument.</summary>
         InputMissing,
         /// <summary>The bound T does not match the binding's declared type (id, version, size, alignment, type token).</summary>
         TypeMismatch,
@@ -768,3 +772,35 @@ Only questions whose answer changes the design:
 - The production snapshot read path end to end (it is covered at the dispatch level by tests, never
   wired in production). G2 establishes it.
 - Unity 7000.x behaviour of Burst, Jobs and Collections (G5).
+
+## Amendment 2026-11-25 (P12-002): two routes for group data
+
+The consumer's first request (SweetKingdom, request 1) is data that belongs to a squad and is read by every
+member: a target, a formation anchor. There are now two routes for it.
+
+- **Built: an indexed input channel.** `TreeGroup.TryBindInput<T>(InputChannel<T> channel, NativeArray<T>
+  rows, NativeArray<int> rowOfSlot)`, one additive overload: the agent in slot `i` reads
+  `rows[rowOfSlot[i]]` through its ordinary `[AibtInput]` field. The two-argument overload and its
+  "row = slot" meaning are unchanged; binding the channel again with the other overload switches the mode.
+  `rows` may have any length (zero included); `rowOfSlot` is at least `Capacity` long. Every step copies
+  all of `rows` and the first `HighWaterIndex` entries of `rowOfSlot` into buffers the group owns before
+  any agent runs, so jobs never read game memory and a step sees the values at its entry. A negative index
+  reads zeros; an index at or beyond `rows.Length` in the slot of a live agent refuses the step with
+  `InvalidArgument` before anything runs. Wake on change compares the value an agent would read, through
+  the index. One internal routine (`SimulationAgentRoutinesV1.SelectRow`) chooses the row for the job path,
+  the in-place path, wake and the trace. The trace's `Input` record names the row (`AgentTraceRecord.InputRow`,
+  an additive property) and MCP `read_agent_trace` adds `row` to input events. Decision:
+  `Planning~/Evidence/P12-002/decision.md`; evidence: `Planning~/Evidence/P12-002/README.md`.
+- **Not built: the Shared-scope context.** "Provisional slots the API does not block" keeps the
+  group-shared blackboard slot as it was. It is the route if library nodes or trees that read blackboard
+  keys must see group data, or if nodes must write it; that needs its own decision. The indexed channel
+  serves only the game's own nodes, read-only, each agent its own squad's row (reading another squad's row
+  is the question of P12-003).
+
+Corrections made with this amendment: the header status (it said nothing was implemented and the owner
+decisions were open), and the `InputMissing` line of the API sketch: a bound array shorter than `Capacity`
+returns `InvalidArgument` (it did so since G2); `InputMissing` is an unbound channel or an array the safety
+system refuses (disposed, or still written by a job).
+
+No change to the ABI v2 manifest, the compiled program format, the normative specifications or execution
+semantics.

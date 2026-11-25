@@ -4,6 +4,22 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Simulation container: an indexed input channel for group data (P12-002)
+
+- **New overload `TreeGroup.TryBindInput<T>(InputChannel<T>, NativeArray<T> rows, NativeArray<int> rowOfSlot)`:**
+  the agent in slot `i` reads `rows[rowOfSlot[i]]`, so one row per squad serves every member through the
+  node's ordinary `[AibtInput]` field. `rows` may have any length; `rowOfSlot` is at least `Capacity` long.
+  Each step copies both before any agent runs (the cost follows the rows array). A negative index reads
+  zeros; an out-of-range index of a live agent refuses the step with `InvalidArgument`. Wake on change
+  compares the value through the index. The two-argument overload is unchanged; binding again with the
+  other overload switches the mode. `TryAdd` does not write the index: a reused slot keeps the previous
+  occupant's index until the game writes it.
+- **Traces name the row:** `AgentTraceRecord.InputRow` (new property) on `Input` records, and `row` on input
+  events of MCP `read_agent_trace`.
+- New section "Group data: an indexed input channel" in `simulation-container.md`, with what nodes cannot do
+  (library nodes and blackboard keys do not see the rows, nodes cannot write them, another squad's row is
+  P12-003's question). ADR-P10-008 has an amendment (two routes for group data) and a corrected status.
+
 ### Simulation container: durations in ticks and reactive interrupts (P12-001)
 
 - **Documented and pinned by tests, no code change:** a duration of `n × TickMicroseconds`, or any duration

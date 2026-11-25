@@ -123,7 +123,8 @@ void FixedTick(uint tick)
 - **Inputs.** `TryBindInput` checks that `T` is the type the program's nodes declare for the channel
   (type id, version, every field), else `TypeMismatch`; an id no node reads gives `UnknownChannel`.
   The group does not own the array: keep it alive and at least `Capacity` rows long while bound.
-  The first bind of a type uses reflection; later binds and steps do not allocate.
+  The first bind of a type uses reflection; later binds and steps do not allocate. For one row per
+  squad instead of one per agent, see "Group data: an indexed input channel" below.
 - **What a node sees.** The row is translated to the canonical value (fields ordered by field id,
   natural alignment, little-endian; -0.0 becomes +0.0). A row that is not canonical (NaN, an
   infinity, a bool above 1) faults the agent that reads it (`AgentFault.Cause` = `InvalidEncoding`);
@@ -142,6 +143,66 @@ void FixedTick(uint tick)
   `CatalogTooOld`. Regenerate the catalog (it happens on the next compile).
 - **Hosts** (`ProductionTreeHost`, `ProductionTreeScheduler`) are unchanged: they still refuse
   programs with input (snapshot) bindings.
+
+## Group data: an indexed input channel
+
+Data that belongs to a squad or group (its target, its formation anchor, its alert level) is one row per
+squad, read by every member. Bind the channel with a second array that names each slot's row:
+
+```csharp
+var squadRows = new NativeArray<SquadInput>(squadCount, Allocator.Persistent); // any length, zero too
+var squadOf = new NativeArray<int>(guards.Capacity, Allocator.Persistent);     // at least Capacity
+guards.TryBindInput(Squad, squadRows, squadOf); // the agent in slot i reads squadRows[squadOf[i]]
+
+guards.TryAdd(ThinkSchedule.Spread(5), out var guard);
+squadOf[guard.Index] = squadIndex;              // TryAdd does not write it: always set it yourself
+
+void FixedTick(uint tick)
+{
+    for (var s = 0; s < squadCount; s++) squadRows[s] = SquadOf(s); // the game's own data, or its own job
+    simulation.Step(tick);
+}
+```
+
+The node side does not change: a node reads the row with its `[AibtInput("squad")]` field and
+`TryReadSnapshot`, exactly as it reads a per-agent row. The two-argument `TryBindInput` keeps its meaning
+(row = slot); binding the channel again with the other overload switches the mode.
+
+- **What a step sees.** Each `Step` copies the whole rows array and the first `HighWaterIndex` entries of
+  the index array into the group's own buffers before any agent runs. A step sees the values at its entry;
+  jobs never read the game's arrays, and the game may write both again as soon as `Step` returns. A game
+  job that still writes either array when `Step` starts refuses the step with `InputMissing` (collection
+  safety checks on).
+- **What it costs.** The copy follows the rows array the game binds (all of it, every step), not the
+  number of agents that read it, plus one `int` per slot up to `HighWaterIndex`. Bind only the squads that
+  exist, not a large reserve.
+- **A negative index means "no row":** the agent reads zeros, the same value an unbound channel stages.
+- **An index at or beyond the rows' length in the slot of a live agent refuses the whole step** with
+  `InvalidArgument` before anything runs; nothing is half-stepped. Slots without a live agent (free,
+  removed, never used) are not checked.
+- **A reused slot keeps the previous occupant's index** until the game writes it. `TryAdd` does not touch
+  the array, so write the newcomer's index (or -1) when you add it. This is the same rule as rows today: a
+  reused slot reads whatever the game left in its row.
+- **Growing the group.** `rowOfSlot` must be at least `Capacity` long: rebind it after `TryReserve` (the
+  step refuses a short one with `InvalidArgument`). The rows array is independent of `Capacity`.
+- **Wake on change** compares the value an agent would read with the value it read at its last think,
+  through the index: a changed row wakes every member it changes for, a changed index wakes the agent
+  only if the new row holds a different value. Keep data that changes every tick (a moving anchor) in a
+  second channel without wake: with wake on, such a row wakes every member every tick. Several channels
+  may share one index array, so a "target" channel with wake and an "anchor" channel without wake cost
+  one index array.
+- **Traces.** A traced agent's `Input` record carries the row it was read from (`AgentTraceRecord.InputRow`:
+  the slot for a per-agent channel, the index for an indexed one, -1 when the agent read zeros) and, as for
+  every input, the first 16 bytes of the value: a larger squad struct is shown truncated. MCP
+  `read_agent_trace` reports the row as `row` on input events.
+- **Limits.**
+  - Only the game's own generated nodes with `[AibtInput]` read these rows. Library nodes and trees that
+    read blackboard keys do not see them; that is the group-shared blackboard route, not built
+    (ADR-P10-008, "Provisional slots", and its amendment of 2026-11-25).
+  - Nodes cannot write squad facts: the rows are game input. A decision a squad must share goes out as a
+    command, and the game writes the row for the next step.
+  - A node reads its own squad's row only. Reading another squad's row needs a node-context call that is
+    not part of the node ABI today: the question of `P12-003`.
 
 ## External actions (G3)
 
@@ -401,7 +462,8 @@ TreeSimulationDebug.Register(simulation, "guards");
     `ActionCompleted`, `FreshInstance`), or a `Teardown` record with the reason (`AgentRemoved`,
     `AgentRestarted`, `GroupRemoved`);
   - one `Input` record per bound input channel: the agent's row as the think reads it (canonical
-    bytes, up to 16 kept in the record, `ValueHex()`);
+    bytes, up to 16 kept in the record, `ValueHex()`) and which row of the bound array that was
+    (`InputRow`; -1 when the agent read zeros);
   - the `Lifecycle` records of the package's native trace recorder, the same ones a
     `ProductionTreeHost` records (update started and completed with the root result; node entered,
     ticked, exited and aborted, with status and reasons);

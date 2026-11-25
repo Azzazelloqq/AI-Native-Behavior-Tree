@@ -574,11 +574,11 @@ namespace AIBT.Simulation
 
         private void Append(TraceEntry trace, AgentTraceFact fact, NativeTraceRecordV1 record, ThinkReasons reasons = ThinkReasons.None,
             ulong channel = 0, OperationId operation = default, ActionCancelReason cancelReason = default,
-            NativeRuntimeFailureV1 failure = default, uint valueSize = 0, ulong low = 0, ulong high = 0)
+            NativeRuntimeFailureV1 failure = default, uint valueSize = 0, ulong low = 0, ulong high = 0, int inputRow = -1)
         {
             trace.Sequence++;
             record.Sequence = trace.Sequence;
-            var item = new AgentTraceRecord(_stepTick, fact, record, reasons, channel, operation, cancelReason, failure, valueSize, low, high);
+            var item = new AgentTraceRecord(_stepTick, fact, record, reasons, channel, operation, cancelReason, failure, valueSize, low, high, inputRow);
             var capacity = trace.Ring.Length;
             if (trace.Count < capacity)
             {
@@ -684,9 +684,11 @@ namespace AIBT.Simulation
                 SimulationAgentRoutinesV1.TryStage(ref entry, channel, _traceScratch, 0u, size);
                 Pack(_traceScratch, 0, size, out var low, out var high);
                 var id = _map.Inputs[channel].Id;
+                // P12-002: the row the staging routine chose (the same routine as the dispatch and wake).
+                var row = SimulationAgentRoutinesV1.SelectRow(_inputs[channel], entry.Row);
                 Append(trace, AgentTraceFact.Input,
                     FactRecord(core, updateId, NativeTraceEventKindV1.SchedulerDecision, NativeUpdatePhaseV1.CollectInput, CompiledIndex.Invalid, id),
-                    channel: id, valueSize: size, low: low, high: high);
+                    channel: id, valueSize: size, low: low, high: high, inputRow: row);
             }
             trace.CommandMark = entry.Commands.Length;
             trace.EventMark = entry.Events.Length;
