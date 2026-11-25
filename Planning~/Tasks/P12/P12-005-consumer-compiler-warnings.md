@@ -1,8 +1,9 @@
 # P12-005 — Two compiler warnings every consumer sees
 
 Status: `Review` — filed 2026-11-25 from the SweetKingdom feedback on 0.2.0 (item B). Compiled and tested on
-7000.0.0a8 the same day: the three warnings are gone and the eight test classes pass. Evidence:
-`Planning~/Evidence/P12-005/README.md`.
+7000.0.0a8 the same day: the three warnings are gone and the eight test classes pass. The compile of the
+three changed assemblies is the orchestrator's, relayed in its message (its log was overwritten); the test
+runs are this session's. Evidence: `Planning~/Evidence/P12-005/README.md`.
 
 ## Objective
 
@@ -38,6 +39,8 @@ be compiled in this project. For 6000.x, "compiles without these warnings" is ar
     `new`, are byte-identical (same MD5). Reflection (`GetCustomAttribute<BtNodeAttribute>().TypeId` in
     `Agents/Runtime/ManagedNodeType.cs:94`), the link.xml processor, the generator and the analyzer see the
     same metadata.
+  - The netstandard2.1 build and the two MD5 builds were made in scratch folders that were not kept; there
+    is no artefact behind these two statements.
   - `BtNodeAttribute` is not in `ExpectedPublicAbiV2.txt`. The generator (`CodeGen~`,
     `Analyzers/AIBT.CodeGen.dll`) does not mention `BtNode` at all.
 

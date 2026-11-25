@@ -49,6 +49,11 @@ The Console errors of this run are the two that
 
 ## Not verified
 
+- **The compile of `AIBT.Runtime`, `AIBT.Agents` and `AIBT.Mcp` with these edits on 7000.0.0a8 is relayed.**
+  It comes from the orchestrator's message; its log was overwritten, and no rebuild of those three assemblies
+  was seen in this session.
+- **The CS0114 claims in the card have no kept artefact:** the netstandard2.1 build that shows the warning,
+  and the two deterministic builds with the same MD5. They were made in scratch folders that were not kept.
 - A compile on 6000.0 or 6000.6.
 - The test-assembly warnings: CS0618 in `LargeGraphPerformanceTests.cs` 73–74, and CS0728 × 22. They are
   follow-ups, as decided in the card.

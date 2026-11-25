@@ -1232,7 +1232,8 @@ interleaved measurement (`Planning~/Evidence/P12-002/README.md`). `P12-003` (rea
 is settled as not built and is in `Review`: on 2026-11-25 the consumer answered that 0.2.0 is enough. The
 recipes that serve it are documented, with a test behind each; the shape to build, the condition for
 reopening and the prototype plan are in its card. The two tests the consumer asked for (one rows array
-behind two channels; a second read of one input in one callback) wait for the Editor. On 2026-11-25, on the owner's word, the package
+behind two channels; a second read of one input in one callback) ran on 7000.0.0a8 (`9db607a`, 13/13); a
+second read succeeds only while the catalog's room fits it, so the documents say not to rely on it. On 2026-11-25, on the owner's word, the package
 version went from `0.1.0` to `0.2.0` with phases 2 to 12 as its changelog section.
 On 2026-11-25 the consumer's feedback on 0.2.0 gave three items. `P12-004` makes `BurstExecutionPathTests`
 independent of a warm Burst cache: synchronous compilation for its own run, restored after, and a wait in
