@@ -17,6 +17,10 @@ All notable changes to this project will be documented here. The project follows
 
 ### Tests
 
+- **The ABI layout pin test runs on CoreCLR (P12-007).** `PublicBurstAbiContractTests` measured the
+  `BlackboardReadHandle<int>` size with `Marshal.SizeOf<T>()`, which CoreCLR (Unity 7) refuses for a generic
+  type; it now measures the same 8-byte pin with `Marshal.SizeOf(object)` and `UnsafeUtility.SizeOf<T>()`.
+  Every pinned size and offset holds on Unity 7; the manifest is unchanged.
 - **One rows array behind two input channels, and a second read of one input (P12-003).**
   `TreeSimulationSquadRowsTests` pins one rows array bound to two channels of one row type with two index
   arrays, read in one think, in place and in jobs: wake on one channel only, rebinding one channel, and an

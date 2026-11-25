@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using AIBT.Burst;
 using NUnit.Framework;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
@@ -74,7 +75,12 @@ namespace AIBT.Tests.CodeGen.Contracts
         [Test]
         public void PinnedLayouts_ContextPrefixes_AndDefaultOpaqueValues_FailClosed()
         {
-            Assert.That(Marshal.SizeOf<BlackboardReadHandle<int>>(), Is.EqualTo(8));
+            // The 8-byte handle pin, measured two ways that work on Mono and on CoreCLR (Unity 7):
+            // Marshal.SizeOf<T>() and Marshal.SizeOf(Type) refuse any generic type on CoreCLR
+            // ("The specified Type must not be a generic type"), while the instance overload accepts a
+            // closed generic struct. UnsafeUtility.SizeOf is the layout Burst and native code use (P12-007).
+            Assert.That(Marshal.SizeOf((object)default(BlackboardReadHandle<int>)), Is.EqualTo(8));
+            Assert.That(UnsafeUtility.SizeOf<BlackboardReadHandle<int>>(), Is.EqualTo(8));
             Assert.That(Marshal.OffsetOf<BurstEnterContext>("_validationToken").ToInt32(), Is.EqualTo(0));
             Assert.That(Marshal.OffsetOf<BurstEnterContext>("_randomState").ToInt32(), Is.EqualTo(8));
             Assert.That(Marshal.OffsetOf<BurstEnterContext>("_randomIncrement").ToInt32(), Is.EqualTo(16));
