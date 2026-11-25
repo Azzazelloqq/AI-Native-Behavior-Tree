@@ -68,6 +68,7 @@ internal static class Program
         await VerifyDiagnosticMatrix(contractReference);
         await VerifyOptionalLifecycleCallbacks(contractReference);
         await VerifyShortForms(contractReference);
+        await VerifySameInputTwice(contractReference);
         await VerifyTransitiveCapabilityFlow(contractReference);
         await VerifyForbiddenExceptionFlow(contractReference);
         await VerifyForbiddenUnityApiFlow(contractReference);
@@ -535,6 +536,20 @@ public partial struct AccessNode
         Require(!noTick.Diagnostics.Any(value => value.Id == "CS8785" || value.Id == "AD0001"), "short-form node without Tick crashed the generator or analyzer");
         Require(noTick.Diagnostics.Any(value => value.Id.StartsWith("AIBT", StringComparison.Ordinal) && value.Severity == DiagnosticSeverity.Error), "short-form node without Tick was accepted");
         Require(!noTick.GeneratedSource.Contains("IsUsable = true", StringComparison.Ordinal), "short-form node without Tick produced a usable shard");
+    }
+
+    private static async Task VerifySameInputTwice(MetadataReference contracts)
+    {
+        // P12-003: one input id on two fields of one node is refused at compile time. [AibtInput] normalizes to a
+        // snapshot binding, and two bindings of one node with one id are a binding identity collision.
+        var sameInput = await CompileAsync("ShortForm.SameInputTwice", new[] { MisusePrefix
+            + "[AibtBurstValue(\"aibt.short.row\", 1u, \"aibt.short.row.schema\")] public partial struct Row { [AibtValueField(\"value\", \"Int32\", 1u)] public int Value; } "
+            + "public partial struct C { [AibtInput(\"own\")] public SnapshotReadHandle<Row> First; [AibtInput(\"own\")] public SnapshotReadHandle<Row> Second; } public partial struct M { } "
+            + MisuseDocs + "[AibtCondition(\"aibt.short.same-input\")]" + MisuseTick }, new[] { contracts }, true, true);
+        Require(!sameInput.Diagnostics.Any(value => value.Id == "CS8785" || value.Id == "AD0001"), "two fields with one input id crashed the generator or analyzer");
+        Require(sameInput.Diagnostics.Any(value => value.Id == "AIBT5010" && value.Severity == DiagnosticSeverity.Error),
+            "two fields with one input id were not refused with AIBT5010: " + string.Join(" | ", sameInput.Diagnostics.Select(value => value.Id + ":" + value.GetMessage(CultureInfo.InvariantCulture))));
+        RequireAtomicUnusable(sameInput, "two fields with one input id");
     }
 
     private static async Task VerifyDiagnosticMatrix(MetadataReference contracts)

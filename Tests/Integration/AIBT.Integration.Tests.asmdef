@@ -16,6 +16,7 @@
     "AIBT.CodeGen.P10010SimulationIo.Tests",
     "AIBT.CodeGen.P10011SimulationActions.Tests",
     "AIBT.CodeGen.P12001ReactivePattern.Tests",
+    "AIBT.CodeGen.P12003SquadRows.Tests",
     "AIBT.Mcp",
     "AIBT.StandardNodes",
     "Unity.Burst",

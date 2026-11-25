@@ -15,6 +15,15 @@ All notable changes to this project will be documented here. The project follows
   jobs synchronously while it runs and restores the option after; the wait for the agent-frame job is
   bounded in seconds, not by a 6000-frame cap. A path that runs managed still fails. Test only.
 
+### Tests
+
+- **One rows array behind two input channels, and a second read of one input (P12-003).**
+  `TreeSimulationSquadRowsTests` pins one rows array bound to two channels of one row type with two index
+  arrays, read in one think, in place and in jobs: wake on one channel only, rebinding one channel, and an
+  out-of-range index in the second channel. A second read of one input in one callback succeeds only when
+  the catalog has room for it; beyond that the agent faults with `CapacityExceeded`. The generator verifier
+  pins that two fields with one input id do not compile (AIBT5010).
+
 ### Documentation
 
 - **Simulation container: "API stability" (P12-006).** A new section of `simulation-container.md` lists what

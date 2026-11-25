@@ -1,8 +1,8 @@
 # P12-003 — Read-only game arrays in nodes: not built, recipes documented
 
 Status: `Review` — settled 2026-11-25: **not built**. The recipes that serve the consumer with 0.2.0 are
-documented. The two tests the consumer asked for are written and not committed or run: the Modules Editor is
-closed. Acceptance is the orchestrator's.
+documented. The two tests the consumer asked for pass on 7000.0.0a8 (`TreeSimulationSquadRowsTests` 13/13,
+2026-11-25). Acceptance is the orchestrator's.
 
 ## Objective
 
@@ -149,7 +149,7 @@ Planning and documentation (committed):
   - the corrected limit in "Group data: an indexed input channel".
 - This card, `Planning~/work-items.json`, `Planning~/Evidence/P12-003/`.
 
-Tests (written, not committed until the Editor is back):
+Tests (run on 7000.0.0a8 on 2026-11-25, see the evidence README):
 
 - `Tests/Editor/CodeGen/GenerationP12003/`: a new fixture assembly `AIBT.CodeGen.P12003SquadRows.Tests` with
   the shard `aibt.tests.p12003.squad-rows`, which holds three nodes:

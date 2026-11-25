@@ -25,7 +25,7 @@ The texts are unchanged. Their line references point at the code of `8396202` (t
 
 ## Tests and runs
 
-- Written on 2026-11-25 and not yet run: the Modules Editor is closed.
+- Written on 2026-11-25:
   - `TreeSimulationSquadRowsTests`: 13 cases, with the fixture assembly `AIBT.CodeGen.P12003SquadRows.Tests`.
   - The verifier case `ShortForm.SameInputTwice`.
 - The verifier case was run alone outside the package (generator and verifier sources copied to a scratch
@@ -33,4 +33,45 @@ The texts are unchanged. Their line references point at the code of `8396202` (t
   should.
 - The full P2 matrix fails at baseline before reaching it (the contract compilation lacks the agent-frame
   sources). That failure is recorded in the card and not fixed here.
-- Results of the Editor run go here when it happens.
+
+### Editor runs (Modules on 7000.0.0a8, 2026-11-25, `Tools/Unity/Invoke-UnityTests.ps1`)
+
+**Compile.** The orchestrator compiled the working tree with the fixture assembly and the asmdef reference: no
+errors. At 23:05 `AIBT.Integration.Tests` was recompiled after an unrelated doc-comment edit. It logged no
+warning from the new files; the only warnings were the 22 old CS0728, a P12-005 follow-up.
+
+**`TreeSimulationSquadRowsTests`, 23:00: 13/13.** In 0.82 s:
+
+```
+Passed OneRowsArray_TwoChannels_EachAgentReadsItsOwnAndItsTargetRow(False|True)
+Passed OutOfRangeIndexInTheSecondChannel_RefusesTheStep_NothingRuns(False|True)
+Passed ReadingBeyondTheCatalogsValueSessions_FaultsTheAgentWithCapacityExceeded(False|True)
+Passed ReadingOneInputTwice_WithRoomInTheCatalog_ReadsTheSameRowTwice(False|True)
+Passed RebindingOneChannel_LeavesTheOtherAsItWas(False|True)
+Passed TwoChannels_LogIsTheSameInPlaceAndInJobs
+Passed WakeOnChange_OnOneChannel_WakesOnlyTheReadersThroughThatChannel(False|True)
+```
+
+- The jobs cases (`True`) pin, among others:
+  - the fault cause `CapacityExceeded`;
+  - that the refused callback's command is not published.
+
+  Before this run these two were known only from reading the code.
+- The tests do not show whether the jobs cases ran under Burst or managed: they assert values, not the path.
+
+**After the recompile, 23:07–23:11:**
+
+```
+testName TreeSimulationIndexedInputTests 44/45 (failed=0 skipped=0)
+testName TreeSimulationIoTests 20/20 (failed=0 skipped=0)
+testName TreeSimulationSquadRowsTests 13/13 (failed=0 skipped=0)
+```
+
+- The 45th case of `TreeSimulationIndexedInputTests` is P12-002's `AgentFrameJob_RunsTheIndexedRoutineBurstCompiled`,
+  reported Inconclusive: the recompiled assembly's job was still compiling asynchronously (see
+  `Planning~/Evidence/P12-004/README.md`). The rerun at 23:11 passed.
+- The one Console error of that run is the refusal that
+  `TreeSimulationIoTests.Hosts_StillRefuseSnapshotBindings_AndRegisteredCommandPayloads_AsBefore` provokes on
+  purpose (`Callback rejected: TypeMismatch`); that test passed.
+
+**The verifier case was not run again:** the full P2 matrix still fails at baseline.
