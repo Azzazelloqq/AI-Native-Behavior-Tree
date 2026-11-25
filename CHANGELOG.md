@@ -6,14 +6,27 @@ All notable changes to this project will be documented here. The project follows
 
 ### Fixes
 
-- **No CS0618, CS0114 and CS0652 in a consumer's Console (P12-005).** `McpRuntimeTools` lists hosts with
-  `FindObjectsByType<T>(FindObjectsInactive)` on 6000.6 and later (the overloads that take
-  `FindObjectsSortMode` are obsolete there and on 7000.0); `BtNodeAttribute.TypeId` declares that it hides
-  `Attribute.TypeId` (`new`; the compiled assembly is unchanged). `AIBT.Runtime` no longer reports CS0652: an
-  always-false `int > uint.MaxValue` check is removed from the pipelined scheduler (no change of behaviour).
-- **`BurstExecutionPathTests` no longer depend on a warm Burst cache (P12-004).** The class compiles Burst
-  jobs synchronously while it runs and restores the option after; the wait for the agent-frame job is
-  bounded in seconds, not by a 6000-frame cap. A path that runs managed still fails. Test only.
+- **No CS0618, CS0114 and CS0652 from the package on 6000.6 and 7000.0 (P12-005).**
+  - `McpRuntimeTools` lists hosts with `FindObjectsByType<T>(FindObjectsInactive)` on 6000.6 and later,
+    where the overloads that take `FindObjectsSortMode` are obsolete (as on 7000.0). Below 6000.6 it keeps
+    the old call; whether those Editors report it obsolete was not checked.
+  - `BtNodeAttribute.TypeId` declares that it hides `Attribute.TypeId` (`new`; the compiled assembly is
+    unchanged).
+  - `AIBT.Runtime` no longer reports CS0652: an always-false `int > uint.MaxValue` check is removed from
+    the pipelined scheduler (no change of behaviour).
+- **`BurstExecutionPathTests` no longer depend on a warm Burst cache (P12-004).** Test only.
+  - The class turns on synchronous Burst compilation while it runs and restores the option after.
+  - The wait for the agent-frame job is bounded in seconds, not by a 6000-frame cap.
+  - A path that runs managed still fails.
+
+  Two things to know when you run it:
+  - **It can block the Editor for minutes.** On a cold Burst cache (a fresh `Library`), the first frame of
+    the agent-frame path blocks the Editor's main thread until Burst has compiled the job: 173 s on the
+    maintainer's machine. No test timeout can interrupt that block, so the Editor looks hung.
+  - **Killing the Editor can leave the option on.** If the Editor is killed or crashes while the class
+    runs, "Synchronous Compilation" (Jobs > Burst) stays on. Burst keeps it in EditorPrefs (key
+    `BurstCompileSynchronously`), which are per user and machine, so it stays on for every project until
+    it is cleared in that menu.
 
 ### Tests
 
@@ -28,9 +41,11 @@ All notable changes to this project will be documented here. The project follows
 - **One rows array behind two input channels, and a second read of one input (P12-003).**
   `TreeSimulationSquadRowsTests` pins one rows array bound to two channels of one row type with two index
   arrays, read in one think, in place and in jobs: wake on one channel only, rebinding one channel, and an
-  out-of-range index in the second channel. A second read of one input in one callback succeeds only when
-  the catalog has room for it; beyond that the agent faults with `CapacityExceeded`. The generator verifier
-  pins that two fields with one input id do not compile (AIBT5010).
+  out-of-range index in the second channel. A second read of one input in one callback succeeds only while
+  the callback's room, sized for the whole catalog, still fits it; beyond that the agent faults with
+  `CapacityExceeded`. A case of the generator verifier (`ShortForm.SameInputTwice`) checks that two fields
+  with one input id are refused (AIBT5010). It ran once, from a copy outside the package; the full verifier
+  matrix currently fails before reaching it.
 
 ### Documentation
 

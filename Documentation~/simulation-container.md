@@ -138,16 +138,29 @@ void FixedTick(uint tick)
   own quota). A node that would go over the quota does not run: the agent faults with
   `AgentFault.Cause` = `CapacityExceeded`; commands emitted earlier in that think are kept. Nothing
   throws. Nodes emit at most one command per command field per dispatch.
-- **Read each input once per callback**: read the row into a local and use the local. Every
-  `TryReadSnapshot` call opens a value session of its own, as `TryRead` does for a blackboard binding,
-  and the generated catalog sizes the sessions of one callback for its largest node (two per `ReadWrite`
-  binding and per external action, one per other binding: input, command, `Read`, `Write`). A second read
-  of the same input in one callback returns the same row only when another node of the catalog leaves
-  room for it. Otherwise the call returns `CapacityExceeded`, the refusal is latched, and the agent faults
-  with `AgentFault.Cause` = `CapacityExceeded`, in place and in jobs; the commands that callback emitted
-  are not published, and the step and other agents go on. Adding a node to the catalog or removing one can
-  therefore change whether a second read works: do not rely on it. Two fields of one node with the same
-  input id do not compile (`AIBT5010`, a binding identity collision). Tests:
+- **Read each input once per callback**: read the row into a local and use the local.
+  - **Each call costs room.** Every `TryReadSnapshot` call opens a value session of its own, with its own
+    staging bytes (the row's size), as `TryRead` does for a blackboard binding.
+  - **The room is sized per catalog, not per node.** The generated catalog sizes one callback's room as the
+    largest need of any one of its nodes. A node's need is two sessions per `ReadWrite` binding and per
+    external action, and one per other binding (input, command, `Read`, `Write`); staging bytes are
+    counted the same way.
+  - **So a second read may or may not fit.** A second read of the same input in one callback returns the
+    same row while both the sessions and the staging bytes still fit. That room can come from a larger
+    node elsewhere in the catalog, or from this node's own bindings that it does not use in that callback
+    (a command it does not emit, an input it skips).
+  - **When it does not fit:**
+    - the call returns `CapacityExceeded`, and the refusal is latched;
+    - the agent faults with `AgentFault.Cause` = `CapacityExceeded`, in place and in jobs;
+    - the commands that callback emitted are not published, and the step and the other agents go on.
+  - **Do not rely on a second read.** Whether it succeeds depends on the rest of the catalog and on what the
+    node did earlier in the callback, so adding or removing a node can change it.
+  - **Two fields, one id.** Two fields of one node with the same input id are refused by the generator
+    (`AIBT5010`, a binding identity collision). The generator verifier has a case for this
+    (`ShortForm.SameInputTwice` in `Tools~/Verification/P2`), but it has run only once, outside the
+    package; the full verifier matrix currently stops before it.
+
+  Tests:
   `TreeSimulationSquadRowsTests.ReadingOneInputTwice_WithRoomInTheCatalog_ReadsTheSameRowTwice` and
   `ReadingBeyondTheCatalogsValueSessions_FaultsTheAgentWithCapacityExceeded`; for blackboard bindings on
   a host, [Burst node authoring, Read a binding once per callback](burst-node-authoring.md#read-a-binding-once-per-callback).
@@ -634,7 +647,15 @@ stable:
 - `TreeGroup`, inputs: both `TryBindInput` overloads, including the indexed rules of "Group data" (a
   reused slot keeps its index), plus `TryUnbindInput` and `TrySetWakeOnChange`.
 - `TreeGroup`, outputs and actions: `GetCommands`, `TryGetCommands`, `GetFaults`, `GetRootCompletions`,
-  `GetActionEvents`, both `TryComplete` overloads, `TryGetStartPayload`, `TryGetCancelPayload`.
+  `GetActionEvents`, `ActionEventCapacity`, both `TryComplete` overloads, `TryGetStartPayload`,
+  `TryGetCancelPayload`.
+- The settings fields:
+  - `TreeSimulationSettings`: `TickMicroseconds`, `RandomSeed`, `UseJobs`, `MinimumJobBatch`,
+    `MaximumStepsPerThink`;
+  - `TreeGroupSettings`: `Capacity`, `DefaultThinkInterval`, `RootCompletion`, `CommandQuotaPerAgent`,
+    `ActionCapacityPerAgent`.
+
+  Their names and meaning stay; their default values may change (table below).
 - Value types: `AgentHandle`, `ActionHandle`, `Command<T>`, `ThinkSchedule`, `RootCompletion`, `AgentFault`,
   `ActionEvent`, `ActionOutcome`, `RootCompletionPolicy`.
 - `InputChannel<T>` and `CommandChannel<T>`. A channel's id is FNV-1a 64 of its UTF-8 name, and generated
@@ -654,13 +675,18 @@ stable:
 | `SimulationResult` | Values were added in G2, G3 and G4. `Unsupported` is no longer returned since G3 and is kept for later stages. The documented code of one misuse was corrected once: the ADR sketch said `InputMissing` for a short input array, and the code returns `InvalidArgument`. | Treat every value other than `Success` as a failure, keep a default branch, and do not store the numbers. |
 | `ThinkReasons`, `AgentTraceFact`, `ActionCancelReason`, `AgentRunState`, `ActionEventKind` | Enums that grow when the container learns a new reason or fact (`ThinkReasons` is a set of flags). | Keep a default branch. Test flags with `&`, not `==`. |
 | `AgentTraceRecord` and the rest of the debugging surface: `AgentTraceInfo`, `AgentTraceSettings`, `AgentDebugState`, `ActivePathNode`, `LiveAction`, `TreeSimulationDebug`, `RegisteredSimulation`, `TrySetTraced`, `TryCopyTrace`, `TryClearTrace`, `TryConfigureTracing`, `TryGetActivePath`, `TryCopyLiveActions`, `DescribeAgent`, `IsTraced`, `TracedCount`, `TraceSettings` | It grows with the tools. 0.2.0 added `AgentTraceRecord.InputRow`, and a value is shown truncated to 16 bytes. The Graph window does not attach to a container agent yet. | Keep it in debug-only code. Do not persist records or parse `DescribeAgent` text. |
-| MCP `runtime_simulations`, `describe_agent`, `read_agent_trace`, and the CLI `runtime simulations` and `agent describe|trace` | The output is JSON for tools. Keys are added: `row` in 0.2.0. | Read keys by name and ignore unknown ones. |
+| MCP `runtime_simulations`, `describe_agent`, `read_agent_trace`, and the CLI `runtime simulations`, `agent describe` and `agent trace` | The output is JSON for tools. Keys are added: `row` in 0.2.0. | Read keys by name and ignore unknown ones. |
 | `[AibtInput("id")]` | Its own documentation says it is experimental until G5. ADR-P10-008 lists its name under decision D1. | Where a node must not depend on it, write the long form it expands to, which is frozen: `[AibtConfigField(id, "GeneratedHandle", 1u), AibtSnapshotBinding(id, valueTypeId, version)]`. |
 | Generated `BurstAccess` helpers (`TryReadSnapshot`, `TryEmit`, `TryStart`, `TryConsume`, …) | They are generator output in your catalog, not part of the ABI contract. They call the frozen context calls. | None needed beyond regenerating catalogs on a package update. |
 
-Additions that would not break code: a group-shared context (ADR-P10-008, "Provisional slots"), a
-deadline-aware wake, and P12-003's question of how a node reads another squad's row (that one would need a
-node ABI change by ADR).
+Additions that would not break code, none of them scheduled:
+
+- a group-shared context (ADR-P10-008, "Provisional slots");
+- a deadline-aware wake;
+- a per-field wake mask for an input channel. It is recorded only as a candidate for the case where a need
+  shows; a dedicated trigger channel gives the same result today.
+
+## Not yet (G5 and later)
 
 - The AIBT Graph window's live highlighting and trace timeline for a container agent (G4 gives the
   data and the MCP/CLI tools; the window still binds to hosts only).

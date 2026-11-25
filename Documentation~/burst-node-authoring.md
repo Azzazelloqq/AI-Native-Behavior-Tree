@@ -61,12 +61,19 @@ intentionally not part of the public authoring surface.
 Read each blackboard binding at most once per callback: read the value into a local and use the
 local. The same holds for writes (write once, at the end).
 
-The generated catalog sizes the value sessions of one callback for its largest node: one session
-per `Read` or `Write` binding, two per `ReadWrite` binding (a read and a write). Every
-`TryRead`/`TryWrite` call takes one session. A node that reads one binding twice in one callback
-therefore asks for more sessions than the catalog has. The second call returns
-`BurstContextResult.CapacityExceeded`, and because the rejection is latched the host stops with
-`NativeLifetimeStateInvalid`. The Console names the node:
+Every `TryRead`/`TryWrite` call takes one value session and staging bytes for its value. The
+generated catalog sizes the room of one callback for the largest need of any one of its nodes: one
+session per `Read` or `Write` binding (and per input or command), two per `ReadWrite` binding (a read
+and a write) and per external action, with their bytes counted the same way.
+
+A second read of one binding in one callback therefore succeeds only while both the sessions and
+the staging bytes still fit. Whether they fit depends on the rest of the catalog (a larger node
+elsewhere leaves room) and on what the node did earlier in the callback (a binding it does not use
+leaves room). A host that dispatches members together sizes the room for the whole group, so on such
+a path the outcome may also depend on the other members (not traced or tested). Do not rely on it.
+
+When it does not fit, the call returns `BurstContextResult.CapacityExceeded`, and because the
+rejection is latched the host stops with `NativeLifetimeStateInvalid`. The Console names the node:
 `Callback rejected: CapacityExceeded at node '<id>'.` The callback's own refusal does not record
 which capacity was too small, so the message lists the possible limits: the value sessions and
 their staging bytes described here, and the node's command, command payload or operation capacity
