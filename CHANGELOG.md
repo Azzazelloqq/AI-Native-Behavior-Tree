@@ -10,6 +10,13 @@ All notable changes to this project will be documented here. The project follows
   is frozen (the node ABI v2 handles and binding attributes a node uses to reach the container), what is
   experimental with no change planned, and what may still change before the container is marked stable,
   each with the reason and what a game should wrap.
+- **Simulation container: "Game data that is not per agent" (P12-003).** A new section of
+  `simulation-container.md` gives five recipes for a grid, a zone map, a list of threats, another squad's
+  row and a rare lookup, each with the test that pins it, and what they cannot do. A node still cannot read
+  an arbitrary element of a game array: that read is not built (the consumer confirmed that 0.2.0 serves its
+  nodes). "Inputs and commands" now says to read each input once per callback and what a second read does.
+  The limit "a node reads its own squad's row only" is corrected: a squad the game chooses works through a
+  second channel.
 
 ## [0.2.0] - 2026-11-25
 

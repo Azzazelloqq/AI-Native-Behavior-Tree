@@ -138,6 +138,19 @@ void FixedTick(uint tick)
   own quota). A node that would go over the quota does not run: the agent faults with
   `AgentFault.Cause` = `CapacityExceeded`; commands emitted earlier in that think are kept. Nothing
   throws. Nodes emit at most one command per command field per dispatch.
+- **Read each input once per callback**: read the row into a local and use the local. Every
+  `TryReadSnapshot` call opens a value session of its own, as `TryRead` does for a blackboard binding,
+  and the generated catalog sizes the sessions of one callback for its largest node (two per `ReadWrite`
+  binding and per external action, one per other binding: input, command, `Read`, `Write`). A second read
+  of the same input in one callback returns the same row only when another node of the catalog leaves
+  room for it. Otherwise the call returns `CapacityExceeded`, the refusal is latched, and the agent faults
+  with `AgentFault.Cause` = `CapacityExceeded`, in place and in jobs; the commands that callback emitted
+  are not published, and the step and other agents go on. Adding a node to the catalog or removing one can
+  therefore change whether a second read works: do not rely on it. Two fields of one node with the same
+  input id do not compile (`AIBT5010`, a binding identity collision). Tests:
+  `TreeSimulationSquadRowsTests.ReadingOneInputTwice_WithRoomInTheCatalog_ReadsTheSameRowTwice` and
+  `ReadingBeyondTheCatalogsValueSessions_FaultsTheAgentWithCapacityExceeded`; for blackboard bindings on
+  a host, [Burst node authoring, Read a binding once per callback](burst-node-authoring.md#read-a-binding-once-per-callback).
 - **Wake on change** (off by default): byte compare of the canonical row against the row the agent
   read at its last think, per channel. Agents that have not thought since it was turned on are not
   woken. Deterministic, allocation-free.
@@ -205,8 +218,83 @@ The node side does not change: a node reads the row with its `[AibtInput("squad"
     (ADR-P10-008, "Provisional slots", and its amendment of 2026-11-25).
   - Nodes cannot write squad facts: the rows are game input. A decision a squad must share goes out as a
     command, and the game writes the row for the next step.
-  - A node reads its own squad's row only. Reading another squad's row needs a node-context call that is
-    not part of the node ABI today: the question of `P12-003`.
+  - A node reads the rows its own `[AibtInput]` fields are bound to. Another squad's row works when the
+    game chooses that squad (the squad's target, its neighbour): bind a second channel to the same rows
+    array with a second index array (recipe 3 of "Game data that is not per agent" below). A squad the node
+    chooses during the think (the weakest of all squads, say) cannot be read: that needs a read of an
+    arbitrary row, which is not built (`P12-003`).
+
+## Game data that is not per agent
+
+A node reads only the rows its input fields are bound to: there is no node call that reads an arbitrary
+element of a game array. Game data that is not one row per agent (a grid, a zone map, a list of threats,
+another squad's facts) reaches a node in one of the ways below. Each recipe names the test that pins its
+mechanism.
+
+1. **Sampled per agent by the game.** For anything keyed by the agent's position or state (is the cell
+   ahead walkable, the danger at its cell, the nearest threat, how many threats are in range), the game
+   computes the answer per agent, in its own job before `Step`, into the agent's row of a per-agent input
+   channel, for example `SenseInput { WalkableAhead, DangerHere, NearestThreat, ThreatsInRange }`. The node
+   sees the answer, not the grid or the list. No latency: sampled before `Step(t)`, read in `Step(t)`. The
+   guarantees are those of every input: the step sees the values at its entry, the same in place and in
+   jobs, and does not allocate.
+   A game job that still writes the rows when `Step` starts refuses the step with `InputMissing` only
+   while collection safety checks are on (the Editor and development builds). Without them nothing checks
+   it and the step copies whatever the array holds at that moment, so complete the job before `Step`.
+   Tests: `TreeSimulationIoTests.Population_InputsAndCommands_DigestsAreIdentical_AcrossPathsWorkerCountsAndRuns`
+   (per-agent rows, the same results in place and in jobs) and
+   `TreeSimulationIndexedInputTests.IndicesOrRowsWrittenByARunningGameJob_RefuseTheStepWithInputMissing`
+   (the refusal, under `ENABLE_UNITY_COLLECTIONS_CHECKS`; per-agent and indexed channels go through the
+   same check).
+2. **Zone facts through an indexed channel.** One row per zone, and `rowOfSlot[slot]` = the zone of the
+   agent's cell, written by the game when the agent changes cell (see "Group data: an indexed input
+   channel"). Wake on change works through the index. Tests:
+   `TreeSimulationIndexedInputTests.MembersReadTheirRow_NotTheirSlotRow`,
+   `WakeOnChange_ARowChange_WakesTheMembersOfThatRowOnly`,
+   `WakeOnChange_AnIndexChange_WakesOnlyWhenTheValueDiffers`.
+3. **Another squad's row through a second channel.** When the game chooses the other squad (the squad's
+   target, its neighbour, its leader squad), bind a second channel of the same row type to the same rows
+   array with a second index array, and give the node a second field:
+
+   ```csharp
+   // The node's configuration.
+   [AibtInput("own-squad")] public SnapshotReadHandle<SquadRow> Own;
+   [AibtInput("target-squad")] public SnapshotReadHandle<SquadRow> Target;
+
+   // The game.
+   group.TryBindInput(OwnSquad, squadRows, squadOfSlot);
+   group.TryBindInput(TargetSquad, squadRows, targetSquadOfSlot);
+   ```
+
+   The channels are independent: each copies the rows at step entry (the array is copied once per
+   channel), each checks its own indices (an out-of-range index in either refuses the step), each has its
+   own wake setting, and each is rebound or unbound alone. Tests: `TreeSimulationSquadRowsTests` (both
+   rows read in one think, the same log in place and in jobs, wake on one channel only, rebinding one
+   channel, an out-of-range index in the second channel).
+4. **A rare lookup whose index only the tree knows, through an external action.** The node starts an
+   action with the query as its start value (`TryStart`); the game answers between steps with
+   `TryComplete<TResult>`; the node reads the answer in the next step (`TryConsume`). Latency: one tick.
+   The completion wakes the agent whatever its schedule. Test:
+   `TreeSimulationActionTests.Completion_WakesTheAgent_ForTheNextStep`.
+5. **A change that matters to particular agents.** `TryWakeMany` with the agents the game knows are
+   concerned, or a trigger channel (one small row per agent) with `TrySetWakeOnChange` (see "Reactive
+   interrupts"). Tests: `TreeSimulationReactivePatternTests.TryWakeMany_WithoutWakeOnChange_PreemptsInsideThatStep`
+   and `TriggerWrittenBeforeStep_PreemptsTheWalkInsideThatStep`.
+
+Read each input once per callback in all of these (see "Inputs and commands").
+
+What the recipes cannot do; each of these needs a read of a game array from the node:
+
+- an index computed inside the node from tree state in the same think (a blackboard value, the result of
+  an earlier node of this think), when one tick of latency is not acceptable;
+- a scan: a variable number of elements in one think (a ray through the grid, a filter over all threats
+  that only this node knows);
+- more lookups per agent and think than a fixed row can hold;
+- another squad chosen by the node itself rather than by the game.
+
+That read is not built (`P12-003`, 2026-11-25: the consumer confirmed that recipes 1 to 5 serve its
+nodes). The shape it would have and the condition for building it are recorded in
+`Planning~/Tasks/P12/P12-003-read-only-game-arrays.md` (in the AIBT repository only).
 
 ## External actions (G3)
 
