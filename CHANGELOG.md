@@ -4,6 +4,8 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-26
+
 ### Fixes
 
 - **No CS0618, CS0114 and CS0652 from the package on 6000.6 and 7000.0 (P12-005).**
